@@ -210,16 +210,17 @@
         </div>
     </div>
 
-    <!-- Opskrift Modal (Tilføj/Rediger) -->
-    <div id="recipe-modal" class="modal-overlay hidden">
+    <!-- Opskrift Redigerings-Modal -->
+    <div id="recipe-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3 id="recipe-modal-title">Tilføj ny opskrift</h3>
+            <h3 id="recipe-edit-modal-title">Rediger opskrift</h3>
             <form id="recipe-form">
                 <input type="hidden" id="recipe-id">
                 <div class="image-upload-container">
                     <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift">
-                    <button type="button" id="generate-image-btn" class="btn btn-secondary">Generer AI Billede</button>
+                    <label for="image-upload-input" class="btn btn-secondary">Upload Billede</label>
+                    <input type="file" id="image-upload-input" class="hidden">
                 </div>
                 <div class="form-grid">
                     <div class="input-group">
@@ -282,10 +283,42 @@
                 </div>
                 <button type="button" id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
                 <div class="form-actions">
-                    <button type="button" id="add-to-meal-plan-btn" class="btn btn-secondary">Føj til Madplan</button>
                     <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- NYT: Opskrift Læsevisning Modal -->
+    <div id="recipe-read-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <div id="recipe-read-view-content">
+                <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image">
+                <h3 id="read-view-title"></h3>
+                <div class="read-view-meta">
+                    <span id="read-view-category"></span>
+                    <span id="read-view-time"><i class="fas fa-clock"></i></span>
+                    <span id="read-view-portions"><i class="fas fa-users"></i></span>
+                </div>
+                 <div id="read-view-tags" class="recipe-card-tags"></div>
+                <div class="read-view-actions">
+                    <button id="read-view-add-to-meal-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Føj til Madplan</button>
+                    <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
+                </div>
+                <hr>
+                <p id="read-view-notes"></p>
+                <div class="read-view-main-content">
+                    <div class="read-view-ingredients">
+                        <h4>Ingredienser</h4>
+                        <ul id="read-view-ingredients-list"></ul>
+                    </div>
+                    <div class="read-view-instructions">
+                        <h4>Fremgangsmåde</h4>
+                        <div id="read-view-instructions-text"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
