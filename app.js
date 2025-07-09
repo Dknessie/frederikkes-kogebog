@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemCategoryInput = document.getElementById('item-category');
     const itemStoreSectionSelect = document.getElementById('item-store-section');
 
-    // --- Opskrift Redigerings-Modal Elementer ---
+    // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
     const recipeForm = document.getElementById('recipe-form');
     const addRecipeBtn = document.getElementById('add-recipe-btn');
@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
     const recipeImagePreview = document.getElementById('recipe-image-preview');
     const imageUploadInput = document.getElementById('image-upload-input');
+    const recipeFilterContainer = document.getElementById('recipe-filter-container');
     
     // --- Opskrift Læsevisning Modal Elementer ---
     const recipeReadModal = document.getElementById('recipe-read-modal');
@@ -94,10 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentInventoryItems = [];
     let currentRecipes = [];
     let currentMealPlan = {};
-    let currentShoppingList = {}; // Nyt state-objekt for indkøbsliste
+    let currentShoppingList = {};
     let currentImageUrl = '';
     let currentlyViewedRecipeId = null;
-
+    let activeRecipeFilterTag = null;
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
@@ -202,7 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const recipesRef = collection(db, 'recipes');
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
             currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderRecipes(currentRecipes);
+            renderTagFilters();
+            renderRecipes();
             document.getElementById('profile-recipe-count').textContent = currentRecipes.length;
             const favoriteCount = currentRecipes.filter(r => r.is_favorite).length;
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
@@ -243,13 +245,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderRecipes(recipes) {
+    function renderRecipes() {
         recipeGrid.innerHTML = '';
-        if (recipes.length === 0) {
-            recipeGrid.innerHTML = `<p>Du har ingen opskrifter endnu. Tilføj en for at starte.</p>`;
+        const recipesToRender = activeRecipeFilterTag 
+            ? currentRecipes.filter(r => r.tags && r.tags.includes(activeRecipeFilterTag))
+            : currentRecipes;
+
+        if (recipesToRender.length === 0) {
+            recipeGrid.innerHTML = `<p>Ingen opskrifter matcher dit filter.</p>`;
             return;
         }
-        recipes.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
+
+        recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
@@ -275,6 +282,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function renderTagFilters() {
+        const allTags = new Set();
+        currentRecipes.forEach(r => {
+            if (r.tags) {
+                r.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+
+        recipeFilterContainer.innerHTML = '';
+        const allButton = document.createElement('button');
+        allButton.className = 'filter-tag';
+        allButton.textContent = 'Alle';
+        if (!activeRecipeFilterTag) {
+            allButton.classList.add('active');
+        }
+        allButton.addEventListener('click', () => {
+            activeRecipeFilterTag = null;
+            renderTagFilters();
+            renderRecipes();
+        });
+        recipeFilterContainer.appendChild(allButton);
+
+        allTags.forEach(tag => {
+            const tagButton = document.createElement('button');
+            tagButton.className = 'filter-tag';
+            tagButton.textContent = tag;
+            if (activeRecipeFilterTag === tag) {
+                tagButton.classList.add('active');
+            }
+            tagButton.addEventListener('click', () => {
+                activeRecipeFilterTag = tag;
+                renderTagFilters();
+                renderRecipes();
+            });
+            recipeFilterContainer.appendChild(tagButton);
+        });
+    }
+
     function renderMealPlan(plan) {
         mealPlanContainer.innerHTML = '';
         const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -297,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListContainer.innerHTML = '';
         const groupedList = {};
 
-        // Group items by store_section
         Object.values(currentShoppingList).forEach(item => {
             const section = item.store_section || 'Andet';
             if (!groupedList[section]) {
@@ -326,12 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     : '';
 
                 listItemsHTML += `
-                    <li class="shopping-list-item">
+                    <li class="shopping-list-item" data-item-name="${item.name}">
                         <div class="item-info">
                             <input type="checkbox" id="shop-${item.name}">
                             <label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
                         </div>
-                        ${newItemIndicator}
+                        <div>
+                            ${newItemIndicator}
+                            <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
+                        </div>
                     </li>`;
             });
 
@@ -765,7 +812,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Round up quantities
         for (const key in currentShoppingList) {
             const item = currentShoppingList[key];
             if (item.unit !== 'g' && item.unit !== 'kg' && item.unit !== 'l' && item.unit !== 'ml') {
@@ -795,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await batch.commit();
-            currentShoppingList = {}; // Clear the list
+            currentShoppingList = {};
             renderShoppingList();
             alert("Varelager opdateret!");
         } catch (error) {
@@ -805,10 +851,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shoppingListContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.new-item-indicator')) {
-            const itemName = e.target.closest('.new-item-indicator').dataset.itemName;
-            addInventoryItemBtn.click(); // Open the modal
-            document.getElementById('item-name').value = itemName; // Pre-fill the name
+        const newItemBtn = e.target.closest('.new-item-indicator');
+        if (newItemBtn) {
+            const itemName = newItemBtn.dataset.itemName;
+            addInventoryItemBtn.click();
+            document.getElementById('item-name').value = itemName;
+            return;
+        }
+
+        const removeItemBtn = e.target.closest('.remove-from-list-btn');
+        if(removeItemBtn) {
+            const itemName = removeItemBtn.closest('.shopping-list-item').dataset.itemName;
+            delete currentShoppingList[itemName.toLowerCase()];
+            renderShoppingList();
         }
     });
 
