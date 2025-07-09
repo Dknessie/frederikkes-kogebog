@@ -17,7 +17,8 @@ import {
     doc,
     updateDoc,
     deleteDoc,
-    getDoc
+    getDoc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 // Korrekt Firebase-konfiguration til applikationen
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutButtons = [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')];
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('#app-main-content .page');
+    const headerTitleLink = document.querySelector('.header-title-link');
 
     // --- Vare Modal Elementer ---
     const inventoryItemModal = document.getElementById('inventory-item-modal');
@@ -67,6 +69,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
     const recipeImagePreview = document.getElementById('recipe-image-preview');
     const generateImageBtn = document.getElementById('generate-image-btn');
+    const addToMealPlanBtn = document.getElementById('add-to-meal-plan-btn');
+
+    // --- Madplan Elementer ---
+    const mealPlanModal = document.getElementById('meal-plan-modal');
+    const mealPlanForm = document.getElementById('meal-plan-form');
+    const mealPlanContainer = document.getElementById('meal-plan-container');
+    const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
+
 
     // --- Indkøbsliste Elementer ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
@@ -75,8 +85,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
+    let mealPlanUnsubscribe = null;
     let currentInventoryItems = [];
     let currentRecipes = [];
+    let currentMealPlan = {};
     let currentImageUrl = '';
 
     // =================================================================
@@ -96,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loginPage.classList.remove('hidden');
             if (inventoryUnsubscribe) inventoryUnsubscribe();
             if (recipesUnsubscribe) recipesUnsubscribe();
+            if (mealPlanUnsubscribe) mealPlanUnsubscribe();
         }
     });
 
@@ -139,6 +152,11 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
     };
+    
+    headerTitleLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigateTo('#dashboard');
+    });
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -165,6 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupRealtimeListeners() {
         if (inventoryUnsubscribe) inventoryUnsubscribe();
         if (recipesUnsubscribe) recipesUnsubscribe();
+        if (mealPlanUnsubscribe) mealPlanUnsubscribe();
 
         const inventoryRef = collection(db, 'inventory_items');
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
@@ -180,6 +199,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const favoriteCount = currentRecipes.filter(r => r.is_favorite).length;
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
+
+        // Listener for this week's meal plan
+        const weekNumber = getWeekNumber(new Date());
+        const year = new Date().getFullYear();
+        const mealPlanDocId = `week_${weekNumber}_${year}`;
+        const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
+        mealPlanUnsubscribe = onSnapshot(mealPlanRef, (doc) => {
+            if (doc.exists()) {
+                currentMealPlan = doc.data();
+            } else {
+                currentMealPlan = {};
+            }
+            renderMealPlan(currentMealPlan);
+        });
     }
 
     // =================================================================
@@ -232,6 +265,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
                 </div>`;
             recipeGrid.appendChild(card);
+        });
+    }
+
+    function renderMealPlan(plan) {
+        mealPlanContainer.innerHTML = '';
+        const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const dayNames = { monday: 'Mandag', tuesday: 'Tirsdag', wednesday: 'Onsdag', thursday: 'Torsdag', friday: 'Fredag', saturday: 'Lørdag', sunday: 'Søndag' };
+
+        days.forEach(day => {
+            const meal = plan[day];
+            const recipe = meal ? currentRecipes.find(r => r.id === meal.recipeId) : null;
+            const mealDiv = document.createElement('div');
+            mealDiv.className = 'meal-plan-day';
+            mealDiv.innerHTML = `
+                <strong>${dayNames[day]}</strong>
+                <span>${recipe ? `${recipe.title} (${meal.portions} port.)` : 'Ikke planlagt'}</span>
+            `;
+            mealPlanContainer.appendChild(mealDiv);
         });
     }
 
@@ -407,14 +458,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const lineParts = line.split(' ');
         let potentialUnit = lineParts[0].replace(/[^a-zæøå]/gi, '');
         let potentialName = lineParts.slice(1).join(' ').trim();
-        if (!potentialName) potentialName = potentialUnit; // If only one word, it's the name
+        if (!potentialName) potentialName = potentialUnit;
         
         const inventoryItem = currentInventoryItems.find(item => potentialName.includes(item.name.toLowerCase()));
 
         if (inventoryItem && inventoryItem.conversion_from_unit === potentialUnit) {
             unit = inventoryItem.conversion_to_unit;
             quantity = (quantity || 1) * inventoryItem.conversion_to_quantity;
-            name = inventoryItem.name; // Use the official name from inventory
+            name = inventoryItem.name;
         } else if (knownUnits[potentialUnit]) {
             unit = knownUnits[potentialUnit];
             name = potentialName;
@@ -479,6 +530,8 @@ document.addEventListener('DOMContentLoaded', () => {
             title: document.getElementById('recipe-title').value,
             category: document.getElementById('recipe-category').value,
             tags: tags,
+            portions: Number(document.getElementById('recipe-portions').value) || null,
+            time: Number(document.getElementById('recipe-time').value) || null,
             notes: document.getElementById('recipe-notes').value,
             instructions: document.getElementById('recipe-instructions').value,
             source_url: document.getElementById('recipe-source-url').value,
@@ -525,6 +578,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('recipe-title').value = recipe.title || '';
             document.getElementById('recipe-category').value = recipe.category || '';
             document.getElementById('recipe-tags').value = (recipe.tags && recipe.tags.join(', ')) || '';
+            document.getElementById('recipe-portions').value = recipe.portions || '';
+            document.getElementById('recipe-time').value = recipe.time || '';
             document.getElementById('recipe-notes').value = recipe.notes || '';
             document.getElementById('recipe-instructions').value = recipe.instructions || '';
             document.getElementById('recipe-source-url').value = recipe.source_url || '';
@@ -544,17 +599,92 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE
+    // 7. MADPLAN & INDKØBSLISTE
     // =================================================================
+    addToMealPlanBtn.addEventListener('click', () => {
+        const recipeId = document.getElementById('recipe-id').value;
+        const recipe = currentRecipes.find(r => r.id === recipeId);
+        if (recipe) {
+            document.getElementById('meal-plan-recipe-id').value = recipe.id;
+            document.getElementById('meal-plan-portions').value = recipe.portions || 2;
+            mealPlanModal.classList.remove('hidden');
+        }
+    });
+
+    mealPlanForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const recipeId = document.getElementById('meal-plan-recipe-id').value;
+        const day = document.getElementById('meal-plan-day').value;
+        const portions = Number(document.getElementById('meal-plan-portions').value);
+
+        const weekNumber = getWeekNumber(new Date());
+        const year = new Date().getFullYear();
+        const mealPlanDocId = `week_${weekNumber}_${year}`;
+        const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
+
+        try {
+            await setDoc(mealPlanRef, {
+                [day]: { recipeId, portions }
+            }, { merge: true });
+            mealPlanModal.classList.add('hidden');
+            recipeModal.classList.add('hidden');
+            alert("Opskriften er føjet til madplanen!");
+        } catch (error) {
+            console.error("Fejl ved opdatering af madplan:", error);
+            alert("Der skete en fejl.");
+        }
+    });
+
+    generateWeeklyShoppingListBtn.addEventListener('click', () => {
+        const allIngredientsNeeded = [];
+        for (const day in currentMealPlan) {
+            const meal = currentMealPlan[day];
+            if (meal && meal.recipeId) {
+                const recipe = currentRecipes.find(r => r.id === meal.recipeId);
+                if (recipe) {
+                    const scaleFactor = recipe.portions ? meal.portions / recipe.portions : 1;
+                    recipe.ingredients.forEach(ing => {
+                        allIngredientsNeeded.push({
+                            ...ing,
+                            quantity: (ing.quantity || 0) * scaleFactor
+                        });
+                    });
+                }
+            }
+        }
+        
+        const consolidatedIngredients = {};
+        allIngredientsNeeded.forEach(ing => {
+            const key = ing.name.toLowerCase();
+            if (consolidatedIngredients[key]) {
+                consolidatedIngredients[key].quantity += ing.quantity;
+            } else {
+                consolidatedIngredients[key] = { ...ing };
+            }
+        });
+        
+        const finalShoppingList = Object.values(consolidatedIngredients);
+        generateShoppingList(finalShoppingList, "ugens");
+    });
+
     function generateShoppingListFromRecipe(recipeId) {
         const recipe = currentRecipes.find(r => r.id === recipeId);
         if (!recipe) return;
-
+        generateShoppingList(recipe.ingredients, `"${recipe.title}"`);
+    }
+    
+    function generateShoppingList(ingredients, sourceText) {
         const itemsToBuy = {};
-
-        recipe.ingredients.forEach(ing => {
+        ingredients.forEach(ing => {
             const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-            const needed = ing.quantity || 0;
+            let needed = ing.quantity || 0;
+            // Rund 0.5 op til 1, men kun hvis det ikke er en del af en større mængde
+            if (needed > 0 && needed < 1) {
+                needed = 1;
+            } else {
+                needed = Math.ceil(needed);
+            }
+
             const inStock = inventoryItem ? inventoryItem.current_stock : 0;
             
             if (inStock < needed) {
@@ -569,7 +699,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         renderShoppingList(itemsToBuy);
-        alert(`Indkøbsliste genereret for "${recipe.title}". Gå til fanen "Indkøbsliste" for at se den.`);
+        alert(`Indkøbsliste genereret for ${sourceText}. Gå til fanen "Indkøbsliste" for at se den.`);
         navigateTo('#shopping-list');
+    }
+
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+        return weekNo;
     }
 });
