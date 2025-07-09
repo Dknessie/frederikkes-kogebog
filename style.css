@@ -447,6 +447,12 @@ nav {
     color: #999;
 }
 
+/* Notifikations Modal */
+.modal-notification {
+    max-width: 450px;
+    text-align: center;
+}
+
 /* ===== Formularer i Modaler ===== */
 .form-grid {
     display: grid;
