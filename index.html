@@ -106,7 +106,8 @@
             <!-- ===== Indkøbsliste Side ===== -->
             <section id="shopping-list" class="page hidden">
                 <h2>Indkøbsliste</h2>
-                <div class="shopping-list-container">
+                <div id="shopping-list-container" class="shopping-list-container">
+                    <p>Din indkøbsliste er tom. Tilføj varer fra en opskrift for at starte.</p>
                     <!-- Data indsættes her fra app.js -->
                 </div>
             </section>
@@ -161,13 +162,46 @@
                     </div>
                     <div class="input-group">
                         <label for="item-store-section">Sektion i butik</label>
-                        <input type="text" id="item-store-section" placeholder="F.eks. Køl, Tørvarer">
+                        <select id="item-store-section">
+                            <option value="">Vælg sektion...</option>
+                            <option value="Frugt & Grønt">Frugt & Grønt</option>
+                            <option value="Kød & Fisk">Kød & Fisk</option>
+                            <option value="Mejeri">Mejeri</option>
+                            <option value="Køl">Køl (Pålæg, etc.)</option>
+                            <option value="Frost">Frost</option>
+                            <option value="Tørvarer">Tørvarer (Pasta, ris, etc.)</option>
+                            <option value="Konserves">Konserves</option>
+                            <option value="Drikkevarer">Drikkevarer</option>
+                            <option value="Slik & Snacks">Slik & Snacks</option>
+                            <option value="Husholdning">Husholdning</option>
+                            <option value="Personlig Pleje">Personlig Pleje</option>
+                            <option value="Andet">Andet</option>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
                         <input type="text" id="item-home-location" placeholder="F.eks. Køleskab, Skuffe">
                     </div>
                 </div>
+                <hr>
+                <fieldset class="conversion-fieldset">
+                    <legend>Varespecifik Konvertering (valgfri)</legend>
+                    <p class="fieldset-description">Bruges til at importere fra opskrifter. F.eks. 1 dåse = 400 g.</p>
+                    <div class="form-grid">
+                         <div class="input-group">
+                            <label for="item-conversion-from">Fra enhed</label>
+                            <input type="text" id="item-conversion-from" placeholder="f.eks. dåse">
+                        </div>
+                        <div class="input-group">
+                            <label for="item-conversion-to-quantity">Til antal</label>
+                            <input type="number" id="item-conversion-to-quantity" placeholder="f.eks. 400">
+                        </div>
+                        <div class="input-group">
+                            <label for="item-conversion-to-unit">Til enhed</label>
+                            <input type="text" id="item-conversion-to-unit" placeholder="f.eks. g">
+                        </div>
+                    </div>
+                </fieldset>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
                 </div>
@@ -196,12 +230,11 @@
                 </div>
                 <hr>
                 
-                <!-- NYT: Import sektion -->
                 <div id="import-section">
                     <h4>Importer ingredienser</h4>
                     <div class="input-group">
                         <label for="recipe-import-textarea">Indsæt ingrediensliste her</label>
-                        <textarea id="recipe-import-textarea" rows="5" placeholder="F.eks.:&#10;2 stk løg&#10;600 gram gulerødder&#10;1 fed hvidløg"></textarea>
+                        <textarea id="recipe-import-textarea" rows="5" placeholder="F.eks.:&#10;2 stk løg&#10;600 gram gulerødder&#10;1 dåse hakkede tomater"></textarea>
                     </div>
                     <button type="button" id="import-ingredients-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer og fortolk</button>
                 </div>
