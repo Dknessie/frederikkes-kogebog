@@ -57,19 +57,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemCategoryInput = document.getElementById('item-category');
     const itemStoreSectionSelect = document.getElementById('item-store-section');
 
-    // --- Opskrift Modal Elementer ---
-    const recipeModal = document.getElementById('recipe-modal');
+    // --- Opskrift Redigerings-Modal Elementer ---
+    const recipeEditModal = document.getElementById('recipe-edit-modal');
     const recipeForm = document.getElementById('recipe-form');
     const addRecipeBtn = document.getElementById('add-recipe-btn');
-    const recipeModalTitle = document.getElementById('recipe-modal-title');
+    const recipeEditModalTitle = document.getElementById('recipe-edit-modal-title');
     const recipeGrid = document.querySelector('.recipe-grid');
     const ingredientsContainer = document.getElementById('ingredients-container');
     const addIngredientBtn = document.getElementById('add-ingredient-btn');
     const importIngredientsBtn = document.getElementById('import-ingredients-btn');
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
     const recipeImagePreview = document.getElementById('recipe-image-preview');
-    const generateImageBtn = document.getElementById('generate-image-btn');
-    const addToMealPlanBtn = document.getElementById('add-to-meal-plan-btn');
+    const imageUploadInput = document.getElementById('image-upload-input');
+    
+    // --- Opskrift Læsevisning Modal Elementer ---
+    const recipeReadModal = document.getElementById('recipe-read-modal');
+    const readViewAddToMealPlanBtn = document.getElementById('read-view-add-to-meal-plan-btn');
+    const readViewEditBtn = document.getElementById('read-view-edit-btn');
+
 
     // --- Madplan Elementer ---
     const mealPlanModal = document.getElementById('meal-plan-modal');
@@ -90,6 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRecipes = [];
     let currentMealPlan = {};
     let currentImageUrl = '';
+    let currentlyViewedRecipeId = null;
+
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
@@ -200,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
 
-        // Listener for this week's meal plan
         const weekNumber = getWeekNumber(new Date());
         const year = new Date().getFullYear();
         const mealPlanDocId = `week_${weekNumber}_${year}`;
@@ -305,6 +311,42 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionDiv.innerHTML = `<h3>${section}</h3><ul>${listItems}</ul>`;
             shoppingListContainer.appendChild(sectionDiv);
         }
+    }
+    
+    function renderReadView(recipe) {
+        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        document.getElementById('read-view-title').textContent = recipe.title;
+        document.getElementById('read-view-category').textContent = recipe.category || '';
+        document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
+        document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
+        
+        const tagsContainer = document.getElementById('read-view-tags');
+        tagsContainer.innerHTML = '';
+        if (recipe.tags && recipe.tags.length > 0) {
+            recipe.tags.forEach(tag => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'recipe-card-tag';
+                tagEl.textContent = tag;
+                tagsContainer.appendChild(tagEl);
+            });
+        }
+        
+        document.getElementById('read-view-notes').textContent = recipe.notes || '';
+        
+        const ingredientsList = document.getElementById('read-view-ingredients-list');
+        ingredientsList.innerHTML = '';
+        if (recipe.ingredients && recipe.ingredients.length > 0) {
+            recipe.ingredients.forEach(ing => {
+                const li = document.createElement('li');
+                li.textContent = `${ing.quantity || ''} ${ing.unit || ''} ${ing.name}`;
+                ingredientsList.appendChild(li);
+            });
+        }
+        
+        document.getElementById('read-view-instructions-text').textContent = recipe.instructions || '';
+        
+        currentlyViewedRecipeId = recipe.id;
+        recipeReadModal.classList.remove('hidden');
     }
 
     // =================================================================
@@ -419,14 +461,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     addRecipeBtn.addEventListener('click', () => {
-        recipeModalTitle.textContent = 'Tilføj ny opskrift';
+        recipeEditModalTitle.textContent = 'Tilføj ny opskrift';
         recipeForm.reset();
         document.getElementById('recipe-id').value = '';
         ingredientsContainer.innerHTML = '';
         currentImageUrl = '';
         recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
         addIngredientRow();
-        recipeModal.classList.remove('hidden');
+        recipeEditModal.classList.remove('hidden');
     });
 
     addIngredientBtn.addEventListener('click', () => addIngredientRow());
@@ -500,15 +542,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         recipeImportTextarea.value = '';
     });
-
-    generateImageBtn.addEventListener('click', () => {
-        const title = document.getElementById('recipe-title').value;
-        if (!title) {
-            alert("Indtast venligst en titel for at generere et billede.");
-            return;
+    
+    imageUploadInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentImageUrl = event.target.result;
+                recipeImagePreview.src = currentImageUrl;
+            };
+            reader.readAsDataURL(file);
         }
-        currentImageUrl = `https://placehold.co/600x400/d1603d/FFFFFF?text=AI+Billede+af%0A${encodeURIComponent(title)}`;
-        recipeImagePreview.src = currentImageUrl;
     });
 
     recipeForm.addEventListener('submit', async (e) => {
@@ -546,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 await addDoc(collection(db, 'recipes'), recipeData);
             }
-            recipeModal.classList.add('hidden');
+            recipeEditModal.classList.add('hidden');
         } catch (error) {
             console.error("Fejl ved lagring af opskrift:", error);
             alert("Der skete en fejl. Opskriften blev ikke gemt.");
@@ -573,7 +617,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const recipe = currentRecipes.find(r => r.id === docId);
         if (recipe) {
-            recipeModalTitle.textContent = 'Rediger opskrift';
+            renderReadView(recipe);
+        }
+    });
+    
+    readViewEditBtn.addEventListener('click', () => {
+        const recipe = currentRecipes.find(r => r.id === currentlyViewedRecipeId);
+        if (recipe) {
+            recipeReadModal.classList.add('hidden'); // Skjul læse-modal
+            
+            recipeEditModalTitle.textContent = 'Rediger opskrift';
             document.getElementById('recipe-id').value = recipe.id;
             document.getElementById('recipe-title').value = recipe.title || '';
             document.getElementById('recipe-category').value = recipe.category || '';
@@ -594,16 +647,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 addIngredientRow();
             }
-            recipeModal.classList.remove('hidden');
+            recipeEditModal.classList.remove('hidden'); // Vis redigerings-modal
         }
     });
-
-    // =================================================================
-    // 7. MADPLAN & INDKØBSLISTE
-    // =================================================================
-    addToMealPlanBtn.addEventListener('click', () => {
-        const recipeId = document.getElementById('recipe-id').value;
-        const recipe = currentRecipes.find(r => r.id === recipeId);
+    
+    readViewAddToMealPlanBtn.addEventListener('click', () => {
+        const recipe = currentRecipes.find(r => r.id === currentlyViewedRecipeId);
         if (recipe) {
             document.getElementById('meal-plan-recipe-id').value = recipe.id;
             document.getElementById('meal-plan-portions').value = recipe.portions || 2;
@@ -611,6 +660,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // =================================================================
+    // 7. MADPLAN & INDKØBSLISTE
+    // =================================================================
     mealPlanForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const recipeId = document.getElementById('meal-plan-recipe-id').value;
@@ -627,7 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 [day]: { recipeId, portions }
             }, { merge: true });
             mealPlanModal.classList.add('hidden');
-            recipeModal.classList.add('hidden');
+            recipeReadModal.classList.add('hidden');
             alert("Opskriften er føjet til madplanen!");
         } catch (error) {
             console.error("Fejl ved opdatering af madplan:", error);
@@ -642,7 +694,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (meal && meal.recipeId) {
                 const recipe = currentRecipes.find(r => r.id === meal.recipeId);
                 if (recipe) {
-                    const scaleFactor = recipe.portions ? meal.portions / recipe.portions : 1;
+                    const scaleFactor = (recipe.portions && meal.portions) ? meal.portions / recipe.portions : 1;
                     recipe.ingredients.forEach(ing => {
                         allIngredientsNeeded.push({
                             ...ing,
@@ -664,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const finalShoppingList = Object.values(consolidatedIngredients);
-        generateShoppingList(finalShoppingList, "ugens");
+        generateShoppingList(finalShoppingList, "ugens madplan");
     });
 
     function generateShoppingListFromRecipe(recipeId) {
@@ -678,23 +730,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ingredients.forEach(ing => {
             const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
             let needed = ing.quantity || 0;
-            // Rund 0.5 op til 1, men kun hvis det ikke er en del af en større mængde
-            if (needed > 0 && needed < 1) {
-                needed = 1;
-            } else {
-                needed = Math.ceil(needed);
-            }
-
+            
             const inStock = inventoryItem ? inventoryItem.current_stock : 0;
             
             if (inStock < needed) {
-                const toBuy = needed - inStock;
-                const section = (inventoryItem && inventoryItem.store_section) ? inventoryItem.store_section : 'Andet';
-                
-                if (!itemsToBuy[section]) {
-                    itemsToBuy[section] = [];
+                let toBuy = needed - inStock;
+                // Rund op til nærmeste hele tal hvis det ikke er en vægtenhed
+                if (ing.unit !== 'g' && ing.unit !== 'kg' && ing.unit !== 'l' && ing.unit !== 'ml') {
+                    toBuy = Math.ceil(toBuy);
                 }
-                itemsToBuy[section].push({ name: ing.name, quantity_to_buy: toBuy, unit: ing.unit });
+
+                if (toBuy > 0) {
+                    const section = (inventoryItem && inventoryItem.store_section) ? inventoryItem.store_section : 'Andet';
+                    
+                    if (!itemsToBuy[section]) {
+                        itemsToBuy[section] = [];
+                    }
+                    itemsToBuy[section].push({ name: ing.name, quantity_to_buy: toBuy, unit: ing.unit });
+                }
             }
         });
         
