@@ -224,9 +224,11 @@
             <form id="recipe-form">
                 <input type="hidden" id="recipe-id">
                 <div class="image-upload-container">
-                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift">
-                    <label for="image-upload-input" class="btn btn-secondary">Upload Billede</label>
-                    <input type="file" id="image-upload-input" class="hidden">
+                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL" alt="Billede af opskrift">
+                </div>
+                <div class="input-group">
+                    <label for="recipe-imageUrl">Billede URL (valgfri)</label>
+                    <input type="url" id="recipe-imageUrl" placeholder="https://...">
                 </div>
                 <div class="form-grid">
                     <div class="input-group">
