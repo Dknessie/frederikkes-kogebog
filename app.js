@@ -60,6 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeGrid = document.querySelector('.recipe-grid');
     const ingredientsContainer = document.getElementById('ingredients-container');
     const addIngredientBtn = document.getElementById('add-ingredient-btn');
+    const importIngredientsBtn = document.getElementById('import-ingredients-btn');
+    const recipeImportTextarea = document.getElementById('recipe-import-textarea');
+
 
     // --- State ---
     let currentUser = null;
@@ -276,10 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 6. CRUD-HANDLINGER FOR OPSKRIFTER
+    // 6. CRUD-HANDLINGER FOR OPSKRIFTER & IMPORT-LOGIK
     // =================================================================
     
-    // Funktion til at tilføje et nyt ingrediens-felt til formularen
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
         row.className = 'ingredient-row';
@@ -292,43 +294,95 @@ document.addEventListener('DOMContentLoaded', () => {
         ingredientsContainer.appendChild(row);
     };
 
-    // Åbn modal for at tilføje en ny opskrift
     addRecipeBtn.addEventListener('click', () => {
         recipeModalTitle.textContent = 'Tilføj ny opskrift';
         recipeForm.reset();
         document.getElementById('recipe-id').value = '';
-        ingredientsContainer.innerHTML = ''; // Ryd gamle ingredienser
-        addIngredientRow(); // Tilføj ét tomt felt fra start
+        ingredientsContainer.innerHTML = '';
+        addIngredientRow();
         recipeModal.classList.remove('hidden');
     });
 
-    // Tilføj et nyt ingrediens-felt, når der klikkes på knappen
     addIngredientBtn.addEventListener('click', () => addIngredientRow());
 
-    // Fjern et ingrediens-felt
     ingredientsContainer.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
             e.target.closest('.ingredient-row').remove();
         }
     });
 
-    // Gem eller opdater en opskrift
+    // --- NYT: Import-logik ---
+    const parseSingleIngredientLine = (line) => {
+        line = line.trim().toLowerCase();
+        if (!line) return null;
+
+        let quantity = null;
+        let unit = '';
+        let name = '';
+
+        const knownUnits = {
+            'gram': 'g', 'g': 'g', 'stk': 'stk', 'fed': 'fed', 'dl': 'dl', 'l': 'l', 'ml': 'ml', 'tsk': 'tsk', 'spsk': 'spsk', 'dåse': 'dåse', 'bundt': 'bundt', 'knivspids': 'knivspids'
+        };
+        
+        // Find tal i starten af linjen
+        const quantityMatch = line.match(/^(\d[\d\s.,]*)/);
+        if (quantityMatch) {
+            quantity = parseFloat(quantityMatch[0].replace(',', '.').replace(/\s/g, ''));
+            line = line.substring(quantityMatch[0].length).trim();
+        }
+
+        // Find en kendt enhed
+        const lineParts = line.split(' ');
+        const firstWord = lineParts[0].replace(/[^a-zæøå]/gi, ''); // Rens ordet for tegn
+        if (knownUnits[firstWord]) {
+            unit = knownUnits[firstWord];
+            name = lineParts.slice(1).join(' ').trim();
+        } else {
+            // Håndter "200gramhakket..."
+            let unitFound = false;
+            for (const u in knownUnits) {
+                if (line.startsWith(u)) {
+                    unit = knownUnits[u];
+                    name = line.substring(u.length).trim();
+                    unitFound = true;
+                    break;
+                }
+            }
+            if (!unitFound) {
+                name = line; // Ingen enhed fundet, resten er navnet
+            }
+        }
+        
+        return { quantity, unit, name: name.charAt(0).toUpperCase() + name.slice(1) };
+    };
+
+    importIngredientsBtn.addEventListener('click', () => {
+        const text = recipeImportTextarea.value;
+        if (!text) return;
+
+        ingredientsContainer.innerHTML = ''; // Ryd eksisterende felter
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            const parsed = parseSingleIngredientLine(line);
+            if (parsed && parsed.name) {
+                addIngredientRow(parsed);
+            }
+        });
+        recipeImportTextarea.value = ''; // Ryd tekstfeltet efter import
+    });
+    // --- Slut på Import-logik ---
+
     recipeForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const recipeId = document.getElementById('recipe-id').value;
 
-        // Saml ingredienser fra formular
         const ingredients = [];
         document.querySelectorAll('.ingredient-row').forEach(row => {
             const name = row.querySelector('.ingredient-name').value.trim();
             const quantity = row.querySelector('.ingredient-quantity').value;
             const unit = row.querySelector('.ingredient-unit').value.trim();
-            if (name) { // Gem kun hvis der er et navn
-                ingredients.push({
-                    name,
-                    quantity: Number(quantity) || null,
-                    unit
-                });
+            if (name) {
+                ingredients.push({ name, quantity: Number(quantity) || null, unit });
             }
         });
 
@@ -342,10 +396,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (recipeId) {
-                // Opdater eksisterende opskrift
                 await updateDoc(doc(db, 'recipes', recipeId), recipeData);
             } else {
-                // Tilføj ny opskrift
                 await addDoc(collection(db, 'recipes'), recipeData);
             }
             recipeModal.classList.add('hidden');
@@ -355,25 +407,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Håndter klik på opskriftskort
     recipeGrid.addEventListener('click', async (e) => {
         const card = e.target.closest('.recipe-card');
         if (!card) return;
         const docId = card.dataset.id;
         const recipeRef = doc(db, 'recipes', docId);
 
-        // Håndter favorit-klik
         if (e.target.closest('.favorite-icon')) {
             const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('is-favorite');
             try {
                 await updateDoc(recipeRef, { is_favorite: !isCurrentlyFavorite });
-            } catch (error) {
-                console.error("FEJL ved opdatering af favorit:", error);
-            }
-            return; // Stop videre eksekvering
+            } catch (error) { console.error("FEJL ved opdatering af favorit:", error); }
+            return;
         }
 
-        // Åbn redigerings-modal, når der klikkes på kortet
         const recipe = currentRecipes.find(r => r.id === docId);
         if (recipe) {
             recipeModalTitle.textContent = 'Rediger opskrift';
@@ -382,13 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('recipe-instructions').value = recipe.instructions || '';
             document.getElementById('recipe-source-url').value = recipe.source_url || '';
             
-            ingredientsContainer.innerHTML = ''; // Ryd gamle felter
+            ingredientsContainer.innerHTML = '';
+            recipeImportTextarea.value = '';
             if (recipe.ingredients && recipe.ingredients.length > 0) {
                 recipe.ingredients.forEach(ing => addIngredientRow(ing));
             } else {
-                addIngredientRow(); // Tilføj et tomt felt, hvis der ingen er
+                addIngredientRow();
             }
-
             recipeModal.classList.remove('hidden');
         }
     });
