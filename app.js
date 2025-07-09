@@ -18,7 +18,8 @@ import {
     updateDoc,
     deleteDoc,
     getDoc,
-    setDoc
+    setDoc,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 // Korrekt Firebase-konfiguration til applikationen
@@ -75,16 +76,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const readViewAddToMealPlanBtn = document.getElementById('read-view-add-to-meal-plan-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
 
-
     // --- Madplan Elementer ---
     const mealPlanModal = document.getElementById('meal-plan-modal');
     const mealPlanForm = document.getElementById('meal-plan-form');
     const mealPlanContainer = document.getElementById('meal-plan-container');
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
 
-
     // --- Indkøbsliste Elementer ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
+    const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
 
     // --- State ---
     let currentUser = null;
@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentInventoryItems = [];
     let currentRecipes = [];
     let currentMealPlan = {};
+    let currentShoppingList = {}; // Nyt state-objekt for indkøbsliste
     let currentImageUrl = '';
     let currentlyViewedRecipeId = null;
 
@@ -267,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="recipe-card-tags">${tagsHTML}</div>
                 </div>
                 <div class="recipe-card-actions">
-                    <button class="btn-icon generate-shopping-list-btn" title="Generer indkøbsliste"><i class="fas fa-cart-plus"></i></button>
+                    <button class="btn-icon add-to-shopping-list-btn" title="Føj til indkøbsliste"><i class="fas fa-cart-plus"></i></button>
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
                 </div>`;
             recipeGrid.appendChild(card);
@@ -292,23 +293,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderShoppingList(itemsToBuy) {
+    function renderShoppingList() {
         shoppingListContainer.innerHTML = '';
-        if (Object.keys(itemsToBuy).length === 0) {
-            shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom, eller også har du alle varer på lager.</p>`;
+        const groupedList = {};
+
+        // Group items by store_section
+        Object.values(currentShoppingList).forEach(item => {
+            const section = item.store_section || 'Andet';
+            if (!groupedList[section]) {
+                groupedList[section] = [];
+            }
+            groupedList[section].push(item);
+        });
+
+        if (Object.keys(groupedList).length === 0) {
+            shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom.</p>`;
+            confirmPurchaseBtn.classList.add('hidden');
             return;
         }
 
-        for (const section in itemsToBuy) {
+        confirmPurchaseBtn.classList.remove('hidden');
+
+        for (const section in groupedList) {
             const sectionDiv = document.createElement('div');
             sectionDiv.className = 'store-section';
             
-            let listItems = '';
-            itemsToBuy[section].forEach(item => {
-                listItems += `<li><input type="checkbox" id="shop-${item.name}"><label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label></li>`;
+            let listItemsHTML = '';
+            groupedList[section].forEach(item => {
+                const itemInInventory = currentInventoryItems.find(invItem => invItem.name.toLowerCase() === item.name.toLowerCase());
+                const newItemIndicator = !itemInInventory 
+                    ? `<button class="btn-icon new-item-indicator" data-item-name="${item.name}" title="Tilføj '${item.name}' til varelageret"><i class="fas fa-plus-circle"></i></button>`
+                    : '';
+
+                listItemsHTML += `
+                    <li class="shopping-list-item">
+                        <div class="item-info">
+                            <input type="checkbox" id="shop-${item.name}">
+                            <label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
+                        </div>
+                        ${newItemIndicator}
+                    </li>`;
             });
 
-            sectionDiv.innerHTML = `<h3>${section}</h3><ul>${listItems}</ul>`;
+            sectionDiv.innerHTML = `<h3>${section}</h3><ul>${listItemsHTML}</ul>`;
             shoppingListContainer.appendChild(sectionDiv);
         }
     }
@@ -610,8 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (e.target.closest('.generate-shopping-list-btn')) {
-            generateShoppingListFromRecipe(docId);
+        if (e.target.closest('.add-to-shopping-list-btn')) {
+            addToShoppingListFromRecipe(docId);
             return;
         }
 
@@ -624,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
     readViewEditBtn.addEventListener('click', () => {
         const recipe = currentRecipes.find(r => r.id === currentlyViewedRecipeId);
         if (recipe) {
-            recipeReadModal.classList.add('hidden'); // Skjul læse-modal
+            recipeReadModal.classList.add('hidden');
             
             recipeEditModalTitle.textContent = 'Rediger opskrift';
             document.getElementById('recipe-id').value = recipe.id;
@@ -647,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 addIngredientRow();
             }
-            recipeEditModal.classList.remove('hidden'); // Vis redigerings-modal
+            recipeEditModal.classList.remove('hidden');
         }
     });
     
@@ -705,56 +732,85 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        const consolidatedIngredients = {};
-        allIngredientsNeeded.forEach(ing => {
-            const key = ing.name.toLowerCase();
-            if (consolidatedIngredients[key]) {
-                consolidatedIngredients[key].quantity += ing.quantity;
-            } else {
-                consolidatedIngredients[key] = { ...ing };
-            }
-        });
-        
-        const finalShoppingList = Object.values(consolidatedIngredients);
-        generateShoppingList(finalShoppingList, "ugens madplan");
+        addToShoppingList(allIngredientsNeeded, "ugens madplan");
     });
 
-    function generateShoppingListFromRecipe(recipeId) {
+    function addToShoppingListFromRecipe(recipeId) {
         const recipe = currentRecipes.find(r => r.id === recipeId);
         if (!recipe) return;
-        generateShoppingList(recipe.ingredients, `"${recipe.title}"`);
+        addToShoppingList(recipe.ingredients, `"${recipe.title}"`);
     }
     
-    function generateShoppingList(ingredients, sourceText) {
-        const itemsToBuy = {};
+    function addToShoppingList(ingredients, sourceText) {
         ingredients.forEach(ing => {
-            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-            let needed = ing.quantity || 0;
+            const key = ing.name.toLowerCase();
+            const existingItem = currentShoppingList[key];
             
-            const inStock = inventoryItem ? inventoryItem.current_stock : 0;
-            
-            if (inStock < needed) {
-                let toBuy = needed - inStock;
-                // Rund op til nærmeste hele tal hvis det ikke er en vægtenhed
-                if (ing.unit !== 'g' && ing.unit !== 'kg' && ing.unit !== 'l' && ing.unit !== 'ml') {
-                    toBuy = Math.ceil(toBuy);
-                }
+            if (existingItem) {
+                existingItem.quantity_to_buy += ing.quantity || 0;
+            } else {
+                const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
+                const needed = ing.quantity || 0;
+                const inStock = inventoryItem ? inventoryItem.current_stock : 0;
+                const toBuy = needed - inStock;
 
                 if (toBuy > 0) {
-                    const section = (inventoryItem && inventoryItem.store_section) ? inventoryItem.store_section : 'Andet';
-                    
-                    if (!itemsToBuy[section]) {
-                        itemsToBuy[section] = [];
-                    }
-                    itemsToBuy[section].push({ name: ing.name, quantity_to_buy: toBuy, unit: ing.unit });
+                    currentShoppingList[key] = {
+                        name: ing.name,
+                        quantity_to_buy: toBuy,
+                        unit: ing.unit,
+                        store_section: inventoryItem ? inventoryItem.store_section : 'Andet'
+                    };
                 }
             }
         });
+
+        // Round up quantities
+        for (const key in currentShoppingList) {
+            const item = currentShoppingList[key];
+            if (item.unit !== 'g' && item.unit !== 'kg' && item.unit !== 'l' && item.unit !== 'ml') {
+                item.quantity_to_buy = Math.ceil(item.quantity_to_buy);
+            }
+        }
         
-        renderShoppingList(itemsToBuy);
-        alert(`Indkøbsliste genereret for ${sourceText}. Gå til fanen "Indkøbsliste" for at se den.`);
+        renderShoppingList();
+        alert(`Varer fra ${sourceText} er tilføjet til indkøbslisten.`);
         navigateTo('#shopping-list');
     }
+
+    confirmPurchaseBtn.addEventListener('click', async () => {
+        if (Object.keys(currentShoppingList).length === 0) return;
+        if (!confirm("Er du sikker på, at du vil tilføje alle varer på listen til dit varelager?")) return;
+
+        const batch = writeBatch(db);
+        
+        Object.values(currentShoppingList).forEach(item => {
+            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            if (inventoryItem) {
+                const itemRef = doc(db, "inventory_items", inventoryItem.id);
+                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
+                batch.update(itemRef, { current_stock: newStock });
+            }
+        });
+
+        try {
+            await batch.commit();
+            currentShoppingList = {}; // Clear the list
+            renderShoppingList();
+            alert("Varelager opdateret!");
+        } catch (error) {
+            console.error("Fejl ved bekræftelse af indkøb:", error);
+            alert("Der skete en fejl under opdatering af varelager.");
+        }
+    });
+
+    shoppingListContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.new-item-indicator')) {
+            const itemName = e.target.closest('.new-item-indicator').dataset.itemName;
+            addInventoryItemBtn.click(); // Open the modal
+            document.getElementById('item-name').value = itemName; // Pre-fill the name
+        }
+    });
 
     function getWeekNumber(d) {
         d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
