@@ -172,6 +172,10 @@ header {
     height: 70px;
 }
 
+.header-title-link {
+    text-decoration: none;
+}
+
 .header-title {
     font-family: var(--heading-font);
     font-size: 1.5rem;
@@ -227,7 +231,7 @@ nav {
 /* ===== Dashboard ===== */
 .dashboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 2rem;
 }
 
@@ -236,13 +240,19 @@ nav {
     padding: 0;
 }
 
-.meal-plan-list li {
-    padding: 0.5rem 0;
+#meal-plan-container .meal-plan-day {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
     border-bottom: 1px solid #eee;
 }
-.meal-plan-list li:last-child {
+#meal-plan-container .meal-plan-day:last-child {
     border-bottom: none;
 }
+#meal-plan-container .meal-plan-day strong {
+    color: var(--primary-color);
+}
+
 
 /* ===== Opskrifter ===== */
 .actions-bar {
@@ -421,6 +431,7 @@ nav {
     margin-top: 2rem;
     display: flex;
     justify-content: flex-end;
+    gap: 1rem;
 }
 
 .conversion-fieldset {
