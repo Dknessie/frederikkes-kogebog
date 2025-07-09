@@ -87,6 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const shoppingListContainer = document.getElementById('shopping-list-container');
     const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
 
+    // --- Notifikations Modal Elementer ---
+    const notificationModal = document.getElementById('notification-modal');
+    const notificationTitle = document.getElementById('notification-title');
+    const notificationMessage = document.getElementById('notification-message');
+    const notificationActions = document.getElementById('notification-actions');
+
     // --- State ---
     let currentUser = null;
     let inventoryUnsubscribe = null;
@@ -98,6 +104,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentShoppingList = {};
     let currentlyViewedRecipeId = null;
     let activeRecipeFilterTag = null;
+
+    // =================================================================
+    // 0. HJÆLPEFUNKTIONER
+    // =================================================================
+    
+    /**
+     * Viser en custom notifikations-modal.
+     * @param {object} options - Indstillinger for notifikationen.
+     * @param {string} options.title - Titlen på modalen.
+     * @param {string} options.message - Beskeden i modalen.
+     * @param {'alert'|'confirm'} [options.type='alert'] - Typen af notifikation.
+     * @returns {Promise<boolean>} Et promise der resolver til `true` hvis bekræftet, ellers `false`.
+     */
+    function showNotification({ title, message, type = 'alert' }) {
+        notificationTitle.textContent = title;
+        notificationMessage.textContent = message;
+        notificationActions.innerHTML = ''; // Ryd gamle knapper
+
+        return new Promise((resolve) => {
+            if (type === 'confirm') {
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'btn btn-primary';
+                confirmBtn.textContent = 'Bekræft';
+                confirmBtn.onclick = () => {
+                    notificationModal.classList.add('hidden');
+                    resolve(true);
+                };
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-secondary';
+                cancelBtn.textContent = 'Annuller';
+                cancelBtn.onclick = () => {
+                    notificationModal.classList.add('hidden');
+                    resolve(false);
+                };
+                notificationActions.append(cancelBtn, confirmBtn);
+            } else {
+                const okBtn = document.createElement('button');
+                okBtn.className = 'btn btn-primary';
+                okBtn.textContent = 'OK';
+                okBtn.onclick = () => {
+                    notificationModal.classList.add('hidden');
+                    resolve(true);
+                };
+                notificationActions.append(okBtn);
+            }
+            notificationModal.classList.remove('hidden');
+        });
+    }
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
@@ -479,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inventoryItemModal.classList.add('hidden');
         } catch (error) {
             console.error("Fejl ved lagring af vare:", error);
-            alert("Der skete en fejl. Varen blev ikke gemt.");
+            await showNotification({ title: "Fejl", message: "Der skete en fejl. Varen blev ikke gemt." });
         }
     });
 
@@ -489,7 +544,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const docId = target.closest('tr').dataset.id;
         
         if (target.classList.contains('delete-item')) {
-            if (confirm('Er du sikker på, at du vil slette denne vare?')) {
+            const confirmed = await showNotification({ title: "Slet Vare", message: `Er du sikker på, at du vil slette denne vare? Handlingen kan ikke fortrydes.`, type: 'confirm' });
+            if (confirmed) {
                 try {
                     await deleteDoc(doc(db, 'inventory_items', docId));
                 } catch (error) { console.error("FEJL ved sletning af vare:", error); }
@@ -657,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recipeEditModal.classList.add('hidden');
         } catch (error) {
             console.error("Fejl ved lagring af opskrift:", error);
-            alert("Der skete en fejl. Opskriften blev ikke gemt.");
+            await showNotification({ title: "Fejl", message: "Der skete en fejl. Opskriften blev ikke gemt." });
         }
     });
 
@@ -744,10 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }, { merge: true });
             mealPlanModal.classList.add('hidden');
             recipeReadModal.classList.add('hidden');
-            alert("Opskriften er føjet til madplanen!");
+            await showNotification({ title: "Succes", message: "Opskriften er føjet til madplanen!" });
         } catch (error) {
             console.error("Fejl ved opdatering af madplan:", error);
-            alert("Der skete en fejl.");
+            await showNotification({ title: "Fejl", message: "Der skete en fejl." });
         }
     });
 
@@ -810,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         renderShoppingList();
-        alert(`Varer fra ${sourceText} er tilføjet til indkøbslisten.`);
+        showNotification({ title: "Opdateret", message: `Varer fra ${sourceText} er tilføjet til indkøbslisten.` });
         navigateTo('#shopping-list');
     }
 
@@ -822,22 +878,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (checkedItems.length === 0) {
-            alert("Vælg venligst de varer, du har købt.");
+            await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt, ved at afkrydse dem." });
             return;
         }
 
-        // Tjek om alle afkrydsede varer eksisterer i varelageret
         for (const item of checkedItems) {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (!inventoryItem) {
-                alert(`Varen "${item.name}" findes ikke i dit varelager. Opret den venligst, før du kan bekræfte indkøbet.`);
+                await showNotification({ title: "Vare mangler", message: `Varen "${item.name}" findes ikke i dit varelager. Opret den venligst, før du kan bekræfte indkøbet.` });
                 addInventoryItemBtn.click();
                 document.getElementById('item-name').value = item.name;
-                return; // Stop processen
+                return;
             }
         }
 
-        if (!confirm("Er du sikker på, at du vil tilføje de valgte varer til dit varelager?")) return;
+        const confirmed = await showNotification({ title: "Bekræft Indkøb", message: "Er du sikker på, at du vil tilføje de valgte varer til dit varelager?", type: 'confirm' });
+        if (!confirmed) return;
 
         const batch = writeBatch(db);
         
@@ -847,17 +903,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
             batch.update(itemRef, { current_stock: newStock });
             
-            // Fjern varen fra den midlertidige indkøbsliste
             delete currentShoppingList[item.name.toLowerCase()];
         });
 
         try {
             await batch.commit();
-            renderShoppingList(); // Opdater visningen med de resterende varer
-            alert("Varelager opdateret!");
+            renderShoppingList();
+            await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
         } catch (error) {
             console.error("Fejl ved bekræftelse af indkøb:", error);
-            alert("Der skete en fejl under opdatering af varelager.");
+            await showNotification({ title: "Fejl", message: "Der skete en fejl under opdatering af varelager." });
         }
     });
 
