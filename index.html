@@ -216,9 +216,36 @@
             <h3 id="recipe-modal-title">Tilføj ny opskrift</h3>
             <form id="recipe-form">
                 <input type="hidden" id="recipe-id">
+                <div class="image-upload-container">
+                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift">
+                    <button type="button" id="generate-image-btn" class="btn btn-secondary">Generer AI Billede</button>
+                </div>
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="recipe-title">Titel</label>
+                        <input type="text" id="recipe-title" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="recipe-category">Kategori</label>
+                        <select id="recipe-category">
+                            <option value="">Vælg kategori...</option>
+                            <option value="Aftensmad">Aftensmad</option>
+                            <option value="Frokost">Frokost</option>
+                            <option value="Morgenmad">Morgenmad</option>
+                            <option value="Bagværk">Bagværk</option>
+                            <option value="Dessert">Dessert</option>
+                            <option value="Salat">Salat</option>
+                            <option value="Andet">Andet</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="input-group">
-                    <label for="recipe-title">Titel</label>
-                    <input type="text" id="recipe-title" required>
+                    <label for="recipe-tags">Tags (separer med komma)</label>
+                    <input type="text" id="recipe-tags" placeholder="f.eks. nemt, hurtigt, vegetar">
+                </div>
+                <div class="input-group">
+                    <label for="recipe-notes">Noter</label>
+                    <textarea id="recipe-notes" rows="3"></textarea>
                 </div>
                 <div class="input-group">
                     <label for="recipe-instructions">Fremgangsmåde</label>
@@ -236,7 +263,7 @@
                         <label for="recipe-import-textarea">Indsæt ingrediensliste her</label>
                         <textarea id="recipe-import-textarea" rows="5" placeholder="F.eks.:&#10;2 stk løg&#10;600 gram gulerødder&#10;1 dåse hakkede tomater"></textarea>
                     </div>
-                    <button type="button" id="import-ingredients-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer og fortolk</button>
+                    <button type="button" id="import-ingredients-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importér</button>
                 </div>
                 
                 <hr>
