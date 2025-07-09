@@ -1,4 +1,3 @@
-```javascript
 // =================================================================
 // 0. FIREBASE INITIALISERING & IMPORTS
 // =================================================================
@@ -38,8 +37,6 @@ const db = getFirestore(app);
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DEBUG: DOM er fuldt indlæst. Initialiserer app...");
-
     // --- Globale Elementer ---
     const loginPage = document.getElementById('login-page');
     const appContainer = document.getElementById('app-container');
@@ -55,16 +52,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const inventoryModalTitle = document.getElementById('inventory-modal-title');
     const inventoryTableBody = document.querySelector('.inventory-table tbody');
 
+    // --- Opskrift Modal Elementer ---
+    const recipeModal = document.getElementById('recipe-modal');
+    const recipeForm = document.getElementById('recipe-form');
+    const addRecipeBtn = document.getElementById('add-recipe-btn');
+    const recipeModalTitle = document.getElementById('recipe-modal-title');
+    const recipeGrid = document.querySelector('.recipe-grid');
+    const ingredientsContainer = document.getElementById('ingredients-container');
+    const addIngredientBtn = document.getElementById('add-ingredient-btn');
+
     // --- State ---
     let currentUser = null;
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
-    let currentInventoryItems = []; // Gem en lokal kopi af varerne
+    let currentInventoryItems = [];
+    let currentRecipes = [];
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
     // =================================================================
-
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
@@ -110,14 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 2. NAVIGATION & MODAL HÅNDTERING
     // =================================================================
-
     const navigateTo = (hash) => {
         pages.forEach(page => page.classList.add('hidden'));
         const targetPage = document.querySelector(hash);
         if (targetPage) {
             targetPage.classList.remove('hidden');
         } else {
-            document.getElementById('dashboard-page').classList.remove('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
         }
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
@@ -137,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo(window.location.hash || '#dashboard');
     });
 
-    // Luk modaler
     document.querySelectorAll('.close-modal-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.currentTarget.closest('.modal-overlay').classList.add('hidden');
@@ -147,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 3. FIRESTORE REAL-TIME LISTENERS
     // =================================================================
-
     function setupRealtimeListeners() {
         if (inventoryUnsubscribe) inventoryUnsubscribe();
         if (recipesUnsubscribe) recipesUnsubscribe();
@@ -160,10 +163,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const recipesRef = collection(db, 'recipes');
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
-            const recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderRecipes(recipes);
-            document.getElementById('profile-recipe-count').textContent = recipes.length;
-            const favoriteCount = recipes.filter(r => r.is_favorite).length;
+            currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderRecipes(currentRecipes);
+            document.getElementById('profile-recipe-count').textContent = currentRecipes.length;
+            const favoriteCount = currentRecipes.filter(r => r.is_favorite).length;
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
     }
@@ -171,7 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 4. RENDER FUNKTIONER
     // =================================================================
-
     function renderInventory(items) {
         inventoryTableBody.innerHTML = '';
         if (items.length === 0) {
@@ -190,19 +192,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const recipeGrid = document.querySelector('.recipe-grid');
     function renderRecipes(recipes) {
         recipeGrid.innerHTML = '';
         if (recipes.length === 0) {
             recipeGrid.innerHTML = `<p>Du har ingen opskrifter endnu. Tilføj en for at starte.</p>`;
             return;
         }
-        recipes.forEach(recipe => {
+        recipes.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
             const card = document.createElement('div');
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            card.innerHTML = `<h4>${recipe.title}</h4><p>${recipe.description || 'Klik for at se detaljer.'}</p><div class="recipe-card-actions"><i class="${isFavoriteClass} fa-heart favorite-icon"></i></div>`;
+            card.innerHTML = `<h4>${recipe.title}</h4><p>${recipe.description || 'Klik for at se eller redigere.'}</p><div class="recipe-card-actions"><i class="${isFavoriteClass} fa-heart favorite-icon"></i></div>`;
             recipeGrid.appendChild(card);
         });
     }
@@ -210,8 +211,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 5. CRUD-HANDLINGER FOR VARELAGER
     // =================================================================
-
-    // Åbn modal for at tilføje en ny vare
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
@@ -219,11 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryItemModal.classList.remove('hidden');
     });
 
-    // Gem eller opdater en vare
     inventoryItemForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
-        
         const itemData = {
             name: document.getElementById('item-name').value,
             category: document.getElementById('item-category').value,
@@ -234,17 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
         };
-
         try {
             if (itemId) {
-                // Opdater eksisterende vare
-                const itemRef = doc(db, 'inventory_items', itemId);
-                await updateDoc(itemRef, itemData);
-                console.log("Vare opdateret:", itemId);
+                await updateDoc(doc(db, 'inventory_items', itemId), itemData);
             } else {
-                // Tilføj ny vare
                 await addDoc(collection(db, 'inventory_items'), itemData);
-                console.log("Ny vare tilføjet");
             }
             inventoryItemModal.classList.add('hidden');
         } catch (error) {
@@ -253,26 +244,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Håndter klik på rediger- og slet-knapper i varetabellen
     inventoryTableBody.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
-
-        const row = target.closest('tr');
-        const docId = row.dataset.id;
+        const docId = target.closest('tr').dataset.id;
         
-        // Slet vare
         if (target.classList.contains('delete-item')) {
             if (confirm('Er du sikker på, at du vil slette denne vare?')) {
                 try {
                     await deleteDoc(doc(db, 'inventory_items', docId));
-                } catch (error) {
-                    console.error("FEJL ved sletning af vare:", error);
-                }
+                } catch (error) { console.error("FEJL ved sletning af vare:", error); }
             }
         }
 
-        // Rediger vare
         if (target.classList.contains('edit-item')) {
             const item = currentInventoryItems.find(i => i.id === docId);
             if (item) {
@@ -292,25 +276,120 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 6. CRUD-HANDLINGER FOR OPSKRIFTER (Pladsholder)
+    // 6. CRUD-HANDLINGER FOR OPSKRIFTER
     // =================================================================
     
+    // Funktion til at tilføje et nyt ingrediens-felt til formularen
+    const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
+        const row = document.createElement('div');
+        row.className = 'ingredient-row';
+        row.innerHTML = `
+            <input type="text" class="ingredient-name" placeholder="Ingrediensnavn" value="${ingredient.name}" required>
+            <input type="number" class="ingredient-quantity" placeholder="Antal" value="${ingredient.quantity}">
+            <input type="text" class="ingredient-unit" placeholder="Enhed" value="${ingredient.unit}">
+            <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
+        `;
+        ingredientsContainer.appendChild(row);
+    };
+
+    // Åbn modal for at tilføje en ny opskrift
+    addRecipeBtn.addEventListener('click', () => {
+        recipeModalTitle.textContent = 'Tilføj ny opskrift';
+        recipeForm.reset();
+        document.getElementById('recipe-id').value = '';
+        ingredientsContainer.innerHTML = ''; // Ryd gamle ingredienser
+        addIngredientRow(); // Tilføj ét tomt felt fra start
+        recipeModal.classList.remove('hidden');
+    });
+
+    // Tilføj et nyt ingrediens-felt, når der klikkes på knappen
+    addIngredientBtn.addEventListener('click', () => addIngredientRow());
+
+    // Fjern et ingrediens-felt
+    ingredientsContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-ingredient-btn')) {
+            e.target.closest('.ingredient-row').remove();
+        }
+    });
+
+    // Gem eller opdater en opskrift
+    recipeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const recipeId = document.getElementById('recipe-id').value;
+
+        // Saml ingredienser fra formular
+        const ingredients = [];
+        document.querySelectorAll('.ingredient-row').forEach(row => {
+            const name = row.querySelector('.ingredient-name').value.trim();
+            const quantity = row.querySelector('.ingredient-quantity').value;
+            const unit = row.querySelector('.ingredient-unit').value.trim();
+            if (name) { // Gem kun hvis der er et navn
+                ingredients.push({
+                    name,
+                    quantity: Number(quantity) || null,
+                    unit
+                });
+            }
+        });
+
+        const recipeData = {
+            title: document.getElementById('recipe-title').value,
+            instructions: document.getElementById('recipe-instructions').value,
+            source_url: document.getElementById('recipe-source-url').value,
+            ingredients: ingredients,
+            is_favorite: currentRecipes.find(r => r.id === recipeId)?.is_favorite || false
+        };
+
+        try {
+            if (recipeId) {
+                // Opdater eksisterende opskrift
+                await updateDoc(doc(db, 'recipes', recipeId), recipeData);
+            } else {
+                // Tilføj ny opskrift
+                await addDoc(collection(db, 'recipes'), recipeData);
+            }
+            recipeModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Fejl ved lagring af opskrift:", error);
+            alert("Der skete en fejl. Opskriften blev ikke gemt.");
+        }
+    });
+
+    // Håndter klik på opskriftskort
     recipeGrid.addEventListener('click', async (e) => {
-        const favoriteIcon = e.target.closest('.favorite-icon');
         const card = e.target.closest('.recipe-card');
         if (!card) return;
         const docId = card.dataset.id;
         const recipeRef = doc(db, 'recipes', docId);
 
-        if (favoriteIcon) {
-            const isCurrentlyFavorite = favoriteIcon.classList.contains('is-favorite');
+        // Håndter favorit-klik
+        if (e.target.closest('.favorite-icon')) {
+            const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('is-favorite');
             try {
                 await updateDoc(recipeRef, { is_favorite: !isCurrentlyFavorite });
             } catch (error) {
                 console.error("FEJL ved opdatering af favorit:", error);
             }
-            return;
+            return; // Stop videre eksekvering
         }
-        console.log("DEBUG: Åbn detaljer for opskrift:", docId);
+
+        // Åbn redigerings-modal, når der klikkes på kortet
+        const recipe = currentRecipes.find(r => r.id === docId);
+        if (recipe) {
+            recipeModalTitle.textContent = 'Rediger opskrift';
+            document.getElementById('recipe-id').value = recipe.id;
+            document.getElementById('recipe-title').value = recipe.title || '';
+            document.getElementById('recipe-instructions').value = recipe.instructions || '';
+            document.getElementById('recipe-source-url').value = recipe.source_url || '';
+            
+            ingredientsContainer.innerHTML = ''; // Ryd gamle felter
+            if (recipe.ingredients && recipe.ingredients.length > 0) {
+                recipe.ingredients.forEach(ing => addIngredientRow(ing));
+            } else {
+                addIngredientRow(); // Tilføj et tomt felt, hvis der ingen er
+            }
+
+            recipeModal.classList.remove('hidden');
+        }
     });
 });
