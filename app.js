@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
             
             const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
                 ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
@@ -387,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderReadView(recipe) {
-        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
         document.getElementById('read-view-title').textContent = recipe.title;
         document.getElementById('read-view-category').textContent = recipe.category || '';
         document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
