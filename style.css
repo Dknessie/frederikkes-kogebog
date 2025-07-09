@@ -84,13 +84,14 @@ hr {
     font-weight: 600;
 }
 
-.input-group input, .input-group textarea {
+.input-group input, .input-group textarea, .input-group select {
     width: 100%;
     padding: 0.8rem;
     border: 1px solid #ccc;
     border-radius: var(--border-radius);
     box-sizing: border-box;
     font-family: var(--body-font);
+    background-color: white;
 }
 
 .error-message {
@@ -262,8 +263,13 @@ nav {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    cursor: pointer;
+    position: relative;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recipe-card-clickable-area {
+    cursor: pointer;
+    flex-grow: 1;
 }
 
 .recipe-card:hover {
@@ -273,6 +279,14 @@ nav {
 
 .recipe-card h4 {
     margin-top: 0;
+}
+
+.recipe-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
 .favorite-icon {
@@ -375,6 +389,22 @@ nav {
     justify-content: flex-end;
 }
 
+.conversion-fieldset {
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+}
+.conversion-fieldset legend {
+    font-weight: 600;
+    padding: 0 0.5rem;
+    color: var(--primary-color);
+}
+.fieldset-description {
+    font-size: 0.9rem;
+    color: #777;
+    margin-top: 0;
+}
+
 /* Specifik styling for opskrifts-formular */
 #import-section {
     background-color: #fafafa;
@@ -395,6 +425,51 @@ nav {
     margin-top: 1rem;
 }
 
+/* ===== Indkøbsliste ===== */
+.shopping-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.store-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.store-section h3 {
+    margin-top: 0;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+}
+
+.store-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.store-section li {
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+}
+
+.store-section input[type="checkbox"] {
+    margin-right: 1rem;
+    width: 18px;
+    height: 18px;
+}
+
+.store-section label {
+    flex-grow: 1;
+}
+
+.store-section input[type="checkbox"]:checked + label {
+    text-decoration: line-through;
+    color: #999;
+}
 
 /* ===== Responsivitet ===== */
 @media (max-width: 768px) {
