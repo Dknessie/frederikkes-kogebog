@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frederikkes Kogebog</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ===== Login Skærm ===== -->
+    <main id="login-page" class="page active">
+        <div class="login-container">
+            <h1 class="app-title">Frederikkes Kogebog</h1>
+            <p class="app-subtitle">Din digitale assistent i køkkenet</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" value="frederikke@kogebog.dk" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Adgangskode</label>
+                    <input type="password" id="password" value="password123" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Log ind</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </main>
+
+    <!-- ===== App Container (Skjult indtil login) ===== -->
+    <div id="app-container" class="hidden">
+        <header>
+            <div class="header-content">
+                <span class="header-title">Frederikkes Kogebog</span>
+                <nav>
+                    <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
+                    <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
+                    <a href="#shopping-list" class="nav-link"><i class="fas fa-cart-shopping"></i> Indkøbsliste</a>
+                    <a href="#profile" class="nav-link"><i class="fas fa-user-circle"></i> Profil</a>
+                </nav>
+                 <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
+
+        <main id="app-main-content">
+            <!-- ===== Dashboard Side ===== -->
+            <section id="dashboard-page" class="page">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Madplan for Uge 28</h3>
+                        <ul class="meal-plan-list">
+                            <li><strong>Mandag:</strong> Spaghetti Bolognese</li>
+                            <li><strong>Tirsdag:</strong> Kylling i Karry</li>
+                            <li><strong>Onsdag:</strong> Rester</li>
+                            <li><strong>Torsdag:</strong> Stegt flæsk med persillesovs</li>
+                            <li><strong>Fredag:</strong> Hjemmelavet Pizza</li>
+                            <li><strong>Lørdag:</strong> Bøf med bløde løg</li>
+                            <li><strong>Søndag:</strong> Lasagne</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Hvad kan jeg lave nu?</h3>
+                        <p>Baseret på dit varelager kan du lave følgende retter:</p>
+                        <ul class="suggestion-list">
+                            <li>Spaghetti Aglio e Olio</li>
+                            <li>Omelet med spinat</li>
+                        </ul>
+                        <button class="btn btn-secondary" id="find-recipes-btn">Find flere forslag</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Opskrifter Side ===== -->
+            <section id="recipes-page" class="page hidden">
+                <h2>Opskrifter</h2>
+                <div class="actions-bar">
+                    <button class="btn btn-primary">Tilføj ny opskrift</button>
+                </div>
+                <div class="recipe-grid">
+                    <!-- Data indsættes her fra app.js -->
+                </div>
+            </section>
+
+            <!-- ===== Varelager Side ===== -->
+            <section id="inventory-page" class="page hidden">
+                <h2>Varelager</h2>
+                 <div class="actions-bar">
+                    <button class="btn btn-primary">Tilføj ny vare</button>
+                </div>
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Vare</th>
+                            <th>Beholdning</th>
+                            <th>Kategori</th>
+                            <th>Placering</th>
+                            <th>Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data indsættes her fra app.js -->
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ===== Indkøbsliste Side ===== -->
+            <section id="shopping-list-page" class="page hidden">
+                <h2>Indkøbsliste</h2>
+                <div class="shopping-list-container">
+                    <!-- Data indsættes her fra app.js -->
+                </div>
+            </section>
+
+            <!-- ===== Profil Side ===== -->
+            <section id="profile-page" class="page hidden">
+                <h2>Profil</h2>
+                <div class="card">
+                    <h3>Statistik</h3>
+                    <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
+                    <p><strong>Antal opskrifter:</strong> <span id="profile-recipe-count">0</span></p>
+                    <p><strong>Favoritopskrifter:</strong> <span id="profile-favorite-count">0</span></p>
+                    <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Modaler (som før) -->
+    <div id="recipe-details-view" class="modal-overlay hidden">
+        <!-- ... modal content ... -->
+    </div>
+    <div id="kitchen-mode-page" class="modal-overlay hidden">
+        <!-- ... modal content ... -->
+    </div>
+
+    <!-- Indlæs app.js som et modul. Al logik er nu samlet her. -->
+    <script type="module" src="app.js"></script>
+
+</body>
+</html>
+```
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frederikkes Kogebog</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ===== Login Skærm ===== -->
+    <main id="login-page" class="page active">
+        <div class="login-container">
+            <h1 class="app-title">Frederikkes Kogebog</h1>
+            <p class="app-subtitle">Din digitale assistent i køkkenet</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" value="frederikke@kogebog.dk" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Adgangskode</label>
+                    <input type="password" id="password" value="password123" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Log ind</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </main>
+
+    <!-- ===== App Container (Skjult indtil login) ===== -->
+    <div id="app-container" class="hidden">
+        <header>
+            <div class="header-content">
+                <span class="header-title">Frederikkes Kogebog</span>
+                <nav>
+                    <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
+                    <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
+                    <a href="#shopping-list" class="nav-link"><i class="fas fa-cart-shopping"></i> Indkøbsliste</a>
+                    <a href="#profile" class="nav-link"><i class="fas fa-user-circle"></i> Profil</a>
+                </nav>
+                 <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
+
+        <main id="app-main-content">
+            <!-- ===== Dashboard Side ===== -->
+            <section id="dashboard-page" class="page">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Madplan for Uge 28</h3>
+                        <ul class="meal-plan-list">
+                            <li><strong>Mandag:</strong> Spaghetti Bolognese</li>
+                            <li><strong>Tirsdag:</strong> Kylling i Karry</li>
+                            <li><strong>Onsdag:</strong> Rester</li>
+                            <li><strong>Torsdag:</strong> Stegt flæsk med persillesovs</li>
+                            <li><strong>Fredag:</strong> Hjemmelavet Pizza</li>
+                            <li><strong>Lørdag:</strong> Bøf med bløde løg</li>
+                            <li><strong>Søndag:</strong> Lasagne</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Hvad kan jeg lave nu?</h3>
+                        <p>Baseret på dit varelager kan du lave følgende retter:</p>
+                        <ul class="suggestion-list">
+                            <li>Spaghetti Aglio e Olio</li>
+                            <li>Omelet med spinat</li>
+                        </ul>
+                        <button class="btn btn-secondary" id="find-recipes-btn">Find flere forslag</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== Opskrifter Side ===== -->
+            <section id="recipes-page" class="page hidden">
+                <h2>Opskrifter</h2>
+                <div class="actions-bar">
+                    <button class="btn btn-primary">Tilføj ny opskrift</button>
+                </div>
+                <div class="recipe-grid">
+                    <!-- Data indsættes her fra app.js -->
+                </div>
+            </section>
+
+            <!-- ===== Varelager Side ===== -->
+            <section id="inventory-page" class="page hidden">
+                <h2>Varelager</h2>
+                 <div class="actions-bar">
+                    <button class="btn btn-primary">Tilføj ny vare</button>
+                </div>
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Vare</th>
+                            <th>Beholdning</th>
+                            <th>Kategori</th>
+                            <th>Placering</th>
+                            <th>Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data indsættes her fra app.js -->
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- ===== Indkøbsliste Side ===== -->
+            <section id="shopping-list-page" class="page hidden">
+                <h2>Indkøbsliste</h2>
+                <div class="shopping-list-container">
+                    <!-- Data indsættes her fra app.js -->
+                </div>
+            </section>
+
+            <!-- ===== Profil Side ===== -->
+            <section id="profile-page" class="page hidden">
+                <h2>Profil</h2>
+                <div class="card">
+                    <h3>Statistik</h3>
+                    <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
+                    <p><strong>Antal opskrifter:</strong> <span id="profile-recipe-count">0</span></p>
+                    <p><strong>Favoritopskrifter:</strong> <span id="profile-favorite-count">0</span></p>
+                    <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Modaler (som før) -->
+    <div id="recipe-details-view" class="modal-overlay hidden">
+        <!-- ... modal content ... -->
+    </div>
+    <div id="kitchen-mode-page" class="modal-overlay hidden">
+        <!-- ... modal content ... -->
+    </div>
+
+    <!-- Indlæs app.js som et modul. Al logik er nu samlet her. -->
+    <script type="module" src="app.js"></script>
+
+</body>
+</html>
