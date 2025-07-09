@@ -1,7 +1,8 @@
 // =================================================================
-// 0. FIREBASE INITIALISERING & IMPORTS
+// START PÅ app.js - Sørg for at alt indhold er inden for denne fil.
 // =================================================================
 
+// 0. FIREBASE INITIALISERING & IMPORTS
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { 
     getAuth,
@@ -21,16 +22,14 @@ import {
     where
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-console.log("DEBUG: app.js script er startet.");
-
 // UDSKIFT DETTE MED DIN EGEN CONFIG FRA FIREBASE-KONSOLEN
 const firebaseConfig = {
-  apiKey: "DIN_API_KEY",
-  authDomain: "DIT_AUTH_DOMAIN",
-  projectId: "DIT_PROJECT_ID",
-  storageBucket: "DIN_STORAGE_BUCKET",
-  messagingSenderId: "DIN_MESSAGING_SENDER_ID",
-  appId: "DIN_APP_ID"
+  apiKey: "AIzaSyDUuGEqZ53r5PWMwg1_hj7Jpu7DubK-Lo8",
+  authDomain: "frederikkes-kogebog.firebaseapp.com",
+  projectId: "frederikkes-kogebog",
+  storageBucket: "frederikkes-kogebog.firebasestorage.app",
+  messagingSenderId: "557087234453",
+  appId: "1:557087234453:web:9abec4eb124bc08583be9c"
 };
 
 // Initialiser Firebase og services
@@ -89,9 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     loginForm.addEventListener('submit', (e) => {
-        console.log("DEBUG: Submit event fanget!");
         e.preventDefault();
-        console.log("DEBUG: e.preventDefault() er blevet kaldt. Siden skulle IKKE genindlæses nu.");
+        console.log("DEBUG: Login-formular afsendt. Forsøger at logge ind...");
         
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
@@ -103,12 +101,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         signInWithEmailAndPassword(auth, email, password)
             .then((userCredential) => {
-                console.log("DEBUG: signInWithEmailAndPassword - SUCCES. Venter på at onAuthStateChanged reagerer.");
+                console.log("DEBUG: signInWithEmailAndPassword - SUCCES.");
                 // onAuthStateChanged håndterer resten
             })
             .catch((error) => {
-                console.error("DEBUG: signInWithEmailAndPassword - FEJL:", error.code, error.message);
-                loginError.textContent = 'Login fejlede. Tjek konsollen for detaljer.';
+                console.error("DEBUG: signInWithEmailAndPassword - FEJL:", error.code);
+                loginError.textContent = 'Login fejlede. Tjek at email og adgangskode er korrekte.';
             })
             .finally(() => {
                 loginButton.disabled = false;
