@@ -251,7 +251,7 @@ nav {
 
 .recipe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1.5rem;
 }
 
@@ -259,17 +259,11 @@ nav {
     background: white;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    position: relative;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.recipe-card-clickable-area {
+    overflow: hidden;
     cursor: pointer;
-    flex-grow: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .recipe-card:hover {
@@ -277,8 +271,47 @@ nav {
     box-shadow: 0 8px 16px rgba(0,0,0,0.1);
 }
 
+.recipe-card-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.recipe-card-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.recipe-card-category {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
 .recipe-card h4 {
     margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.recipe-card-tags {
+    margin-top: auto; /* Pushes tags to the bottom */
+    padding-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.recipe-card-tag {
+    background-color: #eee;
+    color: #555;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
 }
 
 .recipe-card-actions {
@@ -286,7 +319,8 @@ nav {
     justify-content: flex-end;
     align-items: center;
     gap: 1rem;
-    margin-top: 1rem;
+    padding: 0.5rem 1.5rem 1rem;
+    border-top: 1px solid #eee;
 }
 
 .favorite-icon {
@@ -393,6 +427,7 @@ nav {
     border: 1px solid #ddd;
     border-radius: var(--border-radius);
     padding: 1rem;
+    margin-top: 1rem;
 }
 .conversion-fieldset legend {
     font-weight: 600;
@@ -406,6 +441,18 @@ nav {
 }
 
 /* Specifik styling for opskrifts-formular */
+.image-upload-container {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+#recipe-image-preview {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    border: 2px dashed #ddd;
+    margin-bottom: 1rem;
+}
 #import-section {
     background-color: #fafafa;
     padding: 1rem;
@@ -414,11 +461,20 @@ nav {
 }
 
 .ingredient-row {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: var(--border-radius);
+    padding: 1rem;
     display: grid;
     grid-template-columns: 1fr 100px 100px 40px;
-    gap: 0.5rem;
+    gap: 1rem;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.ingredient-row input {
+    padding: 0.6rem;
 }
 
 #add-ingredient-btn {
@@ -494,6 +550,6 @@ nav {
         grid-template-columns: 1fr;
     }
     .ingredient-row {
-        grid-template-columns: 1fr 80px 80px 40px;
+        grid-template-columns: 1fr;
     }
 }
