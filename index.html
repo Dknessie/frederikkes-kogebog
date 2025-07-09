@@ -58,7 +58,7 @@
                         <div id="meal-plan-container">
                             <!-- Madplan genereres her af JS -->
                         </div>
-                        <button id="generate-weekly-shopping-list-btn" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-tasks"></i> Generer Ugens Indkøbsliste</button>
+                        <button id="generate-weekly-shopping-list-btn" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-tasks"></i> Tilføj Uge til Indkøbsliste</button>
                     </div>
                     <div class="card">
                         <h3>Hvad kan jeg lave nu?</h3>
@@ -107,6 +107,9 @@
             <!-- ===== Indkøbsliste Side ===== -->
             <section id="shopping-list" class="page hidden">
                 <h2>Indkøbsliste</h2>
+                <div class="actions-bar">
+                    <button id="confirm-purchase-btn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Bekræft Indkøb</button>
+                </div>
                 <div id="shopping-list-container" class="shopping-list-container">
                     <p>Din indkøbsliste er tom. Tilføj varer fra en opskrift for at starte.</p>
                     <!-- Data indsættes her fra app.js -->
