@@ -1,10 +1,16 @@
-// Importer nødvendige funktioner fra Firebase SDK'et
+// =================================================================
+// 0. FIREBASE INITIALISERING & IMPORTS
+// =================================================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { 
+    getAuth,
     onAuthStateChanged, 
     signInWithEmailAndPassword, 
     signOut 
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 import { 
+    getFirestore,
     collection, 
     onSnapshot,
     addDoc,
@@ -17,12 +23,24 @@ import {
 
 console.log("DEBUG: app.js script er startet.");
 
+// UDSKIFT DETTE MED DIN EGEN CONFIG FRA FIREBASE-KONSOLEN
+const firebaseConfig = {
+  apiKey: "DIN_API_KEY",
+  authDomain: "DIT_AUTH_DOMAIN",
+  projectId: "DIT_PROJECT_ID",
+  storageBucket: "DIN_STORAGE_BUCKET",
+  messagingSenderId: "DIN_MESSAGING_SENDER_ID",
+  appId: "DIN_APP_ID"
+};
+
+// Initialiser Firebase og services
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOM er fuldt indlæst. Initialiserer app...");
-
-    // Firebase services (initialiseret i index.html)
-    const auth = window.auth;
-    const db = window.db;
 
     // --- Elementer ---
     const loginPage = document.getElementById('login-page');
@@ -40,9 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
 
-    // Kritisk tjek: Findes login-formularen?
     if (!loginForm) {
-        console.error("KRITISK FEJL: Kunne ikke finde login-formularen (#login-form). Scriptet kan ikke fortsætte.");
+        console.error("KRITISK FEJL: Kunne ikke finde login-formularen (#login-form).");
         return;
     }
 
@@ -53,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            console.log("DEBUG: Bruger er logget ind:", user.uid);
+            console.log("DEBUG: onAuthStateChanged - BRUGER FUNDET. Viser app-container.");
+            document.getElementById('profile-email').textContent = user.email;
             loginPage.classList.remove('active');
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
@@ -61,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             navigateTo(window.location.hash || '#dashboard');
         } else {
             currentUser = null;
-            console.log("DEBUG: Bruger er logget ud eller ikke logget ind.");
+            console.log("DEBUG: onAuthStateChanged - INGEN BRUGER. Viser login-side.");
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
             loginPage.classList.add('active');
@@ -71,14 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     loginForm.addEventListener('submit', (e) => {
+        console.log("DEBUG: Submit event fanget!");
         e.preventDefault();
-        console.log("DEBUG: Login-knap klikket! Forsøger at logge ind...");
+        console.log("DEBUG: e.preventDefault() er blevet kaldt. Siden skulle IKKE genindlæses nu.");
         
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const originalButtonHTML = loginButton.innerHTML;
-
-        console.log(`DEBUG: Forsøger login med Email: ${email}`);
 
         loginButton.disabled = true;
         loginButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Logger ind...`;
@@ -86,12 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         signInWithEmailAndPassword(auth, email, password)
             .then((userCredential) => {
-                console.log("DEBUG: Firebase login succesfuldt.");
+                console.log("DEBUG: signInWithEmailAndPassword - SUCCES. Venter på at onAuthStateChanged reagerer.");
                 // onAuthStateChanged håndterer resten
             })
             .catch((error) => {
-                console.error("DEBUG: Firebase login FEJLEDE:", error.code, error.message);
-                loginError.textContent = 'Forkert email eller adgangskode. Prøv igen.';
+                console.error("DEBUG: signInWithEmailAndPassword - FEJL:", error.code, error.message);
+                loginError.textContent = 'Login fejlede. Tjek konsollen for detaljer.';
             })
             .finally(() => {
                 loginButton.disabled = false;
@@ -101,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     logoutButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            console.log("DEBUG: Logout-knap klikket.");
             signOut(auth).catch(error => console.error("Logout Fejl:", error));
         });
     });
@@ -154,6 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
             const recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderRecipes(recipes);
+            document.getElementById('profile-recipe-count').textContent = recipes.length;
+            const favoriteCount = recipes.filter(r => r.is_favorite).length;
+            document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
     }
 
@@ -171,11 +190,11 @@ document.addEventListener('DOMContentLoaded', () => {
         items.forEach(item => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
-            const stockPercentage = item.max_stock ? (item.current_stock / item.max_stock) * 100 : 100;
+            const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
             let stockColor = '#4CAF50';
             if (stockPercentage < 50) stockColor = '#FFC107';
             if (stockPercentage < 20) stockColor = '#F44336';
-            tr.innerHTML = `<td>${item.name}</td><td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock} ${item.unit}</span></td><td>${item.category}</td><td>${item.home_location}</td><td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
+            tr.innerHTML = `<td>${item.name || ''}</td><td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock || 0} ${item.unit || ''}</span></td><td>${item.category || ''}</td><td>${item.home_location || ''}</td><td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
             inventoryTableBody.appendChild(tr);
         });
     }
@@ -209,23 +228,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemRef = doc(db, 'inventory_items', docId);
 
         if (target.classList.contains('delete-item')) {
-            console.log(`DEBUG: Forsøger at slette vare ${docId}. Afventer bekræftelse...`);
-            // Erstatter confirm() med en log-besked. Handlingen udføres direkte.
             try {
                 await deleteDoc(itemRef);
-                console.log("SUCCESS: Vare slettet:", docId);
             } catch (error) {
                 console.error("FEJL ved sletning af vare:", error);
             }
         }
 
         if (target.classList.contains('edit-item')) {
-            const currentStock = row.querySelector('span').textContent.split(' ')[0];
-            const newStock = prompt("Indtast ny beholdning:", currentStock);
-            if (newStock !== null && !isNaN(newStock)) {
+            const currentStock = prompt("Indtast ny beholdning:");
+            if (currentStock !== null && !isNaN(currentStock)) {
                 try {
-                    await updateDoc(itemRef, { current_stock: Number(newStock) });
-                    console.log("SUCCESS: Vare opdateret:", docId);
+                    await updateDoc(itemRef, { current_stock: Number(currentStock) });
                 } catch (error) {
                     console.error("FEJL ved opdatering af vare:", error);
                 }
@@ -252,30 +266,3 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("DEBUG: Åbn detaljer for opskrift:", docId);
     });
 });
-```
-
-### Sådan Fejlsøger Vi Sammen
-
-Nu skal vi bruge browserens "Udviklerværktøjer" til at se, hvad der sker.
-
-1.  **Åbn Udviklerværktøjer:**
-    * Højreklik et sted på login-siden og vælg **"Undersøg"** (eller "Inspect").
-    * Find og klik på fanen, der hedder **"Konsol"** (eller "Console").
-
-2.  **Genindlæs Siden:**
-    * Tryk `Ctrl + R` (eller `Cmd + R` på Mac) for at genindlæse siden. Hold gerne `Shift`-tasten nede, mens du gør det, for at sikre at du får den nyeste version af filerne (`Shift + Ctrl + R`).
-
-3.  **Analyser Konsollen:**
-    * Du burde nu se de første par "DEBUG"-beskeder i konsollen, f.eks. `app.js script er startet.` og `DOM er fuldt indlæst.`. Hvis du ikke ser dem, bliver `app.js` slet ikke kørt.
-
-4.  **Test Login-knappen:**
-    * Klik på "Log ind"-knappen.
-    * Kig nu i konsollen. Du **skal** se beskeden: `DEBUG: Login-knap klikket! Forsøger at logge ind...`.
-
-**Fortæl mig, hvad du ser i konsollen:**
-
-* **Scenarie A:** Du ser `Login-knap klikket!` efterfulgt af en fejlmeddelelse (en rød linje). Kopier og indsæt gerne fejlen her. Det er sandsynligvis et problem med din `firebaseConfig`.
-* **Scenarie B:** Du ser `Login-knap klikket!`, men der sker ikke mere. Det kan tyde på et netværksproblem eller en fejl i Firebase-reglerne.
-* **Scenarie C:** Du ser **slet ikke** `Login-knap klikket!`. Det betyder, at scriptet af en eller anden grund ikke har registreret klikket. Det er det mest kritiske problem, som vi så skal dykke ned i.
-
-Med denne information kan vi helt sikkert finde og løse problem
