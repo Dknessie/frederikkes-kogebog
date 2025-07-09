@@ -195,6 +195,18 @@
                     <input type="url" id="recipe-source-url" placeholder="https://...">
                 </div>
                 <hr>
+                
+                <!-- NYT: Import sektion -->
+                <div id="import-section">
+                    <h4>Importer ingredienser</h4>
+                    <div class="input-group">
+                        <label for="recipe-import-textarea">Indsæt ingrediensliste her</label>
+                        <textarea id="recipe-import-textarea" rows="5" placeholder="F.eks.:&#10;2 stk løg&#10;600 gram gulerødder&#10;1 fed hvidløg"></textarea>
+                    </div>
+                    <button type="button" id="import-ingredients-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer og fortolk</button>
+                </div>
+                
+                <hr>
                 <h4>Ingredienser</h4>
                 <div id="ingredients-container">
                     <!-- Ingrediens-felter indsættes her af JS -->
