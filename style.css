@@ -261,7 +261,7 @@ nav {
 
 .recipe-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.5rem;
 }
 
@@ -283,45 +283,46 @@ nav {
 
 .recipe-card-image {
     width: 100%;
-    height: 180px;
+    height: 150px; /* Reduceret højde for kompakthed */
     object-fit: cover;
 }
 
 .recipe-card-content {
-    padding: 1.5rem;
+    padding: 1rem; /* Reduceret padding */
     display: flex;
     flex-direction: column;
     flex-grow: 1;
 }
 
 .recipe-card-category {
-    font-size: 0.8rem;
+    font-size: 0.75rem; /* Mindre skrift */
     font-weight: 600;
     color: var(--primary-color);
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
 }
 
 .recipe-card h4 {
     margin-top: 0;
     margin-bottom: 0.5rem;
     color: var(--text-color);
+    font-size: 1.1rem; /* Mindre overskrift */
 }
 
 .recipe-card-tags {
-    margin-top: auto; /* Pushes tags to the bottom */
-    padding-top: 1rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
 }
 
 .recipe-card-tag {
     background-color: #eee;
     color: #555;
-    padding: 0.2rem 0.6rem;
+    padding: 0.15rem 0.5rem;
     border-radius: 12px;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
 }
 
 .recipe-card-actions {
@@ -329,19 +330,19 @@ nav {
     justify-content: flex-end;
     align-items: center;
     gap: 1rem;
-    padding: 0.5rem 1.5rem 1rem;
+    padding: 0.5rem 1rem 0.75rem;
     border-top: 1px solid #eee;
 }
 
 .favorite-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     color: #ddd;
     cursor: pointer;
     transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .favorite-icon.is-favorite {
-    color: #E91E63; /* Pink/rød for favoritter */
+    color: #E91E63;
 }
 .favorite-icon:hover {
     transform: scale(1.2);
@@ -579,25 +580,35 @@ nav {
     padding: 0;
 }
 
-.store-section li {
+.shopping-list-item {
     padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.shopping-list-item .item-info {
     display: flex;
     align-items: center;
 }
 
-.store-section input[type="checkbox"] {
+.shopping-list-item input[type="checkbox"] {
     margin-right: 1rem;
     width: 18px;
     height: 18px;
 }
 
-.store-section label {
+.shopping-list-item label {
     flex-grow: 1;
 }
 
-.store-section input[type="checkbox"]:checked + label {
+.shopping-list-item input[type="checkbox"]:checked + label {
     text-decoration: line-through;
     color: #999;
+}
+
+.new-item-indicator {
+    color: var(--accent-color);
+    margin-left: 1rem;
 }
 
 /* ===== Responsivitet ===== */
