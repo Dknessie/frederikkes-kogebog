@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 listItemsHTML += `
                     <li class="shopping-list-item" data-item-name="${item.name}">
                         <div class="item-info">
-                            <input type="checkbox" id="shop-${item.name}">
+                            <input type="checkbox" id="shop-${item.name}" class="shopping-list-checkbox">
                             <label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
                         </div>
                         <div>
@@ -815,24 +815,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     confirmPurchaseBtn.addEventListener('click', async () => {
-        if (Object.keys(currentShoppingList).length === 0) return;
-        if (!confirm("Er du sikker på, at du vil tilføje alle varer på listen til dit varelager?")) return;
+        const checkedItems = [];
+        document.querySelectorAll('.shopping-list-checkbox:checked').forEach(checkbox => {
+            const itemName = checkbox.closest('.shopping-list-item').dataset.itemName;
+            checkedItems.push(currentShoppingList[itemName.toLowerCase()]);
+        });
+
+        if (checkedItems.length === 0) {
+            alert("Vælg venligst de varer, du har købt.");
+            return;
+        }
+
+        // Tjek om alle afkrydsede varer eksisterer i varelageret
+        for (const item of checkedItems) {
+            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            if (!inventoryItem) {
+                alert(`Varen "${item.name}" findes ikke i dit varelager. Opret den venligst, før du kan bekræfte indkøbet.`);
+                addInventoryItemBtn.click();
+                document.getElementById('item-name').value = item.name;
+                return; // Stop processen
+            }
+        }
+
+        if (!confirm("Er du sikker på, at du vil tilføje de valgte varer til dit varelager?")) return;
 
         const batch = writeBatch(db);
         
-        Object.values(currentShoppingList).forEach(item => {
+        checkedItems.forEach(item => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
-            if (inventoryItem) {
-                const itemRef = doc(db, "inventory_items", inventoryItem.id);
-                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
-                batch.update(itemRef, { current_stock: newStock });
-            }
+            const itemRef = doc(db, "inventory_items", inventoryItem.id);
+            const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
+            batch.update(itemRef, { current_stock: newStock });
+            
+            // Fjern varen fra den midlertidige indkøbsliste
+            delete currentShoppingList[item.name.toLowerCase()];
         });
 
         try {
             await batch.commit();
-            currentShoppingList = {};
-            renderShoppingList();
+            renderShoppingList(); // Opdater visningen med de resterende varer
             alert("Varelager opdateret!");
         } catch (error) {
             console.error("Fejl ved bekræftelse af indkøb:", error);
