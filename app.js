@@ -22,12 +22,12 @@ import {
     where
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
-// UDSKIFT DETTE MED DIN EGEN CONFIG FRA FIREBASE-KONSOLEN
+// Firebase-konfiguration til applikationen
 const firebaseConfig = {
   apiKey: "AIzaSyDUuGEqZ53r5PWMwg1_hj7Jpu7DubK-Lo8",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
-  storageBucket: "frederikkes-kogebog.firebasestorage.app",
+  storageBucket: "frederikkes-kogebog.appspot.com",
   messagingSenderId: "557087234453",
   appId: "1:557087234453:web:9abec4eb124bc08583be9c"
 };
