@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addIngredientBtn = document.getElementById('add-ingredient-btn');
     const importIngredientsBtn = document.getElementById('import-ingredients-btn');
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
+    const recipeImagePreview = document.getElementById('recipe-image-preview');
+    const generateImageBtn = document.getElementById('generate-image-btn');
 
     // --- Indkøbsliste Elementer ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
@@ -75,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let recipesUnsubscribe = null;
     let currentInventoryItems = [];
     let currentRecipes = [];
+    let currentImageUrl = '';
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
@@ -211,10 +214,18 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
+            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+            
+            const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
+                ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
+                : '';
+
             card.innerHTML = `
-                <div class="recipe-card-clickable-area">
+                <img src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <div class="recipe-card-content">
+                    <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
                     <h4>${recipe.title}</h4>
-                    <p>${recipe.description || 'Klik for at se eller redigere.'}</p>
+                    <div class="recipe-card-tags">${tagsHTML}</div>
                 </div>
                 <div class="recipe-card-actions">
                     <button class="btn-icon generate-shopping-list-btn" title="Generer indkøbsliste"><i class="fas fa-cart-plus"></i></button>
@@ -289,7 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
             price: Number(document.getElementById('item-price').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
-            // Gem konverteringsdata
             conversion_from_unit: document.getElementById('item-conversion-from').value.toLowerCase() || null,
             conversion_to_quantity: Number(document.getElementById('item-conversion-to-quantity').value) || null,
             conversion_to_unit: document.getElementById('item-conversion-to-unit').value.toLowerCase() || null,
@@ -333,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-price').value = item.price || '';
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
-                // Udfyld konverteringsdata
                 document.getElementById('item-conversion-from').value = item.conversion_from_unit || '';
                 document.getElementById('item-conversion-to-quantity').value = item.conversion_to_quantity || '';
                 document.getElementById('item-conversion-to-unit').value = item.conversion_to_unit || '';
@@ -363,6 +372,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeForm.reset();
         document.getElementById('recipe-id').value = '';
         ingredientsContainer.innerHTML = '';
+        currentImageUrl = '';
+        recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
         addIngredientRow();
         recipeModal.classList.remove('hidden');
     });
@@ -396,14 +407,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const lineParts = line.split(' ');
         let potentialUnit = lineParts[0].replace(/[^a-zæøå]/gi, '');
         let potentialName = lineParts.slice(1).join(' ').trim();
+        if (!potentialName) potentialName = potentialUnit; // If only one word, it's the name
         
-        // Find den potentielle vare i varelageret for at tjekke for specifik konvertering
         const inventoryItem = currentInventoryItems.find(item => potentialName.includes(item.name.toLowerCase()));
 
         if (inventoryItem && inventoryItem.conversion_from_unit === potentialUnit) {
             unit = inventoryItem.conversion_to_unit;
             quantity = (quantity || 1) * inventoryItem.conversion_to_quantity;
-            name = potentialName;
+            name = inventoryItem.name; // Use the official name from inventory
         } else if (knownUnits[potentialUnit]) {
             unit = knownUnits[potentialUnit];
             name = potentialName;
@@ -439,6 +450,16 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImportTextarea.value = '';
     });
 
+    generateImageBtn.addEventListener('click', () => {
+        const title = document.getElementById('recipe-title').value;
+        if (!title) {
+            alert("Indtast venligst en titel for at generere et billede.");
+            return;
+        }
+        currentImageUrl = `https://placehold.co/600x400/d1603d/FFFFFF?text=AI+Billede+af%0A${encodeURIComponent(title)}`;
+        recipeImagePreview.src = currentImageUrl;
+    });
+
     recipeForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const recipeId = document.getElementById('recipe-id').value;
@@ -452,11 +473,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        const tags = document.getElementById('recipe-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
+
         const recipeData = {
             title: document.getElementById('recipe-title').value,
+            category: document.getElementById('recipe-category').value,
+            tags: tags,
+            notes: document.getElementById('recipe-notes').value,
             instructions: document.getElementById('recipe-instructions').value,
             source_url: document.getElementById('recipe-source-url').value,
             ingredients: ingredients,
+            imageUrl: currentImageUrl,
             is_favorite: currentRecipes.find(r => r.id === recipeId)?.is_favorite || false
         };
 
@@ -491,15 +518,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Hvis der klikkes andre steder på kortet, åbn redigering
         const recipe = currentRecipes.find(r => r.id === docId);
         if (recipe) {
             recipeModalTitle.textContent = 'Rediger opskrift';
             document.getElementById('recipe-id').value = recipe.id;
             document.getElementById('recipe-title').value = recipe.title || '';
+            document.getElementById('recipe-category').value = recipe.category || '';
+            document.getElementById('recipe-tags').value = (recipe.tags && recipe.tags.join(', ')) || '';
+            document.getElementById('recipe-notes').value = recipe.notes || '';
             document.getElementById('recipe-instructions').value = recipe.instructions || '';
             document.getElementById('recipe-source-url').value = recipe.source_url || '';
             
+            currentImageUrl = recipe.imageUrl || '';
+            recipeImagePreview.src = recipe.imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+
             ingredientsContainer.innerHTML = '';
             recipeImportTextarea.value = '';
             if (recipe.ingredients && recipe.ingredients.length > 0) {
