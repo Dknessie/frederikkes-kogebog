@@ -376,6 +376,13 @@ nav {
 }
 
 /* Specifik styling for opskrifts-formular */
+#import-section {
+    background-color: #fafafa;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid #eee;
+}
+
 .ingredient-row {
     display: grid;
     grid-template-columns: 1fr 100px 100px 40px;
