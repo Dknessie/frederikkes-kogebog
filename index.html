@@ -36,7 +36,7 @@
     <div id="app-container" class="hidden">
         <header>
             <div class="header-content">
-                <span class="header-title">Frederikkes Kogebog</span>
+                <a href="#dashboard" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
                 <nav>
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
@@ -54,10 +54,11 @@
                 <h2>Dashboard</h2>
                 <div class="dashboard-grid">
                     <div class="card">
-                        <h3>Madplan for Uge 28</h3>
-                        <ul class="meal-plan-list">
-                            <!-- Indhold genereres af JS -->
-                        </ul>
+                        <h3>Denne Uges Madplan</h3>
+                        <div id="meal-plan-container">
+                            <!-- Madplan genereres her af JS -->
+                        </div>
+                        <button id="generate-weekly-shopping-list-btn" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-tasks"></i> Generer Ugens Indkøbsliste</button>
                     </div>
                     <div class="card">
                         <h3>Hvad kan jeg lave nu?</h3>
@@ -238,6 +239,14 @@
                             <option value="Andet">Andet</option>
                         </select>
                     </div>
+                     <div class="input-group">
+                        <label for="recipe-portions">Antal portioner</label>
+                        <input type="number" id="recipe-portions" placeholder="f.eks. 4">
+                    </div>
+                    <div class="input-group">
+                        <label for="recipe-time">Tid (minutter)</label>
+                        <input type="number" id="recipe-time" placeholder="f.eks. 30">
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="recipe-tags">Tags (separer med komma)</label>
@@ -273,7 +282,40 @@
                 </div>
                 <button type="button" id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
                 <div class="form-actions">
+                    <button type="button" id="add-to-meal-plan-btn" class="btn btn-secondary">Føj til Madplan</button>
                     <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Madplan Modal -->
+    <div id="meal-plan-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Føj til Madplan</h3>
+            <form id="meal-plan-form">
+                <input type="hidden" id="meal-plan-recipe-id">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="meal-plan-day">Vælg dag</label>
+                        <select id="meal-plan-day" required>
+                            <option value="monday">Mandag</option>
+                            <option value="tuesday">Tirsdag</option>
+                            <option value="wednesday">Onsdag</option>
+                            <option value="thursday">Torsdag</option>
+                            <option value="friday">Fredag</option>
+                            <option value="saturday">Lørdag</option>
+                            <option value="sunday">Søndag</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="meal-plan-portions">Antal portioner</label>
+                        <input type="number" id="meal-plan-portions" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem i Madplan</button>
                 </div>
             </form>
         </div>
