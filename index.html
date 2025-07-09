@@ -175,6 +175,38 @@
         </div>
     </div>
 
+    <!-- Opskrift Modal (Tilføj/Rediger) -->
+    <div id="recipe-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="recipe-modal-title">Tilføj ny opskrift</h3>
+            <form id="recipe-form">
+                <input type="hidden" id="recipe-id">
+                <div class="input-group">
+                    <label for="recipe-title">Titel</label>
+                    <input type="text" id="recipe-title" required>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-instructions">Fremgangsmåde</label>
+                    <textarea id="recipe-instructions" rows="8"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-source-url">Kilde URL (valgfri)</label>
+                    <input type="url" id="recipe-source-url" placeholder="https://...">
+                </div>
+                <hr>
+                <h4>Ingredienser</h4>
+                <div id="ingredients-container">
+                    <!-- Ingrediens-felter indsættes her af JS -->
+                </div>
+                <button type="button" id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Indlæs app.js som et modul. Al logik er nu samlet her. -->
     <script type="module" src="app.js"></script>
