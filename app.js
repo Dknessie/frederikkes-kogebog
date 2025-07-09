@@ -1,4 +1,8 @@
+```javascript
+// =================================================================
 // 0. FIREBASE INITIALISERING & IMPORTS
+// =================================================================
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
 import { 
     getAuth,
@@ -14,8 +18,7 @@ import {
     doc,
     updateDoc,
     deleteDoc,
-    query,
-    where
+    getDoc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 // Korrekt Firebase-konfiguration til applikationen
@@ -37,26 +40,26 @@ const db = getFirestore(app);
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DEBUG: DOM er fuldt indlæst. Initialiserer app...");
 
-    // --- Elementer ---
+    // --- Globale Elementer ---
     const loginPage = document.getElementById('login-page');
     const appContainer = document.getElementById('app-container');
     const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
-    const loginButton = loginForm.querySelector('button[type="submit"]');
     const logoutButtons = [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')];
-    
     const navLinks = document.querySelectorAll('.nav-link');
     const pages = document.querySelectorAll('#app-main-content .page');
+
+    // --- Vare Modal Elementer ---
+    const inventoryItemModal = document.getElementById('inventory-item-modal');
+    const inventoryItemForm = document.getElementById('inventory-item-form');
+    const addInventoryItemBtn = document.getElementById('add-inventory-item-btn');
+    const inventoryModalTitle = document.getElementById('inventory-modal-title');
+    const inventoryTableBody = document.querySelector('.inventory-table tbody');
 
     // --- State ---
     let currentUser = null;
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
-
-    if (!loginForm) {
-        console.error("KRITISK FEJL: Kunne ikke finde login-formularen (#login-form).");
-        return;
-    }
+    let currentInventoryItems = []; // Gem en lokal kopi af varerne
 
     // =================================================================
     // 1. AUTHENTICATION LOGIK
@@ -65,19 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             currentUser = user;
-            console.log("DEBUG: onAuthStateChanged - BRUGER FUNDET. Viser app-container.");
             document.getElementById('profile-email').textContent = user.email;
-            loginPage.classList.remove('active');
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
             setupRealtimeListeners();
             navigateTo(window.location.hash || '#dashboard');
         } else {
             currentUser = null;
-            console.log("DEBUG: onAuthStateChanged - INGEN BRUGER. Viser login-side.");
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
-            loginPage.classList.add('active');
             if (inventoryUnsubscribe) inventoryUnsubscribe();
             if (recipesUnsubscribe) recipesUnsubscribe();
         }
@@ -85,24 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        console.log("DEBUG: Login-formular afsendt. Forsøger at logge ind...");
-        
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
+        const loginButton = loginForm.querySelector('button[type="submit"]');
         const originalButtonHTML = loginButton.innerHTML;
-
         loginButton.disabled = true;
         loginButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Logger ind...`;
-        loginError.textContent = '';
-
         signInWithEmailAndPassword(auth, email, password)
-            .then((userCredential) => {
-                console.log("DEBUG: signInWithEmailAndPassword - SUCCES.");
-                // onAuthStateChanged håndterer resten
-            })
             .catch((error) => {
-                console.error("DEBUG: signInWithEmailAndPassword - FEJL:", error.code);
-                loginError.textContent = 'Login fejlede. Tjek at email og adgangskode er korrekte.';
+                console.error("Login Fejl:", error.code);
+                loginForm.querySelector('#login-error').textContent = 'Login fejlede. Tjek email og adgangskode.';
             })
             .finally(() => {
                 loginButton.disabled = false;
@@ -117,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 2. NAVIGATION
+    // 2. NAVIGATION & MODAL HÅNDTERING
     // =================================================================
 
     const navigateTo = (hash) => {
@@ -146,6 +137,13 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo(window.location.hash || '#dashboard');
     });
 
+    // Luk modaler
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.currentTarget.closest('.modal-overlay').classList.add('hidden');
+        });
+    });
+
     // =================================================================
     // 3. FIRESTORE REAL-TIME LISTENERS
     // =================================================================
@@ -156,8 +154,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const inventoryRef = collection(db, 'inventory_items');
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
-            const inventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderInventory(inventoryItems);
+            currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderInventory(currentInventoryItems);
         }, error => console.error("Fejl i varelager-listener:", error));
 
         const recipesRef = collection(db, 'recipes');
@@ -174,14 +172,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. RENDER FUNKTIONER
     // =================================================================
 
-    const inventoryTableBody = document.querySelector('.inventory-table tbody');
     function renderInventory(items) {
         inventoryTableBody.innerHTML = '';
         if (items.length === 0) {
              inventoryTableBody.innerHTML = `<tr><td colspan="5">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
              return;
         }
-        items.forEach(item => {
+        items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
             const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
@@ -211,36 +208,93 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 5. CRUD-HANDLINGER
+    // 5. CRUD-HANDLINGER FOR VARELAGER
     // =================================================================
 
+    // Åbn modal for at tilføje en ny vare
+    addInventoryItemBtn.addEventListener('click', () => {
+        inventoryModalTitle.textContent = 'Tilføj ny vare';
+        inventoryItemForm.reset();
+        document.getElementById('inventory-item-id').value = '';
+        inventoryItemModal.classList.remove('hidden');
+    });
+
+    // Gem eller opdater en vare
+    inventoryItemForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const itemId = document.getElementById('inventory-item-id').value;
+        
+        const itemData = {
+            name: document.getElementById('item-name').value,
+            category: document.getElementById('item-category').value,
+            current_stock: Number(document.getElementById('item-current-stock').value),
+            max_stock: Number(document.getElementById('item-max-stock').value) || null,
+            unit: document.getElementById('item-unit').value,
+            price: Number(document.getElementById('item-price').value) || null,
+            store_section: document.getElementById('item-store-section').value,
+            home_location: document.getElementById('item-home-location').value,
+        };
+
+        try {
+            if (itemId) {
+                // Opdater eksisterende vare
+                const itemRef = doc(db, 'inventory_items', itemId);
+                await updateDoc(itemRef, itemData);
+                console.log("Vare opdateret:", itemId);
+            } else {
+                // Tilføj ny vare
+                await addDoc(collection(db, 'inventory_items'), itemData);
+                console.log("Ny vare tilføjet");
+            }
+            inventoryItemModal.classList.add('hidden');
+        } catch (error) {
+            console.error("Fejl ved lagring af vare:", error);
+            alert("Der skete en fejl. Varen blev ikke gemt.");
+        }
+    });
+
+    // Håndter klik på rediger- og slet-knapper i varetabellen
     inventoryTableBody.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target) return;
+
         const row = target.closest('tr');
         const docId = row.dataset.id;
-        const itemRef = doc(db, 'inventory_items', docId);
-
+        
+        // Slet vare
         if (target.classList.contains('delete-item')) {
-            try {
-                await deleteDoc(itemRef);
-            } catch (error) {
-                console.error("FEJL ved sletning af vare:", error);
+            if (confirm('Er du sikker på, at du vil slette denne vare?')) {
+                try {
+                    await deleteDoc(doc(db, 'inventory_items', docId));
+                } catch (error) {
+                    console.error("FEJL ved sletning af vare:", error);
+                }
             }
         }
 
+        // Rediger vare
         if (target.classList.contains('edit-item')) {
-            const currentStock = prompt("Indtast ny beholdning:");
-            if (currentStock !== null && !isNaN(currentStock)) {
-                try {
-                    await updateDoc(itemRef, { current_stock: Number(currentStock) });
-                } catch (error) {
-                    console.error("FEJL ved opdatering af vare:", error);
-                }
+            const item = currentInventoryItems.find(i => i.id === docId);
+            if (item) {
+                inventoryModalTitle.textContent = 'Rediger vare';
+                document.getElementById('inventory-item-id').value = item.id;
+                document.getElementById('item-name').value = item.name || '';
+                document.getElementById('item-category').value = item.category || '';
+                document.getElementById('item-current-stock').value = item.current_stock || 0;
+                document.getElementById('item-max-stock').value = item.max_stock || '';
+                document.getElementById('item-unit').value = item.unit || '';
+                document.getElementById('item-price').value = item.price || '';
+                document.getElementById('item-store-section').value = item.store_section || '';
+                document.getElementById('item-home-location').value = item.home_location || '';
+                inventoryItemModal.classList.remove('hidden');
             }
         }
     });
 
+    // =================================================================
+    // 6. CRUD-HANDLINGER FOR OPSKRIFTER (Pladsholder)
+    // =================================================================
+    
     recipeGrid.addEventListener('click', async (e) => {
         const favoriteIcon = e.target.closest('.favorite-icon');
         const card = e.target.closest('.recipe-card');
