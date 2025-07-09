@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const importIngredientsBtn = document.getElementById('import-ingredients-btn');
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
     const recipeImagePreview = document.getElementById('recipe-image-preview');
-    const imageUploadInput = document.getElementById('image-upload-input');
+    const recipeImageUrlInput = document.getElementById('recipe-imageUrl');
     const recipeFilterContainer = document.getElementById('recipe-filter-container');
     
     // --- Opskrift Læsevisning Modal Elementer ---
@@ -96,7 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentRecipes = [];
     let currentMealPlan = {};
     let currentShoppingList = {};
-    let currentImageUrl = '';
     let currentlyViewedRecipeId = null;
     let activeRecipeFilterTag = null;
 
@@ -342,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListContainer.innerHTML = '';
         const groupedList = {};
 
-        Object.values(currentShoppingList).forEach(item => {
+        Object.values(currentShoppingList).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             const section = item.store_section || 'Andet';
             if (!groupedList[section]) {
                 groupedList[section] = [];
@@ -539,8 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeForm.reset();
         document.getElementById('recipe-id').value = '';
         ingredientsContainer.innerHTML = '';
-        currentImageUrl = '';
-        recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+        recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
         addIngredientRow();
         recipeEditModal.classList.remove('hidden');
     });
@@ -617,16 +615,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImportTextarea.value = '';
     });
     
-    imageUploadInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                currentImageUrl = event.target.result;
-                recipeImagePreview.src = currentImageUrl;
-            };
-            reader.readAsDataURL(file);
-        }
+    recipeImageUrlInput.addEventListener('input', (e) => {
+        recipeImagePreview.src = e.target.value || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
     });
 
     recipeForm.addEventListener('submit', async (e) => {
@@ -654,7 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             instructions: document.getElementById('recipe-instructions').value,
             source_url: document.getElementById('recipe-source-url').value,
             ingredients: ingredients,
-            imageUrl: currentImageUrl,
+            imageUrl: document.getElementById('recipe-imageUrl').value || null,
             is_favorite: currentRecipes.find(r => r.id === recipeId)?.is_favorite || false
         };
 
@@ -710,9 +700,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('recipe-notes').value = recipe.notes || '';
             document.getElementById('recipe-instructions').value = recipe.instructions || '';
             document.getElementById('recipe-source-url').value = recipe.source_url || '';
+            document.getElementById('recipe-imageUrl').value = recipe.imageUrl || '';
             
-            currentImageUrl = recipe.imageUrl || '';
-            recipeImagePreview.src = recipe.imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+            recipeImagePreview.src = recipe.imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
 
             ingredientsContainer.innerHTML = '';
             recipeImportTextarea.value = '';
