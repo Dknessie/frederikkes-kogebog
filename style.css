@@ -492,6 +492,68 @@ nav {
     margin-top: 1rem;
 }
 
+/* ===== Opskrift Læsevisning ===== */
+.read-view-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.read-view-meta {
+    display: flex;
+    gap: 1.5rem;
+    color: #777;
+    margin: 1rem 0;
+    align-items: center;
+}
+.read-view-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.read-view-meta #read-view-category {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.2rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.read-view-actions {
+    display: flex;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+#read-view-notes {
+    background-color: #fffbe6;
+    border-left: 4px solid #facc15;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.read-view-main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+.read-view-ingredients ul {
+    list-style: none;
+    padding: 0;
+}
+.read-view-ingredients li {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+#read-view-instructions-text {
+    white-space: pre-wrap; /* Respekterer linjeskift */
+}
+
+
 /* ===== Indkøbsliste ===== */
 .shopping-list-container {
     display: flex;
@@ -557,7 +619,7 @@ nav {
     .page {
         padding: 1rem;
     }
-    .form-grid {
+    .form-grid, .read-view-main-content {
         grid-template-columns: 1fr;
     }
     .ingredient-row {
