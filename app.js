@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const addInventoryItemBtn = document.getElementById('add-inventory-item-btn');
     const inventoryModalTitle = document.getElementById('inventory-modal-title');
     const inventoryTableBody = document.querySelector('.inventory-table tbody');
+    const itemNameInput = document.getElementById('item-name');
+    const itemCategoryInput = document.getElementById('item-category');
+    const itemStoreSectionSelect = document.getElementById('item-store-section');
 
     // --- Opskrift Modal Elementer ---
     const recipeModal = document.getElementById('recipe-modal');
@@ -63,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const importIngredientsBtn = document.getElementById('import-ingredients-btn');
     const recipeImportTextarea = document.getElementById('recipe-import-textarea');
 
+    // --- Indkøbsliste Elementer ---
+    const shoppingListContainer = document.getElementById('shopping-list-container');
 
     // --- State ---
     let currentUser = null;
@@ -206,14 +211,65 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            card.innerHTML = `<h4>${recipe.title}</h4><p>${recipe.description || 'Klik for at se eller redigere.'}</p><div class="recipe-card-actions"><i class="${isFavoriteClass} fa-heart favorite-icon"></i></div>`;
+            card.innerHTML = `
+                <div class="recipe-card-clickable-area">
+                    <h4>${recipe.title}</h4>
+                    <p>${recipe.description || 'Klik for at se eller redigere.'}</p>
+                </div>
+                <div class="recipe-card-actions">
+                    <button class="btn-icon generate-shopping-list-btn" title="Generer indkøbsliste"><i class="fas fa-cart-plus"></i></button>
+                    <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                </div>`;
             recipeGrid.appendChild(card);
         });
     }
 
+    function renderShoppingList(itemsToBuy) {
+        shoppingListContainer.innerHTML = '';
+        if (Object.keys(itemsToBuy).length === 0) {
+            shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom, eller også har du alle varer på lager.</p>`;
+            return;
+        }
+
+        for (const section in itemsToBuy) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'store-section';
+            
+            let listItems = '';
+            itemsToBuy[section].forEach(item => {
+                listItems += `<li><input type="checkbox" id="shop-${item.name}"><label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label></li>`;
+            });
+
+            sectionDiv.innerHTML = `<h3>${section}</h3><ul>${listItems}</ul>`;
+            shoppingListContainer.appendChild(sectionDiv);
+        }
+    }
+
     // =================================================================
-    // 5. CRUD-HANDLINGER FOR VARELAGER
+    // 5. CRUD & INTELLIGENS FOR VARELAGER
     // =================================================================
+    const categoryKeywords = {
+        'Frugt & Grønt': ['agurk', 'tomat', 'salat', 'løg', 'hvidløg', 'peberfrugt', 'gulerod', 'kartoffel', 'æble', 'banan', 'appelsin', 'pære'],
+        'Kød & Fisk': ['kylling', 'oksekød', 'svinekød', 'fisk', 'laks', 'kalkun', 'lam'],
+        'Mejeri': ['mælk', 'ost', 'smør', 'yoghurt', 'fløde', 'æg'],
+        'Tørvarer': ['pasta', 'ris', 'mel', 'sukker', 'gær', 'havregryn', 'brød', 'rugbrød', 'bolle'],
+        'Konserves': ['hakkede tomater', 'majs', 'bønner', 'kikærter', 'tun'],
+    };
+
+    itemNameInput.addEventListener('keyup', () => {
+        const name = itemNameInput.value.toLowerCase();
+        for (const category in categoryKeywords) {
+            if (categoryKeywords[category].some(keyword => name.includes(keyword))) {
+                itemCategoryInput.value = category;
+                const sectionMap = { 'Mejeri': 'Mejeri', 'Kød & Fisk': 'Kød & Fisk', 'Frugt & Grønt': 'Frugt & Grønt', 'Tørvarer': 'Tørvarer', 'Konserves': 'Konserves'};
+                if (sectionMap[category]) {
+                    itemStoreSectionSelect.value = sectionMap[category];
+                }
+                break;
+            }
+        }
+    });
+    
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
@@ -233,6 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
             price: Number(document.getElementById('item-price').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
+            // Gem konverteringsdata
+            conversion_from_unit: document.getElementById('item-conversion-from').value.toLowerCase() || null,
+            conversion_to_quantity: Number(document.getElementById('item-conversion-to-quantity').value) || null,
+            conversion_to_unit: document.getElementById('item-conversion-to-unit').value.toLowerCase() || null,
         };
         try {
             if (itemId) {
@@ -273,13 +333,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-price').value = item.price || '';
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
+                // Udfyld konverteringsdata
+                document.getElementById('item-conversion-from').value = item.conversion_from_unit || '';
+                document.getElementById('item-conversion-to-quantity').value = item.conversion_to_quantity || '';
+                document.getElementById('item-conversion-to-unit').value = item.conversion_to_unit || '';
                 inventoryItemModal.classList.remove('hidden');
             }
         }
     });
 
     // =================================================================
-    // 6. CRUD-HANDLINGER FOR OPSKRIFTER & IMPORT-LOGIK
+    // 6. OPSKRIFTER & IMPORT
     // =================================================================
     
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
@@ -287,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.className = 'ingredient-row';
         row.innerHTML = `
             <input type="text" class="ingredient-name" placeholder="Ingrediensnavn" value="${ingredient.name}" required>
-            <input type="number" class="ingredient-quantity" placeholder="Antal" value="${ingredient.quantity}">
+            <input type="number" step="any" class="ingredient-quantity" placeholder="Antal" value="${ingredient.quantity}">
             <input type="text" class="ingredient-unit" placeholder="Enhed" value="${ingredient.unit}">
             <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
         `;
@@ -311,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NYT: Import-logik ---
     const parseSingleIngredientLine = (line) => {
         line = line.trim().toLowerCase();
         if (!line) return null;
@@ -324,21 +387,27 @@ document.addEventListener('DOMContentLoaded', () => {
             'gram': 'g', 'g': 'g', 'stk': 'stk', 'fed': 'fed', 'dl': 'dl', 'l': 'l', 'ml': 'ml', 'tsk': 'tsk', 'spsk': 'spsk', 'dåse': 'dåse', 'bundt': 'bundt', 'knivspids': 'knivspids'
         };
         
-        // Find tal i starten af linjen
         const quantityMatch = line.match(/^(\d[\d\s.,]*)/);
         if (quantityMatch) {
             quantity = parseFloat(quantityMatch[0].replace(',', '.').replace(/\s/g, ''));
             line = line.substring(quantityMatch[0].length).trim();
         }
 
-        // Find en kendt enhed
         const lineParts = line.split(' ');
-        const firstWord = lineParts[0].replace(/[^a-zæøå]/gi, ''); // Rens ordet for tegn
-        if (knownUnits[firstWord]) {
-            unit = knownUnits[firstWord];
-            name = lineParts.slice(1).join(' ').trim();
+        let potentialUnit = lineParts[0].replace(/[^a-zæøå]/gi, '');
+        let potentialName = lineParts.slice(1).join(' ').trim();
+        
+        // Find den potentielle vare i varelageret for at tjekke for specifik konvertering
+        const inventoryItem = currentInventoryItems.find(item => potentialName.includes(item.name.toLowerCase()));
+
+        if (inventoryItem && inventoryItem.conversion_from_unit === potentialUnit) {
+            unit = inventoryItem.conversion_to_unit;
+            quantity = (quantity || 1) * inventoryItem.conversion_to_quantity;
+            name = potentialName;
+        } else if (knownUnits[potentialUnit]) {
+            unit = knownUnits[potentialUnit];
+            name = potentialName;
         } else {
-            // Håndter "200gramhakket..."
             let unitFound = false;
             for (const u in knownUnits) {
                 if (line.startsWith(u)) {
@@ -349,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             if (!unitFound) {
-                name = line; // Ingen enhed fundet, resten er navnet
+                name = line;
             }
         }
         
@@ -359,8 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     importIngredientsBtn.addEventListener('click', () => {
         const text = recipeImportTextarea.value;
         if (!text) return;
-
-        ingredientsContainer.innerHTML = ''; // Ryd eksisterende felter
+        ingredientsContainer.innerHTML = '';
         const lines = text.split('\n');
         lines.forEach(line => {
             const parsed = parseSingleIngredientLine(line);
@@ -368,14 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 addIngredientRow(parsed);
             }
         });
-        recipeImportTextarea.value = ''; // Ryd tekstfeltet efter import
+        recipeImportTextarea.value = '';
     });
-    // --- Slut på Import-logik ---
 
     recipeForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const recipeId = document.getElementById('recipe-id').value;
-
         const ingredients = [];
         document.querySelectorAll('.ingredient-row').forEach(row => {
             const name = row.querySelector('.ingredient-name').value.trim();
@@ -411,16 +477,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = e.target.closest('.recipe-card');
         if (!card) return;
         const docId = card.dataset.id;
-        const recipeRef = doc(db, 'recipes', docId);
-
+        
         if (e.target.closest('.favorite-icon')) {
             const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('is-favorite');
             try {
-                await updateDoc(recipeRef, { is_favorite: !isCurrentlyFavorite });
+                await updateDoc(doc(db, 'recipes', docId), { is_favorite: !isCurrentlyFavorite });
             } catch (error) { console.error("FEJL ved opdatering af favorit:", error); }
             return;
         }
 
+        if (e.target.closest('.generate-shopping-list-btn')) {
+            generateShoppingListFromRecipe(docId);
+            return;
+        }
+
+        // Hvis der klikkes andre steder på kortet, åbn redigering
         const recipe = currentRecipes.find(r => r.id === docId);
         if (recipe) {
             recipeModalTitle.textContent = 'Rediger opskrift';
@@ -439,4 +510,34 @@ document.addEventListener('DOMContentLoaded', () => {
             recipeModal.classList.remove('hidden');
         }
     });
+
+    // =================================================================
+    // 7. INDKØBSLISTE
+    // =================================================================
+    function generateShoppingListFromRecipe(recipeId) {
+        const recipe = currentRecipes.find(r => r.id === recipeId);
+        if (!recipe) return;
+
+        const itemsToBuy = {};
+
+        recipe.ingredients.forEach(ing => {
+            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+            const needed = ing.quantity || 0;
+            const inStock = inventoryItem ? inventoryItem.current_stock : 0;
+            
+            if (inStock < needed) {
+                const toBuy = needed - inStock;
+                const section = (inventoryItem && inventoryItem.store_section) ? inventoryItem.store_section : 'Andet';
+                
+                if (!itemsToBuy[section]) {
+                    itemsToBuy[section] = [];
+                }
+                itemsToBuy[section].push({ name: ing.name, quantity_to_buy: toBuy, unit: ing.unit });
+            }
+        });
+        
+        renderShoppingList(itemsToBuy);
+        alert(`Indkøbsliste genereret for "${recipe.title}". Gå til fanen "Indkøbsliste" for at se den.`);
+        navigateTo('#shopping-list');
+    }
 });
