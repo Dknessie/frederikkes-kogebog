@@ -325,19 +325,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderInventory(items) {
         inventoryTableBody.innerHTML = '';
         if (items.length === 0) {
-             inventoryTableBody.innerHTML = `<tr><td colspan="6">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
+             // OPDATERET: Colspan er nu 8 pga. ny statuskolonne
+             inventoryTableBody.innerHTML = `<tr><td colspan="8">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
              return;
         }
         items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
+            
+            // Logik for beholdningsstatus
             const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
-            let stockColor = '#4CAF50';
-            if (stockPercentage < 50) stockColor = '#FFC107';
-            if (stockPercentage < 20) stockColor = '#F44336';
+            let stockColor = '#4CAF50'; // Grøn
+            if (stockPercentage < 50) stockColor = '#FFC107'; // Gul
+            if (stockPercentage < 20) stockColor = '#F44336'; // Rød
+
+            // NYT: Tekst-baseret status
+            let stockStatus = { text: 'På lager', className: 'status-ok' };
+            if (item.max_stock && item.max_stock > 0) {
+                if (stockPercentage < 50) stockStatus = { text: 'Lav', className: 'status-low' };
+                if (stockPercentage < 20) stockStatus = { text: 'Kritisk', className: 'status-critical' };
+                if (item.current_stock <= 0) stockStatus = { text: 'Tom', className: 'status-critical' };
+            } else {
+                stockStatus = { text: '-', className: 'status-unknown' };
+            }
+
+            // OPDATERET: Tabelrække med ny statuskolonne
             tr.innerHTML = `
                 <td>${item.name || ''}</td>
-                <td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock || 0} ${item.unit || ''}</span></td>
+                <td>
+                    <div class="stock-display">
+                        <div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div>
+                        <span>${item.current_stock || 0} ${item.unit || ''}</span>
+                    </div>
+                </td>
+                <td><span class="status-badge ${stockStatus.className}">${stockStatus.text}</span></td>
                 <td>${item.category || ''}</td>
                 <td>${item.kg_price ? `${item.kg_price.toFixed(2)} kr.` : ''}</td>
                 <td>${item.grams_per_unit || ''}</td>
@@ -949,7 +970,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unit === 'dl' || unit === 'deciliter') return quantity / 10;
         if (unit === 'ml') return quantity / 1000;
 
-        // OPDATERET: Simpel konvertering baseret på g/enhed
         if (inventoryItem && inventoryItem.grams_per_unit && unit === inventoryItem.unit.toLowerCase()) {
             const totalGrams = quantity * inventoryItem.grams_per_unit;
             return totalGrams / 1000;
