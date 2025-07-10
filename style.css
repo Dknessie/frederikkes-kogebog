@@ -456,7 +456,7 @@ nav {
     justify-content: space-between;
     align-items: center;
     font-weight: 600;
-    cursor: pointer; /* Gør det tydeligt at man kan klikke */
+    cursor: pointer; 
 }
 .sidebar-recipe-header i {
     transition: transform 0.3s ease;
@@ -487,6 +487,17 @@ nav {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
+}
+
+/* NYT: Styling af totalpris */
+.shopping-list-total {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
 }
 
 #shopping-list-container {
@@ -530,7 +541,7 @@ nav {
     align-items: flex-start;
     gap: 0.75rem;
     flex-grow: 1;
-    min-width: 0; /* Forhindrer flexbox i at overløbe */
+    min-width: 0; 
 }
 .shopping-list-item .item-name-details {
     display: flex;
@@ -551,7 +562,6 @@ nav {
     gap: 0.5rem;
     align-items: center;
 }
-/* OPDATERET: Gør input felter mindre */
 .shopping-list-item .item-quantity-input {
     width: 50px;
     padding: 0.25rem;
@@ -713,11 +723,10 @@ nav {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 0.5rem; /* Mindre gap */
+    gap: 0.5rem; 
     padding: 0.5rem 1rem 0.75rem;
     border-top: 1px solid #eee;
 }
-/* NYT: Styling til slet-knap */
 .delete-recipe-btn {
     color: #aaa;
 }
@@ -799,11 +808,16 @@ nav {
 /* OPDATERET: Styling for Læse-modal */
 .read-view-image {
     width: 100%;
-    max-height: 350px; /* Fast højde */
-    object-fit: cover; /* Sikrer korrekt skalering */
+    max-height: 350px; 
+    object-fit: cover; 
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
     background-color: #f0f0f0;
+}
+.read-view-actions {
+    margin-top: 1.5rem; /* Mere plads */
+    display: flex;
+    gap: 1rem;
 }
 .read-view-main-content {
     display: grid;
@@ -828,4 +842,25 @@ nav {
 }
 #read-view-instructions-text {
     white-space: pre-wrap;
+}
+
+/* OPDATERET: Styling for Redigerings-modal */
+#recipe-edit-modal .image-upload-container img {
+    max-height: 300px; /* Samme som læse-modal */
+    object-fit: cover;
+}
+#recipe-edit-modal .form-grid {
+    gap: 1.5rem; /* Mere plads */
+}
+#recipe-edit-modal .ingredient-row {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 40px;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
