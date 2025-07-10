@@ -144,8 +144,8 @@
                             <th>Vare</th>
                             <th>Beholdning</th>
                             <th>Kategori</th>
-                            <!-- OPDATERET: Tabel header -->
                             <th>kr/kg</th>
+                            <th>g/enhed</th> <!-- NYT -->
                             <th>Placering</th>
                             <th>Handlinger</th>
                         </tr>
@@ -204,6 +204,11 @@
                         <label for="item-kg-price">kr/kg (valgfri)</label>
                         <input type="number" step="0.01" id="item-kg-price">
                     </div>
+                    <!-- NYT: g/enhed felt -->
+                    <div class="input-group">
+                        <label for="item-grams-per-unit">Gram pr. enhed (valgfri)</label>
+                        <input type="number" id="item-grams-per-unit" placeholder="f.eks. 250 for 1 agurk">
+                    </div>
                     <div class="input-group">
                         <label for="item-store-section">Sektion i butik</label>
                         <select id="item-store-section">
@@ -227,15 +232,6 @@
                         <input type="text" id="item-home-location" placeholder="F.eks. Køleskab, Skuffe">
                     </div>
                 </div>
-                <hr>
-                <fieldset class="conversion-fieldset">
-                    <legend>Varespecifikke Konverteringer</legend>
-                    <p class="fieldset-description">Hjælper med at omregne enheder fra opskrifter til din lagerenhed (f.eks. 1 dåse = 400 g).</p>
-                    <div id="conversions-container">
-                        <!-- Konverteringsrækker indsættes her af JS -->
-                    </div>
-                    <button type="button" id="add-conversion-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Konvertering</button>
-                </fieldset>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
                 </div>
