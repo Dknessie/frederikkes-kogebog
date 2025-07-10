@@ -419,9 +419,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 listItemsHTML += `
                     <li class="shopping-list-item" data-item-name="${item.name}">
-                        <div class="item-info">
-                            <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
-                            <label for="shop-${safeItemName}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
+                        <div class="item-main-info">
+                             <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
+                             <div class="item-name-details">
+                                <label for="shop-${safeItemName}">${item.name}</label>
+                                <div class="item-details">
+                                    <input type="number" class="item-quantity-input" value="${item.quantity_to_buy}" step="any">
+                                    <input type="text" class="item-unit-input" value="${item.unit}">
+                                </div>
+                             </div>
                         </div>
                         <div class="item-actions">
                             ${newItemIndicator}
@@ -831,6 +837,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    shoppingListContainer.addEventListener('input', (e) => {
+        const target = e.target;
+        if (target.classList.contains('item-quantity-input') || target.classList.contains('item-unit-input')) {
+            const listItem = target.closest('.shopping-list-item');
+            const itemName = listItem.dataset.itemName.toLowerCase();
+            const item = currentShoppingList[itemName];
+
+            if(item) {
+                if (target.classList.contains('item-quantity-input')) {
+                    item.quantity_to_buy = parseFloat(target.value) || 0;
+                }
+                if (target.classList.contains('item-unit-input')) {
+                    item.unit = target.value;
+                }
+            }
+        }
+    });
+
     shoppingListContainer.addEventListener('click', (e) => {
         const newItemBtn = e.target.closest('.new-item-indicator');
         if (newItemBtn) {
@@ -916,6 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // OPDATERET: renderSidebarRecipeList med ny harmonika-struktur
     function renderSidebarRecipeList() {
         sidebarRecipeList.innerHTML = '';
         const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
@@ -935,11 +960,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
+            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
             const div = document.createElement('div');
-            div.className = 'draggable-item';
+            div.className = 'sidebar-recipe-item';
             div.draggable = true;
             div.dataset.recipeId = recipe.id;
-            div.innerHTML = `<i class="fas fa-utensils"></i><span>${recipe.title}</span>`;
+            div.innerHTML = `
+                <div class="sidebar-recipe-header">
+                    <span>${recipe.title}</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="sidebar-recipe-body">
+                    <img src="${imageUrl}" alt="${recipe.title}" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                </div>
+            `;
             sidebarRecipeList.appendChild(div);
         });
     }
@@ -997,11 +1031,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sidebarSearchInput.addEventListener('input', renderSidebarRecipeList);
 
+    // NYT: Event listener for harmonika-effekt
+    sidebarRecipeList.addEventListener('click', (e) => {
+        const header = e.target.closest('.sidebar-recipe-header');
+        if (header) {
+            const item = header.closest('.sidebar-recipe-item');
+            const wasExpanded = item.classList.contains('expanded');
+
+            // Luk alle andre
+            sidebarRecipeList.querySelectorAll('.sidebar-recipe-item').forEach(i => i.classList.remove('expanded'));
+            
+            // Åbn den klikkede, hvis den ikke allerede var åben
+            if (!wasExpanded) {
+                item.classList.add('expanded');
+            }
+        }
+    });
+
+
     // Drag and Drop Logik
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
-        if (e.target.classList.contains('draggable-item')) {
+        if (e.target.classList.contains('sidebar-recipe-item')) {
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'new-item',
                 recipeId: e.target.dataset.recipeId
