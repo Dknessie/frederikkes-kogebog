@@ -252,7 +252,7 @@ nav {
 }
 
 /* ================================================= */
-/* NYT: Madplan Side Styling                         */
+/* Madplan Side Styling                              */
 /* ================================================= */
 
 .meal-planner-layout {
@@ -334,8 +334,13 @@ nav {
     border-radius: 4px;
     font-size: 0.85rem;
     border-left: 3px solid var(--primary-color);
-    cursor: pointer;
+    cursor: grab; /* OPDATERET: Gør det tydeligt at den kan trækkes */
     position: relative;
+    transition: box-shadow 0.2s ease;
+}
+.planned-recipe:active {
+    cursor: grabbing;
+    box-shadow: var(--shadow);
 }
 .planned-recipe.leftovers {
     border-left-color: var(--accent-color);
@@ -356,11 +361,15 @@ nav {
     cursor: pointer;
     font-size: 0.8rem;
     display: none;
+    padding: 2px 4px;
+    line-height: 1;
 }
 .planned-recipe:hover .remove-meal-btn {
     display: block;
 }
-
+.remove-meal-btn:hover {
+    color: #D32F2F;
+}
 
 /* Sidebar */
 .meal-planner-sidebar {
@@ -371,11 +380,31 @@ nav {
     box-shadow: var(--shadow);
     padding: 1.5rem;
     height: 100%;
-    overflow-y: hidden;
+    overflow-y: hidden; /* Forhindrer hele sidebaren i at scrolle */
 }
 .meal-planner-sidebar h3 {
     margin-top: 0;
     text-align: center;
+}
+
+/* NYT: Sidebar søgefelt */
+.sidebar-search {
+    position: relative;
+    margin-bottom: 1rem;
+}
+.sidebar-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+#sidebar-recipe-search {
+    width: 100%;
+    padding: 0.75rem 0.75rem 0.75rem 2.5rem; /* Plads til ikon */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
 }
 
 .sidebar-tabs {
@@ -399,7 +428,8 @@ nav {
 
 .sidebar-content {
     flex-grow: 1;
-    overflow-y: auto;
+    overflow-y: auto; /* Tillader KUN dette område at scrolle */
+    padding-right: 0.5rem; /* Giver plads til scrollbar */
 }
 
 .special-draggables {
