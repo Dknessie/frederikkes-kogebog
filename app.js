@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeReadModal = document.getElementById('recipe-read-modal');
     const readViewAddToMealPlanBtn = document.getElementById('read-view-add-to-meal-plan-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
-    const readViewDeleteBtn = document.getElementById('read-view-delete-btn'); // NYT
+    const readViewDeleteBtn = document.getElementById('read-view-delete-btn');
 
     // --- Madplan Side Elementer ---
     const calendarGrid = document.getElementById('calendar-grid');
@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Indkøbsliste (nu i sidebar) ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
+    const shoppingListTotalContainer = document.getElementById('shopping-list-total-container');
     const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
     const addShoppingItemForm = document.getElementById('add-shopping-item-form');
@@ -305,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderInventory(items) {
         inventoryTableBody.innerHTML = '';
         if (items.length === 0) {
-             inventoryTableBody.innerHTML = `<tr><td colspan="5">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
+             inventoryTableBody.innerHTML = `<tr><td colspan="6">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
              return;
         }
         items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
@@ -315,7 +316,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let stockColor = '#4CAF50';
             if (stockPercentage < 50) stockColor = '#FFC107';
             if (stockPercentage < 20) stockColor = '#F44336';
-            tr.innerHTML = `<td>${item.name || ''}</td><td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock || 0} ${item.unit || ''}</span></td><td>${item.category || ''}</td><td>${item.home_location || ''}</td><td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
+            tr.innerHTML = `
+                <td>${item.name || ''}</td>
+                <td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock || 0} ${item.unit || ''}</span></td>
+                <td>${item.category || ''}</td>
+                <td>${item.kg_price ? `${item.kg_price.toFixed(2)} kr.` : ''}</td>
+                <td>${item.home_location || ''}</td>
+                <td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
             inventoryTableBody.appendChild(tr);
         });
     }
@@ -351,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="recipe-card-actions">
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
-                    <!-- NYT: Slet knap på kortet -->
                     <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
                 </div>`;
             recipeGrid.appendChild(card);
@@ -402,10 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (Object.keys(groupedList).length === 0) {
             shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom.</p>`;
+            shoppingListTotalContainer.classList.add('hidden');
             confirmPurchaseBtn.style.display = 'none';
             return;
         }
 
+        shoppingListTotalContainer.classList.remove('hidden');
         confirmPurchaseBtn.style.display = 'inline-flex';
 
         for (const section in groupedList) {
@@ -442,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionDiv.innerHTML = `<h4>${section}</h4><ul>${listItemsHTML}</ul>`;
             shoppingListContainer.appendChild(sectionDiv);
         }
+        calculateAndRenderShoppingListTotal();
     }
     
     function renderReadView(recipe) {
@@ -481,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 5. CRUD & INTELLIGENS FOR VARELAGER (Uændret)
+    // 5. CRUD & INTELLIGENS FOR VARELAGER
     // =================================================================
     const categoryKeywords = {
         'Frugt & Grønt': ['agurk', 'tomat', 'salat', 'løg', 'hvidløg', 'peberfrugt', 'gulerod', 'kartoffel', 'æble', 'banan', 'appelsin', 'pære'],
@@ -521,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             current_stock: Number(document.getElementById('item-current-stock').value),
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
             unit: document.getElementById('item-unit').value,
-            price: Number(document.getElementById('item-price').value) || null,
+            kg_price: Number(document.getElementById('item-kg-price').value) || null, // OPDATERET
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
             conversion_from_unit: document.getElementById('item-conversion-from').value.toLowerCase() || null,
@@ -565,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-current-stock').value = item.current_stock || 0;
                 document.getElementById('item-max-stock').value = item.max_stock || '';
                 document.getElementById('item-unit').value = item.unit || '';
-                document.getElementById('item-price').value = item.price || '';
+                document.getElementById('item-kg-price').value = item.kg_price || ''; // OPDATERET
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 document.getElementById('item-conversion-from').value = item.conversion_from_unit || '';
@@ -578,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =================================================================
-    // 6. OPSKRIFTER & IMPORT (Uændret)
+    // 6. OPSKRIFTER & IMPORT
     // =================================================================
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
@@ -669,9 +678,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // NYT: Håndtering af slet-knap på kortet
         if (e.target.closest('.delete-recipe-btn')) {
-            e.stopPropagation(); // Forhindrer at læse-modal åbnes
+            e.stopPropagation(); 
             const confirmed = await showNotification({title: "Slet Opskrift", message: "Er du sikker på, du vil slette denne opskrift?", type: 'confirm'});
             if(confirmed) {
                 try {
@@ -720,7 +728,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // NYT: Slet-knap i læse-modal
     readViewDeleteBtn.addEventListener('click', async () => {
         const recipeId = currentlyViewedRecipeId;
         if (!recipeId) return;
@@ -889,6 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.unit = target.value;
                 }
             }
+            calculateAndRenderShoppingListTotal(); // Opdater totalen live
         }
     });
 
@@ -909,6 +917,25 @@ document.addEventListener('DOMContentLoaded', () => {
             renderShoppingList();
         }
     });
+
+    // NYT: Funktion til at beregne og vise totalpris
+    function calculateAndRenderShoppingListTotal() {
+        let totalPrice = 0;
+        Object.values(currentShoppingList).forEach(item => {
+            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            if (inventoryItem && inventoryItem.kg_price) {
+                let quantityInKg = 0;
+                const unit = item.unit.toLowerCase();
+                if (unit === 'g' || unit === 'gram') {
+                    quantityInKg = item.quantity_to_buy / 1000;
+                } else if (unit === 'kg') {
+                    quantityInKg = item.quantity_to_buy;
+                }
+                totalPrice += quantityInKg * inventoryItem.kg_price;
+            }
+        });
+        shoppingListTotalContainer.innerHTML = `<span>Estimeret Pris: <strong>${totalPrice.toFixed(2)} kr.</strong></span>`;
+    }
 
     // =================================================================
     // 8. MADPLAN SIDE LOGIK
@@ -1086,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
-        if (e.target.classList.contains('sidebar-recipe-item')) { // OPDATERET: Træk fra harmonika-element
+        if (e.target.classList.contains('sidebar-recipe-item')) { 
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'new-item',
                 recipeId: e.target.dataset.recipeId
