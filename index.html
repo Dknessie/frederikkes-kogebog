@@ -37,7 +37,6 @@
         <header>
             <div class="header-content">
                 <a href="#meal-planner" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
-                <!-- OPDATERET: Ny "Inspiration" fane tilføjet -->
                 <nav>
                     <a href="#meal-planner" class="nav-link active"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
@@ -57,8 +56,8 @@
                     <aside class="meal-planner-sidebar-left">
                         <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
                         <div class="sidebar-actions">
-                             <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-tasks"></i></button>
-                             <button id="confirm-purchase-btn" class="btn-icon-text" title="Bekræft Indkøb"><i class="fas fa-check-circle"></i></button>
+                             <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-magic-wand-sparkles"></i></button>
+                             <button id="confirm-purchase-btn" class="btn-icon-text btn-confirm-purchase" title="Bekræft Indkøb"><i class="fas fa-check"></i></button>
                         </div>
                         <div id="shopping-list-total-container" class="shopping-list-total">
                             <!-- Totalpris indsættes her af JS -->
@@ -80,6 +79,10 @@
                             <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
                             <h2 id="calendar-title"></h2>
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <!-- NYT: Knap til autogenerering -->
+                        <div class="calendar-actions">
+                            <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér Madplan</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
                             <!-- Kalender genereres af JS -->
@@ -121,7 +124,7 @@
                 </div>
             </section>
             
-            <!-- NYT: Inspiration Side -->
+            <!-- Inspiration Side -->
             <section id="inspiration" class="page hidden">
                 <h2>Inspiration</h2>
                 <p>Her er de retter du kan lave, baseret på dit nuværende varelager.</p>
@@ -342,6 +345,8 @@
                     <span id="read-view-category"></span>
                     <span id="read-view-time"><i class="fas fa-clock"></i></span>
                     <span id="read-view-portions"><i class="fas fa-users"></i></span>
+                    <!-- NYT: Pris-estimat for opskrift -->
+                    <span id="read-view-price"><i class="fas fa-coins"></i></span>
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
@@ -362,6 +367,49 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- NYT: Autogenerér Madplan Modal -->
+    <div id="autogen-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Autogenerér Madplan</h3>
+            <p>Indstil dine præferencer for den kommende uge.</p>
+            <form id="autogen-form">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="autogen-budget">Maks. Budget (kr.)</label>
+                        <input type="number" id="autogen-budget" placeholder="F.eks. 500">
+                    </div>
+                    <div class="input-group">
+                        <label for="autogen-time">Maks. Tid pr. Ret (min)</label>
+                        <select id="autogen-time">
+                            <option value="999">Ubegrænset</option>
+                            <option value="20">Under 20 min</option>
+                            <option value="30" selected>Under 30 min</option>
+                            <option value="45">Under 45 min</option>
+                            <option value="60">Under 60 min</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Kostpræferencer (Tags)</label>
+                    <div class="checkbox-group" id="autogen-diet-tags">
+                        <!-- Checkboxes genereres af JS -->
+                    </div>
+                </div>
+                <div class="input-group switch-group">
+                    <label for="autogen-use-leftovers">Prioritér varer på lager</label>
+                    <label class="switch">
+                        <input type="checkbox" id="autogen-use-leftovers" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Generér Forslag</button>
+                </div>
+            </form>
         </div>
     </div>
 
