@@ -56,8 +56,9 @@
                     <aside class="meal-planner-sidebar-left">
                         <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
                         <div class="sidebar-actions">
-                             <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-magic-wand-sparkles"></i></button>
-                             <button id="confirm-purchase-btn" class="btn-icon-text btn-confirm-purchase" title="Bekræft Indkøb"><i class="fas fa-check"></i></button>
+                             <!-- OPDATERET: Knapper med tekst og nye klasser -->
+                             <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld Liste</button>
+                             <button id="confirm-purchase-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Bekræft Køb</button>
                         </div>
                         <div id="shopping-list-total-container" class="shopping-list-total">
                             <!-- Totalpris indsættes her af JS -->
@@ -81,6 +82,7 @@
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-actions">
+                             <!-- OPDATERET: Knap styling styres nu bedre af CSS -->
                             <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér Madplan</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
@@ -143,9 +145,11 @@
                         <tr>
                             <th>Vare</th>
                             <th>Beholdning</th>
+                            <!-- NYT: Status kolonne -->
+                            <th>Status</th>
                             <th>Kategori</th>
                             <th>kr/kg</th>
-                            <th>g/enhed</th> <!-- NYT -->
+                            <th>g/enhed</th>
                             <th>Placering</th>
                             <th>Handlinger</th>
                         </tr>
@@ -179,6 +183,7 @@
             <h3 id="inventory-modal-title">Tilføj ny vare</h3>
             <form id="inventory-item-form">
                 <input type="hidden" id="inventory-item-id">
+                <!-- OPDATERET: Klassen .form-grid vil nu style dette i et kompakt gitter -->
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="item-name">Varenavn</label>
@@ -194,7 +199,7 @@
                     </div>
                     <div class="input-group">
                         <label for="item-max-stock">Normal beholdning</label>
-                        <input type="number" id="item-max-stock" placeholder="F.eks. 1000 (til status-bar)">
+                        <input type="number" id="item-max-stock" placeholder="F.eks. 1000 (til status)">
                     </div>
                      <div class="input-group">
                         <label for="item-unit">Enhed</label>
@@ -204,7 +209,6 @@
                         <label for="item-kg-price">kr/kg (valgfri)</label>
                         <input type="number" step="0.01" id="item-kg-price">
                     </div>
-                    <!-- NYT: g/enhed felt -->
                     <div class="input-group">
                         <label for="item-grams-per-unit">Gram pr. enhed (valgfri)</label>
                         <input type="number" id="item-grams-per-unit" placeholder="f.eks. 250 for 1 agurk">
