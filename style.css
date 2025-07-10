@@ -897,9 +897,10 @@ nav {
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
 #recipe-edit-modal .form-actions {
-    margin-top: 2rem; /* Mere plads */
+    margin-top: 2rem; 
 }
 
+/* OPDATERET: Styling for konverteringsrækker */
 .conversion-row {
     display: grid;
     grid-template-columns: 1fr 100px 100px 40px;
