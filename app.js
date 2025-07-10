@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const shoppingListContainer = document.getElementById('shopping-list-container');
     const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
+    const addShoppingItemForm = document.getElementById('add-shopping-item-form');
 
     // --- Notifikations Modal Elementer ---
     const notificationModal = document.getElementById('notification-modal');
@@ -109,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMealPlan = {}; 
     let currentShoppingList = {};
     let currentlyViewedRecipeId = null;
-    let activeRecipeFilterTag = null;
-    let activeSidebarTag = null; // NYT: Til filter i sidebar
+    let activeRecipeFilterTag = null; 
+    let activeSidebarTag = null; 
     let currentDate = new Date(); 
 
     // =================================================================
@@ -184,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
             setupRealtimeListeners();
-            // OPDATERET: Gå til madplan som standard
             navigateTo(window.location.hash || '#meal-planner');
         } else {
             currentUser = null;
@@ -222,13 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (targetPage) {
             targetPage.classList.remove('hidden');
         } else {
-            // OPDATERET: Standard er nu madplan
             document.getElementById('meal-planner').classList.remove('hidden');
         }
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
-        if (hash === '#meal-planner') {
+        if (hash === '#meal-planner' || hash === '') {
             renderMealPlanner();
             renderSidebarRecipeList();
             renderSidebarTagFilters();
@@ -277,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const recipesRef = collection(db, 'recipes');
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
             currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTagFilters(); // Til opskriftssiden
+            renderTagFilters(); 
             renderRecipes();
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderSidebarRecipeList();
@@ -400,11 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (Object.keys(groupedList).length === 0) {
             shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom.</p>`;
-            confirmPurchaseBtn.classList.add('hidden');
+            confirmPurchaseBtn.style.display = 'none';
             return;
         }
 
-        confirmPurchaseBtn.classList.remove('hidden');
+        confirmPurchaseBtn.style.display = 'inline-flex';
 
         for (const section in groupedList) {
             const sectionDiv = document.createElement('div');
@@ -412,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let listItemsHTML = '';
             groupedList[section].forEach(item => {
+                const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
                 const itemInInventory = currentInventoryItems.find(invItem => invItem.name.toLowerCase() === item.name.toLowerCase());
                 const newItemIndicator = !itemInInventory 
                     ? `<button class="btn-icon new-item-indicator" data-item-name="${item.name}" title="Tilføj '${item.name}' til varelageret"><i class="fas fa-plus-circle"></i></button>`
@@ -420,10 +420,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 listItemsHTML += `
                     <li class="shopping-list-item" data-item-name="${item.name}">
                         <div class="item-info">
-                            <input type="checkbox" id="shop-${item.name}" class="shopping-list-checkbox">
-                            <label for="shop-${item.name}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
+                            <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
+                            <label for="shop-${safeItemName}">${item.quantity_to_buy} ${item.unit} ${item.name}</label>
                         </div>
-                        <div>
+                        <div class="item-actions">
                             ${newItemIndicator}
                             <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
                         </div>
@@ -474,7 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 5. CRUD & INTELLIGENS FOR VARELAGER (Uændret)
     // =================================================================
-    // Denne sektion er uændret fra forrige version
     const categoryKeywords = {
         'Frugt & Grønt': ['agurk', 'tomat', 'salat', 'løg', 'hvidløg', 'peberfrugt', 'gulerod', 'kartoffel', 'æble', 'banan', 'appelsin', 'pære'],
         'Kød & Fisk': ['kylling', 'oksekød', 'svinekød', 'fisk', 'laks', 'kalkun', 'lam'],
@@ -572,7 +571,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 6. OPSKRIFTER & IMPORT (Uændret)
     // =================================================================
-    // Denne sektion er uændret fra forrige version
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
         row.className = 'ingredient-row';
@@ -704,12 +702,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK (Nu integreret i madplan-siden)
+    // 7. INDKØBSLISTE LOGIK
     // =================================================================
     
     generateWeeklyShoppingListBtn.addEventListener('click', () => {
         const allIngredientsNeeded = [];
-        const start = getStartOfWeek(currentDate); // Bruger den viste uge
+        const start = getStartOfWeek(currentDate); 
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(start);
@@ -755,7 +753,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentShoppingList[key] = {
                         name: ing.name,
                         quantity_to_buy: toBuy,
-                        unit: ing.unit,
+                        unit: ing.unit || '',
                         store_section: inventoryItem ? inventoryItem.store_section : 'Andet'
                     };
                 }
@@ -770,8 +768,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         renderShoppingList();
-        showNotification({ title: "Opdateret", message: `Varer fra ${sourceText} er tilføjet til indkøbslisten.` });
+        if (sourceText) {
+            showNotification({ title: "Opdateret", message: `Varer fra ${sourceText} er tilføjet til indkøbslisten.` });
+        }
     }
+
+    addShoppingItemForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('add-shopping-item-name');
+        const itemName = input.value.trim();
+        if (itemName) {
+            addToShoppingList([{ name: itemName, quantity: 1, unit: 'stk' }]);
+            input.value = '';
+        }
+    });
 
     confirmPurchaseBtn.addEventListener('click', async () => {
         const checkedItems = [];
@@ -785,27 +795,29 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        for (const item of checkedItems) {
-            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
-            if (!inventoryItem) {
-                await showNotification({ title: "Vare mangler", message: `Varen "${item.name}" findes ikke i dit varelager. Opret den venligst.` });
-                addInventoryItemBtn.click();
-                document.getElementById('item-name').value = item.name;
-                return;
-            }
+        const itemsWithoutInventory = checkedItems.filter(item => !currentInventoryItems.some(inv => inv.name.toLowerCase() === item.name.toLowerCase()));
+
+        if (itemsWithoutInventory.length > 0) {
+            const confirmed = await showNotification({ 
+                title: "Varer mangler i lager", 
+                message: `Følgende varer findes ikke i dit varelager: ${itemsWithoutInventory.map(i => i.name).join(', ')}. Vil du fortsætte og kun opdatere de kendte varer?`,
+                type: 'confirm'
+            });
+            if (!confirmed) return;
         }
 
-        const confirmed = await showNotification({ title: "Bekræft Indkøb", message: "Vil du tilføje de valgte varer til dit varelager?", type: 'confirm' });
-        if (!confirmed) return;
+        const confirmedPurchase = await showNotification({ title: "Bekræft Indkøb", message: "Vil du tilføje de valgte varer til dit varelager?", type: 'confirm' });
+        if (!confirmedPurchase) return;
 
         const batch = writeBatch(db);
         
         checkedItems.forEach(item => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
-            const itemRef = doc(db, "inventory_items", inventoryItem.id);
-            const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
-            batch.update(itemRef, { current_stock: newStock });
-            
+            if (inventoryItem) {
+                const itemRef = doc(db, "inventory_items", inventoryItem.id);
+                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
+                batch.update(itemRef, { current_stock: newStock });
+            }
             delete currentShoppingList[item.name.toLowerCase()];
         });
 
@@ -823,6 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newItemBtn = e.target.closest('.new-item-indicator');
         if (newItemBtn) {
             const itemName = newItemBtn.dataset.itemName;
+            navigateTo('#inventory');
             addInventoryItemBtn.click();
             document.getElementById('item-name').value = itemName;
             return;
@@ -949,7 +962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         sidebarTagFilters.appendChild(allButton);
 
-        allTags.forEach(tag => {
+        [...allTags].sort().forEach(tag => {
             const tagButton = document.createElement('button');
             tagButton.className = 'filter-tag';
             tagButton.textContent = tag;
@@ -986,6 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Drag and Drop Logik
     document.addEventListener('dragstart', (e) => {
+        if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
         if (e.target.classList.contains('draggable-item')) {
             e.dataTransfer.setData('application/json', JSON.stringify({
@@ -1004,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('dragend', (e) => {
+        if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '1';
     });
 
@@ -1038,11 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let updates = {};
             let dataToSet;
             if (dragData.type === 'new-item') {
-                if (dragData.recipeId === 'leftovers') {
-                    dataToSet = { type: 'leftovers' };
-                } else {
-                    dataToSet = { recipeId: dragData.recipeId, type: 'recipe' };
-                }
+                 dataToSet = { recipeId: dragData.recipeId, type: 'recipe' };
             } else { 
                 dataToSet = dragData.mealData;
             }
