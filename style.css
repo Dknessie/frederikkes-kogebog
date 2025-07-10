@@ -530,6 +530,28 @@ nav {
     color: #aaa;
 }
 
+.add-item-form-container {
+    margin-top: auto; /* Skubber formen til bunden */
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+#add-shopping-item-form {
+    display: flex;
+    gap: 0.5rem;
+}
+#add-shopping-item-form input {
+    flex-grow: 1;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.6rem;
+}
+#add-shopping-item-form button {
+    flex-shrink: 0;
+    padding: 0.5rem;
+    font-size: 1.4rem;
+    color: var(--accent-color);
+}
+
 
 /* ===== Opskrifter & Varelager Sider ===== */
 .actions-bar {
@@ -666,11 +688,6 @@ nav {
     border-bottom: 1px solid #eee;
 }
 
-.inventory-table th {
-    background-color: #f9f9f9;
-    font-weight: 600;
-}
-
 /* ===== Modaler ===== */
 .modal-overlay {
     position: fixed;
@@ -713,46 +730,4 @@ nav {
     text-align: center;
 }
 
-/* ===== Responsivitet ===== */
-@media (max-width: 1200px) {
-    .meal-planner-layout {
-        grid-template-columns: 1fr;
-        height: auto;
-    }
-    .meal-planner-sidebar-left, .meal-planner-sidebar-right {
-        height: 400px; 
-    }
-    .meal-planner-sidebar-left {
-        order: 2; 
-    }
-     .meal-planner-sidebar-right {
-        order: 3; 
-    }
-}
-
-
-@media (max-width: 768px) {
-    .header-content {
-        flex-direction: column;
-        height: auto;
-        padding: 1rem 0;
-    }
-    nav {
-        margin-top: 1rem;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .nav-link {
-        font-size: 0.9rem;
-    }
-    .page {
-        padding: 1rem;
-    }
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-    .calendar-grid {
-        grid-template-columns: 1fr; 
-    }
-}
+/* ===== Responsivitet (Ignoreret for nu som ønsket) ===== */
