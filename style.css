@@ -896,6 +896,9 @@ nav {
     margin-bottom: 1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
+#recipe-edit-modal .form-actions {
+    margin-top: 2rem; /* Mere plads */
+}
 
 .conversion-row {
     display: grid;
@@ -910,7 +913,7 @@ nav {
     padding: 0.6rem;
 }
 
-/* NYT: Styling for Autogen Modal */
+/* Autogen Modal */
 .checkbox-group {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
