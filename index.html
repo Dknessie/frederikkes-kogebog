@@ -39,7 +39,6 @@
                 <a href="#dashboard" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
                 <nav>
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                    <!-- NYT: Madplan link tilføjet -->
                     <a href="#meal-planner" class="nav-link"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
@@ -74,7 +73,7 @@
             </section>
 
             <!-- ================================================= -->
-            <!-- NYT: Madplan Side                                 -->
+            <!-- Madplan Side                                      -->
             <!-- ================================================= -->
             <section id="meal-planner" class="page hidden">
                 <div class="meal-planner-layout">
@@ -92,6 +91,11 @@
                     <!-- Sidebar med opskrifter -->
                     <aside class="meal-planner-sidebar">
                         <h3>Træk en opskrift til planen</h3>
+                        <!-- NYT: Søgefelt tilføjet -->
+                        <div class="sidebar-search">
+                            <i class="fas fa-search"></i>
+                            <input type="search" id="sidebar-recipe-search" placeholder="Søg i opskrifter...">
+                        </div>
                         <div class="sidebar-tabs">
                             <button class="sidebar-tab active" data-tab="my-recipes">Mine Opskrifter</button>
                             <button class="sidebar-tab" data-tab="favorites">Favoritter</button>
