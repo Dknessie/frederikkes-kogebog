@@ -80,7 +80,6 @@
                             <h2 id="calendar-title"></h2>
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <!-- NYT: Knap til autogenerering -->
                         <div class="calendar-actions">
                             <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér Madplan</button>
                         </div>
@@ -228,23 +227,14 @@
                     </div>
                 </div>
                 <hr>
+                <!-- OPDATERET: Konverteringssektion -->
                 <fieldset class="conversion-fieldset">
-                    <legend>Varespecifik Konvertering (valgfri)</legend>
-                    <p class="fieldset-description">Bruges til at importere fra opskrifter. F.eks. 1 dåse = 400 g.</p>
-                    <div class="form-grid">
-                         <div class="input-group">
-                            <label for="item-conversion-from">Fra enhed</label>
-                            <input type="text" id="item-conversion-from" placeholder="f.eks. dåse">
-                        </div>
-                        <div class="input-group">
-                            <label for="item-conversion-to-quantity">Til antal</label>
-                            <input type="number" id="item-conversion-to-quantity" placeholder="f.eks. 400">
-                        </div>
-                        <div class="input-group">
-                            <label for="item-conversion-to-unit">Til enhed</label>
-                            <input type="text" id="item-conversion-to-unit" placeholder="f.eks. g">
-                        </div>
+                    <legend>Varespecifikke Konverteringer</legend>
+                    <p class="fieldset-description">Hjælper med at omregne enheder fra opskrifter til din lagerenhed (f.eks. 1 dåse = 400 g).</p>
+                    <div id="conversions-container">
+                        <!-- Konverteringsrækker indsættes her af JS -->
                     </div>
+                    <button type="button" id="add-conversion-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Konvertering</button>
                 </fieldset>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
@@ -345,7 +335,6 @@
                     <span id="read-view-category"></span>
                     <span id="read-view-time"><i class="fas fa-clock"></i></span>
                     <span id="read-view-portions"><i class="fas fa-users"></i></span>
-                    <!-- NYT: Pris-estimat for opskrift -->
                     <span id="read-view-price"><i class="fas fa-coins"></i></span>
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
@@ -370,7 +359,7 @@
         </div>
     </div>
 
-    <!-- NYT: Autogenerér Madplan Modal -->
+    <!-- Autogenerér Madplan Modal -->
     <div id="autogen-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
