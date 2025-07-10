@@ -897,13 +897,18 @@ nav {
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
 
-/* NYT: Styling for konverteringsrækker */
+/* OPDATERET: Styling for konverteringsrækker */
 .conversion-row {
     display: grid;
     grid-template-columns: 1fr 100px 100px 40px;
     gap: 1rem;
     align-items: center;
     margin-bottom: 1rem;
+}
+.conversion-row input {
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    padding: 0.6rem;
 }
 
 /* NYT: Styling for Autogen Modal */
