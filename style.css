@@ -1,8 +1,8 @@
 /* ===== Generel Styling & Variabler ===== */
 :root {
-    --primary-color: #d1603d; 
-    --secondary-color: #f3f0e9; 
-    --accent-color: #5d8a66; 
+    --primary-color: #d1603d; /* En varm, indbydende orange/brun */
+    --secondary-color: #f3f0e9; /* En lys creme/beige baggrund */
+    --accent-color: #5d8a66; /* En dæmpet grøn til succes/status */
     --text-color: #3d3d3d;
     --heading-font: 'Playfair Display', serif;
     --body-font: 'Inter', sans-serif;
@@ -25,7 +25,7 @@ body {
 
 .page {
     padding: 2rem;
-    max-width: 1600px; 
+    max-width: 1400px; /* Øget for den nye layout */
     margin: 0 auto;
     animation: fadeIn 0.5s ease-in-out;
 }
@@ -112,7 +112,6 @@ hr {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    justify-content: center;
 }
 
 .btn-primary {
@@ -152,21 +151,6 @@ hr {
     color: var(--primary-color);
 }
 
-.btn-icon-text {
-    background-color: #f0f0f0;
-    color: var(--text-color);
-    border: 1px solid #ddd;
-    border-radius: var(--border-radius);
-    padding: 0.6rem;
-    font-size: 1rem;
-    flex-grow: 1;
-    cursor: pointer;
-}
-.btn-icon-text:hover {
-    background-color: #e0e0e0;
-}
-
-
 /* ===== App Layout (Header & Main) ===== */
 #app-container {
     display: flex;
@@ -187,7 +171,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1600px;
+    max-width: 1400px;
     margin: 0 auto;
     height: 70px;
 }
@@ -204,7 +188,7 @@ header {
 
 nav {
     display: flex;
-    gap: 1rem;
+    gap: 1rem; /* Reduceret gap for flere links */
 }
 
 .nav-link {
@@ -247,15 +231,35 @@ nav {
     box-shadow: var(--shadow);
 }
 
+/* ===== Dashboard ===== */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+#meal-plan-dashboard-container .meal-plan-day {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #eee;
+}
+#meal-plan-dashboard-container .meal-plan-day:last-child {
+    border-bottom: none;
+}
+#meal-plan-dashboard-container .meal-plan-day strong {
+    color: var(--primary-color);
+}
+
 /* ================================================= */
-/* Madplan Side Styling                              */
+/* NYT: Madplan Side Styling                         */
 /* ================================================= */
 
 .meal-planner-layout {
     display: grid;
-    grid-template-columns: 300px 1fr 320px; 
+    grid-template-columns: 1fr 320px; /* Hovedindhold og sidebar */
     gap: 2rem;
-    height: calc(100vh - 70px - 4rem); 
+    height: calc(100vh - 70px - 4rem); /* Fuld højde minus header og padding */
 }
 
 .meal-planner-main {
@@ -314,7 +318,7 @@ nav {
     border-bottom: none;
 }
 .meal-slot.drag-over {
-    background-color: #d1e7dd; 
+    background-color: #d1e7dd; /* Grønlig farve ved hover */
 }
 
 .meal-slot-title {
@@ -330,13 +334,8 @@ nav {
     border-radius: 4px;
     font-size: 0.85rem;
     border-left: 3px solid var(--primary-color);
-    cursor: grab; 
+    cursor: pointer;
     position: relative;
-    transition: box-shadow 0.2s ease;
-}
-.planned-recipe:active {
-    cursor: grabbing;
-    box-shadow: var(--shadow);
 }
 .planned-recipe.leftovers {
     border-left-color: var(--accent-color);
@@ -357,18 +356,14 @@ nav {
     cursor: pointer;
     font-size: 0.8rem;
     display: none;
-    padding: 2px 4px;
-    line-height: 1;
 }
 .planned-recipe:hover .remove-meal-btn {
     display: block;
 }
-.remove-meal-btn:hover {
-    color: #D32F2F;
-}
 
-/* Sidebar (Generel styling for begge) */
-.meal-planner-sidebar-left, .meal-planner-sidebar-right {
+
+/* Sidebar */
+.meal-planner-sidebar {
     display: flex;
     flex-direction: column;
     background: white;
@@ -376,52 +371,17 @@ nav {
     box-shadow: var(--shadow);
     padding: 1.5rem;
     height: 100%;
-    overflow-y: hidden; 
+    overflow-y: hidden;
 }
-.meal-planner-sidebar-left h3, .meal-planner-sidebar-right h3 {
+.meal-planner-sidebar h3 {
     margin-top: 0;
     text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.sidebar-content {
-    flex-grow: 1;
-    overflow-y: auto; 
-    padding-right: 0.5rem; 
-}
-
-/* Højre Sidebar (Opskrifter) */
-.sidebar-search {
-    position: relative;
-    margin-bottom: 1rem;
-}
-.sidebar-search i {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-}
-#sidebar-recipe-search {
-    width: 100%;
-    padding: 0.75rem 0.75rem 0.75rem 2.5rem; 
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    box-sizing: border-box;
-    background-color: #fdfdfd;
-}
-#sidebar-recipe-search:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(209, 96, 61, 0.2);
 }
 
 .sidebar-tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
 }
 .sidebar-tab {
     padding: 0.75rem 1rem;
@@ -431,11 +391,21 @@ nav {
     font-weight: 600;
     color: #777;
     border-bottom: 2px solid transparent;
-    flex-grow: 1;
 }
 .sidebar-tab.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
+}
+
+.sidebar-content {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.special-draggables {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .draggable-item {
@@ -454,132 +424,14 @@ nav {
     cursor: grabbing;
     box-shadow: var(--shadow);
 }
-
-/* Venstre Sidebar (Indkøbsliste) */
-.sidebar-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-#shopping-list-container {
-    padding-top: 0.5rem;
-}
-
-.store-section {
-    margin-bottom: 1rem;
-}
-
-.store-section h4 {
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-    border-bottom: 2px solid var(--secondary-color);
-    padding-bottom: 0.5rem;
-    color: var(--text-color);
-    font-family: var(--body-font);
-    font-size: 1rem;
-    font-weight: 700;
-}
-
-.store-section ul {
-    list-style: none;
-    padding: 0;
-}
-
-/* OPDATERET: Styling for shopping-list-item */
-.shopping-list-item {
-    padding: 0.75rem 0.25rem;
-    display: flex;
-    align-items: flex-start; /* Juster for flerradet indhold */
-    justify-content: space-between;
-    gap: 0.5rem;
-    border-bottom: 1px solid #f0f0f0;
-}
-.shopping-list-item:last-child {
-    border-bottom: none;
-}
-
-.shopping-list-item .item-main-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    flex-grow: 1;
-}
-.shopping-list-item .item-name-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.shopping-list-item .item-name-details label {
+.draggable-item.special-item {
+    background-color: var(--accent-color);
+    color: white;
     font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-.shopping-list-item .item-details {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-.shopping-list-item .item-quantity-input {
-    width: 60px;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-.shopping-list-item .item-unit-input {
-    width: 50px;
-    padding: 0.25rem 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.shopping-list-item .item-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    flex-shrink: 0;
-}
-
-.shopping-list-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    margin-top: 4px;
-}
-
-.shopping-list-item input[type="checkbox"]:checked + .item-name-details label {
-    text-decoration: line-through;
-    color: #999;
-}
-
-.new-item-indicator, .remove-from-list-btn {
-    font-size: 1rem;
-}
-
-.add-item-form-container {
-    margin-top: auto;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-#add-shopping-item-form {
-    display: flex;
-    gap: 0.5rem;
-}
-#add-shopping-item-form input {
-    flex-grow: 1;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 0.6rem;
-}
-#add-shopping-item-form button {
-    flex-shrink: 0;
-    padding: 0.5rem;
-    font-size: 1.4rem;
-    color: var(--accent-color);
 }
 
 
-/* ===== Opskrifter & Varelager Sider ===== */
+/* ===== Opskrifter ===== */
 .actions-bar {
     margin-bottom: 1.5rem;
 }
@@ -699,6 +551,7 @@ nav {
     transform: scale(1.2);
 }
 
+/* ===== Varelager ===== */
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
@@ -712,6 +565,26 @@ nav {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid #eee;
+}
+
+.inventory-table th {
+    background-color: #f9f9f9;
+    font-weight: 600;
+}
+
+.stock-bar {
+    width: 100px;
+    height: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.stock-level {
+    height: 100%;
+    border-radius: 5px;
 }
 
 /* ===== Modaler ===== */
@@ -751,7 +624,239 @@ nav {
     color: #999;
 }
 
+/* Notifikations Modal */
 .modal-notification {
     max-width: 450px;
     text-align: center;
+}
+
+/* ===== Formularer i Modaler ===== */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.conversion-fieldset {
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.conversion-fieldset legend {
+    font-weight: 600;
+    padding: 0 0.5rem;
+    color: var(--primary-color);
+}
+.fieldset-description {
+    font-size: 0.9rem;
+    color: #777;
+    margin-top: 0;
+}
+
+/* Specifik styling for opskrifts-formular */
+.image-upload-container {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+#recipe-image-preview {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    border: 2px dashed #ddd;
+    margin-bottom: 1rem;
+}
+#import-section {
+    background-color: #fafafa;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid #eee;
+}
+
+.ingredient-row {
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 40px;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.ingredient-row input {
+    padding: 0.6rem;
+}
+
+#add-ingredient-btn {
+    margin-top: 1rem;
+}
+
+/* ===== Opskrift Læsevisning ===== */
+.read-view-image {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.read-view-meta {
+    display: flex;
+    gap: 1.5rem;
+    color: #777;
+    margin: 1rem 0;
+    align-items: center;
+}
+.read-view-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.read-view-meta #read-view-category {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.2rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.read-view-actions {
+    display: flex;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+#read-view-notes {
+    background-color: #fffbe6;
+    border-left: 4px solid #facc15;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.read-view-main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+.read-view-ingredients ul {
+    list-style: none;
+    padding: 0;
+}
+.read-view-ingredients li {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+#read-view-instructions-text {
+    white-space: pre-wrap; /* Respekterer linjeskift */
+}
+
+
+/* ===== Indkøbsliste ===== */
+.shopping-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.store-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.store-section h3 {
+    margin-top: 0;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+}
+
+.store-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.shopping-list-item {
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.shopping-list-item .item-info {
+    display: flex;
+    align-items: center;
+}
+
+.shopping-list-item input[type="checkbox"] {
+    margin-right: 1rem;
+    width: 18px;
+    height: 18px;
+}
+
+.shopping-list-item label {
+    flex-grow: 1;
+}
+
+.shopping-list-item input[type="checkbox"]:checked + label {
+    text-decoration: line-through;
+    color: #999;
+}
+
+.new-item-indicator {
+    color: var(--accent-color);
+    margin-left: 1rem;
+}
+
+/* ===== Responsivitet ===== */
+@media (max-width: 1200px) {
+    .meal-planner-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .meal-planner-sidebar {
+        height: 400px; /* Fast højde på mindre skærme */
+    }
+}
+
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem 0;
+    }
+    nav {
+        margin-top: 1rem;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .nav-link {
+        font-size: 0.9rem;
+    }
+    .page {
+        padding: 1rem;
+    }
+    .form-grid, .read-view-main-content {
+        grid-template-columns: 1fr;
+    }
+    .ingredient-row {
+        grid-template-columns: 1fr;
+    }
+    .calendar-grid {
+        grid-template-columns: 1fr; /* Stack dage vertikalt på mobil */
+    }
 }
