@@ -37,7 +37,6 @@
         <header>
             <div class="header-content">
                 <a href="#meal-planner" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
-                <!-- OPDATERET: Navigation simplificeret -->
                 <nav>
                     <a href="#meal-planner" class="nav-link active"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
@@ -50,16 +49,16 @@
 
         <main id="app-main-content">
             <!-- ================================================= -->
-            <!-- Madplan Side (Nu med 3 kolonner)                  -->
+            <!-- Madplan Side (Nu med korrekt 3-kolonne layout)    -->
             <!-- ================================================= -->
             <section id="meal-planner" class="page">
                 <div class="meal-planner-layout">
-                    <!-- NYT: Venstre Sidebar til Indkøbsliste -->
+                    <!-- Venstre Sidebar til Indkøbsliste -->
                     <aside class="meal-planner-sidebar-left">
                         <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
                         <div class="sidebar-actions">
-                             <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary"><i class="fas fa-tasks"></i> Fyld fra Ugeplan</button>
-                             <button id="confirm-purchase-btn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Bekræft Indkøb</button>
+                             <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-tasks"></i></button>
+                             <button id="confirm-purchase-btn" class="btn-icon-text" title="Bekræft Indkøb"><i class="fas fa-check-circle"></i></button>
                         </div>
                         <div id="shopping-list-container" class="sidebar-content">
                             <!-- Indkøbsliste genereres her af JS -->
@@ -85,7 +84,6 @@
                             <i class="fas fa-search"></i>
                             <input type="search" id="sidebar-recipe-search" placeholder="Søg i opskrifter...">
                         </div>
-                        <!-- NYT: Tag-filtre i sidebar -->
                         <div id="sidebar-tag-filters" class="filter-container">
                             <!-- Tag-filtre indsættes her af JS -->
                         </div>
