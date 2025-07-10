@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const readViewAddToMealPlanBtn = document.getElementById('read-view-add-to-meal-plan-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
     const readViewDeleteBtn = document.getElementById('read-view-delete-btn');
+    const readViewPrice = document.getElementById('read-view-price');
 
     // --- Madplan Side Elementer ---
     const calendarGrid = document.getElementById('calendar-grid');
@@ -88,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarTabs = document.querySelectorAll('.sidebar-tab');
     const sidebarSearchInput = document.getElementById('sidebar-recipe-search');
     const sidebarTagFilters = document.getElementById('sidebar-tag-filters');
+    const autogenPlanBtn = document.getElementById('autogen-plan-btn');
 
     // --- Indkøbsliste (nu i sidebar) ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
@@ -98,6 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Inspiration Side ---
     const inspirationGrid = document.getElementById('inspiration-grid');
+
+    // --- Autogen Modal ---
+    const autogenModal = document.getElementById('autogen-modal');
+    const autogenForm = document.getElementById('autogen-form');
+    const autogenDietTagsContainer = document.getElementById('autogen-diet-tags');
 
     // --- Notifikations Modal Elementer ---
     const notificationModal = document.getElementById('notification-modal');
@@ -115,8 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMealPlan = {}; 
     let currentShoppingList = {};
     let currentlyViewedRecipeId = null;
-    let activeRecipeFilterTags = new Set(); // OPDATERET
-    let activeSidebarTags = new Set(); // OPDATERET
+    let activeRecipeFilterTags = new Set();
+    let activeSidebarTags = new Set();
     let currentDate = new Date(); 
 
     // =================================================================
@@ -279,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
             currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderInventory(currentInventoryItems);
-            // Opdater inspiration, hvis den er synlig
             if (document.querySelector('#inspiration:not(.hidden)')) {
                 renderInspirationPage();
             }
@@ -473,6 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
         document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
         
+        // NYT: Beregn og vis pris
+        const recipePrice = calculateRecipePrice(recipe);
+        readViewPrice.innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
+
         const tagsContainer = document.getElementById('read-view-tags');
         tagsContainer.innerHTML = '';
         if (recipe.tags && recipe.tags.length > 0) {
@@ -949,6 +959,27 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListTotalContainer.innerHTML = `<span>Estimeret Pris: <strong>${totalPrice.toFixed(2)} kr.</strong></span>`;
     }
 
+    // NYT: Funktion til at beregne prisen for en enkelt opskrift
+    function calculateRecipePrice(recipe) {
+        let totalPrice = 0;
+        if (!recipe.ingredients) return 0;
+
+        recipe.ingredients.forEach(ing => {
+            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+            if(inventoryItem && inventoryItem.kg_price) {
+                let quantityInKg = 0;
+                const unit = (ing.unit || '').toLowerCase();
+                if (unit === 'g' || unit === 'gram') {
+                    quantityInKg = ing.quantity / 1000;
+                } else if (unit === 'kg') {
+                    quantityInKg = ing.quantity;
+                }
+                totalPrice += quantityInKg * inventoryItem.kg_price;
+            }
+        });
+        return totalPrice;
+    }
+
     // =================================================================
     // 8. MADPLAN SIDE LOGIK
     // =================================================================
@@ -1009,7 +1040,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
-                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash-alt"></i></button>
+                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
                 `;
                 slot.appendChild(recipeDiv);
             }
@@ -1230,12 +1261,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 9. INSPIRATION SIDE LOGIK (NYT)
+    // 9. INSPIRATION & AUTOGEN LOGIK
     // =================================================================
     function calculateRecipeMatch(recipe) {
         let missingCount = 0;
         if (!recipe.ingredients || recipe.ingredients.length === 0) {
-            return { ...recipe, missingCount: 99 }; // Opskrifter uden ingredienser vises sidst
+            return { ...recipe, missingCount: 99 };
         }
 
         recipe.ingredients.forEach(ing => {
@@ -1302,5 +1333,102 @@ document.addEventListener('DOMContentLoaded', () => {
             inspirationGrid.appendChild(card);
         });
     }
+
+    autogenPlanBtn.addEventListener('click', () => {
+        const allTags = new Set();
+        currentRecipes.forEach(r => {
+            if (r.tags) r.tags.forEach(tag => allTags.add(tag));
+        });
+
+        autogenDietTagsContainer.innerHTML = '';
+        [...allTags].sort().forEach(tag => {
+            const label = document.createElement('label');
+            label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
+            autogenDietTagsContainer.appendChild(label);
+        });
+
+        autogenModal.classList.remove('hidden');
+    });
+
+    autogenForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // 1. Indsaml kriterier
+        const budget = parseFloat(document.getElementById('autogen-budget').value) || Infinity;
+        const maxTime = parseInt(document.getElementById('autogen-time').value, 10);
+        const useLeftovers = document.getElementById('autogen-use-leftovers').checked;
+        const selectedDietTags = [...autogenDietTagsContainer.querySelectorAll('input:checked')].map(el => el.value);
+
+        // 2. Filtrer opskrifter
+        let eligibleRecipes = currentRecipes.filter(recipe => {
+            if (recipe.time > maxTime) return false;
+            if (selectedDietTags.length > 0 && !selectedDietTags.every(tag => recipe.tags?.includes(tag))) return false;
+            
+            const recipePrice = calculateRecipePrice(recipe);
+            if (recipePrice > (budget / 7) && recipePrice > 0) return false; // Simpel budget-check
+
+            return true;
+        });
+
+        // 3. Prioriter baseret på lager
+        if(useLeftovers) {
+            eligibleRecipes = eligibleRecipes.map(calculateRecipeMatch).sort((a,b) => a.missingCount - b.missingCount);
+        }
+
+        if (eligibleRecipes.length < 7) {
+            showNotification({title: "Ikke nok opskrifter", message: "Kunne ikke finde nok opskrifter, der matcher dine kriterier. Prøv med færre begrænsninger."});
+            return;
+        }
+
+        // 4. Generer planen (simpel tilfældig udvælgelse)
+        const weeklyPlan = {};
+        const start = getStartOfWeek(currentDate);
+        let usedRecipeIds = new Set();
+
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(start);
+            dayDate.setDate(start.getDate() + i);
+            const dateString = formatDate(dayDate);
+            
+            let chosenRecipe = null;
+            for(let recipe of eligibleRecipes) {
+                if (!usedRecipeIds.has(recipe.id)) {
+                    chosenRecipe = recipe;
+                    break;
+                }
+            }
+            // Hvis alle er brugt, start forfra (tillad dubletter om nødvendigt)
+            if (!chosenRecipe) {
+                chosenRecipe = eligibleRecipes[Math.floor(Math.random() * eligibleRecipes.length)];
+            }
+            
+            usedRecipeIds.add(chosenRecipe.id);
+            
+            weeklyPlan[dateString] = {
+                dinner: { recipeId: chosenRecipe.id, type: 'recipe' }
+            };
+        }
+        
+        // 5. Gem planen til Firestore
+        const confirmed = await showNotification({title: "Forslag til Madplan", message: "En ny madplan er genereret baseret på dine kriterier. Vil du gemme den?", type: 'confirm'});
+        if (confirmed) {
+            const year = currentDate.getFullYear();
+            const mealPlanDocId = `plan_${year}`;
+            const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
+
+            try {
+                // Sæt kun de 7 dage i den genererede uge, og bevar resten
+                const updates = {};
+                Object.keys(weeklyPlan).forEach(date => {
+                    updates[date] = weeklyPlan[date];
+                });
+                await setDoc(mealPlanRef, updates, { merge: true });
+                autogenModal.classList.add('hidden');
+                showNotification({title: "Madplan Gemt", message: "Din nye madplan er blevet gemt."});
+            } catch (error) {
+                console.error("Fejl ved lagring af autogen-plan:", error);
+            }
+        }
+    });
 
 });
