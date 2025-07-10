@@ -96,6 +96,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
     const addShoppingItemForm = document.getElementById('add-shopping-item-form');
 
+    // --- Inspiration Side ---
+    const inspirationGrid = document.getElementById('inspiration-grid');
+
     // --- Notifikations Modal Elementer ---
     const notificationModal = document.getElementById('notification-modal');
     const notificationTitle = document.getElementById('notification-title');
@@ -112,8 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMealPlan = {}; 
     let currentShoppingList = {};
     let currentlyViewedRecipeId = null;
-    let activeRecipeFilterTag = null; 
-    let activeSidebarTag = null; 
+    let activeRecipeFilterTags = new Set(); // OPDATERET
+    let activeSidebarTags = new Set(); // OPDATERET
     let currentDate = new Date(); 
 
     // =================================================================
@@ -235,6 +238,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSidebarTagFilters();
             renderShoppingList();
         }
+        if (hash === '#inspiration') {
+            renderInspirationPage();
+        }
     };
     
     headerTitleLink.addEventListener('click', (e) => {
@@ -273,6 +279,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
             currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             renderInventory(currentInventoryItems);
+            // Opdater inspiration, hvis den er synlig
+            if (document.querySelector('#inspiration:not(.hidden)')) {
+                renderInspirationPage();
+            }
         }, error => console.error("Fejl i varelager-listener:", error));
 
         const recipesRef = collection(db, 'recipes');
@@ -283,6 +293,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderSidebarRecipeList();
                 renderSidebarTagFilters();
+            }
+            if (document.querySelector('#inspiration:not(.hidden)')) {
+                renderInspirationPage();
             }
             document.getElementById('profile-recipe-count').textContent = currentRecipes.length;
             const favoriteCount = currentRecipes.filter(r => r.is_favorite).length;
@@ -329,9 +342,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderRecipes() {
         recipeGrid.innerHTML = '';
-        const recipesToRender = activeRecipeFilterTag 
-            ? currentRecipes.filter(r => r.tags && r.tags.includes(activeRecipeFilterTag))
-            : currentRecipes;
+        let recipesToRender = currentRecipes;
+
+        if (activeRecipeFilterTags.size > 0) {
+            recipesToRender = recipesToRender.filter(r => {
+                if (!r.tags) return false;
+                return [...activeRecipeFilterTags].every(tag => r.tags.includes(tag));
+            });
+        }
 
         if (recipesToRender.length === 0) {
             recipeGrid.innerHTML = `<p>Ingen opskrifter matcher dit filter.</p>`;
@@ -371,24 +389,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         recipeFilterContainer.innerHTML = '';
-        const allButton = document.createElement('button');
-        allButton.className = 'filter-tag';
-        allButton.textContent = 'Alle';
-        if (!activeRecipeFilterTag) allButton.classList.add('active');
-        allButton.addEventListener('click', () => {
-            activeRecipeFilterTag = null;
-            renderTagFilters();
-            renderRecipes();
-        });
-        recipeFilterContainer.appendChild(allButton);
-
+        
         allTags.forEach(tag => {
             const tagButton = document.createElement('button');
             tagButton.className = 'filter-tag';
             tagButton.textContent = tag;
-            if (activeRecipeFilterTag === tag) tagButton.classList.add('active');
+            if (activeRecipeFilterTags.has(tag)) tagButton.classList.add('active');
+            
             tagButton.addEventListener('click', () => {
-                activeRecipeFilterTag = tag;
+                if (activeRecipeFilterTags.has(tag)) {
+                    activeRecipeFilterTags.delete(tag);
+                } else {
+                    activeRecipeFilterTags.add(tag);
+                }
                 renderTagFilters();
                 renderRecipes();
             });
@@ -530,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
             current_stock: Number(document.getElementById('item-current-stock').value),
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
             unit: document.getElementById('item-unit').value,
-            kg_price: Number(document.getElementById('item-kg-price').value) || null, // OPDATERET
+            kg_price: Number(document.getElementById('item-kg-price').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
             conversion_from_unit: document.getElementById('item-conversion-from').value.toLowerCase() || null,
@@ -574,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-current-stock').value = item.current_stock || 0;
                 document.getElementById('item-max-stock').value = item.max_stock || '';
                 document.getElementById('item-unit').value = item.unit || '';
-                document.getElementById('item-kg-price').value = item.kg_price || ''; // OPDATERET
+                document.getElementById('item-kg-price').value = item.kg_price || '';
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 document.getElementById('item-conversion-from').value = item.conversion_from_unit || '';
@@ -896,7 +909,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     item.unit = target.value;
                 }
             }
-            calculateAndRenderShoppingListTotal(); // Opdater totalen live
+            calculateAndRenderShoppingListTotal();
         }
     });
 
@@ -918,7 +931,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NYT: Funktion til at beregne og vise totalpris
     function calculateAndRenderShoppingListTotal() {
         let totalPrice = 0;
         Object.values(currentShoppingList).forEach(item => {
@@ -997,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
-                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan">&times;</button>
+                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash-alt"></i></button>
                 `;
                 slot.appendChild(recipeDiv);
             }
@@ -1011,15 +1023,18 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let recipesToRender = currentRecipes;
         if (activeTab === 'favorites') {
-            recipesToRender = currentRecipes.filter(r => r.is_favorite);
+            recipesToRender = recipesToRender.filter(r => r.is_favorite);
         }
 
         if (searchTerm) {
             recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
         }
 
-        if (activeSidebarTag) {
-            recipesToRender = recipesToRender.filter(r => r.tags && r.tags.includes(activeSidebarTag));
+        if (activeSidebarTags.size > 0) {
+            recipesToRender = recipesToRender.filter(r => {
+                if (!r.tags) return false;
+                return [...activeSidebarTags].every(tag => r.tags.includes(tag));
+            });
         }
         
         recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
@@ -1048,24 +1063,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         sidebarTagFilters.innerHTML = '';
-        const allButton = document.createElement('button');
-        allButton.className = 'filter-tag';
-        allButton.textContent = 'Alle';
-        if (!activeSidebarTag) allButton.classList.add('active');
-        allButton.addEventListener('click', () => {
-            activeSidebarTag = null;
-            renderSidebarTagFilters();
-            renderSidebarRecipeList();
-        });
-        sidebarTagFilters.appendChild(allButton);
-
+        
         [...allTags].sort().forEach(tag => {
             const tagButton = document.createElement('button');
             tagButton.className = 'filter-tag';
             tagButton.textContent = tag;
-            if (activeSidebarTag === tag) tagButton.classList.add('active');
+            if (activeSidebarTags.has(tag)) tagButton.classList.add('active');
+            
             tagButton.addEventListener('click', () => {
-                activeSidebarTag = tag;
+                if (activeSidebarTags.has(tag)) {
+                    activeSidebarTags.delete(tag);
+                } else {
+                    activeSidebarTags.add(tag);
+                }
                 renderSidebarTagFilters();
                 renderSidebarRecipeList();
             });
@@ -1218,5 +1228,79 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // =================================================================
+    // 9. INSPIRATION SIDE LOGIK (NYT)
+    // =================================================================
+    function calculateRecipeMatch(recipe) {
+        let missingCount = 0;
+        if (!recipe.ingredients || recipe.ingredients.length === 0) {
+            return { ...recipe, missingCount: 99 }; // Opskrifter uden ingredienser vises sidst
+        }
+
+        recipe.ingredients.forEach(ing => {
+            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+            const needed = ing.quantity || 0;
+            const inStock = inventoryItem ? inventoryItem.current_stock : 0;
+            if (needed > inStock) {
+                missingCount++;
+            }
+        });
+        return { ...recipe, missingCount };
+    }
+
+    function renderInspirationPage() {
+        inspirationGrid.innerHTML = '';
+        
+        const recipesWithMatch = currentRecipes.map(calculateRecipeMatch);
+        
+        recipesWithMatch.sort((a, b) => {
+            if (a.missingCount !== b.missingCount) {
+                return a.missingCount - b.missingCount;
+            }
+            return a.title.localeCompare(b.title);
+        });
+
+        if (recipesWithMatch.length === 0) {
+            inspirationGrid.innerHTML = `<p>Du har ingen opskrifter endnu. Tilføj en for at få inspiration.</p>`;
+            return;
+        }
+
+        recipesWithMatch.forEach(recipe => {
+            let statusClass = 'status-red';
+            let statusTitle = `Mangler ${recipe.missingCount} ingredienser`;
+            if (recipe.missingCount === 0) {
+                statusClass = 'status-green';
+                statusTitle = 'Du har alle ingredienser';
+            } else if (recipe.missingCount === 1) {
+                statusClass = 'status-yellow';
+                statusTitle = 'Mangler 1 ingrediens';
+            }
+
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.dataset.id = recipe.id;
+            const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
+            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
+            
+            const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
+                ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
+                : '';
+
+            card.innerHTML = `
+                <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
+                <img src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <div class="recipe-card-content">
+                    <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
+                    <h4>${recipe.title}</h4>
+                    <div class="recipe-card-tags">${tagsHTML}</div>
+                </div>
+                <div class="recipe-card-actions">
+                    <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                    <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
+                </div>`;
+            inspirationGrid.appendChild(card);
+        });
+    }
 
 });
