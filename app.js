@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemNameInput = document.getElementById('item-name');
     const itemCategoryInput = document.getElementById('item-category');
     const itemStoreSectionSelect = document.getElementById('item-store-section');
-    const conversionsContainer = document.getElementById('conversions-container'); // NYT
-    const addConversionBtn = document.getElementById('add-conversion-btn'); // NYT
+    const conversionsContainer = document.getElementById('conversions-container');
+    const addConversionBtn = document.getElementById('add-conversion-btn');
 
     // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
@@ -538,7 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // NYT: Funktion til at tilføje konverteringsrække i modal
     const addConversionRow = (conversion = { from_unit: '', to_unit: '', quantity: '' }) => {
         const row = document.createElement('div');
         row.className = 'conversion-row';
@@ -562,8 +561,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
         document.getElementById('inventory-item-id').value = '';
-        conversionsContainer.innerHTML = ''; // Ryd gamle rækker
-        addConversionRow(); // Start med en tom række
+        conversionsContainer.innerHTML = '';
+        addConversionRow();
         inventoryItemModal.classList.remove('hidden');
     });
 
@@ -571,7 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
         
-        // NYT: Indsaml konverteringer fra dynamiske rækker
         const conversions = [];
         document.querySelectorAll('.conversion-row').forEach(row => {
             const from_unit = row.querySelector('.conversion-from-unit').value.trim().toLowerCase();
@@ -591,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
-            conversions: conversions // Gem som array
+            conversions: conversions
         };
         try {
             if (itemId) {
@@ -634,12 +632,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 
-                // NYT: Udfyld konverteringsrækker
                 conversionsContainer.innerHTML = '';
                 if (item.conversions && item.conversions.length > 0) {
                     item.conversions.forEach(conv => addConversionRow(conv));
                 } else {
-                    addConversionRow(); // Tilføj en tom hvis ingen findes
+                    addConversionRow();
                 }
 
                 inventoryItemModal.classList.remove('hidden');
@@ -980,21 +977,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function getQuantityInGrams(quantity, unit, inventoryItem) {
+    function getQuantityInKg(quantity, unit, inventoryItem) {
         unit = unit.toLowerCase();
-        if (unit === 'g' || unit === 'gram') return quantity;
-        if (unit === 'kg') return quantity * 1000;
-        if (unit === 'l' || unit === 'liter') return quantity * 1000; // Simpel antagelse
-        if (unit === 'dl' || unit === 'deciliter') return quantity * 100;
-        if (unit === 'ml') return quantity;
+        if (unit === 'g' || unit === 'gram') return quantity / 1000;
+        if (unit === 'kg') return quantity;
+        if (unit === 'l' || unit === 'liter') return quantity; // Antager 1l = 1kg
+        if (unit === 'dl' || unit === 'deciliter') return quantity / 10;
+        if (unit === 'ml') return quantity / 1000;
 
         if (inventoryItem && inventoryItem.conversions) {
             const conversion = inventoryItem.conversions.find(c => c.from_unit === unit);
             if (conversion && (conversion.to_unit === 'g' || conversion.to_unit === 'gram')) {
-                return quantity * conversion.quantity;
+                return (quantity * conversion.quantity) / 1000;
             }
         }
-        return null; // Kan ikke konverteres
+        return null; // Kan ikke konverteres til kg
     }
 
     function calculateAndRenderShoppingListTotal() {
@@ -1002,9 +999,8 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(currentShoppingList).forEach(item => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem && inventoryItem.kg_price) {
-                const quantityInGrams = getQuantityInGrams(item.quantity_to_buy, item.unit, inventoryItem);
-                if (quantityInGrams !== null) {
-                    const quantityInKg = quantityInGrams / 1000;
+                const quantityInKg = getQuantityInKg(item.quantity_to_buy, item.unit, inventoryItem);
+                if (quantityInKg !== null) {
                     totalPrice += quantityInKg * inventoryItem.kg_price;
                 }
             }
@@ -1019,9 +1015,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recipe.ingredients.forEach(ing => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
             if(inventoryItem && inventoryItem.kg_price) {
-                const quantityInGrams = getQuantityInGrams(ing.quantity, ing.unit, inventoryItem);
-                if (quantityInGrams !== null) {
-                    const quantityInKg = quantityInGrams / 1000;
+                const quantityInKg = getQuantityInKg(ing.quantity, ing.unit, inventoryItem);
+                if (quantityInKg !== null) {
                     totalPrice += quantityInKg * inventoryItem.kg_price;
                 }
             }
@@ -1103,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let recipesToRender = currentRecipes;
         if (activeTab === 'favorites') {
-            recipesToRender = currentRecipes.filter(r => r.is_favorite);
+            recipesToRender = recipesToRender.filter(r => r.is_favorite);
         }
 
         if (searchTerm) {
