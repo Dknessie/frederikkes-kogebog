@@ -60,6 +60,10 @@
                              <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-tasks"></i></button>
                              <button id="confirm-purchase-btn" class="btn-icon-text" title="Bekræft Indkøb"><i class="fas fa-check-circle"></i></button>
                         </div>
+                        <!-- NYT: Container for totalpris -->
+                        <div id="shopping-list-total-container" class="shopping-list-total">
+                            <!-- Totalpris indsættes her af JS -->
+                        </div>
                         <div id="shopping-list-container" class="sidebar-content">
                             <!-- Indkøbsliste genereres her af JS -->
                         </div>
@@ -131,6 +135,8 @@
                             <th>Vare</th>
                             <th>Beholdning</th>
                             <th>Kategori</th>
+                            <!-- OPDATERET: Tabel header -->
+                            <th>Kg/Pris</th>
                             <th>Placering</th>
                             <th>Handlinger</th>
                         </tr>
@@ -185,9 +191,10 @@
                         <label for="item-unit">Enhed</label>
                         <input type="text" id="item-unit" placeholder="f.eks. g, stk, ml" required>
                     </div>
+                    <!-- OPDATERET: Label og id for pris -->
                     <div class="input-group">
-                        <label for="item-price">Pris (valgfri)</label>
-                        <input type="number" step="0.01" id="item-price">
+                        <label for="item-kg-price">Kg/Pris (valgfri)</label>
+                        <input type="number" step="0.01" id="item-kg-price">
                     </div>
                     <div class="input-group">
                         <label for="item-store-section">Sektion i butik</label>
@@ -332,7 +339,6 @@
                     <span id="read-view-portions"><i class="fas fa-users"></i></span>
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
-                <!-- OPDATERET: Knapper i læse-modal -->
                 <div class="read-view-actions">
                     <button id="read-view-add-to-meal-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Føj til Madplan</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
