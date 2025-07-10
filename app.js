@@ -58,6 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemNameInput = document.getElementById('item-name');
     const itemCategoryInput = document.getElementById('item-category');
     const itemStoreSectionSelect = document.getElementById('item-store-section');
+    const conversionsContainer = document.getElementById('conversions-container'); // NYT
+    const addConversionBtn = document.getElementById('add-conversion-btn'); // NYT
 
     // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
@@ -479,7 +481,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
         document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
         
-        // NYT: Beregn og vis pris
         const recipePrice = calculateRecipePrice(recipe);
         readViewPrice.innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
 
@@ -537,16 +538,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // NYT: Funktion til at tilføje konverteringsrække i modal
+    const addConversionRow = (conversion = { from_unit: '', to_unit: '', quantity: '' }) => {
+        const row = document.createElement('div');
+        row.className = 'conversion-row';
+        row.innerHTML = `
+            <input type="text" class="conversion-from-unit" placeholder="Fra enhed (f.eks. dåse)" value="${conversion.from_unit}">
+            <input type="number" class="conversion-to-quantity" placeholder="Til antal" value="${conversion.quantity}">
+            <input type="text" class="conversion-to-unit" placeholder="Til enhed (f.eks. g)" value="${conversion.to_unit}">
+            <button type="button" class="btn-icon remove-conversion-btn"><i class="fas fa-trash"></i></button>
+        `;
+        conversionsContainer.appendChild(row);
+    };
+
+    addConversionBtn.addEventListener('click', () => addConversionRow());
+    conversionsContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-conversion-btn')) {
+            e.target.closest('.conversion-row').remove();
+        }
+    });
+    
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
         document.getElementById('inventory-item-id').value = '';
+        conversionsContainer.innerHTML = ''; // Ryd gamle rækker
+        addConversionRow(); // Start med en tom række
         inventoryItemModal.classList.remove('hidden');
     });
 
     inventoryItemForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
+        
+        // NYT: Indsaml konverteringer fra dynamiske rækker
+        const conversions = [];
+        document.querySelectorAll('.conversion-row').forEach(row => {
+            const from_unit = row.querySelector('.conversion-from-unit').value.trim().toLowerCase();
+            const to_unit = row.querySelector('.conversion-to-unit').value.trim().toLowerCase();
+            const quantity = parseFloat(row.querySelector('.conversion-to-quantity').value);
+            if (from_unit && to_unit && quantity) {
+                conversions.push({ from_unit, to_unit, quantity });
+            }
+        });
+
         const itemData = {
             name: document.getElementById('item-name').value,
             category: document.getElementById('item-category').value,
@@ -556,9 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
-            conversion_from_unit: document.getElementById('item-conversion-from').value.toLowerCase() || null,
-            conversion_to_quantity: Number(document.getElementById('item-conversion-to-quantity').value) || null,
-            conversion_to_unit: document.getElementById('item-conversion-to-unit').value.toLowerCase() || null,
+            conversions: conversions // Gem som array
         };
         try {
             if (itemId) {
@@ -600,9 +633,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-kg-price').value = item.kg_price || '';
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
-                document.getElementById('item-conversion-from').value = item.conversion_from_unit || '';
-                document.getElementById('item-conversion-to-quantity').value = item.conversion_to_quantity || '';
-                document.getElementById('item-conversion-to-unit').value = item.conversion_to_unit || '';
+                
+                // NYT: Udfyld konverteringsrækker
+                conversionsContainer.innerHTML = '';
+                if (item.conversions && item.conversions.length > 0) {
+                    item.conversions.forEach(conv => addConversionRow(conv));
+                } else {
+                    addConversionRow(); // Tilføj en tom hvis ingen findes
+                }
+
                 inventoryItemModal.classList.remove('hidden');
             }
         }
@@ -941,25 +980,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function getQuantityInGrams(quantity, unit, inventoryItem) {
+        unit = unit.toLowerCase();
+        if (unit === 'g' || unit === 'gram') return quantity;
+        if (unit === 'kg') return quantity * 1000;
+        if (unit === 'l' || unit === 'liter') return quantity * 1000; // Simpel antagelse
+        if (unit === 'dl' || unit === 'deciliter') return quantity * 100;
+        if (unit === 'ml') return quantity;
+
+        if (inventoryItem && inventoryItem.conversions) {
+            const conversion = inventoryItem.conversions.find(c => c.from_unit === unit);
+            if (conversion && (conversion.to_unit === 'g' || conversion.to_unit === 'gram')) {
+                return quantity * conversion.quantity;
+            }
+        }
+        return null; // Kan ikke konverteres
+    }
+
     function calculateAndRenderShoppingListTotal() {
         let totalPrice = 0;
         Object.values(currentShoppingList).forEach(item => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem && inventoryItem.kg_price) {
-                let quantityInKg = 0;
-                const unit = item.unit.toLowerCase();
-                if (unit === 'g' || unit === 'gram') {
-                    quantityInKg = item.quantity_to_buy / 1000;
-                } else if (unit === 'kg') {
-                    quantityInKg = item.quantity_to_buy;
+                const quantityInGrams = getQuantityInGrams(item.quantity_to_buy, item.unit, inventoryItem);
+                if (quantityInGrams !== null) {
+                    const quantityInKg = quantityInGrams / 1000;
+                    totalPrice += quantityInKg * inventoryItem.kg_price;
                 }
-                totalPrice += quantityInKg * inventoryItem.kg_price;
             }
         });
         shoppingListTotalContainer.innerHTML = `<span>Estimeret Pris: <strong>${totalPrice.toFixed(2)} kr.</strong></span>`;
     }
 
-    // NYT: Funktion til at beregne prisen for en enkelt opskrift
     function calculateRecipePrice(recipe) {
         let totalPrice = 0;
         if (!recipe.ingredients) return 0;
@@ -967,14 +1019,11 @@ document.addEventListener('DOMContentLoaded', () => {
         recipe.ingredients.forEach(ing => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
             if(inventoryItem && inventoryItem.kg_price) {
-                let quantityInKg = 0;
-                const unit = (ing.unit || '').toLowerCase();
-                if (unit === 'g' || unit === 'gram') {
-                    quantityInKg = ing.quantity / 1000;
-                } else if (unit === 'kg') {
-                    quantityInKg = ing.quantity;
+                const quantityInGrams = getQuantityInGrams(ing.quantity, ing.unit, inventoryItem);
+                if (quantityInGrams !== null) {
+                    const quantityInKg = quantityInGrams / 1000;
+                    totalPrice += quantityInKg * inventoryItem.kg_price;
                 }
-                totalPrice += quantityInKg * inventoryItem.kg_price;
             }
         });
         return totalPrice;
@@ -1054,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let recipesToRender = currentRecipes;
         if (activeTab === 'favorites') {
-            recipesToRender = recipesToRender.filter(r => r.is_favorite);
+            recipesToRender = currentRecipes.filter(r => r.is_favorite);
         }
 
         if (searchTerm) {
@@ -1353,24 +1402,21 @@ document.addEventListener('DOMContentLoaded', () => {
     autogenForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // 1. Indsaml kriterier
         const budget = parseFloat(document.getElementById('autogen-budget').value) || Infinity;
         const maxTime = parseInt(document.getElementById('autogen-time').value, 10);
         const useLeftovers = document.getElementById('autogen-use-leftovers').checked;
         const selectedDietTags = [...autogenDietTagsContainer.querySelectorAll('input:checked')].map(el => el.value);
 
-        // 2. Filtrer opskrifter
         let eligibleRecipes = currentRecipes.filter(recipe => {
             if (recipe.time > maxTime) return false;
             if (selectedDietTags.length > 0 && !selectedDietTags.every(tag => recipe.tags?.includes(tag))) return false;
             
             const recipePrice = calculateRecipePrice(recipe);
-            if (recipePrice > (budget / 7) && recipePrice > 0) return false; // Simpel budget-check
+            if (recipePrice > (budget / 7) && recipePrice > 0) return false;
 
             return true;
         });
 
-        // 3. Prioriter baseret på lager
         if(useLeftovers) {
             eligibleRecipes = eligibleRecipes.map(calculateRecipeMatch).sort((a,b) => a.missingCount - b.missingCount);
         }
@@ -1380,7 +1426,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 4. Generer planen (simpel tilfældig udvælgelse)
         const weeklyPlan = {};
         const start = getStartOfWeek(currentDate);
         let usedRecipeIds = new Set();
@@ -1397,7 +1442,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 }
             }
-            // Hvis alle er brugt, start forfra (tillad dubletter om nødvendigt)
             if (!chosenRecipe) {
                 chosenRecipe = eligibleRecipes[Math.floor(Math.random() * eligibleRecipes.length)];
             }
@@ -1409,7 +1453,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
         
-        // 5. Gem planen til Firestore
         const confirmed = await showNotification({title: "Forslag til Madplan", message: "En ny madplan er genereret baseret på dine kriterier. Vil du gemme den?", type: 'confirm'});
         if (confirmed) {
             const year = currentDate.getFullYear();
@@ -1417,7 +1460,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
 
             try {
-                // Sæt kun de 7 dage i den genererede uge, og bevar resten
                 const updates = {};
                 Object.keys(weeklyPlan).forEach(date => {
                     updates[date] = weeklyPlan[date];
