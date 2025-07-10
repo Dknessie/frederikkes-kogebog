@@ -897,7 +897,6 @@ nav {
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
 
-/* OPDATERET: Styling for konverteringsrækker */
 .conversion-row {
     display: grid;
     grid-template-columns: 1fr 100px 100px 40px;
