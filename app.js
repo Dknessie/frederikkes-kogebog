@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeReadModal = document.getElementById('recipe-read-modal');
     const readViewAddToMealPlanBtn = document.getElementById('read-view-add-to-meal-plan-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
+    const readViewDeleteBtn = document.getElementById('read-view-delete-btn'); // NYT
 
     // --- Madplan Side Elementer ---
     const calendarGrid = document.getElementById('calendar-grid');
@@ -350,6 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="recipe-card-actions">
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                    <!-- NYT: Slet knap på kortet -->
+                    <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
                 </div>`;
             recipeGrid.appendChild(card);
         });
@@ -666,6 +669,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // NYT: Håndtering af slet-knap på kortet
+        if (e.target.closest('.delete-recipe-btn')) {
+            e.stopPropagation(); // Forhindrer at læse-modal åbnes
+            const confirmed = await showNotification({title: "Slet Opskrift", message: "Er du sikker på, du vil slette denne opskrift?", type: 'confirm'});
+            if(confirmed) {
+                try {
+                    await deleteDoc(doc(db, 'recipes', docId));
+                    showNotification({title: "Slettet", message: "Opskriften er blevet slettet."});
+                } catch (error) {
+                    console.error("Fejl ved sletning af opskrift:", error);
+                    showNotification({title: "Fejl", message: "Opskriften kunne ikke slettes."});
+                }
+            }
+            return;
+        }
+
         const recipe = currentRecipes.find(r => r.id === docId);
         if (recipe) {
             renderReadView(recipe);
@@ -698,6 +717,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 addIngredientRow();
             }
             recipeEditModal.classList.remove('hidden');
+        }
+    });
+    
+    // NYT: Slet-knap i læse-modal
+    readViewDeleteBtn.addEventListener('click', async () => {
+        const recipeId = currentlyViewedRecipeId;
+        if (!recipeId) return;
+
+        const confirmed = await showNotification({title: "Slet Opskrift", message: "Er du sikker på, du vil slette denne opskrift?", type: 'confirm'});
+        if(confirmed) {
+            try {
+                await deleteDoc(doc(db, 'recipes', recipeId));
+                recipeReadModal.classList.add('hidden');
+                showNotification({title: "Slettet", message: "Opskriften er blevet slettet."});
+            } catch (error) {
+                console.error("Fejl ved sletning af opskrift:", error);
+                showNotification({title: "Fejl", message: "Opskriften kunne ikke slettes."});
+            }
         }
     });
     
@@ -940,7 +977,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // OPDATERET: renderSidebarRecipeList med ny harmonika-struktur
     function renderSidebarRecipeList() {
         sidebarRecipeList.innerHTML = '';
         const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
@@ -1031,17 +1067,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sidebarSearchInput.addEventListener('input', renderSidebarRecipeList);
 
-    // NYT: Event listener for harmonika-effekt
     sidebarRecipeList.addEventListener('click', (e) => {
         const header = e.target.closest('.sidebar-recipe-header');
         if (header) {
             const item = header.closest('.sidebar-recipe-item');
             const wasExpanded = item.classList.contains('expanded');
-
-            // Luk alle andre
+            
             sidebarRecipeList.querySelectorAll('.sidebar-recipe-item').forEach(i => i.classList.remove('expanded'));
             
-            // Åbn den klikkede, hvis den ikke allerede var åben
             if (!wasExpanded) {
                 item.classList.add('expanded');
             }
@@ -1053,7 +1086,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
-        if (e.target.classList.contains('sidebar-recipe-item')) {
+        if (e.target.classList.contains('sidebar-recipe-item')) { // OPDATERET: Træk fra harmonika-element
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'new-item',
                 recipeId: e.target.dataset.recipeId
