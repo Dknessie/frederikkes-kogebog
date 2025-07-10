@@ -863,7 +863,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: ing.name,
                         quantity_to_buy: toBuy,
                         unit: ing.unit || '',
-                        store_section: inventoryItem ? inventoryItem.store_section : 'Andet'
+                        store_section: inventoryItem ? inventoryItem.store_section : 'Andet',
+                        // NYT: Sørg for at pris og konverteringer kommer med
+                        kg_price: inventoryItem ? inventoryItem.kg_price : null,
+                        conversions: inventoryItem ? inventoryItem.conversions : []
                     };
                 }
             }
@@ -981,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
         unit = unit.toLowerCase();
         if (unit === 'g' || unit === 'gram') return quantity / 1000;
         if (unit === 'kg') return quantity;
-        if (unit === 'l' || unit === 'liter') return quantity; // Antager 1l = 1kg
+        if (unit === 'l' || unit === 'liter') return quantity; 
         if (unit === 'dl' || unit === 'deciliter') return quantity / 10;
         if (unit === 'ml') return quantity / 1000;
 
@@ -991,12 +994,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return (quantity * conversion.quantity) / 1000;
             }
         }
-        return null; // Kan ikke konverteres til kg
+        return null; 
     }
 
     function calculateAndRenderShoppingListTotal() {
         let totalPrice = 0;
         Object.values(currentShoppingList).forEach(item => {
+            // OPDATERET: Hent inventory item baseret på shopping item, ikke fra global state
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem && inventoryItem.kg_price) {
                 const quantityInKg = getQuantityInKg(item.quantity_to_buy, item.unit, inventoryItem);
