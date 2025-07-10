@@ -12,7 +12,7 @@
 </head>
 <body>
 
-    <!-- ===== Login Skærm (Vises som standard) ===== -->
+    <!-- ===== Login Skærm ===== -->
     <main id="login-page" class="page">
         <div class="login-container">
             <h1 class="app-title">Frederikkes Kogebog</h1>
@@ -32,13 +32,15 @@
         </div>
     </main>
 
-    <!-- ===== App Container (Skjult som standard) ===== -->
+    <!-- ===== App Container ===== -->
     <div id="app-container" class="hidden">
         <header>
             <div class="header-content">
                 <a href="#dashboard" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
                 <nav>
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <!-- NYT: Madplan link tilføjet -->
+                    <a href="#meal-planner" class="nav-link"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
                     <a href="#shopping-list" class="nav-link"><i class="fas fa-cart-shopping"></i> Indkøbsliste</a>
@@ -51,11 +53,11 @@
         <main id="app-main-content">
             <!-- ===== Dashboard Side ===== -->
             <section id="dashboard" class="page">
-                <h2>Dashboard</h2>
+                 <h2>Dashboard</h2>
                 <div class="dashboard-grid">
                     <div class="card">
                         <h3>Denne Uges Madplan</h3>
-                        <div id="meal-plan-container">
+                        <div id="meal-plan-dashboard-container">
                             <!-- Madplan genereres her af JS -->
                         </div>
                         <button id="generate-weekly-shopping-list-btn" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-tasks"></i> Tilføj Uge til Indkøbsliste</button>
@@ -70,6 +72,45 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ================================================= -->
+            <!-- NYT: Madplan Side                                 -->
+            <!-- ================================================= -->
+            <section id="meal-planner" class="page hidden">
+                <div class="meal-planner-layout">
+                    <!-- Kalender-del -->
+                    <div class="meal-planner-main">
+                        <div class="calendar-header">
+                            <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
+                            <h2 id="calendar-title">Uge 28, 2024</h2>
+                            <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid">
+                            <!-- Kalender genereres af JS -->
+                        </div>
+                    </div>
+                    <!-- Sidebar med opskrifter -->
+                    <aside class="meal-planner-sidebar">
+                        <h3>Træk en opskrift til planen</h3>
+                        <div class="sidebar-tabs">
+                            <button class="sidebar-tab active" data-tab="my-recipes">Mine Opskrifter</button>
+                            <button class="sidebar-tab" data-tab="favorites">Favoritter</button>
+                        </div>
+                        <div class="sidebar-content">
+                             <div class="special-draggables">
+                                <div class="draggable-item special-item" draggable="true" data-recipe-id="leftovers">
+                                    <i class="fas fa-box-open"></i>
+                                    <span>Rester</span>
+                                </div>
+                            </div>
+                            <div id="sidebar-recipe-list">
+                                <!-- Opskrifter til at trække indsættes her af JS -->
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
 
             <!-- ===== Opskrifter Side ===== -->
             <section id="recipes" class="page hidden">
@@ -330,7 +371,7 @@
         </div>
     </div>
 
-    <!-- Madplan Modal -->
+    <!-- Gammel Madplan Modal (skjules, men beholdes for nu) -->
     <div id="meal-plan-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -362,7 +403,7 @@
         </div>
     </div>
 
-    <!-- NYT: Notifikations Modal -->
+    <!-- Notifikations Modal -->
     <div id="notification-modal" class="modal-overlay hidden">
         <div class="modal-content modal-notification">
              <h3 id="notification-title"></h3>
@@ -374,7 +415,6 @@
     </div>
 
 
-    <!-- Indlæs app.js som et modul. Al logik er nu samlet her. -->
     <script type="module" src="app.js"></script>
 
 </body>
