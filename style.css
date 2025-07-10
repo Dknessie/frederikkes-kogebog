@@ -1,8 +1,8 @@
 /* ===== Generel Styling & Variabler ===== */
 :root {
-    --primary-color: #d1603d; /* En varm, indbydende orange/brun */
-    --secondary-color: #f3f0e9; /* En lys creme/beige baggrund */
-    --accent-color: #5d8a66; /* En dæmpet grøn til succes/status */
+    --primary-color: #d1603d; 
+    --secondary-color: #f3f0e9; 
+    --accent-color: #5d8a66; 
     --text-color: #3d3d3d;
     --heading-font: 'Playfair Display', serif;
     --body-font: 'Inter', sans-serif;
@@ -486,52 +486,78 @@ nav {
     padding: 0;
 }
 
+/* OPDATERET: Styling for shopping-list-item */
 .shopping-list-item {
-    padding: 0.4rem 0;
+    padding: 0.75rem 0.25rem;
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Juster for flerradet indhold */
     justify-content: space-between;
-    font-size: 0.9rem;
-}
-.shopping-list-item .item-info {
-    display: flex;
-    align-items: center;
     gap: 0.5rem;
-    flex-grow: 1;
-    overflow: hidden;
+    border-bottom: 1px solid #f0f0f0;
 }
-.shopping-list-item .item-info label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.shopping-list-item:last-child {
+    border-bottom: none;
+}
+
+.shopping-list-item .item-main-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-grow: 1;
+}
+.shopping-list-item .item-name-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.shopping-list-item .item-name-details label {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.shopping-list-item .item-details {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.shopping-list-item .item-quantity-input {
+    width: 60px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.shopping-list-item .item-unit-input {
+    width: 50px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
 }
 
 .shopping-list-item .item-actions {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-}
-
-.shopping-list-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
     flex-shrink: 0;
 }
 
-.shopping-list-item input[type="checkbox"]:checked + label {
+.shopping-list-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+
+.shopping-list-item input[type="checkbox"]:checked + .item-name-details label {
     text-decoration: line-through;
     color: #999;
 }
 
-.new-item-indicator {
-    color: var(--accent-color);
-}
-.remove-from-list-btn {
-    color: #aaa;
+.new-item-indicator, .remove-from-list-btn {
+    font-size: 1rem;
 }
 
 .add-item-form-container {
-    margin-top: auto; /* Skubber formen til bunden */
+    margin-top: auto;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
 }
@@ -729,5 +755,3 @@ nav {
     max-width: 450px;
     text-align: center;
 }
-
-/* ===== Responsivitet (Ignoreret for nu som ønsket) ===== */
