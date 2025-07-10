@@ -9,6 +9,9 @@
     --border-radius: 8px;
     --shadow: 0 4px 12px rgba(0,0,0,0.08);
     --border-color: #e0e0e0;
+    --status-green: #4CAF50;
+    --status-yellow: #FFC107;
+    --status-red: #F44336;
 }
 
 body {
@@ -347,24 +350,29 @@ nav {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* OPDATERET: Tydeligere slet-knap på måltid */
 .remove-meal-btn {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    background: none;
-    border: none;
-    color: #aaa;
+    top: 4px;
+    right: 4px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    color: var(--text-color);
     cursor: pointer;
-    font-size: 0.8rem;
-    display: none;
-    padding: 2px 4px;
-    line-height: 1;
+    font-size: 0.9rem;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
 .planned-recipe:hover .remove-meal-btn {
-    display: block;
+    opacity: 1;
 }
 .remove-meal-btn:hover {
-    color: #D32F2F;
+    background: var(--status-red);
+    color: white;
 }
 
 /* Sidebar (Generel styling for begge) */
@@ -489,7 +497,6 @@ nav {
     margin-bottom: 1rem;
 }
 
-/* NYT: Styling af totalpris */
 .shopping-list-total {
     padding: 0.75rem;
     margin-bottom: 1rem;
@@ -668,6 +675,7 @@ nav {
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative; /* Tilføjet for status-prik */
 }
 
 .recipe-card:hover {
@@ -748,6 +756,21 @@ nav {
     transform: scale(1.2);
 }
 
+/* NYT: Styling for status-prik på opskriftskort */
+.status-indicator {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.status-indicator.status-green { background-color: var(--status-green); }
+.status-indicator.status-yellow { background-color: var(--status-yellow); }
+.status-indicator.status-red { background-color: var(--status-red); }
+
 .inventory-table {
     width: 100%;
     border-collapse: collapse;
@@ -805,7 +828,6 @@ nav {
     text-align: center;
 }
 
-/* OPDATERET: Styling for Læse-modal */
 .read-view-image {
     width: 100%;
     max-height: 350px; 
@@ -815,7 +837,7 @@ nav {
     background-color: #f0f0f0;
 }
 .read-view-actions {
-    margin-top: 1.5rem; /* Mere plads */
+    margin-top: 1.5rem; 
     display: flex;
     gap: 1rem;
 }
@@ -844,13 +866,12 @@ nav {
     white-space: pre-wrap;
 }
 
-/* OPDATERET: Styling for Redigerings-modal */
 #recipe-edit-modal .image-upload-container img {
-    max-height: 300px; /* Samme som læse-modal */
+    max-height: 300px; 
     object-fit: cover;
 }
 #recipe-edit-modal .form-grid {
-    gap: 1.5rem; /* Mere plads */
+    gap: 1.5rem; 
 }
 #recipe-edit-modal .ingredient-row {
     background: #f9f9f9;
