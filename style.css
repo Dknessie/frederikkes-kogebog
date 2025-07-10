@@ -8,6 +8,7 @@
     --body-font: 'Inter', sans-serif;
     --border-radius: 8px;
     --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    --border-color: #e0e0e0;
 }
 
 body {
@@ -24,7 +25,7 @@ body {
 
 .page {
     padding: 2rem;
-    max-width: 1200px;
+    max-width: 1400px; /* Øget for den nye layout */
     margin: 0 auto;
     animation: fadeIn 0.5s ease-in-out;
 }
@@ -41,7 +42,7 @@ h1, h2, h3, h4 {
 
 hr {
     border: none;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
     margin: 1.5rem 0;
 }
 
@@ -108,6 +109,9 @@ hr {
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-primary {
@@ -167,7 +171,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     height: 70px;
 }
@@ -184,7 +188,7 @@ header {
 
 nav {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem; /* Reduceret gap for flere links */
 }
 
 .nav-link {
@@ -194,15 +198,14 @@ nav {
     padding: 0.5rem;
     border-bottom: 2px solid transparent;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .nav-link:hover, .nav-link.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
-}
-
-.nav-link i {
-    margin-right: 0.5rem;
 }
 
 .btn-logout {
@@ -235,22 +238,196 @@ nav {
     gap: 2rem;
 }
 
-.meal-plan-list, .suggestion-list {
-    list-style: none;
-    padding: 0;
-}
-
-#meal-plan-container .meal-plan-day {
+#meal-plan-dashboard-container .meal-plan-day {
     display: flex;
     justify-content: space-between;
     padding: 0.75rem 0;
     border-bottom: 1px solid #eee;
 }
-#meal-plan-container .meal-plan-day:last-child {
+#meal-plan-dashboard-container .meal-plan-day:last-child {
     border-bottom: none;
 }
-#meal-plan-container .meal-plan-day strong {
+#meal-plan-dashboard-container .meal-plan-day strong {
     color: var(--primary-color);
+}
+
+/* ================================================= */
+/* NYT: Madplan Side Styling                         */
+/* ================================================= */
+
+.meal-planner-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px; /* Hovedindhold og sidebar */
+    gap: 2rem;
+    height: calc(100vh - 70px - 4rem); /* Fuld højde minus header og padding */
+}
+
+.meal-planner-main {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    flex-grow: 1;
+}
+
+.calendar-day {
+    background-color: #fdfdfd;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-day-header {
+    padding: 0.5rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.meal-slots {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.meal-slot {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border-bottom: 1px dashed #eee;
+    position: relative;
+    min-height: 80px;
+    transition: background-color 0.2s ease;
+}
+.meal-slot:last-child {
+    border-bottom: none;
+}
+.meal-slot.drag-over {
+    background-color: #d1e7dd; /* Grønlig farve ved hover */
+}
+
+.meal-slot-title {
+    font-size: 0.7rem;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.planned-recipe {
+    background-color: var(--secondary-color);
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    border-left: 3px solid var(--primary-color);
+    cursor: pointer;
+    position: relative;
+}
+.planned-recipe.leftovers {
+    border-left-color: var(--accent-color);
+}
+.planned-recipe span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.remove-meal-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: none;
+}
+.planned-recipe:hover .remove-meal-btn {
+    display: block;
+}
+
+
+/* Sidebar */
+.meal-planner-sidebar {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    height: 100%;
+    overflow-y: hidden;
+}
+.meal-planner-sidebar h3 {
+    margin-top: 0;
+    text-align: center;
+}
+
+.sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+.sidebar-tab {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 2px solid transparent;
+}
+.sidebar-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.sidebar-content {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.special-draggables {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.draggable-item {
+    padding: 0.75rem;
+    background-color: #f9f9f9;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    cursor: grab;
+    transition: box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.draggable-item:active {
+    cursor: grabbing;
+    box-shadow: var(--shadow);
+}
+.draggable-item.special-item {
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: 600;
 }
 
 
@@ -644,6 +821,17 @@ nav {
 }
 
 /* ===== Responsivitet ===== */
+@media (max-width: 1200px) {
+    .meal-planner-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .meal-planner-sidebar {
+        height: 400px; /* Fast højde på mindre skærme */
+    }
+}
+
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
@@ -667,5 +855,8 @@ nav {
     }
     .ingredient-row {
         grid-template-columns: 1fr;
+    }
+    .calendar-grid {
+        grid-template-columns: 1fr; /* Stack dage vertikalt på mobil */
     }
 }
