@@ -169,7 +169,6 @@ hr {
     background-color: #e0e0e0;
 }
 
-/* OPDATERET: Styling for bekræft-knap */
 .btn-confirm-purchase {
     background-color: var(--accent-color);
     color: white;
@@ -896,6 +895,15 @@ nav {
     align-items: center;
     margin-bottom: 1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+/* NYT: Styling for konverteringsrækker */
+.conversion-row {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px 40px;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
 }
 
 /* NYT: Styling for Autogen Modal */
