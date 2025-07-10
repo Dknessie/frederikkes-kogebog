@@ -116,6 +116,7 @@ hr {
     align-items: center;
     gap: 0.5rem;
     justify-content: center;
+    text-decoration: none;
 }
 
 .btn-primary {
@@ -155,28 +156,7 @@ hr {
     color: var(--primary-color);
 }
 
-.btn-icon-text {
-    background-color: #f0f0f0;
-    color: var(--text-color);
-    border: 1px solid #ddd;
-    border-radius: var(--border-radius);
-    padding: 0.6rem;
-    font-size: 1rem;
-    flex-grow: 1;
-    cursor: pointer;
-}
-.btn-icon-text:hover {
-    background-color: #e0e0e0;
-}
-
-.btn-confirm-purchase {
-    background-color: var(--accent-color);
-    color: white;
-}
-.btn-confirm-purchase:hover {
-    background-color: #4a7553;
-}
-
+/* FJERNET: .btn-icon-text og .btn-confirm-purchase er erstattet af standard .btn klasser */
 
 /* ===== App Layout (Header & Main) ===== */
 #app-container {
@@ -290,6 +270,12 @@ nav {
     margin-bottom: 1rem;
 }
 
+/* OPDATERET: Sikrer at knappen ikke strækker sig unødigt */
+.calendar-actions .btn {
+    width: auto;
+    max-width: 280px;
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -325,6 +311,8 @@ nav {
     position: relative;
     min-height: 80px;
     transition: background-color 0.2s ease;
+    /* NYT: Forhindrer indhold i at bryde layoutet */
+    overflow: hidden;
 }
 .meal-slot:last-child {
     border-bottom: none;
@@ -349,6 +337,9 @@ nav {
     cursor: grab; 
     position: relative;
     transition: box-shadow 0.2s ease;
+    /* NYT: Sikrer at kortet ikke bliver bredere end sin container */
+    width: 100%;
+    box-sizing: border-box;
 }
 .planned-recipe:active {
     cursor: grabbing;
@@ -357,6 +348,7 @@ nav {
 .planned-recipe.leftovers {
     border-left-color: var(--accent-color);
 }
+/* OPDATERET: Denne regel sikrer, at lang tekst bliver afkortet */
 .planned-recipe span {
     display: block;
     white-space: nowrap;
@@ -503,11 +495,19 @@ nav {
 }
 
 /* Venstre Sidebar (Indkøbsliste) */
+/* OPDATERET: Styling for knapper i sidebar */
 .sidebar-actions {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    justify-content: center;
 }
+.sidebar-actions .btn {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.5rem;
+}
+
 
 .shopping-list-total {
     padding: 0.75rem;
@@ -795,7 +795,45 @@ nav {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid #eee;
+    vertical-align: middle;
 }
+
+/* NYT: Styling for status-indikator i varelager */
+.stock-display {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.stock-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.stock-level {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+.stock-display span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+}
+.status-badge.status-ok { background-color: var(--status-green); }
+.status-badge.status-low { background-color: var(--status-yellow); color: var(--text-color); }
+.status-badge.status-critical { background-color: var(--status-red); }
+.status-badge.status-unknown { background-color: #ccc; color: var(--text-color); }
+
 
 /* ===== Modaler ===== */
 .modal-overlay {
@@ -837,6 +875,13 @@ nav {
 .modal-notification {
     max-width: 450px;
     text-align: center;
+}
+
+/* NYT: Generel form-grid styling */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem 1.5rem;
 }
 
 .read-view-image {
@@ -881,9 +926,6 @@ nav {
     max-height: 300px; 
     object-fit: cover;
 }
-#recipe-edit-modal .form-grid {
-    gap: 1.5rem; 
-}
 #recipe-edit-modal .ingredient-row {
     background: #f9f9f9;
     border: 1px solid #eee;
@@ -898,20 +940,6 @@ nav {
 }
 #recipe-edit-modal .form-actions {
     margin-top: 2rem; 
-}
-
-/* OPDATERET: Styling for konverteringsrækker */
-.conversion-row {
-    display: grid;
-    grid-template-columns: 1fr 100px 100px 40px;
-    gap: 1rem;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-.conversion-row input {
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-    padding: 0.6rem;
 }
 
 /* Autogen Modal */
