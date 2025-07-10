@@ -49,7 +49,7 @@
 
         <main id="app-main-content">
             <!-- ================================================= -->
-            <!-- Madplan Side (Nu med korrekt 3-kolonne layout)    -->
+            <!-- Madplan Side (Korrekt 3-kolonne layout)           -->
             <!-- ================================================= -->
             <section id="meal-planner" class="page">
                 <div class="meal-planner-layout">
@@ -62,6 +62,13 @@
                         </div>
                         <div id="shopping-list-container" class="sidebar-content">
                             <!-- Indkøbsliste genereres her af JS -->
+                        </div>
+                        <!-- NYT: Formular til at tilføje vare manuelt -->
+                        <div class="add-item-form-container">
+                            <form id="add-shopping-item-form">
+                                <input type="text" id="add-shopping-item-name" placeholder="Tilføj vare..." required>
+                                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+                            </form>
                         </div>
                     </aside>
 
