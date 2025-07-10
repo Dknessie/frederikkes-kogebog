@@ -58,8 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const itemNameInput = document.getElementById('item-name');
     const itemCategoryInput = document.getElementById('item-category');
     const itemStoreSectionSelect = document.getElementById('item-store-section');
-    const conversionsContainer = document.getElementById('conversions-container');
-    const addConversionBtn = document.getElementById('add-conversion-btn');
 
     // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
@@ -342,6 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div><span>${item.current_stock || 0} ${item.unit || ''}</span></td>
                 <td>${item.category || ''}</td>
                 <td>${item.kg_price ? `${item.kg_price.toFixed(2)} kr.` : ''}</td>
+                <td>${item.grams_per_unit || ''}</td>
                 <td>${item.home_location || ''}</td>
                 <td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
             inventoryTableBody.appendChild(tr);
@@ -538,31 +537,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    const addConversionRow = (conversion = { from_unit: '', to_unit: '', quantity: '' }) => {
-        const row = document.createElement('div');
-        row.className = 'conversion-row';
-        row.innerHTML = `
-            <input type="text" class="conversion-from-unit" placeholder="Fra enhed (f.eks. dåse)" value="${conversion.from_unit}">
-            <input type="number" class="conversion-to-quantity" placeholder="Til antal" value="${conversion.quantity}">
-            <input type="text" class="conversion-to-unit" placeholder="Til enhed (f.eks. g)" value="${conversion.to_unit}">
-            <button type="button" class="btn-icon remove-conversion-btn"><i class="fas fa-trash"></i></button>
-        `;
-        conversionsContainer.appendChild(row);
-    };
-
-    addConversionBtn.addEventListener('click', () => addConversionRow());
-    conversionsContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-conversion-btn')) {
-            e.target.closest('.conversion-row').remove();
-        }
-    });
-    
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
         document.getElementById('inventory-item-id').value = '';
-        conversionsContainer.innerHTML = '';
-        addConversionRow();
         inventoryItemModal.classList.remove('hidden');
     });
 
@@ -570,16 +548,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
         
-        const conversions = [];
-        document.querySelectorAll('.conversion-row').forEach(row => {
-            const from_unit = row.querySelector('.conversion-from-unit').value.trim().toLowerCase();
-            const to_unit = row.querySelector('.conversion-to-unit').value.trim().toLowerCase();
-            const quantity = parseFloat(row.querySelector('.conversion-to-quantity').value);
-            if (from_unit && to_unit && quantity) {
-                conversions.push({ from_unit, to_unit, quantity });
-            }
-        });
-
         const itemData = {
             name: document.getElementById('item-name').value,
             category: document.getElementById('item-category').value,
@@ -587,9 +555,9 @@ document.addEventListener('DOMContentLoaded', () => {
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
             unit: document.getElementById('item-unit').value,
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
+            grams_per_unit: Number(document.getElementById('item-grams-per-unit').value) || null,
             store_section: document.getElementById('item-store-section').value,
             home_location: document.getElementById('item-home-location').value,
-            conversions: conversions
         };
         try {
             if (itemId) {
@@ -629,16 +597,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-max-stock').value = item.max_stock || '';
                 document.getElementById('item-unit').value = item.unit || '';
                 document.getElementById('item-kg-price').value = item.kg_price || '';
+                document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
                 document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 
-                conversionsContainer.innerHTML = '';
-                if (item.conversions && item.conversions.length > 0) {
-                    item.conversions.forEach(conv => addConversionRow(conv));
-                } else {
-                    addConversionRow();
-                }
-
                 inventoryItemModal.classList.remove('hidden');
             }
         }
@@ -865,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         unit: ing.unit || '',
                         store_section: inventoryItem ? inventoryItem.store_section : 'Andet',
                         kg_price: inventoryItem ? inventoryItem.kg_price : null,
-                        conversions: inventoryItem ? inventoryItem.conversions : []
+                        grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
                 }
             }
@@ -987,12 +949,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unit === 'dl' || unit === 'deciliter') return quantity / 10;
         if (unit === 'ml') return quantity / 1000;
 
-        if (inventoryItem && inventoryItem.conversions) {
-            const conversion = inventoryItem.conversions.find(c => c.from_unit === unit);
-            if (conversion && (conversion.to_unit === 'g' || conversion.to_unit === 'gram')) {
-                return (quantity * conversion.quantity) / 1000;
-            }
+        // OPDATERET: Simpel konvertering baseret på g/enhed
+        if (inventoryItem && inventoryItem.grams_per_unit && unit === inventoryItem.unit.toLowerCase()) {
+            const totalGrams = quantity * inventoryItem.grams_per_unit;
+            return totalGrams / 1000;
         }
+        
         return null; 
     }
 
