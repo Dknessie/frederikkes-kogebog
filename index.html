@@ -36,11 +36,14 @@
     <div id="app-container" class="hidden">
         <header>
             <div class="header-content">
-                <a href="#meal-planner" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
+                <a href="#dashboard" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
                 <nav>
-                    <a href="#meal-planner" class="nav-link active"><i class="fas fa-calendar-alt"></i> Madplan</a>
+                    <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <!-- NYT: Madplan link tilføjet -->
+                    <a href="#meal-planner" class="nav-link"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
+                    <a href="#shopping-list" class="nav-link"><i class="fas fa-cart-shopping"></i> Indkøbsliste</a>
                     <a href="#profile" class="nav-link"><i class="fas fa-user-circle"></i> Profil</a>
                 </nav>
                  <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
@@ -48,57 +51,61 @@
         </header>
 
         <main id="app-main-content">
-            <!-- ================================================= -->
-            <!-- Madplan Side (Korrekt 3-kolonne layout)           -->
-            <!-- ================================================= -->
-            <section id="meal-planner" class="page">
-                <div class="meal-planner-layout">
-                    <!-- Venstre Sidebar til Indkøbsliste -->
-                    <aside class="meal-planner-sidebar-left">
-                        <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
-                        <div class="sidebar-actions">
-                             <button id="generate-weekly-shopping-list-btn" class="btn-icon-text" title="Fyld fra Ugeplan"><i class="fas fa-tasks"></i></button>
-                             <button id="confirm-purchase-btn" class="btn-icon-text" title="Bekræft Indkøb"><i class="fas fa-check-circle"></i></button>
+            <!-- ===== Dashboard Side ===== -->
+            <section id="dashboard" class="page">
+                 <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <h3>Denne Uges Madplan</h3>
+                        <div id="meal-plan-dashboard-container">
+                            <!-- Madplan genereres her af JS -->
                         </div>
-                        <div id="shopping-list-container" class="sidebar-content">
-                            <!-- Indkøbsliste genereres her af JS -->
-                        </div>
-                        <div class="add-item-form-container">
-                            <form id="add-shopping-item-form">
-                                <input type="text" id="add-shopping-item-name" placeholder="Tilføj vare..." required>
-                                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                            </form>
-                        </div>
-                    </aside>
+                        <button id="generate-weekly-shopping-list-btn" class="btn btn-primary" style="margin-top: 1rem;"><i class="fas fa-tasks"></i> Tilføj Uge til Indkøbsliste</button>
+                    </div>
+                    <div class="card">
+                        <h3>Hvad kan jeg lave nu?</h3>
+                        <p>Baseret på dit varelager kan du lave følgende retter:</p>
+                        <ul id="suggestion-list" class="suggestion-list">
+                             <!-- Indhold genereres af JS -->
+                        </ul>
+                        <button class="btn btn-secondary" id="find-recipes-btn">Find flere forslag</button>
+                    </div>
+                </div>
+            </section>
 
-                    <!-- Kalender-del (Center) -->
+            <!-- ================================================= -->
+            <!-- NYT: Madplan Side                                 -->
+            <!-- ================================================= -->
+            <section id="meal-planner" class="page hidden">
+                <div class="meal-planner-layout">
+                    <!-- Kalender-del -->
                     <div class="meal-planner-main">
                         <div class="calendar-header">
                             <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <h2 id="calendar-title"></h2>
+                            <h2 id="calendar-title">Uge 28, 2024</h2>
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
                             <!-- Kalender genereres af JS -->
                         </div>
                     </div>
-
-                    <!-- Højre Sidebar med opskrifter -->
-                    <aside class="meal-planner-sidebar-right">
-                        <h3><i class="fas fa-book-open"></i> Opskrifter</h3>
-                        <div class="sidebar-search">
-                            <i class="fas fa-search"></i>
-                            <input type="search" id="sidebar-recipe-search" placeholder="Søg i opskrifter...">
-                        </div>
-                        <div id="sidebar-tag-filters" class="filter-container">
-                            <!-- Tag-filtre indsættes her af JS -->
-                        </div>
+                    <!-- Sidebar med opskrifter -->
+                    <aside class="meal-planner-sidebar">
+                        <h3>Træk en opskrift til planen</h3>
                         <div class="sidebar-tabs">
-                            <button class="sidebar-tab active" data-tab="my-recipes">Alle</button>
+                            <button class="sidebar-tab active" data-tab="my-recipes">Mine Opskrifter</button>
                             <button class="sidebar-tab" data-tab="favorites">Favoritter</button>
                         </div>
-                        <div id="sidebar-recipe-list" class="sidebar-content">
-                            <!-- Opskrifter til at trække indsættes her af JS -->
+                        <div class="sidebar-content">
+                             <div class="special-draggables">
+                                <div class="draggable-item special-item" draggable="true" data-recipe-id="leftovers">
+                                    <i class="fas fa-box-open"></i>
+                                    <span>Rester</span>
+                                </div>
+                            </div>
+                            <div id="sidebar-recipe-list">
+                                <!-- Opskrifter til at trække indsættes her af JS -->
+                            </div>
                         </div>
                     </aside>
                 </div>
@@ -139,6 +146,18 @@
                         <!-- Data indsættes her fra app.js -->
                     </tbody>
                 </table>
+            </section>
+
+            <!-- ===== Indkøbsliste Side ===== -->
+            <section id="shopping-list" class="page hidden">
+                <h2>Indkøbsliste</h2>
+                <div class="actions-bar">
+                    <button id="confirm-purchase-btn" class="btn btn-primary"><i class="fas fa-check-circle"></i> Bekræft Indkøb</button>
+                </div>
+                <div id="shopping-list-container" class="shopping-list-container">
+                    <p>Din indkøbsliste er tom. Tilføj varer fra en opskrift for at starte.</p>
+                    <!-- Data indsættes her fra app.js -->
+                </div>
             </section>
 
             <!-- ===== Profil Side ===== -->
@@ -349,6 +368,38 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Gammel Madplan Modal (skjules, men beholdes for nu) -->
+    <div id="meal-plan-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Føj til Madplan</h3>
+            <form id="meal-plan-form">
+                <input type="hidden" id="meal-plan-recipe-id">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="meal-plan-day">Vælg dag</label>
+                        <select id="meal-plan-day" required>
+                            <option value="monday">Mandag</option>
+                            <option value="tuesday">Tirsdag</option>
+                            <option value="wednesday">Onsdag</option>
+                            <option value="thursday">Torsdag</option>
+                            <option value="friday">Fredag</option>
+                            <option value="saturday">Lørdag</option>
+                            <option value="sunday">Søndag</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="meal-plan-portions">Antal portioner</label>
+                        <input type="number" id="meal-plan-portions" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem i Madplan</button>
+                </div>
+            </form>
         </div>
     </div>
 
