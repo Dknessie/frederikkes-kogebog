@@ -119,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationActions = document.getElementById('notification-actions');
 
     // --- State Management ---
-    // OPDATERET: Centraliseret state for bedre overblik og forudsigelighed.
     const state = {
         currentUser: null,
         inventory: [],
@@ -130,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeSidebarTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        listeners: { // Holder styr på Firestore listeners
+        listeners: {
             inventory: null,
             recipes: null,
             mealPlan: null,
@@ -142,13 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 0. HJÆLPEFUNKTIONER & VÆRKTØJER
     // =================================================================
     
-    // FORBEDRING: Centraliseret fejlhåndtering for konsistent brugerfeedback.
     function handleError(error, userMessage = "Der opstod en uventet fejl.") {
         console.error("En fejl opstod:", error);
         showNotification({ title: "Fejl", message: userMessage });
     }
 
-    // FORBEDRING: Debounce-funktion til at begrænse, hvor ofte en funktion kaldes.
     function debounce(func, delay = 300) {
         let timeout;
         return (...args) => {
@@ -215,6 +212,34 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toISOString().split('T')[0]; // YYYY-MM-DD
     }
 
+    // NY HJÆLPEFUNKTION: Håndterer enhedsomregning baseret på varekortets regler
+    /**
+     * Omregner en mængde fra en enhed til en anden baseret på et varekorts regler.
+     * @param {number} quantity - Mængden der skal omregnes.
+     * @param {string} fromUnit - Enheden der skal omregnes FRA (f.eks. 'tsk').
+     * @param {object} inventoryItem - Hele varekortet fra Firestore.
+     * @returns {{convertedQuantity: number|null, finalUnit: string, error: string|null}} - Et objekt med resultatet.
+     */
+    function convertToPrimaryUnit(quantity, fromUnit, inventoryItem) {
+        const primaryUnit = (inventoryItem.unit || '').toLowerCase();
+        fromUnit = (fromUnit || '').toLowerCase();
+
+        if (fromUnit === primaryUnit) {
+            return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
+        }
+
+        // Tjek for en specifik omregningsregel på varekortet
+        const conversionRule = (inventoryItem.conversions || []).find(c => (c.from || '').toLowerCase() === fromUnit);
+
+        if (conversionRule && conversionRule.factor) {
+            const convertedQuantity = quantity * conversionRule.factor;
+            return { convertedQuantity: convertedQuantity, finalUnit: primaryUnit, error: null };
+        }
+
+        return { convertedQuantity: null, finalUnit: primaryUnit, error: `Kan ikke omregne fra '${fromUnit}' til '${primaryUnit}'.` };
+    }
+
+
     // =================================================================
     // 1. AUTHENTICATION LOGIK
     // =================================================================
@@ -230,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
             state.currentUser = null;
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
-            // Ryd alle listeners ved logout
             Object.keys(state.listeners).forEach(key => {
                 if (state.listeners[key]) state.listeners[key]();
             });
@@ -268,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
-        // Kald render-funktioner baseret på den aktive side
         switch(hash) {
             case '#meal-planner':
             case '':
@@ -320,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
-        // Ryd eksisterende listeners for at undgå dubletter
         Object.keys(state.listeners).forEach(key => {
             if (state.listeners[key]) state.listeners[key]();
         });
@@ -371,10 +393,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 4. RENDER FUNKTIONER (OPDATERET FOR YDEEVNE)
+    // 4. RENDER FUNKTIONER
     // =================================================================
     
-    // FORBEDRING: Bruger DocumentFragment for at minimere DOM-manipulation.
     function renderInventory() {
         const items = state.inventory;
         const fragment = document.createDocumentFragment();
@@ -422,7 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryTableBody.appendChild(fragment);
     }
     
-    // FORBEDRING: Bruger DocumentFragment og lazy loading af billeder.
     const lazyImageObserver = new IntersectionObserver((entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -701,7 +721,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =================================================================
-    // 6. OPSKRIFTER & IMPORT (OPDATERET)
+    // 6. OPSKRIFTER & IMPORT
     // =================================================================
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
@@ -715,17 +735,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ingredientsContainer.appendChild(row);
     };
 
-    // FORBEDRING: Implementeret robust parser for ingredienser.
     importIngredientsBtn.addEventListener('click', () => {
         const text = recipeImportTextarea.value;
         if (!text) return;
         
-        // Regex til at fange: (mængde) (enhed) (navn)
-        // Den håndterer tal med komma/punktum, forskellige enheder og navne med mellemrum.
         const ingredientRegex = /^\s*([\d.,]+)?\s*([a-zA-ZæøåÆØÅ]+)?\s*(.+)\s*$/;
         
         const lines = text.split('\n');
-        ingredientsContainer.innerHTML = ''; // Ryd eksisterende
+        ingredientsContainer.innerHTML = ''; 
         
         lines.forEach(line => {
             if (line.trim() === '') return;
@@ -742,11 +759,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     unit: unit
                 });
             } else {
-                // Hvis regex fejler, tilføj hele linjen som navn
                 addIngredientRow({ name: line.trim(), quantity: '', unit: '' });
             }
         });
-        recipeImportTextarea.value = ''; // Ryd textarea
+        recipeImportTextarea.value = '';
     });
 
     addRecipeBtn.addEventListener('click', () => {
@@ -897,7 +913,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK (OPDATERET)
+    // 7. INDKØBSLISTE LOGIK (OPDATERET MED NY LOGIK)
     // =================================================================
     
     async function updateShoppingListInFirestore(newList) {
@@ -924,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 Object.values(dayPlan).forEach(meal => {
                     if (meal && meal.recipeId && meal.type === 'recipe') {
                         const recipe = state.recipes.find(r => r.id === meal.recipeId);
-                        if (recipe) {
+                        if (recipe && recipe.ingredients) {
                             recipe.ingredients.forEach(ing => {
                                 allIngredientsNeeded.push({ ...ing });
                             });
@@ -938,42 +954,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
+    // OPDATERET: Implementerer den fleksible logik for indkøbslisten
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
+        let conversionErrors = [];
 
-        ingredients.forEach(ing => {
+        for (const ing of ingredients) {
             const key = ing.name.toLowerCase();
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
-            const neededQuantity = ing.quantity || 0;
-
-            let quantityToBuy = neededQuantity;
+            let quantityToBuy = ing.quantity || 1; // Standard til 1 hvis mængde mangler
+            let unitToBuy = ing.unit || 'stk';
 
             if (inventoryItem) {
-                // Simpel enhedstjek - fratræk kun hvis enheder er ens
-                if ((inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()) {
-                    const inStockQuantity = inventoryItem.current_stock || 0;
-                    quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
-                }
-            }
+                // Hvis varen findes, forsøg at omregne og beregn mangel
+                const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
 
+                if (conversionResult.convertedQuantity !== null) {
+                    const needed = conversionResult.convertedQuantity;
+                    const inStock = inventoryItem.current_stock || 0;
+                    const neededFromStore = Math.max(0, needed - inStock);
+                    
+                    quantityToBuy = neededFromStore;
+                    unitToBuy = conversionResult.finalUnit;
+
+                } else {
+                    // Hvis omregning fejler, tilføj den originale mængde og enhed
+                    quantityToBuy = ing.quantity;
+                    unitToBuy = ing.unit;
+                    if(ing.unit) conversionErrors.push(ing.name);
+                }
+            } else {
+                // Hvis varen slet ikke findes, tilføj den fulde mængde fra opskriften
+                quantityToBuy = ing.quantity;
+                unitToBuy = ing.unit;
+            }
+            
+            // Tilføj kun til listen hvis der rent faktisk skal købes noget
             if (quantityToBuy > 0) {
                 const existingShoppingListItem = updatedList[key];
-
-                if (existingShoppingListItem) {
+                if (existingShoppingListItem && (existingShoppingListItem.unit || '').toLowerCase() === (unitToBuy || '').toLowerCase()) {
                     existingShoppingListItem.quantity_to_buy += quantityToBuy;
                 } else {
-                    updatedList[key] = {
+                     updatedList[key] = {
                         name: ing.name,
                         quantity_to_buy: quantityToBuy,
-                        unit: ing.unit || '',
+                        unit: unitToBuy,
                         store_section: inventoryItem ? inventoryItem.store_section : 'Andet',
                         kg_price: inventoryItem ? inventoryItem.kg_price : null,
                         grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
                 }
             }
-        });
-
+        }
+        
+        // Ryd op i mængder (f.eks. afrunding for 'stk')
         for (const key in updatedList) {
             const item = updatedList[key];
             if (item.unit && !['g', 'kg', 'l', 'ml'].includes(item.unit.toLowerCase())) {
@@ -983,7 +1017,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         await updateShoppingListInFirestore(updatedList);
         if (sourceText) {
-            showNotification({ title: "Opdateret", message: `Varer fra ${sourceText} er tilføjet til indkøbslisten.` });
+            let message = `Varer fra ${sourceText} er tilføjet til indkøbslisten.`;
+            if (conversionErrors.length > 0) {
+                message += `<br><br>Bemærk: Kunne ikke omregne enheder for: ${[...new Set(conversionErrors)].join(', ')}.`;
+            }
+            showNotification({ title: "Opdateret", message: message });
         }
     }
 
@@ -1132,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 8. MADPLAN SIDE LOGIK (OPDATERET)
+    // 8. MADPLAN SIDE LOGIK
     // =================================================================
     
     function renderMealPlanner() {
@@ -1183,7 +1221,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (recipe) {
                         recipeName = recipe.title;
                     } else {
-                        // BUGFIX: Håndterer slettede opskrifter
                         recipeName = "Slettet Opskrift";
                         recipeExists = false;
                     }
@@ -1195,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (mealData.status === 'cooked') recipeDiv.classList.add('cooked');
                 if (!recipeExists) recipeDiv.classList.add('deleted');
 
-                recipeDiv.draggable = recipeExists; // Kan ikke trække slettede opskrifter
+                recipeDiv.draggable = recipeExists;
                 recipeDiv.dataset.sourceDate = date;
                 recipeDiv.dataset.sourceMeal = meal;
                 recipeDiv.dataset.mealData = JSON.stringify(mealData);
@@ -1204,7 +1241,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cookedBtnClass = isCooked ? 'cooked' : '';
                 const cookedBtnTitle = isCooked ? 'Retten er markeret som lavet' : 'Marker som lavet (nedskriv fra lager)';
                 
-                // Vis ikke "lavet"-knap for slettede opskrifter
                 const cookedBtnHTML = recipeExists ? `<button class="btn-icon mark-cooked-btn ${cookedBtnClass}" title="${cookedBtnTitle}" ${isCooked ? 'disabled' : ''}><i class="fas fa-utensils"></i></button>` : '';
 
                 recipeDiv.innerHTML = `
@@ -1290,7 +1326,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarTagFilters.appendChild(fragment);
     }
 
-    // Event Listeners for Madplan
     prevWeekBtn.addEventListener('click', () => {
         state.currentDate.setDate(state.currentDate.getDate() - 7);
         renderMealPlanner();
@@ -1309,7 +1344,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    // FORBEDRING: Debounced search input
     sidebarSearchInput.addEventListener('input', debounce(renderSidebarRecipeList, 300));
 
     sidebarRecipeList.addEventListener('click', (e) => {
@@ -1326,8 +1360,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
-    // Drag and Drop Logik
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
@@ -1412,6 +1444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // OPDATERET: Implementerer den strikse logik for "Marker som lavet"
     calendarGrid.addEventListener('click', async (e) => {
         const removeBtn = e.target.closest('.remove-meal-btn');
         if (removeBtn) {
@@ -1443,37 +1476,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const mealData = JSON.parse(slot.querySelector('.planned-recipe').dataset.mealData);
             const recipe = state.recipes.find(r => r.id === mealData.recipeId);
 
-            if (!recipe) {
-                showNotification({title: "Fejl", message: "Kunne ikke finde opskriften."});
+            if (!recipe || !recipe.ingredients) {
+                showNotification({title: "Fejl", message: "Opskriften eller dens ingredienser kunne ikke findes."});
                 return;
             }
 
-            const missingIngredients = [];
+            // --- NY STRIKS VALYIK ---
+            let validationErrors = [];
             for (const ingredient of recipe.ingredients) {
                 const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
-                const needed = ingredient.quantity || 0;
-                
-                let inStock = 0;
-                // Kun tjek lager hvis enheder matcher
-                if (inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ingredient.unit || '').toLowerCase()) {
-                    inStock = inventoryItem.current_stock || 0;
+
+                // Tjek 1: Eksisterer varen?
+                if (!inventoryItem) {
+                    validationErrors.push(`Varen '${ingredient.name}' er ikke oprettet i dit varelager.`);
+                    continue; // Gå til næste ingrediens
                 }
 
-                if (needed > inStock) {
-                    missingIngredients.push(`${ingredient.name} (mangler ${needed - inStock} ${ingredient.unit})`);
+                // Tjek 2 & 3: Omregning og beholdning
+                const conversionResult = convertToPrimaryUnit(ingredient.quantity, ingredient.unit, inventoryItem);
+                
+                if (conversionResult.error) {
+                    validationErrors.push(`For '${ingredient.name}': ${conversionResult.error}`);
+                    continue;
+                }
+                
+                const neededQuantity = conversionResult.convertedQuantity;
+                const inStock = inventoryItem.current_stock || 0;
+
+                if (inStock < neededQuantity) {
+                    validationErrors.push(`Mangler ${neededQuantity - inStock} ${conversionResult.finalUnit} '${ingredient.name}'.`);
                 }
             }
 
-            if (missingIngredients.length > 0) {
-                const message = "Du kan ikke lave denne ret, da du mangler følgende varer:<br><br>" + missingIngredients.join('<br>');
+            // Hvis der var valideringsfejl, vis dem og stop.
+            if (validationErrors.length > 0) {
+                const message = "Du kan ikke lave denne ret af følgende årsager:<br><br>" + validationErrors.join('<br>');
                 showNotification({title: "Manglende Varer", message: message});
                 return;
             }
+            // --- SLUT PÅ NY STRIKS VALYIK ---
 
             const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
             if (!confirmed) return;
             
-            // BUGFIX: Deaktiver knap med det samme for at undgå race condition
             cookedBtn.disabled = true;
 
             const year = new Date(date).getFullYear();
@@ -1490,7 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showNotification({title: "Ret Lavet", message: "Retten er markeret, og lageret vil blive opdateret."});
             } catch (error) {
                 handleError(error, "Kunne ikke markere måltidet.");
-                cookedBtn.disabled = false; // Genaktiver knap ved fejl
+                cookedBtn.disabled = false;
             }
         }
     });
@@ -1506,11 +1551,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         recipe.ingredients.forEach(ing => {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-            const needed = ing.quantity || 0;
-            let inStock = 0;
-            if(inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()){
-                inStock = inventoryItem.current_stock;
+            if (!inventoryItem) {
+                missingCount++;
+                return;
             }
+            
+            const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
+            if(conversionResult.error) {
+                missingCount++;
+                return;
+            }
+
+            const needed = conversionResult.convertedQuantity;
+            const inStock = inventoryItem.current_stock || 0;
             if (needed > inStock) {
                 missingCount++;
             }
