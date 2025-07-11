@@ -924,6 +924,28 @@ nav {
     gap: 1rem 1.5rem;
 }
 
+/* NYT: Grid layout for varekort-modal */
+.form-grid-3-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem 1.5rem;
+    align-items: end;
+}
+
+/* NYT: Styling for beregnede felter */
+.calculated-field {
+    display: block;
+    width: 100%;
+    padding: 0.8rem;
+    box-sizing: border-box;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    color: #555;
+}
+
+
 .read-view-image {
     width: 100%;
     max-height: 350px; 
