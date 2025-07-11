@@ -854,28 +854,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = ing.name.toLowerCase();
             const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
             const neededQuantity = ing.quantity || 0;
-            const neededUnit = (ing.unit || '').toLowerCase();
 
             let quantityToBuy = neededQuantity;
 
-            // Tjek kun lager hvis varen findes og enhederne er identiske
+            // Fratræk kun fra lager, hvis varen findes
             if (inventoryItem) {
                 const inStockQuantity = inventoryItem.current_stock || 0;
-                const inStockUnit = (inventoryItem.unit || '').toLowerCase();
-
-                if (inStockUnit === neededUnit) {
-                    quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
-                }
+                quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
             }
 
             // Hvis der skal købes noget, tilføj det til listen
             if (quantityToBuy > 0) {
                 const existingShoppingListItem = updatedList[key];
 
-                if (existingShoppingListItem && (existingShoppingListItem.unit || '').toLowerCase() === neededUnit) {
-                    // Hvis varen allerede er på listen med samme enhed, læg mængden til
+                if (existingShoppingListItem) {
+                    // Hvis varen allerede er på listen, læg mængden til
                     existingShoppingListItem.quantity_to_buy += quantityToBuy;
-                } else if (!existingShoppingListItem) {
+                } else {
                     // Hvis varen ikke er på listen, opret den
                     updatedList[key] = {
                         name: ing.name,
@@ -886,8 +881,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
                 }
-                // Hvis varen er på listen, men med en anden enhed, ignoreres den for nu for at undgå fejl.
-                // En mere avanceret løsning ville kræve enhedskonvertering her.
             }
         });
 
