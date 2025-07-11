@@ -25,7 +25,7 @@ import {
 
 // Firebase-konfiguration
 const firebaseConfig = {
-  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
+  apiKey: "DIN_NYE_API_NØGLE_INDSÆTTES_HER",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
   storageBucket: "frederikkes-kogebog.firebasestorage.app",
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
     let mealPlanUnsubscribe = null;
-    let shoppingListUnsubscribe = null; // NYT: Listener for indkøbsliste
+    let shoppingListUnsubscribe = null; 
     let currentInventoryItems = [];
     let currentRecipes = [];
     let currentMealPlan = {}; 
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function showNotification({ title, message, type = 'alert' }) {
         notificationTitle.textContent = title;
-        notificationMessage.textContent = message;
+        notificationMessage.innerHTML = message; // Use innerHTML to allow for line breaks
         notificationActions.innerHTML = ''; 
 
         return new Promise((resolve) => {
@@ -197,13 +197,12 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-email').textContent = user.email;
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            setupRealtimeListeners(user.uid); // Pass user ID to listeners
+            setupRealtimeListeners(user.uid); 
             navigateTo(window.location.hash || '#meal-planner');
         } else {
             currentUser = null;
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
-            // Stop all listeners on logout
             if (inventoryUnsubscribe) inventoryUnsubscribe();
             if (recipesUnsubscribe) recipesUnsubscribe();
             if (mealPlanUnsubscribe) mealPlanUnsubscribe();
@@ -242,7 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
-        // Render functions are now called by listeners, but we can call them here for initial load
         if (hash === '#meal-planner' || hash === '') {
             renderMealPlanner();
             renderSidebarRecipeList();
@@ -287,13 +285,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
-        // Stop any existing listeners before starting new ones
         if (inventoryUnsubscribe) inventoryUnsubscribe();
         if (recipesUnsubscribe) recipesUnsubscribe();
         if (mealPlanUnsubscribe) mealPlanUnsubscribe();
         if (shoppingListUnsubscribe) shoppingListUnsubscribe();
 
-        // Inventory listener (assuming it might become user-specific later)
         const inventoryRef = collection(db, 'inventory_items');
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
             currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -303,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, error => console.error("Fejl i varelager-listener:", error));
 
-        // Recipes listener (global)
         const recipesRef = collection(db, 'recipes');
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
             currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -321,9 +316,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
 
-        // Meal plan listener (user-specific)
         const year = currentDate.getFullYear();
-        const mealPlanDocId = `plan_${year}`; // Assuming this might become user-specific too
+        const mealPlanDocId = `plan_${year}`; 
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         mealPlanUnsubscribe = onSnapshot(mealPlanRef, (doc) => {
             currentMealPlan = doc.exists() ? doc.data() : {};
@@ -332,7 +326,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // NYT: Shopping list listener (user-specific)
         const shoppingListRef = doc(db, 'shopping_lists', userId);
         shoppingListUnsubscribe = onSnapshot(shoppingListRef, (doc) => {
             currentShoppingList = doc.exists() ? doc.data().items || {} : {};
@@ -946,7 +939,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             await batch.commit();
-            await updateShoppingListInFirestore(updatedList); // Update the shopping list in Firestore
+            await updateShoppingListInFirestore(updatedList); 
             await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
         } catch (error) {
             console.error("Fejl ved bekræftelse af indkøb:", error);
@@ -1324,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("Fejl ved sletning af måltid:", error);
                 showNotification({title: "Fejl", message: "Kunne ikke fjerne måltidet."});
             }
-            return; // Stop further execution
+            return; 
         }
 
         const cookedBtn = e.target.closest('.mark-cooked-btn');
@@ -1332,6 +1325,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const slot = cookedBtn.closest('.meal-slot');
             const date = slot.dataset.date;
             const mealType = slot.dataset.meal;
+            const mealData = JSON.parse(slot.querySelector('.planned-recipe').dataset.mealData);
+            const recipe = currentRecipes.find(r => r.id === mealData.recipeId);
+
+            if (!recipe) {
+                showNotification({title: "Fejl", message: "Kunne ikke finde opskriften."});
+                return;
+            }
+
+            // NYT: Pre-flight check for at se om der er varer nok på lager
+            const missingIngredients = [];
+            for (const ingredient of recipe.ingredients) {
+                const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
+                const needed = ingredient.quantity || 0;
+                const inStock = inventoryItem ? (inventoryItem.current_stock || 0) : 0;
+                if (needed > inStock) {
+                    missingIngredients.push(`${ingredient.name} (mangler ${needed - inStock} ${ingredient.unit})`);
+                }
+            }
+
+            if (missingIngredients.length > 0) {
+                const message = "Du kan ikke lave denne ret, da du mangler følgende varer:<br><br>" + missingIngredients.join('<br>');
+                showNotification({title: "Manglende Varer", message: message});
+                return;
+            }
 
             const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
             if (!confirmed) return;
