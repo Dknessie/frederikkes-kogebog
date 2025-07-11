@@ -85,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
     const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn');
     const updateStockBtn = document.getElementById('update-stock-btn');
-    const addLeftoversBtn = document.getElementById('add-leftovers-btn');
 
     // --- Indkøbsliste (nu i sidebar) ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
@@ -928,7 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // =================================================================
     // 7. INDKØBSLISTE LOGIK (FINALISERET)
     // =================================================================
@@ -984,6 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let conversionErrors = [];
         const totalNeeds = {};
 
+        // Trin 1: Aggreger alle behov
         for (const ing of ingredients) {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
             const key = `${(inventoryItem || ing).name.toLowerCase()}_${(ing.unit || 'stk').toLowerCase()}`;
@@ -997,6 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemsToBuy = {};
         
+        // Trin 2: Gennemgå de samlede behov og sammenlign med lager
         for (const key in totalNeeds) {
             const neededIng = totalNeeds[key];
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase());
@@ -1052,6 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Trin 3: Flet den beregnede liste med den eksisterende indkøbsliste
         for(const key in itemsToBuy) {
             const item = itemsToBuy[key];
             const existingKey = item.name.toLowerCase();
@@ -1307,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (mealData.status === 'cooked') recipeDiv.classList.add('cooked');
                 if (!recipeExists) recipeDiv.classList.add('deleted');
 
-                recipeDiv.draggable = recipeExists && !isLeftovers;
+                recipeDiv.draggable = recipeExists;
                 recipeDiv.dataset.sourceDate = date;
                 recipeDiv.dataset.sourceMeal = meal;
                 recipeDiv.dataset.mealData = JSON.stringify(mealData);
@@ -1473,11 +1475,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 recipeId: e.target.dataset.recipeId
             }));
         }
-        if (e.target.id === 'add-leftovers-btn') {
-            e.dataTransfer.setData('application/json', JSON.stringify({
-                type: 'leftovers'
-            }));
-        }
         if (e.target.classList.contains('planned-recipe')) {
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'move-item',
@@ -1501,23 +1498,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
             const targetDate = slot.dataset.date;
             const targetMeal = slot.dataset.meal;
-
-            if (dragData.type === 'leftovers') {
-                const year = new Date(targetDate).getFullYear();
-                const mealPlanDocId = `plan_${year}`;
-                const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-                const fieldPath = `${targetDate}.${targetMeal}`;
-                try {
-                    await updateDoc(mealPlanRef, { [fieldPath]: { type: 'leftovers' } });
-                } catch (error) {
-                    if (error.code === 'not-found') {
-                        await setDoc(mealPlanRef, { [targetDate]: { [targetMeal]: { type: 'leftovers' } } });
-                    } else {
-                        handleError(error, "Kunne ikke tilføje rester.");
-                    }
-                }
-                return;
-            }
             
             if (dragData.type === 'new-item') {
                 const recipe = state.recipes.find(r => r.id === dragData.recipeId);
@@ -1530,7 +1510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
                     document.getElementById('meal-portions').value = recipe.portions || 1;
                     extraIngredientsContainer.innerHTML = '';
-                    addExtraIngredientBtn.click(); // Add one empty row by default
+                    addExtraIngredientBtn.click();
                     addMealModal.classList.remove('hidden');
                 }
             } else if (dragData.type === 'move-item') {
@@ -1842,6 +1822,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // RETTET: Bruger nu setDoc med { merge: true } for at sikre oprettelse/opdatering
     addMealForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!state.pendingMeal) return;
@@ -1869,23 +1850,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const year = new Date(targetDate).getFullYear();
         const mealPlanDocId = `plan_${year}`;
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-        const fieldPath = `${targetDate}.${targetMeal}`;
-
+        
         try {
-            await updateDoc(mealPlanRef, { [fieldPath]: mealData });
+            await setDoc(mealPlanRef, {
+                [targetDate]: {
+                    [targetMeal]: mealData
+                }
+            }, { merge: true });
         } catch (error) {
-            if (error.code === 'not-found') {
-                await setDoc(mealPlanRef, { [targetDate]: { [targetMeal]: mealData } });
-            } else {
-                handleError(error, "Kunne ikke tilføje måltidet.");
-            }
+            handleError(error, "Kunne ikke tilføje måltidet.");
         } finally {
             addMealModal.classList.add('hidden');
             state.pendingMeal = null;
         }
     });
 
-    // OPDATERET: Logik for "Ajourfør Lager"
+    // OPDATERET: Logik for "Ajourfør Lager" med validering
     updateStockBtn.addEventListener('click', () => {
         const today = new Date();
         today.setHours(0,0,0,0);
