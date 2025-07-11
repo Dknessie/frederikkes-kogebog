@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeSidebarTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        pendingMeal: null, // Holder data for måltid, der skal tilføjes
+        pendingMeal: null, 
         listeners: {
             inventory: null,
             recipes: null,
@@ -984,7 +984,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let conversionErrors = [];
         const totalNeeds = {};
 
-        // Trin 1: Aggreger alle behov
         for (const ing of ingredients) {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
             const key = `${(inventoryItem || ing).name.toLowerCase()}_${(ing.unit || 'stk').toLowerCase()}`;
@@ -998,7 +997,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemsToBuy = {};
         
-        // Trin 2: Gennemgå de samlede behov og sammenlign med lager
         for (const key in totalNeeds) {
             const neededIng = totalNeeds[key];
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase());
@@ -1054,7 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Trin 3: Flet den beregnede liste med den eksisterende indkøbsliste
         for(const key in itemsToBuy) {
             const item = itemsToBuy[key];
             const existingKey = item.name.toLowerCase();
@@ -1496,21 +1493,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.style.opacity = '1';
     });
 
-    calendarGrid.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.add('drag-over');
-        }
-    });
-
-    calendarGrid.addEventListener('dragleave', (e) => {
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.remove('drag-over');
-        }
-    });
-
     calendarGrid.addEventListener('drop', async (e) => {
         e.preventDefault();
         const slot = e.target.closest('.meal-slot');
@@ -1548,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
                     document.getElementById('meal-portions').value = recipe.portions || 1;
                     extraIngredientsContainer.innerHTML = '';
+                    addExtraIngredientBtn.click(); // Add one empty row by default
                     addMealModal.classList.remove('hidden');
                 }
             } else if (dragData.type === 'move-item') {
@@ -1902,7 +1885,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NYT: Logik for "Ajourfør Lager"
+    // OPDATERET: Logik for "Ajourfør Lager"
     updateStockBtn.addEventListener('click', () => {
         const today = new Date();
         today.setHours(0,0,0,0);
@@ -1920,6 +1903,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 date: dateString,
                                 mealType: mealType,
                                 title: recipe.title,
+                                mealData: meal
                             });
                         }
                     }
@@ -1949,18 +1933,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateStockForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const checkedMealsInputs = updateStockList.querySelectorAll('input:checked');
+        if (checkedMealsInputs.length === 0) {
+            updateStockModal.classList.add('hidden');
+            return;
+        }
+
+        // Trin 1: Valider ALLE valgte måltider FØR vi skriver noget
+        const validationErrors = [];
+        const allIngredientsToDeduct = {};
+
+        for (const checkbox of checkedMealsInputs) {
+            const date = checkbox.dataset.date;
+            const mealType = checkbox.dataset.mealType;
+            const mealData = state.mealPlan[date][mealType];
+            const recipe = state.recipes.find(r => r.id === mealData.recipeId);
+            
+            if (!recipe) continue;
+
+            const scaleFactor = (mealData.portions || recipe.portions) / recipe.portions;
+            const ingredients = [...(recipe.ingredients || []), ...(mealData.extra_ingredients || [])];
+
+            for (const ingredient of ingredients) {
+                const scaledQuantity = (ingredient.quantity || 0) * scaleFactor;
+                const key = `${ingredient.name.toLowerCase()}_${(ingredient.unit || 'stk').toLowerCase()}`;
+                if (allIngredientsToDeduct[key]) {
+                    allIngredientsToDeduct[key].quantity += scaledQuantity;
+                } else {
+                    allIngredientsToDeduct[key] = { ...ingredient, quantity: scaledQuantity };
+                }
+            }
+        }
+
+        for (const key in allIngredientsToDeduct) {
+            const neededIng = allIngredientsToDeduct[key];
+            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase() || (item.aliases || []).includes(neededIng.name.toLowerCase()));
+            
+            if (!inventoryItem) {
+                validationErrors.push(`Varen '${neededIng.name}' findes ikke på lager.`);
+                continue;
+            }
+
+            const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
+            if (conversionResult.error) {
+                validationErrors.push(`For '${neededIng.name}': ${conversionResult.error}`);
+                continue;
+            }
+
+            if ((inventoryItem.grams_in_stock || 0) < conversionResult.convertedQuantity) {
+                validationErrors.push(`Ikke nok '${neededIng.name}' på lager.`);
+            }
+        }
+
+        if (validationErrors.length > 0) {
+            showNotification({title: "Lagerfejl", message: "Kunne ikke ajourføre. Følgende problemer blev fundet:<br><br>" + [...new Set(validationErrors)].join('<br>')});
+            return;
+        }
+
+        // Trin 2: Hvis validering er OK, udfør opdateringer
         const batch = writeBatch(db);
         const year = state.currentDate.getFullYear();
         const mealPlanDocId = `plan_${year}`;
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
 
-        const checkedMeals = updateStockList.querySelectorAll('input:checked');
-        if (checkedMeals.length === 0) {
-            updateStockModal.classList.add('hidden');
-            return;
-        }
-
-        checkedMeals.forEach(checkbox => {
+        checkedMealsInputs.forEach(checkbox => {
             const date = checkbox.dataset.date;
             const mealType = checkbox.dataset.mealType;
             const fieldPathStatus = `${date}.${mealType}.status`;
@@ -1974,7 +2010,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await batch.commit();
             updateStockModal.classList.add('hidden');
-            showNotification({title: "Lager Ajourført", message: `${checkedMeals.length} måltid(er) er blevet markeret som lavet.`});
+            showNotification({title: "Lager Ajourført", message: `${checkedMealsInputs.length} måltid(er) er blevet markeret som lavet.`});
         } catch (error) {
             handleError(error, "Lageret kunne ikke ajourføres.");
         }
