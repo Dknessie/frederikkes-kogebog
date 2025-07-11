@@ -25,7 +25,7 @@ import {
 
 // Firebase-konfiguration
 const firebaseConfig = {
-  apiKey: "AIzaSyDUuGEqZ53r5PWMwg1_hj7Jpu7DubK-Lo8",
+  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
   storageBucket: "frederikkes-kogebog.firebasestorage.app",
