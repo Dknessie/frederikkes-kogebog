@@ -2,7 +2,6 @@
 // 0. FIREBASE INITIALISERING & IMPORTS
 // =================================================================
 
-// OPDATERET: Firebase SDK er opdateret til en nyere version.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
     getAuth,
@@ -23,15 +22,8 @@ import {
     deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ===== KRITISK SIKKERHEDSNOTE =====
-// Firebase-konfigurationen nedenfor er eksponeret på klientsiden.
-// For et produktionsmiljø er det afgørende at sikre din backend.
-// ANBEFALING:
-// 1. Stram dine Firestore Sikkerhedsregler for at forhindre uautoriseret adgang.
-// 2. Implementer Firebase App Check for at verificere, at anmodninger kommer fra din app.
-// Efterlad ALDRIG en usikret Firebase-konfiguration i en offentlig app.
 const firebaseConfig = {
-  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw", // Denne nøgle SKAL beskyttes
+  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
   storageBucket: "frederikkes-kogebog.firebasestorage.app",
@@ -39,7 +31,6 @@ const firebaseConfig = {
   appId: "1:557087234453:web:9abec4eb124bc08583be9c"
 };
 
-// Initialiser Firebase og services
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -63,8 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inventoryTableBody = document.querySelector('.inventory-table tbody');
     const itemNameInput = document.getElementById('item-name');
     const itemCategoryInput = document.getElementById('item-category');
-    const itemStoreSectionSelect = document.getElementById('item-store-section');
-
+    
     // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
     const recipeForm = document.getElementById('recipe-form');
@@ -212,28 +202,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toISOString().split('T')[0]; // YYYY-MM-DD
     }
 
-    // NY HJÆLPEFUNKTION: Håndterer enhedsomregning baseret på varekortets regler
-    /**
-     * Omregner en mængde fra en enhed til en anden baseret på et varekorts regler.
-     * @param {number} quantity - Mængden der skal omregnes.
-     * @param {string} fromUnit - Enheden der skal omregnes FRA (f.eks. 'tsk').
-     * @param {object} inventoryItem - Hele varekortet fra Firestore.
-     * @returns {{convertedQuantity: number|null, finalUnit: string, error: string|null}} - Et objekt med resultatet.
-     */
+    // Note: This function is still needed to interpret recipe ingredients,
+    // even with the new `grams_in_stock` field.
     function convertToPrimaryUnit(quantity, fromUnit, inventoryItem) {
-        const primaryUnit = (inventoryItem.unit || '').toLowerCase();
+        // For now, we assume the primary unit for conversion is always grams.
+        const primaryUnit = 'g';
         fromUnit = (fromUnit || '').toLowerCase();
 
         if (fromUnit === primaryUnit) {
             return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
         }
+        
+        // Simple fallback for 'kg'
+        if (fromUnit === 'kg') {
+            return { convertedQuantity: quantity * 1000, finalUnit: primaryUnit, error: null };
+        }
 
-        // Tjek for en specifik omregningsregel på varekortet
-        const conversionRule = (inventoryItem.conversions || []).find(c => (c.from || '').toLowerCase() === fromUnit);
-
-        if (conversionRule && conversionRule.factor) {
-            const convertedQuantity = quantity * conversionRule.factor;
-            return { convertedQuantity: convertedQuantity, finalUnit: primaryUnit, error: null };
+        // If the item itself is measured in grams, no conversion is needed
+        if ((inventoryItem.unit || '').toLowerCase() === 'g') {
+             return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
+        }
+        
+        // Use grams_per_unit for 'stk' etc.
+        if (inventoryItem.grams_per_unit) {
+            return { convertedQuantity: quantity * inventoryItem.grams_per_unit, finalUnit: primaryUnit, error: null };
         }
 
         return { convertedQuantity: null, finalUnit: primaryUnit, error: `Kan ikke omregne fra '${fromUnit}' til '${primaryUnit}'.` };
@@ -410,7 +402,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
             
-            const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
+            // Status bar is now based on grams_in_stock and max_stock (which should be in grams)
+            const stockPercentage = (item.grams_in_stock && item.max_stock) ? (item.grams_in_stock / item.max_stock) * 100 : 100;
             let stockColor = '#4CAF50';
             if (stockPercentage < 50) stockColor = '#FFC107';
             if (stockPercentage < 20) stockColor = '#F44336';
@@ -419,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.max_stock && item.max_stock > 0) {
                 if (stockPercentage < 50) stockStatus = { text: 'Lav', className: 'status-low' };
                 if (stockPercentage < 20) stockStatus = { text: 'Kritisk', className: 'status-critical' };
-                if (item.current_stock <= 0) stockStatus = { text: 'Tom', className: 'status-critical' };
+                if ((item.grams_in_stock || 0) <= 0) stockStatus = { text: 'Tom', className: 'status-critical' };
             } else {
                 stockStatus = { text: '-', className: 'status-unknown' };
             }
@@ -627,50 +620,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 5. CRUD & INTELLIGENS FOR VARELAGER
+    // 5. CRUD & INTELLIGENS FOR VARELAGER (OPDATERET)
     // =================================================================
-    const categoryKeywords = {
-        'Frugt & Grønt': ['agurk', 'tomat', 'salat', 'løg', 'hvidløg', 'peberfrugt', 'gulerod', 'kartoffel', 'æble', 'banan', 'appelsin', 'pære'],
-        'Kød & Fisk': ['kylling', 'oksekød', 'svinekød', 'fisk', 'laks', 'kalkun', 'lam'],
-        'Mejeri': ['mælk', 'ost', 'smør', 'yoghurt', 'fløde', 'æg'],
-        'Tørvarer': ['pasta', 'ris', 'mel', 'sukker', 'gær', 'havregryn', 'brød', 'rugbrød', 'bolle'],
-        'Konserves': ['hakkede tomater', 'majs', 'bønner', 'kikærter', 'tun'],
-    };
-
-    itemNameInput.addEventListener('keyup', () => {
-        const name = itemNameInput.value.toLowerCase();
-        for (const category in categoryKeywords) {
-            if (categoryKeywords[category].some(keyword => name.includes(keyword))) {
-                itemCategoryInput.value = category;
-                const sectionMap = { 'Mejeri': 'Mejeri', 'Kød & Fisk': 'Kød & Fisk', 'Frugt & Grønt': 'Frugt & Grønt', 'Tørvarer': 'Tørvarer', 'Konserves': 'Konserves'};
-                if (sectionMap[category]) {
-                    itemStoreSectionSelect.value = sectionMap[category];
-                }
-                break;
-            }
-        }
-    });
     
+    // NYT: Funktion til at opdatere beregnede felter i realtid
+    function updateCalculatedFields() {
+        const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
+        const unit = document.getElementById('item-unit').value.toLowerCase();
+        const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || 0;
+        const kgPrice = parseFloat(document.getElementById('item-kg-price').value) || 0;
+
+        let totalGrams = 0;
+        if (unit === 'g' || unit === 'gram') {
+            totalGrams = quantity;
+        } else if (gramsPerUnit > 0) {
+            totalGrams = quantity * gramsPerUnit;
+        }
+        document.getElementById('item-grams-in-stock').textContent = `${totalGrams.toFixed(0)} g`;
+
+        let pricePerUnit = 0;
+        if (kgPrice > 0 && gramsPerUnit > 0) {
+            pricePerUnit = (kgPrice / 1000) * gramsPerUnit;
+        }
+        document.getElementById('item-price-per-unit').textContent = `${pricePerUnit.toFixed(2)} kr`;
+    }
+
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
         document.getElementById('inventory-item-id').value = '';
+        updateCalculatedFields(); // Nulstil beregnede felter
         inventoryItemModal.classList.remove('hidden');
+    });
+
+    // NYT: Event listeners til realtidsberegning
+    ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateCalculatedFields);
     });
 
     inventoryItemForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
         
+        const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
+        const unit = document.getElementById('item-unit').value;
+        const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
+
+        let gramsInStock = 0;
+        if (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gram') {
+            gramsInStock = quantity;
+        } else if (gramsPerUnit) {
+            gramsInStock = quantity * gramsPerUnit;
+        }
+
         const itemData = {
             name: document.getElementById('item-name').value,
             category: document.getElementById('item-category').value,
-            current_stock: Number(document.getElementById('item-current-stock').value),
+            current_stock: quantity,
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
-            unit: document.getElementById('item-unit').value,
+            unit: unit,
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
-            grams_per_unit: Number(document.getElementById('item-grams-per-unit').value) || null,
-            store_section: document.getElementById('item-store-section').value,
+            grams_per_unit: gramsPerUnit,
+            grams_in_stock: gramsInStock, // Gemmer den beregnede værdi
             home_location: document.getElementById('item-home-location').value,
         };
         try {
@@ -711,9 +722,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-unit').value = item.unit || '';
                 document.getElementById('item-kg-price').value = item.kg_price || '';
                 document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
-                document.getElementById('item-store-section').value = item.store_section || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 
+                updateCalculatedFields(); // Opdater beregnede felter ved åbning
                 inventoryItemModal.classList.remove('hidden');
             }
         }
@@ -913,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK (OPDATERET MED NY LOGIK)
+    // 7. INDKØBSLISTE LOGIK
     // =================================================================
     
     async function updateShoppingListInFirestore(newList) {
@@ -954,7 +965,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
-    // OPDATERET: Implementerer den fleksible logik for indkøbslisten
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
         let conversionErrors = [];
@@ -962,34 +972,29 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const ing of ingredients) {
             const key = ing.name.toLowerCase();
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
-            let quantityToBuy = ing.quantity || 1; // Standard til 1 hvis mængde mangler
+            let quantityToBuy = ing.quantity || 1;
             let unitToBuy = ing.unit || 'stk';
 
             if (inventoryItem) {
-                // Hvis varen findes, forsøg at omregne og beregn mangel
                 const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
 
                 if (conversionResult.convertedQuantity !== null) {
-                    const needed = conversionResult.convertedQuantity;
-                    const inStock = inventoryItem.current_stock || 0;
-                    const neededFromStore = Math.max(0, needed - inStock);
+                    const neededInGrams = conversionResult.convertedQuantity;
+                    const inStockInGrams = inventoryItem.grams_in_stock || 0;
+                    const neededFromStore = Math.max(0, neededInGrams - inStockInGrams);
                     
+                    // We need to convert back to a logical unit for the shopping list
+                    // This is a simplification: we buy in the primary unit (grams)
                     quantityToBuy = neededFromStore;
-                    unitToBuy = conversionResult.finalUnit;
+                    unitToBuy = 'g';
 
                 } else {
-                    // Hvis omregning fejler, tilføj den originale mængde og enhed
                     quantityToBuy = ing.quantity;
                     unitToBuy = ing.unit;
                     if(ing.unit) conversionErrors.push(ing.name);
                 }
-            } else {
-                // Hvis varen slet ikke findes, tilføj den fulde mængde fra opskriften
-                quantityToBuy = ing.quantity;
-                unitToBuy = ing.unit;
             }
             
-            // Tilføj kun til listen hvis der rent faktisk skal købes noget
             if (quantityToBuy > 0) {
                 const existingShoppingListItem = updatedList[key];
                 if (existingShoppingListItem && (existingShoppingListItem.unit || '').toLowerCase() === (unitToBuy || '').toLowerCase()) {
@@ -999,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: ing.name,
                         quantity_to_buy: quantityToBuy,
                         unit: unitToBuy,
-                        store_section: inventoryItem ? inventoryItem.store_section : 'Andet',
+                        store_section: inventoryItem ? inventoryItem.category : 'Andet',
                         kg_price: inventoryItem ? inventoryItem.kg_price : null,
                         grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
@@ -1007,10 +1012,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Ryd op i mængder (f.eks. afrunding for 'stk')
         for (const key in updatedList) {
             const item = updatedList[key];
-            if (item.unit && !['g', 'kg', 'l', 'ml'].includes(item.unit.toLowerCase())) {
+            if ((item.unit || '').toLowerCase() !== 'g' && (item.unit || '').toLowerCase() !== 'kg') {
                 item.quantity_to_buy = Math.ceil(item.quantity_to_buy);
             }
         }
@@ -1070,7 +1074,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inventoryItem) {
                 const itemRef = doc(db, "inventory_items", inventoryItem.id);
                 const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
-                batch.update(itemRef, { current_stock: newStock });
+                
+                // Update both stock values
+                let newGramsInStock = inventoryItem.grams_in_stock || 0;
+                if(item.unit.toLowerCase() === 'g') {
+                    newGramsInStock += item.quantity_to_buy;
+                } else if (inventoryItem.grams_per_unit) {
+                    newGramsInStock += item.quantity_to_buy * inventoryItem.grams_per_unit;
+                }
+
+                batch.update(itemRef, { 
+                    current_stock: newStock,
+                    grams_in_stock: newGramsInStock
+                });
             }
             delete updatedList[item.name.toLowerCase()];
         });
@@ -1124,18 +1140,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function getQuantityInKg(quantity, unit, inventoryItem) {
-        unit = (unit || '').toLowerCase();
-        if (unit === 'g' || unit === 'gram') return quantity / 1000;
-        if (unit === 'kg') return quantity;
-        if (unit === 'l' || unit === 'liter') return quantity; 
-        if (unit === 'dl' || unit === 'deciliter') return quantity / 10;
-        if (unit === 'ml') return quantity / 1000;
-
-        if (inventoryItem && inventoryItem.grams_per_unit && unit === inventoryItem.unit.toLowerCase()) {
-            const totalGrams = quantity * inventoryItem.grams_per_unit;
-            return totalGrams / 1000;
+        // This function is now less critical but can be kept for price calculations
+        const conversion = convertToPrimaryUnit(quantity, unit, inventoryItem);
+        if(conversion.convertedQuantity !== null) {
+            return conversion.convertedQuantity / 1000;
         }
-        
         return null; 
     }
 
@@ -1444,7 +1453,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // OPDATERET: Implementerer den strikse logik for "Marker som lavet"
     calendarGrid.addEventListener('click', async (e) => {
         const removeBtn = e.target.closest('.remove-meal-btn');
         if (removeBtn) {
@@ -1481,18 +1489,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // --- NY STRIKS VALYIK ---
             let validationErrors = [];
             for (const ingredient of recipe.ingredients) {
                 const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
 
-                // Tjek 1: Eksisterer varen?
                 if (!inventoryItem) {
                     validationErrors.push(`Varen '${ingredient.name}' er ikke oprettet i dit varelager.`);
-                    continue; // Gå til næste ingrediens
+                    continue;
                 }
 
-                // Tjek 2 & 3: Omregning og beholdning
                 const conversionResult = convertToPrimaryUnit(ingredient.quantity, ingredient.unit, inventoryItem);
                 
                 if (conversionResult.error) {
@@ -1500,21 +1505,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     continue;
                 }
                 
-                const neededQuantity = conversionResult.convertedQuantity;
-                const inStock = inventoryItem.current_stock || 0;
+                const neededInGrams = conversionResult.convertedQuantity;
+                const inStockInGrams = inventoryItem.grams_in_stock || 0;
 
-                if (inStock < neededQuantity) {
-                    validationErrors.push(`Mangler ${neededQuantity - inStock} ${conversionResult.finalUnit} '${ingredient.name}'.`);
+                if (inStockInGrams < neededInGrams) {
+                    validationErrors.push(`Mangler ${neededInGrams - inStockInGrams} g '${ingredient.name}'.`);
                 }
             }
 
-            // Hvis der var valideringsfejl, vis dem og stop.
             if (validationErrors.length > 0) {
                 const message = "Du kan ikke lave denne ret af følgende årsager:<br><br>" + validationErrors.join('<br>');
                 showNotification({title: "Manglende Varer", message: message});
                 return;
             }
-            // --- SLUT PÅ NY STRIKS VALYIK ---
 
             const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
             if (!confirmed) return;
@@ -1562,9 +1565,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const needed = conversionResult.convertedQuantity;
-            const inStock = inventoryItem.current_stock || 0;
-            if (needed > inStock) {
+            const neededInGrams = conversionResult.convertedQuantity;
+            const inStockInGrams = inventoryItem.grams_in_stock || 0;
+            if (neededInGrams > inStockInGrams) {
                 missingCount++;
             }
         });
