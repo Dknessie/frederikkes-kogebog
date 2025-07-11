@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function showNotification({ title, message, type = 'alert' }) {
         notificationTitle.textContent = title;
-        notificationMessage.innerHTML = message; // Use innerHTML to allow for line breaks
+        notificationMessage.innerHTML = message;
         notificationActions.innerHTML = ''; 
 
         return new Promise((resolve) => {
@@ -854,11 +854,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const existingItem = updatedList[key];
             
             if (existingItem) {
-                existingItem.quantity_to_buy += ing.quantity || 0;
+                // OPDATERET: Tjekker enheder før mængden lægges til
+                if(existingItem.unit.toLowerCase() === (ing.unit || '').toLowerCase()){
+                    existingItem.quantity_to_buy += ing.quantity || 0;
+                }
             } else {
                 const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
                 const needed = ing.quantity || 0;
-                const inStock = inventoryItem ? inventoryItem.current_stock : 0;
+                
+                // OPDATERET: Tjekker kun lager hvis enhederne er ens
+                let inStock = 0;
+                if (inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()) {
+                    inStock = inventoryItem.current_stock || 0;
+                }
+
                 const toBuy = needed - inStock;
 
                 if (toBuy > 0) {
@@ -1338,7 +1347,12 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const ingredient of recipe.ingredients) {
                 const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
                 const needed = ingredient.quantity || 0;
-                const inStock = inventoryItem ? (inventoryItem.current_stock || 0) : 0;
+                
+                let inStock = 0;
+                if (inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ingredient.unit || '').toLowerCase()) {
+                    inStock = inventoryItem.current_stock || 0;
+                }
+
                 if (needed > inStock) {
                     missingIngredients.push(`${ingredient.name} (mangler ${needed - inStock} ${ingredient.unit})`);
                 }
