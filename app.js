@@ -2,13 +2,14 @@
 // 0. FIREBASE INITIALISERING & IMPORTS
 // =================================================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+// OPDATERET: Firebase SDK er opdateret til en nyere version.
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
     getAuth,
     onAuthStateChanged, 
     signInWithEmailAndPassword, 
     signOut 
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { 
     getFirestore,
     collection, 
@@ -17,15 +18,20 @@ import {
     doc,
     updateDoc,
     deleteDoc,
-    getDoc,
     setDoc,
     writeBatch,
     deleteField
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// Firebase-konfiguration
+// ===== KRITISK SIKKERHEDSNOTE =====
+// Firebase-konfigurationen nedenfor er eksponeret på klientsiden.
+// For et produktionsmiljø er det afgørende at sikre din backend.
+// ANBEFALING:
+// 1. Stram dine Firestore Sikkerhedsregler for at forhindre uautoriseret adgang.
+// 2. Implementer Firebase App Check for at verificere, at anmodninger kommer fra din app.
+// Efterlad ALDRIG en usikret Firebase-konfiguration i en offentlig app.
 const firebaseConfig = {
-  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
+  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw", // Denne nøgle SKAL beskyttes
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
   storageBucket: "frederikkes-kogebog.firebasestorage.app",
@@ -112,25 +118,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const notificationMessage = document.getElementById('notification-message');
     const notificationActions = document.getElementById('notification-actions');
 
-    // --- State ---
-    let currentUser = null;
-    let inventoryUnsubscribe = null;
-    let recipesUnsubscribe = null;
-    let mealPlanUnsubscribe = null;
-    let shoppingListUnsubscribe = null; 
-    let currentInventoryItems = [];
-    let currentRecipes = [];
-    let currentMealPlan = {}; 
-    let currentShoppingList = {};
-    let currentlyViewedRecipeId = null;
-    let activeRecipeFilterTags = new Set();
-    let activeSidebarTags = new Set();
-    let currentDate = new Date(); 
+    // --- State Management ---
+    // OPDATERET: Centraliseret state for bedre overblik og forudsigelighed.
+    const state = {
+        currentUser: null,
+        inventory: [],
+        recipes: [],
+        mealPlan: {},
+        shoppingList: {},
+        activeRecipeFilterTags: new Set(),
+        activeSidebarTags: new Set(),
+        currentDate: new Date(),
+        currentlyViewedRecipeId: null,
+        listeners: { // Holder styr på Firestore listeners
+            inventory: null,
+            recipes: null,
+            mealPlan: null,
+            shoppingList: null,
+        }
+    };
 
     // =================================================================
-    // 0. HJÆLPEFUNKTIONER
+    // 0. HJÆLPEFUNKTIONER & VÆRKTØJER
     // =================================================================
     
+    // FORBEDRING: Centraliseret fejlhåndtering for konsistent brugerfeedback.
+    function handleError(error, userMessage = "Der opstod en uventet fejl.") {
+        console.error("En fejl opstod:", error);
+        showNotification({ title: "Fejl", message: userMessage });
+    }
+
+    // FORBEDRING: Debounce-funktion til at begrænse, hvor ofte en funktion kaldes.
+    function debounce(func, delay = 300) {
+        let timeout;
+        return (...args) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    }
+
     function showNotification({ title, message, type = 'alert' }) {
         notificationTitle.textContent = title;
         notificationMessage.innerHTML = message;
@@ -187,26 +215,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toISOString().split('T')[0]; // YYYY-MM-DD
     }
 
-
     // =================================================================
     // 1. AUTHENTICATION LOGIK
     // =================================================================
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            currentUser = user;
+            state.currentUser = user;
             document.getElementById('profile-email').textContent = user.email;
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
             setupRealtimeListeners(user.uid); 
             navigateTo(window.location.hash || '#meal-planner');
         } else {
-            currentUser = null;
+            state.currentUser = null;
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
-            if (inventoryUnsubscribe) inventoryUnsubscribe();
-            if (recipesUnsubscribe) recipesUnsubscribe();
-            if (mealPlanUnsubscribe) mealPlanUnsubscribe();
-            if (shoppingListUnsubscribe) shoppingListUnsubscribe();
+            // Ryd alle listeners ved logout
+            Object.keys(state.listeners).forEach(key => {
+                if (state.listeners[key]) state.listeners[key]();
+            });
         }
     });
 
@@ -223,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     logoutButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            signOut(auth).catch(error => console.error("Logout Fejl:", error));
+            signOut(auth).catch(error => handleError(error, "Logout fejlede."));
         });
     });
 
@@ -241,17 +268,25 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
-        if (hash === '#meal-planner' || hash === '') {
-            renderMealPlanner();
-            renderSidebarRecipeList();
-            renderSidebarTagFilters();
-            renderShoppingList();
-        }
-        if (hash === '#inspiration') {
-            renderInspirationPage();
-        }
-        if (hash === '#inventory') {
-            renderInventory(currentInventoryItems);
+        // Kald render-funktioner baseret på den aktive side
+        switch(hash) {
+            case '#meal-planner':
+            case '':
+                renderMealPlanner();
+                renderSidebarRecipeList();
+                renderSidebarTagFilters();
+                renderShoppingList();
+                break;
+            case '#recipes':
+                renderRecipes();
+                renderTagFilters();
+                break;
+            case '#inspiration':
+                renderInspirationPage();
+                break;
+            case '#inventory':
+                renderInventory();
+                break;
         }
     };
     
@@ -285,25 +320,25 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
-        if (inventoryUnsubscribe) inventoryUnsubscribe();
-        if (recipesUnsubscribe) recipesUnsubscribe();
-        if (mealPlanUnsubscribe) mealPlanUnsubscribe();
-        if (shoppingListUnsubscribe) shoppingListUnsubscribe();
+        // Ryd eksisterende listeners for at undgå dubletter
+        Object.keys(state.listeners).forEach(key => {
+            if (state.listeners[key]) state.listeners[key]();
+        });
 
         const inventoryRef = collection(db, 'inventory_items');
-        inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
-            currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderInventory(currentInventoryItems);
-            if (document.querySelector('#inspiration:not(.hidden)')) {
-                renderInspirationPage();
-            }
-        }, error => console.error("Fejl i varelager-listener:", error));
+        state.listeners.inventory = onSnapshot(inventoryRef, (snapshot) => {
+            state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
+            if (document.querySelector('#inspiration:not(.hidden)')) renderInspirationPage();
+        }, error => handleError(error, "Kunne ikke hente varelager."));
 
         const recipesRef = collection(db, 'recipes');
-        recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
-            currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTagFilters(); 
-            renderRecipes();
+        state.listeners.recipes = onSnapshot(recipesRef, (snapshot) => {
+            state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (document.querySelector('#recipes:not(.hidden)')) {
+                renderTagFilters(); 
+                renderRecipes();
+            }
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderSidebarRecipeList();
                 renderSidebarTagFilters();
@@ -311,37 +346,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#inspiration:not(.hidden)')) {
                 renderInspirationPage();
             }
-            document.getElementById('profile-recipe-count').textContent = currentRecipes.length;
-            const favoriteCount = currentRecipes.filter(r => r.is_favorite).length;
+            document.getElementById('profile-recipe-count').textContent = state.recipes.length;
+            const favoriteCount = state.recipes.filter(r => r.is_favorite).length;
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
-        }, error => console.error("Fejl i opskrift-listener:", error));
+        }, error => handleError(error, "Kunne ikke hente opskrifter."));
 
-        const year = currentDate.getFullYear();
+        const year = state.currentDate.getFullYear();
         const mealPlanDocId = `plan_${year}`; 
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-        mealPlanUnsubscribe = onSnapshot(mealPlanRef, (doc) => {
-            currentMealPlan = doc.exists() ? doc.data() : {};
+        state.listeners.mealPlan = onSnapshot(mealPlanRef, (doc) => {
+            state.mealPlan = doc.exists() ? doc.data() : {};
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderMealPlanner(); 
             }
-        });
+        }, error => handleError(error, "Kunne ikke hente madplan."));
 
         const shoppingListRef = doc(db, 'shopping_lists', userId);
-        shoppingListUnsubscribe = onSnapshot(shoppingListRef, (doc) => {
-            currentShoppingList = doc.exists() ? doc.data().items || {} : {};
-            renderShoppingList();
-        });
+        state.listeners.shoppingList = onSnapshot(shoppingListRef, (doc) => {
+            state.shoppingList = doc.exists() ? doc.data().items || {} : {};
+            if (document.querySelector('#meal-planner:not(.hidden)')) {
+                renderShoppingList();
+            }
+        }, error => handleError(error, "Kunne ikke hente indkøbsliste."));
     }
 
     // =================================================================
-    // 4. RENDER FUNKTIONER 
+    // 4. RENDER FUNKTIONER (OPDATERET FOR YDEEVNE)
     // =================================================================
-    function renderInventory(items) {
-        inventoryTableBody.innerHTML = '';
+    
+    // FORBEDRING: Bruger DocumentFragment for at minimere DOM-manipulation.
+    function renderInventory() {
+        const items = state.inventory;
+        const fragment = document.createDocumentFragment();
+        inventoryTableBody.innerHTML = ''; 
+
         if (items.length === 0) {
              inventoryTableBody.innerHTML = `<tr><td colspan="8">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
              return;
         }
+        
         items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
@@ -374,18 +417,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${item.grams_per_unit || ''}</td>
                 <td>${item.home_location || ''}</td>
                 <td><button class="btn-icon edit-item"><i class="fas fa-edit"></i></button> <button class="btn-icon delete-item"><i class="fas fa-trash"></i></button></td>`;
-            inventoryTableBody.appendChild(tr);
+            fragment.appendChild(tr);
         });
+        inventoryTableBody.appendChild(fragment);
     }
+    
+    // FORBEDRING: Bruger DocumentFragment og lazy loading af billeder.
+    const lazyImageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove("lazy-load");
+                observer.unobserve(img);
+            }
+        });
+    });
 
     function renderRecipes() {
+        const fragment = document.createDocumentFragment();
         recipeGrid.innerHTML = '';
-        let recipesToRender = currentRecipes;
+        let recipesToRender = state.recipes;
 
-        if (activeRecipeFilterTags.size > 0) {
+        if (state.activeRecipeFilterTags.size > 0) {
             recipesToRender = recipesToRender.filter(r => {
                 if (!r.tags) return false;
-                return [...activeRecipeFilterTags].every(tag => r.tags.includes(tag));
+                return [...state.activeRecipeFilterTags].every(tag => r.tags.includes(tag));
             });
         }
 
@@ -399,14 +456,14 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
+            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
             
             const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
                 ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
                 : '';
 
             card.innerHTML = `
-                <img src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                 <div class="recipe-card-content">
                     <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
                     <h4>${recipe.title}</h4>
@@ -416,42 +473,46 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
                     <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
                 </div>`;
-            recipeGrid.appendChild(card);
+            fragment.appendChild(card);
         });
+        recipeGrid.appendChild(fragment);
+        document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
     }
 
     function renderTagFilters() {
         const allTags = new Set();
-        currentRecipes.forEach(r => {
+        state.recipes.forEach(r => {
             if (r.tags) r.tags.forEach(tag => allTags.add(tag));
         });
 
         recipeFilterContainer.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         
-        allTags.forEach(tag => {
+        [...allTags].sort().forEach(tag => {
             const tagButton = document.createElement('button');
             tagButton.className = 'filter-tag';
             tagButton.textContent = tag;
-            if (activeRecipeFilterTags.has(tag)) tagButton.classList.add('active');
+            if (state.activeRecipeFilterTags.has(tag)) tagButton.classList.add('active');
             
             tagButton.addEventListener('click', () => {
-                if (activeRecipeFilterTags.has(tag)) {
-                    activeRecipeFilterTags.delete(tag);
+                if (state.activeRecipeFilterTags.has(tag)) {
+                    state.activeRecipeFilterTags.delete(tag);
                 } else {
-                    activeRecipeFilterTags.add(tag);
+                    state.activeRecipeFilterTags.add(tag);
                 }
                 renderTagFilters();
                 renderRecipes();
             });
-            recipeFilterContainer.appendChild(tagButton);
+            fragment.appendChild(tagButton);
         });
+        recipeFilterContainer.appendChild(fragment);
     }
     
     function renderShoppingList() {
         shoppingListContainer.innerHTML = '';
         const groupedList = {};
 
-        Object.values(currentShoppingList).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+        Object.values(state.shoppingList).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             const section = item.store_section || 'Andet';
             if (!groupedList[section]) groupedList[section] = [];
             groupedList[section].push(item);
@@ -466,7 +527,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         shoppingListTotalContainer.classList.remove('hidden');
         confirmPurchaseBtn.style.display = 'inline-flex';
-
+        
+        const fragment = document.createDocumentFragment();
         for (const section in groupedList) {
             const sectionDiv = document.createElement('div');
             sectionDiv.className = 'store-section';
@@ -474,7 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let listItemsHTML = '';
             groupedList[section].forEach(item => {
                 const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-                const itemInInventory = currentInventoryItems.find(invItem => invItem.name.toLowerCase() === item.name.toLowerCase());
+                const itemInInventory = state.inventory.find(invItem => invItem.name.toLowerCase() === item.name.toLowerCase());
                 const newItemIndicator = !itemInInventory 
                     ? `<button class="btn-icon new-item-indicator" data-item-name="${item.name}" title="Tilføj '${item.name}' til varelageret"><i class="fas fa-plus-circle"></i></button>`
                     : '';
@@ -499,13 +561,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             sectionDiv.innerHTML = `<h4>${section}</h4><ul>${listItemsHTML}</ul>`;
-            shoppingListContainer.appendChild(sectionDiv);
+            fragment.appendChild(sectionDiv);
         }
+        shoppingListContainer.appendChild(fragment);
         calculateAndRenderShoppingListTotal();
     }
     
     function renderReadView(recipe) {
-        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
+        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
         document.getElementById('read-view-title').textContent = recipe.title;
         document.getElementById('read-view-category').textContent = recipe.category || '';
         document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
@@ -539,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.getElementById('read-view-instructions-text').textContent = recipe.instructions || '';
         
-        currentlyViewedRecipeId = recipe.id;
+        state.currentlyViewedRecipeId = recipe.id;
         recipeReadModal.classList.remove('hidden');
     }
 
@@ -598,8 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             inventoryItemModal.classList.add('hidden');
         } catch (error) {
-            console.error("Fejl ved lagring af vare:", error);
-            await showNotification({ title: "Fejl", message: "Der skete en fejl. Varen blev ikke gemt." });
+            handleError(error, "Varen kunne ikke gemmes.");
         }
     });
 
@@ -613,12 +675,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirmed) {
                 try {
                     await deleteDoc(doc(db, 'inventory_items', docId));
-                } catch (error) { console.error("FEJL ved sletning af vare:", error); }
+                } catch (error) { handleError(error, "Varen kunne ikke slettes."); }
             }
         }
 
         if (target.classList.contains('edit-item')) {
-            const item = currentInventoryItems.find(i => i.id === docId);
+            const item = state.inventory.find(i => i.id === docId);
             if (item) {
                 inventoryModalTitle.textContent = 'Rediger vare';
                 document.getElementById('inventory-item-id').value = item.id;
@@ -639,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =================================================================
-    // 6. OPSKRIFTER & IMPORT
+    // 6. OPSKRIFTER & IMPORT (OPDATERET)
     // =================================================================
     const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
@@ -652,6 +714,40 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         ingredientsContainer.appendChild(row);
     };
+
+    // FORBEDRING: Implementeret robust parser for ingredienser.
+    importIngredientsBtn.addEventListener('click', () => {
+        const text = recipeImportTextarea.value;
+        if (!text) return;
+        
+        // Regex til at fange: (mængde) (enhed) (navn)
+        // Den håndterer tal med komma/punktum, forskellige enheder og navne med mellemrum.
+        const ingredientRegex = /^\s*([\d.,]+)?\s*([a-zA-ZæøåÆØÅ]+)?\s*(.+)\s*$/;
+        
+        const lines = text.split('\n');
+        ingredientsContainer.innerHTML = ''; // Ryd eksisterende
+        
+        lines.forEach(line => {
+            if (line.trim() === '') return;
+            
+            const match = line.match(ingredientRegex);
+            if (match) {
+                const quantity = (match[1] || '').replace(',', '.').trim();
+                const unit = (match[2] || '').trim();
+                const name = (match[3] || '').trim();
+                
+                addIngredientRow({
+                    name: name,
+                    quantity: quantity ? parseFloat(quantity) : '',
+                    unit: unit
+                });
+            } else {
+                // Hvis regex fejler, tilføj hele linjen som navn
+                addIngredientRow({ name: line.trim(), quantity: '', unit: '' });
+            }
+        });
+        recipeImportTextarea.value = ''; // Ryd textarea
+    });
 
     addRecipeBtn.addEventListener('click', () => {
         recipeEditModalTitle.textContent = 'Tilføj ny opskrift';
@@ -701,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
             source_url: document.getElementById('recipe-source-url').value,
             ingredients: ingredients,
             imageUrl: document.getElementById('recipe-imageUrl').value || null,
-            is_favorite: currentRecipes.find(r => r.id === recipeId)?.is_favorite || false
+            is_favorite: state.recipes.find(r => r.id === recipeId)?.is_favorite || false
         };
 
         try {
@@ -712,8 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             recipeEditModal.classList.add('hidden');
         } catch (error) {
-            console.error("Fejl ved lagring af opskrift:", error);
-            await showNotification({ title: "Fejl", message: "Der skete en fejl. Opskriften blev ikke gemt." });
+            handleError(error, "Opskriften kunne ikke gemmes.");
         }
     });
 
@@ -726,7 +821,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('is-favorite');
             try {
                 await updateDoc(doc(db, 'recipes', docId), { is_favorite: !isCurrentlyFavorite });
-            } catch (error) { console.error("FEJL ved opdatering af favorit:", error); }
+            } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus."); }
             return;
         }
 
@@ -738,21 +833,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     await deleteDoc(doc(db, 'recipes', docId));
                     showNotification({title: "Slettet", message: "Opskriften er blevet slettet."});
                 } catch (error) {
-                    console.error("Fejl ved sletning af opskrift:", error);
-                    showNotification({title: "Fejl", message: "Opskriften kunne ikke slettes."});
+                    handleError(error, "Opskriften kunne ikke slettes.");
                 }
             }
             return;
         }
 
-        const recipe = currentRecipes.find(r => r.id === docId);
+        const recipe = state.recipes.find(r => r.id === docId);
         if (recipe) {
             renderReadView(recipe);
         }
     });
     
     readViewEditBtn.addEventListener('click', () => {
-        const recipe = currentRecipes.find(r => r.id === currentlyViewedRecipeId);
+        const recipe = state.recipes.find(r => r.id === state.currentlyViewedRecipeId);
         if (recipe) {
             recipeReadModal.classList.add('hidden');
             
@@ -781,7 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     readViewDeleteBtn.addEventListener('click', async () => {
-        const recipeId = currentlyViewedRecipeId;
+        const recipeId = state.currentlyViewedRecipeId;
         if (!recipeId) return;
 
         const confirmed = await showNotification({title: "Slet Opskrift", message: "Er du sikker på, du vil slette denne opskrift?", type: 'confirm'});
@@ -791,8 +885,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 recipeReadModal.classList.add('hidden');
                 showNotification({title: "Slettet", message: "Opskriften er blevet slettet."});
             } catch (error) {
-                console.error("Fejl ved sletning af opskrift:", error);
-                showNotification({title: "Fejl", message: "Opskriften kunne ikke slettes."});
+                handleError(error, "Opskriften kunne ikke slettes.");
             }
         }
     });
@@ -804,34 +897,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK (OPDATERET FOR FIRESTORE)
+    // 7. INDKØBSLISTE LOGIK (OPDATERET)
     // =================================================================
     
     async function updateShoppingListInFirestore(newList) {
-        if (!currentUser) return;
+        if (!state.currentUser) return;
         try {
-            const shoppingListRef = doc(db, 'shopping_lists', currentUser.uid);
+            const shoppingListRef = doc(db, 'shopping_lists', state.currentUser.uid);
             await setDoc(shoppingListRef, { items: newList });
         } catch (error) {
-            console.error("Fejl ved opdatering af indkøbsliste:", error);
-            showNotification({title: "Fejl", message: "Kunne ikke gemme indkøbslisten."});
+            handleError(error, "Indkøbslisten kunne ikke gemmes.");
         }
     }
     
     async function generateWeeklyShoppingList() {
         const allIngredientsNeeded = [];
-        const start = getStartOfWeek(currentDate); 
+        const start = getStartOfWeek(state.currentDate); 
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(start);
             dayDate.setDate(start.getDate() + i);
             const dateString = formatDate(dayDate);
-            const dayPlan = currentMealPlan[dateString];
+            const dayPlan = state.mealPlan[dateString];
 
             if (dayPlan) {
                 Object.values(dayPlan).forEach(meal => {
                     if (meal && meal.recipeId && meal.type === 'recipe') {
-                        const recipe = currentRecipes.find(r => r.id === meal.recipeId);
+                        const recipe = state.recipes.find(r => r.id === meal.recipeId);
                         if (recipe) {
                             recipe.ingredients.forEach(ing => {
                                 allIngredientsNeeded.push({ ...ing });
@@ -846,32 +938,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
-    // OPDATERET: Ny, mere robust logik til "Fyld liste"
     async function addToShoppingList(ingredients, sourceText) {
-        const updatedList = { ...currentShoppingList };
+        const updatedList = { ...state.shoppingList };
 
         ingredients.forEach(ing => {
             const key = ing.name.toLowerCase();
-            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
+            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
             const neededQuantity = ing.quantity || 0;
 
             let quantityToBuy = neededQuantity;
 
-            // Fratræk kun fra lager, hvis varen findes
             if (inventoryItem) {
-                const inStockQuantity = inventoryItem.current_stock || 0;
-                quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
+                // Simpel enhedstjek - fratræk kun hvis enheder er ens
+                if ((inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()) {
+                    const inStockQuantity = inventoryItem.current_stock || 0;
+                    quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
+                }
             }
 
-            // Hvis der skal købes noget, tilføj det til listen
             if (quantityToBuy > 0) {
                 const existingShoppingListItem = updatedList[key];
 
                 if (existingShoppingListItem) {
-                    // Hvis varen allerede er på listen, læg mængden til
                     existingShoppingListItem.quantity_to_buy += quantityToBuy;
                 } else {
-                    // Hvis varen ikke er på listen, opret den
                     updatedList[key] = {
                         name: ing.name,
                         quantity_to_buy: quantityToBuy,
@@ -884,7 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Rund op for ikke-metriske enheder
         for (const key in updatedList) {
             const item = updatedList[key];
             if (item.unit && !['g', 'kg', 'l', 'ml'].includes(item.unit.toLowerCase())) {
@@ -920,8 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const checkedItems = checkedItemsNames.map(name => currentShoppingList[name.toLowerCase()]);
-        const itemsWithoutInventory = checkedItems.filter(item => !currentInventoryItems.some(inv => inv.name.toLowerCase() === item.name.toLowerCase()));
+        const checkedItems = checkedItemsNames.map(name => state.shoppingList[name.toLowerCase()]);
+        const itemsWithoutInventory = checkedItems.filter(item => !state.inventory.some(inv => inv.name.toLowerCase() === item.name.toLowerCase()));
 
         if (itemsWithoutInventory.length > 0) {
             const confirmed = await showNotification({ 
@@ -936,10 +1025,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirmedPurchase) return;
 
         const batch = writeBatch(db);
-        const updatedList = { ...currentShoppingList };
+        const updatedList = { ...state.shoppingList };
         
         checkedItems.forEach(item => {
-            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem) {
                 const itemRef = doc(db, "inventory_items", inventoryItem.id);
                 const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
@@ -953,8 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await updateShoppingListInFirestore(updatedList); 
             await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
         } catch (error) {
-            console.error("Fejl ved bekræftelse af indkøb:", error);
-            await showNotification({ title: "Fejl", message: "Der skete en fejl." });
+            handleError(error, "Lageret kunne ikke opdateres.");
         }
     });
 
@@ -963,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('item-quantity-input') || target.classList.contains('item-unit-input')) {
             const listItem = target.closest('.shopping-list-item');
             const itemName = listItem.dataset.itemName.toLowerCase();
-            const updatedList = { ...currentShoppingList };
+            const updatedList = { ...state.shoppingList };
             const item = updatedList[itemName];
 
             if(item) {
@@ -991,14 +1079,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const removeItemBtn = e.target.closest('.remove-from-list-btn');
         if(removeItemBtn) {
             const itemName = removeItemBtn.closest('.shopping-list-item').dataset.itemName;
-            const updatedList = { ...currentShoppingList };
+            const updatedList = { ...state.shoppingList };
             delete updatedList[itemName.toLowerCase()];
             updateShoppingListInFirestore(updatedList);
         }
     });
 
     function getQuantityInKg(quantity, unit, inventoryItem) {
-        unit = unit.toLowerCase();
+        unit = (unit || '').toLowerCase();
         if (unit === 'g' || unit === 'gram') return quantity / 1000;
         if (unit === 'kg') return quantity;
         if (unit === 'l' || unit === 'liter') return quantity; 
@@ -1015,8 +1103,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function calculateAndRenderShoppingListTotal() {
         let totalPrice = 0;
-        Object.values(currentShoppingList).forEach(item => {
-            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+        Object.values(state.shoppingList).forEach(item => {
+            const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem && inventoryItem.kg_price) {
                 const quantityInKg = getQuantityInKg(item.quantity_to_buy, item.unit, inventoryItem);
                 if (quantityInKg !== null) {
@@ -1032,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!recipe.ingredients) return 0;
 
         recipe.ingredients.forEach(ing => {
-            const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+            const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
             if(inventoryItem && inventoryItem.kg_price) {
                 const quantityInKg = getQuantityInKg(ing.quantity, ing.unit, inventoryItem);
                 if (quantityInKg !== null) {
@@ -1044,15 +1132,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 8. MADPLAN SIDE LOGIK
+    // 8. MADPLAN SIDE LOGIK (OPDATERET)
     // =================================================================
     
     function renderMealPlanner() {
         calendarGrid.innerHTML = '';
-        const start = getStartOfWeek(currentDate);
+        const start = getStartOfWeek(state.currentDate);
         calendarTitle.textContent = `Uge ${getWeekNumber(start)}, ${start.getFullYear()}`;
         const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 
+        const fragment = document.createDocumentFragment();
         for(let i = 0; i < 7; i++) {
             const dayDate = new Date(start);
             dayDate.setDate(start.getDate() + i);
@@ -1068,8 +1157,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="meal-slot" data-date="${dateString}" data-meal="dinner"><span class="meal-slot-title">Aften</span></div>
                 </div>
             `;
-            calendarGrid.appendChild(dayDiv);
+            fragment.appendChild(dayDiv);
         }
+        calendarGrid.appendChild(fragment);
         populateCalendarWithData();
     }
 
@@ -1077,27 +1167,35 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.meal-slot').forEach(slot => {
             const date = slot.dataset.date;
             const meal = slot.dataset.meal;
-            const mealData = currentMealPlan[date]?.[meal];
+            const mealData = state.mealPlan[date]?.[meal];
             
             slot.querySelector('.planned-recipe')?.remove();
 
             if (mealData) {
                 let recipeName = "Ukendt";
                 let isLeftovers = mealData.type === 'leftovers';
+                let recipeExists = true;
 
                 if (isLeftovers) {
                     recipeName = "Rester";
                 } else if (mealData.recipeId) {
-                    const recipe = currentRecipes.find(r => r.id === mealData.recipeId);
-                    if (recipe) recipeName = recipe.title;
+                    const recipe = state.recipes.find(r => r.id === mealData.recipeId);
+                    if (recipe) {
+                        recipeName = recipe.title;
+                    } else {
+                        // BUGFIX: Håndterer slettede opskrifter
+                        recipeName = "Slettet Opskrift";
+                        recipeExists = false;
+                    }
                 }
                 
                 const recipeDiv = document.createElement('div');
                 recipeDiv.className = 'planned-recipe';
                 if (isLeftovers) recipeDiv.classList.add('leftovers');
                 if (mealData.status === 'cooked') recipeDiv.classList.add('cooked');
-                
-                recipeDiv.draggable = true;
+                if (!recipeExists) recipeDiv.classList.add('deleted');
+
+                recipeDiv.draggable = recipeExists; // Kan ikke trække slettede opskrifter
                 recipeDiv.dataset.sourceDate = date;
                 recipeDiv.dataset.sourceMeal = meal;
                 recipeDiv.dataset.mealData = JSON.stringify(mealData);
@@ -1105,11 +1203,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isCooked = mealData.status === 'cooked';
                 const cookedBtnClass = isCooked ? 'cooked' : '';
                 const cookedBtnTitle = isCooked ? 'Retten er markeret som lavet' : 'Marker som lavet (nedskriv fra lager)';
+                
+                // Vis ikke "lavet"-knap for slettede opskrifter
+                const cookedBtnHTML = recipeExists ? `<button class="btn-icon mark-cooked-btn ${cookedBtnClass}" title="${cookedBtnTitle}" ${isCooked ? 'disabled' : ''}><i class="fas fa-utensils"></i></button>` : '';
 
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
                     <div class="planned-recipe-actions">
-                        <button class="btn-icon mark-cooked-btn ${cookedBtnClass}" title="${cookedBtnTitle}" ${isCooked ? 'disabled' : ''}><i class="fas fa-utensils"></i></button>
+                        ${cookedBtnHTML}
                         <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
                     </div>
                 `;
@@ -1123,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
         const searchTerm = sidebarSearchInput.value.toLowerCase();
         
-        let recipesToRender = currentRecipes;
+        let recipesToRender = state.recipes;
         if (activeTab === 'favorites') {
             recipesToRender = recipesToRender.filter(r => r.is_favorite);
         }
@@ -1132,15 +1233,16 @@ document.addEventListener('DOMContentLoaded', () => {
             recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
         }
 
-        if (activeSidebarTags.size > 0) {
+        if (state.activeSidebarTags.size > 0) {
             recipesToRender = recipesToRender.filter(r => {
                 if (!r.tags) return false;
-                return [...activeSidebarTags].every(tag => r.tags.includes(tag));
+                return [...state.activeSidebarTags].every(tag => r.tags.includes(tag));
             });
         }
         
+        const fragment = document.createDocumentFragment();
         recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
-            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
+            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
             const div = document.createElement('div');
             div.className = 'sidebar-recipe-item';
             div.draggable = true;
@@ -1151,48 +1253,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="sidebar-recipe-body">
-                    <img src="${imageUrl}" alt="${recipe.title}" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                    <img src="${imageUrl}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                 </div>
             `;
-            sidebarRecipeList.appendChild(div);
+            fragment.appendChild(div);
         });
+        sidebarRecipeList.appendChild(fragment);
     }
 
     function renderSidebarTagFilters() {
         const allTags = new Set();
-        currentRecipes.forEach(r => {
+        state.recipes.forEach(r => {
             if (r.tags) r.tags.forEach(tag => allTags.add(tag));
         });
 
         sidebarTagFilters.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         
         [...allTags].sort().forEach(tag => {
             const tagButton = document.createElement('button');
             tagButton.className = 'filter-tag';
             tagButton.textContent = tag;
-            if (activeSidebarTags.has(tag)) tagButton.classList.add('active');
+            if (state.activeSidebarTags.has(tag)) tagButton.classList.add('active');
             
             tagButton.addEventListener('click', () => {
-                if (activeSidebarTags.has(tag)) {
-                    activeSidebarTags.delete(tag);
+                if (state.activeSidebarTags.has(tag)) {
+                    state.activeSidebarTags.delete(tag);
                 } else {
-                    activeSidebarTags.add(tag);
+                    state.activeSidebarTags.add(tag);
                 }
                 renderSidebarTagFilters();
                 renderSidebarRecipeList();
             });
-            sidebarTagFilters.appendChild(tagButton);
+            fragment.appendChild(tagButton);
         });
+        sidebarTagFilters.appendChild(fragment);
     }
 
     // Event Listeners for Madplan
     prevWeekBtn.addEventListener('click', () => {
-        currentDate.setDate(currentDate.getDate() - 7);
+        state.currentDate.setDate(state.currentDate.getDate() - 7);
         renderMealPlanner();
     });
 
     nextWeekBtn.addEventListener('click', () => {
-        currentDate.setDate(currentDate.getDate() + 7);
+        state.currentDate.setDate(state.currentDate.getDate() + 7);
         renderMealPlanner();
     });
 
@@ -1203,8 +1308,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderSidebarRecipeList();
         });
     });
-
-    sidebarSearchInput.addEventListener('input', renderSidebarRecipeList);
+    
+    // FORBEDRING: Debounced search input
+    sidebarSearchInput.addEventListener('input', debounce(renderSidebarRecipeList, 300));
 
     sidebarRecipeList.addEventListener('click', (e) => {
         const header = e.target.closest('.sidebar-recipe-header');
@@ -1277,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let updates = {};
             let dataToSet;
             if (dragData.type === 'new-item') {
-                 dataToSet = { recipeId: dragData.recipeId, type: 'recipe' };
+                 dataToSet = { recipeId: dragData.recipeId, type: 'recipe', status: 'planned' };
             } else { 
                 dataToSet = dragData.mealData;
             }
@@ -1300,8 +1406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     newPlan[targetDate] = { [targetMeal]: dataToSet };
                     await setDoc(mealPlanRef, newPlan);
                 } else {
-                    console.error("Fejl ved drop:", error);
-                    showNotification({title: "Fejl", message: "Kunne ikke gemme ændringen."});
+                    handleError(error, "Kunne ikke gemme ændringen i madplanen.");
                 }
             }
         }
@@ -1325,8 +1430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await updateDoc(mealPlanRef, { [fieldPath]: deleteField() });
             } catch (error) {
-                console.error("Fejl ved sletning af måltid:", error);
-                showNotification({title: "Fejl", message: "Kunne ikke fjerne måltidet."});
+                handleError(error, "Måltidet kunne ikke fjernes.");
             }
             return; 
         }
@@ -1337,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const date = slot.dataset.date;
             const mealType = slot.dataset.meal;
             const mealData = JSON.parse(slot.querySelector('.planned-recipe').dataset.mealData);
-            const recipe = currentRecipes.find(r => r.id === mealData.recipeId);
+            const recipe = state.recipes.find(r => r.id === mealData.recipeId);
 
             if (!recipe) {
                 showNotification({title: "Fejl", message: "Kunne ikke finde opskriften."});
@@ -1346,10 +1450,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const missingIngredients = [];
             for (const ingredient of recipe.ingredients) {
-                const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
+                const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
                 const needed = ingredient.quantity || 0;
                 
                 let inStock = 0;
+                // Kun tjek lager hvis enheder matcher
                 if (inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ingredient.unit || '').toLowerCase()) {
                     inStock = inventoryItem.current_stock || 0;
                 }
@@ -1367,6 +1472,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
             if (!confirmed) return;
+            
+            // BUGFIX: Deaktiver knap med det samme for at undgå race condition
+            cookedBtn.disabled = true;
 
             const year = new Date(date).getFullYear();
             const mealPlanDocId = `plan_${year}`;
@@ -1381,8 +1489,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 showNotification({title: "Ret Lavet", message: "Retten er markeret, og lageret vil blive opdateret."});
             } catch (error) {
-                console.error("Fejl ved markering af måltid:", error);
-                showNotification({title: "Fejl", message: "Kunne ikke markere måltidet."});
+                handleError(error, "Kunne ikke markere måltidet.");
+                cookedBtn.disabled = false; // Genaktiver knap ved fejl
             }
         }
     });
@@ -1397,9 +1505,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         recipe.ingredients.forEach(ing => {
-            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
             const needed = ing.quantity || 0;
-            const inStock = inventoryItem ? inventoryItem.current_stock : 0;
+            let inStock = 0;
+            if(inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()){
+                inStock = inventoryItem.current_stock;
+            }
             if (needed > inStock) {
                 missingCount++;
             }
@@ -1410,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderInspirationPage() {
         inspirationGrid.innerHTML = '';
         
-        const recipesWithMatch = currentRecipes.map(calculateRecipeMatch);
+        const recipesWithMatch = state.recipes.map(calculateRecipeMatch);
         
         recipesWithMatch.sort((a, b) => {
             if (a.missingCount !== b.missingCount) {
@@ -1424,6 +1535,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
         recipesWithMatch.forEach(recipe => {
             let statusClass = 'status-red';
             let statusTitle = `Mangler ${recipe.missingCount} ingredienser`;
@@ -1439,7 +1551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${recipe.title ? encodeURIComponent(recipe.title) : 'Opskrift'}`;
+            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
             
             const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
                 ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
@@ -1447,7 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
-                <img src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                 <div class="recipe-card-content">
                     <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
                     <h4>${recipe.title}</h4>
@@ -1457,13 +1569,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
                     <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
                 </div>`;
-            inspirationGrid.appendChild(card);
+            fragment.appendChild(card);
         });
+        inspirationGrid.appendChild(fragment);
+        document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
     }
 
     autogenPlanBtn.addEventListener('click', () => {
         const allTags = new Set();
-        currentRecipes.forEach(r => {
+        state.recipes.forEach(r => {
             if (r.tags) r.tags.forEach(tag => allTags.add(tag));
         });
 
@@ -1485,7 +1599,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const useLeftovers = document.getElementById('autogen-use-leftovers').checked;
         const selectedDietTags = [...autogenDietTagsContainer.querySelectorAll('input:checked')].map(el => el.value);
 
-        let eligibleRecipes = currentRecipes.filter(recipe => {
+        let eligibleRecipes = state.recipes.filter(recipe => {
             if (recipe.time > maxTime) return false;
             if (selectedDietTags.length > 0 && !selectedDietTags.every(tag => recipe.tags?.includes(tag))) return false;
             
@@ -1505,7 +1619,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const weeklyPlan = {};
-        const start = getStartOfWeek(currentDate);
+        const start = getStartOfWeek(state.currentDate);
         let usedRecipeIds = new Set();
 
         for (let i = 0; i < 7; i++) {
@@ -1527,13 +1641,13 @@ document.addEventListener('DOMContentLoaded', () => {
             usedRecipeIds.add(chosenRecipe.id);
             
             weeklyPlan[dateString] = {
-                dinner: { recipeId: chosenRecipe.id, type: 'recipe' }
+                dinner: { recipeId: chosenRecipe.id, type: 'recipe', status: 'planned' }
             };
         }
         
         const confirmed = await showNotification({title: "Forslag til Madplan", message: "En ny madplan er genereret baseret på dine kriterier. Vil du gemme den?", type: 'confirm'});
         if (confirmed) {
-            const year = currentDate.getFullYear();
+            const year = state.currentDate.getFullYear();
             const mealPlanDocId = `plan_${year}`;
             const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
 
@@ -1546,7 +1660,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 autogenModal.classList.add('hidden');
                 showNotification({title: "Madplan Gemt", message: "Din nye madplan er blevet gemt."});
             } catch (error) {
-                console.error("Fejl ved lagring af autogen-plan:", error);
+                handleError(error, "Den autogenererede madplan kunne ikke gemmes.");
             }
         }
     });
