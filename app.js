@@ -846,46 +846,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
+    // OPDATERET: Ny, mere robust logik til "Fyld liste"
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...currentShoppingList };
 
         ingredients.forEach(ing => {
             const key = ing.name.toLowerCase();
-            const existingItem = updatedList[key];
-            
-            if (existingItem) {
-                // OPDATERET: Tjekker enheder før mængden lægges til
-                if(existingItem.unit.toLowerCase() === (ing.unit || '').toLowerCase()){
-                    existingItem.quantity_to_buy += ing.quantity || 0;
-                }
-            } else {
-                const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
-                const needed = ing.quantity || 0;
-                
-                // OPDATERET: Tjekker kun lager hvis enhederne er ens
-                let inStock = 0;
-                if (inventoryItem && (inventoryItem.unit || '').toLowerCase() === (ing.unit || '').toLowerCase()) {
-                    inStock = inventoryItem.current_stock || 0;
-                }
+            const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === key);
+            const neededQuantity = ing.quantity || 0;
+            const neededUnit = (ing.unit || '').toLowerCase();
 
-                const toBuy = needed - inStock;
+            let quantityToBuy = neededQuantity;
 
-                if (toBuy > 0) {
+            // Tjek kun lager hvis varen findes og enhederne er identiske
+            if (inventoryItem) {
+                const inStockQuantity = inventoryItem.current_stock || 0;
+                const inStockUnit = (inventoryItem.unit || '').toLowerCase();
+
+                if (inStockUnit === neededUnit) {
+                    quantityToBuy = Math.max(0, neededQuantity - inStockQuantity);
+                }
+            }
+
+            // Hvis der skal købes noget, tilføj det til listen
+            if (quantityToBuy > 0) {
+                const existingShoppingListItem = updatedList[key];
+
+                if (existingShoppingListItem && (existingShoppingListItem.unit || '').toLowerCase() === neededUnit) {
+                    // Hvis varen allerede er på listen med samme enhed, læg mængden til
+                    existingShoppingListItem.quantity_to_buy += quantityToBuy;
+                } else if (!existingShoppingListItem) {
+                    // Hvis varen ikke er på listen, opret den
                     updatedList[key] = {
                         name: ing.name,
-                        quantity_to_buy: toBuy,
+                        quantity_to_buy: quantityToBuy,
                         unit: ing.unit || '',
                         store_section: inventoryItem ? inventoryItem.store_section : 'Andet',
                         kg_price: inventoryItem ? inventoryItem.kg_price : null,
                         grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
                 }
+                // Hvis varen er på listen, men med en anden enhed, ignoreres den for nu for at undgå fejl.
+                // En mere avanceret løsning ville kræve enhedskonvertering her.
             }
         });
 
+        // Rund op for ikke-metriske enheder
         for (const key in updatedList) {
             const item = updatedList[key];
-            if (item.unit !== 'g' && item.unit !== 'kg' && item.unit !== 'l' && item.unit !== 'ml') {
+            if (item.unit && !['g', 'kg', 'l', 'ml'].includes(item.unit.toLowerCase())) {
                 item.quantity_to_buy = Math.ceil(item.quantity_to_buy);
             }
         }
@@ -1342,7 +1351,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // NYT: Pre-flight check for at se om der er varer nok på lager
             const missingIngredients = [];
             for (const ingredient of recipe.ingredients) {
                 const inventoryItem = currentInventoryItems.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase());
