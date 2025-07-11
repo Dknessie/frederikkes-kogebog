@@ -366,22 +366,30 @@
         </div>
     </div>
 
-    <!-- NYT: Modal til at vælge portioner og tilføje ekstra ingredienser -->
+    <!-- OPDATERET: Modal til at vælge portioner og tilføje ekstra ingredienser -->
     <div id="add-meal-modal" class="modal-overlay hidden">
-        <div class="modal-content">
+        <div class="modal-content modal-compact">
             <button class="close-modal-btn">&times;</button>
-            <h3 id="add-meal-modal-title">Tilføj måltid til madplan</h3>
             <form id="add-meal-form">
-                <div class="input-group">
-                    <label for="meal-portions">Antal portioner</label>
-                    <input type="number" id="meal-portions" min="1" step="1" required>
+                <h3 id="add-meal-modal-title"></h3>
+                <div class="modal-section">
+                    <label for="meal-portions" class="input-label">Antal portioner</label>
+                    <input type="number" id="meal-portions" class="modal-input" min="1" step="1" required>
                 </div>
-                <hr>
-                <h4>Ekstra ingredienser (valgfri)</h4>
-                <div id="extra-ingredients-container">
-                    <!-- Ekstra ingredienser indsættes her af JS -->
+                <div class="modal-section-alt">
+                    <div id="extra-ingredients-toggle">
+                        <button type="button" id="show-extra-ingredients-btn" class="btn-link">
+                            <i class="fas fa-plus-circle"></i> Tilføj ekstra ingredienser (valgfrit)
+                        </button>
+                    </div>
+                    <div id="extra-ingredients-section" class="hidden">
+                        <label class="input-label">Ekstra ingredienser</label>
+                        <div id="extra-ingredients-container">
+                            <!-- Ekstra ingredienser indsættes her -->
+                        </div>
+                        <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary btn-small"><i class="fas fa-plus"></i> Tilføj</button>
+                    </div>
                 </div>
-                <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ekstra</button>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Tilføj til madplan</button>
                 </div>
