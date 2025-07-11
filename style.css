@@ -298,18 +298,17 @@ nav {
     text-align: center;
 }
 
+/* OPDATERET: Fra flex til grid for rækkekontrol */
 .meal-slots {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 60px 60px 1fr; /* Fast højde til morgen/frokost, resten til aften */
 }
 
 .meal-slot {
-    flex-grow: 1;
     padding: 0.5rem;
     border-bottom: 1px dashed #eee;
     position: relative;
-    min-height: 80px;
     transition: background-color 0.2s ease;
     overflow: hidden;
 }
@@ -350,7 +349,7 @@ nav {
     border-left-color: var(--accent-color);
 }
 .planned-recipe.cooked {
-    background-color: #e8f5e9; /* Lys grøn baggrund for "lavet" retter */
+    background-color: #e8f5e9;
     border-left-color: var(--status-green);
 }
 
@@ -961,7 +960,6 @@ nav {
 }
 
 /* Autogen Modal */
-/* OPDATERET: Gitter-layout for at sikre justering af tags */
 .checkbox-group {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
