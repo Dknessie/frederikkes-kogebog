@@ -1077,3 +1077,35 @@ input:checked + .slider:before {
 .slider.round:before {
   border-radius: 50%;
 }
+
+/* NYT: Styling for preview-listen i dialogboksen */
+.preview-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin: 1.5rem 0;
+    background-color: #fdfdfd;
+}
+
+.preview-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.preview-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.preview-list li:last-child {
+    border-bottom: none;
+}
+
+.preview-list .item-name {
+    font-weight: 600;
+}
