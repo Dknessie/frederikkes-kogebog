@@ -743,9 +743,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =================================================================
-    // 6. OPSKRIFTER & IMPORT
+    // 6. OPSKRIFTER & IMPORT (MED NYT INGREDIENS-DESIGN)
     // =================================================================
-    const addIngredientRow = (ingredient = { name: '', quantity: '', unit: '' }) => {
+    
+    // Fjerner eksisterende autocomplete lister
+    function removeAutocomplete(row) {
+        const suggestions = row.querySelector('.autocomplete-suggestions');
+        if (suggestions) {
+            suggestions.remove();
+        }
+    }
+
+    // Opretter en ny ingrediensrække med det nye design
+    const createIngredientRow = (container, ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
         row.className = 'ingredient-row';
         row.innerHTML = `
@@ -754,7 +764,46 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" class="ingredient-unit" placeholder="Enhed" value="${ingredient.unit}">
             <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
         `;
-        ingredientsContainer.appendChild(row);
+        container.appendChild(row);
+
+        const nameInput = row.querySelector('.ingredient-name');
+        
+        nameInput.addEventListener('input', (e) => {
+            const value = e.target.value.toLowerCase();
+            removeAutocomplete(row); // Fjern gamle forslag
+
+            if (value.length < 1) return;
+
+            const suggestions = state.inventory.filter(item => 
+                item.name.toLowerCase().startsWith(value) || 
+                (item.aliases && item.aliases.some(alias => alias.toLowerCase().startsWith(value)))
+            );
+
+            if (suggestions.length > 0) {
+                const suggestionsContainer = document.createElement('div');
+                suggestionsContainer.className = 'autocomplete-suggestions';
+                suggestions.slice(0, 5).forEach(item => { // Vis maks 5 forslag
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.className = 'autocomplete-suggestion';
+                    suggestionDiv.innerHTML = item.name.replace(new RegExp(`^${value}`, 'i'), `<strong>$&</strong>`);
+                    
+                    suggestionDiv.addEventListener('mousedown', (event) => { // Mousedown for at undgå at blur fjerner listen før klik
+                        event.preventDefault();
+                        nameInput.value = item.name;
+                        row.querySelector('.ingredient-unit').value = item.unit || '';
+                        removeAutocomplete(row);
+                    });
+                    suggestionsContainer.appendChild(suggestionDiv);
+                });
+                row.appendChild(suggestionsContainer);
+            }
+        });
+
+        // Fjern autocomplete når brugeren klikker væk
+        nameInput.addEventListener('blur', () => {
+            // Lille forsinkelse så klik på forslag kan nå at blive registreret
+            setTimeout(() => removeAutocomplete(row), 150);
+        });
     };
 
     importIngredientsBtn.addEventListener('click', () => {
@@ -770,19 +819,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (line.trim() === '') return;
             
             const match = line.match(ingredientRegex);
+            let ingredientData = { name: line.trim(), quantity: '', unit: '' };
             if (match) {
                 const quantity = (match[1] || '').replace(',', '.').trim();
                 const unit = (match[2] || '').trim();
                 const name = (match[3] || '').trim();
                 
-                addIngredientRow({
+                ingredientData = {
                     name: name,
                     quantity: quantity ? parseFloat(quantity) : '',
                     unit: unit
-                });
-            } else {
-                addIngredientRow({ name: line.trim(), quantity: '', unit: '' });
+                };
             }
+            createIngredientRow(ingredientsContainer, ingredientData);
         });
         recipeImportTextarea.value = '';
     });
@@ -793,13 +842,16 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('recipe-id').value = '';
         ingredientsContainer.innerHTML = '';
         recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
-        addIngredientRow();
+        createIngredientRow(ingredientsContainer); // Tilføj første tomme række
         recipeEditModal.classList.remove('hidden');
     });
 
-    addIngredientBtn.addEventListener('click', () => addIngredientRow());
+    addIngredientBtn.addEventListener('click', () => createIngredientRow(ingredientsContainer));
+    addExtraIngredientBtn.addEventListener('click', () => createIngredientRow(extraIngredientsContainer));
 
-    ingredientsContainer.addEventListener('click', (e) => {
+
+    // Event listener for slet-knap (virker for begge beholdere)
+    recipeEditModal.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
             e.target.closest('.ingredient-row').remove();
         }
@@ -813,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const recipeId = document.getElementById('recipe-id').value;
         const ingredients = [];
-        document.querySelectorAll('.ingredient-row').forEach(row => {
+        ingredientsContainer.querySelectorAll('.ingredient-row').forEach(row => {
             const name = row.querySelector('.ingredient-name').value.trim();
             const quantity = row.querySelector('.ingredient-quantity').value;
             const unit = row.querySelector('.ingredient-unit').value.trim();
@@ -904,9 +956,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             ingredientsContainer.innerHTML = '';
             if (recipe.ingredients && recipe.ingredients.length > 0) {
-                recipe.ingredients.forEach(ing => addIngredientRow(ing));
+                recipe.ingredients.forEach(ing => createIngredientRow(ingredientsContainer, ing));
             } else {
-                addIngredientRow();
+                createIngredientRow(ingredientsContainer);
             }
             recipeEditModal.classList.remove('hidden');
         }
@@ -1467,10 +1519,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // FIX: DRAG & DROP EVENT LISTENERS
+    // DRAG & DROP EVENT LISTENERS
     // =================================================================
     
-    // The 'dragover' event must be canceled to allow a drop.
     calendarGrid.addEventListener('dragover', (e) => {
         e.preventDefault();
         const slot = e.target.closest('.meal-slot');
@@ -1479,7 +1530,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Clean up the visual feedback when the dragged item leaves a slot.
     calendarGrid.addEventListener('dragleave', (e) => {
         const slot = e.target.closest('.meal-slot');
         if (slot) {
@@ -1530,8 +1580,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
                     document.getElementById('meal-portions').value = recipe.portions || 1;
-                    extraIngredientsContainer.innerHTML = '';
-                    addExtraIngredientBtn.click();
+                    extraIngredientsContainer.innerHTML = ''; // Ryd gamle
+                    createIngredientRow(extraIngredientsContainer); // Tilføj første tomme række
                     addMealModal.classList.remove('hidden');
                 }
             } else if (dragData.type === 'move-item') {
@@ -1824,26 +1874,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // NYT: Logik for "Tilføj Måltid" modalen
-    addExtraIngredientBtn.addEventListener('click', () => {
-        const row = document.createElement('div');
-        row.className = 'ingredient-row';
-        row.innerHTML = `
-            <input type="text" class="ingredient-name" placeholder="Ingrediensnavn" required>
-            <input type="number" step="any" class="ingredient-quantity" placeholder="Antal">
-            <input type="text" class="ingredient-unit" placeholder="Enhed">
-            <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
-        `;
-        extraIngredientsContainer.appendChild(row);
-    });
-
-    extraIngredientsContainer.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-ingredient-btn')) {
-            e.target.closest('.ingredient-row').remove();
-        }
-    });
-
-    // RETTET: Bruger nu setDoc med { merge: true } for at sikre oprettelse/opdatering
     addMealForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!state.pendingMeal) return;
@@ -1886,7 +1916,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // OPDATERET: Logik for "Ajourfør Lager" med validering
     updateStockBtn.addEventListener('click', () => {
         const today = new Date();
         today.setHours(0,0,0,0);
@@ -1940,7 +1969,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Trin 1: Valider ALLE valgte måltider FØR vi skriver noget
         const validationErrors = [];
         const allIngredientsToDeduct = {};
 
@@ -1991,7 +2019,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Trin 2: Hvis validering er OK, udfør opdateringer
         const batch = writeBatch(db);
         const year = state.currentDate.getFullYear();
         const mealPlanDocId = `plan_${year}`;
