@@ -117,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let inventoryUnsubscribe = null;
     let recipesUnsubscribe = null;
     let mealPlanUnsubscribe = null;
+    let shoppingListUnsubscribe = null; // NYT: Listener for indkøbsliste
     let currentInventoryItems = [];
     let currentRecipes = [];
     let currentMealPlan = {}; 
@@ -196,15 +197,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-email').textContent = user.email;
             loginPage.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            setupRealtimeListeners();
+            setupRealtimeListeners(user.uid); // Pass user ID to listeners
             navigateTo(window.location.hash || '#meal-planner');
         } else {
             currentUser = null;
             appContainer.classList.add('hidden');
             loginPage.classList.remove('hidden');
+            // Stop all listeners on logout
             if (inventoryUnsubscribe) inventoryUnsubscribe();
             if (recipesUnsubscribe) recipesUnsubscribe();
             if (mealPlanUnsubscribe) mealPlanUnsubscribe();
+            if (shoppingListUnsubscribe) shoppingListUnsubscribe();
         }
     });
 
@@ -239,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
+        // Render functions are now called by listeners, but we can call them here for initial load
         if (hash === '#meal-planner' || hash === '') {
             renderMealPlanner();
             renderSidebarRecipeList();
@@ -247,6 +251,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (hash === '#inspiration') {
             renderInspirationPage();
+        }
+        if (hash === '#inventory') {
+            renderInventory(currentInventoryItems);
         }
     };
     
@@ -277,11 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // 3. FIRESTORE REAL-TIME LISTENERS
     // =================================================================
-    function setupRealtimeListeners() {
+    function setupRealtimeListeners(userId) {
+        if (!userId) return;
+
+        // Stop any existing listeners before starting new ones
         if (inventoryUnsubscribe) inventoryUnsubscribe();
         if (recipesUnsubscribe) recipesUnsubscribe();
         if (mealPlanUnsubscribe) mealPlanUnsubscribe();
+        if (shoppingListUnsubscribe) shoppingListUnsubscribe();
 
+        // Inventory listener (assuming it might become user-specific later)
         const inventoryRef = collection(db, 'inventory_items');
         inventoryUnsubscribe = onSnapshot(inventoryRef, (snapshot) => {
             currentInventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -291,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, error => console.error("Fejl i varelager-listener:", error));
 
+        // Recipes listener (global)
         const recipesRef = collection(db, 'recipes');
         recipesUnsubscribe = onSnapshot(recipesRef, (snapshot) => {
             currentRecipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -308,14 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
         }, error => console.error("Fejl i opskrift-listener:", error));
 
+        // Meal plan listener (user-specific)
         const year = currentDate.getFullYear();
-        const mealPlanDocId = `plan_${year}`;
+        const mealPlanDocId = `plan_${year}`; // Assuming this might become user-specific too
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         mealPlanUnsubscribe = onSnapshot(mealPlanRef, (doc) => {
             currentMealPlan = doc.exists() ? doc.data() : {};
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderMealPlanner(); 
             }
+        });
+
+        // NYT: Shopping list listener (user-specific)
+        const shoppingListRef = doc(db, 'shopping_lists', userId);
+        shoppingListUnsubscribe = onSnapshot(shoppingListRef, (doc) => {
+            currentShoppingList = doc.exists() ? doc.data().items || {} : {};
+            renderShoppingList();
         });
     }
 
@@ -325,7 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderInventory(items) {
         inventoryTableBody.innerHTML = '';
         if (items.length === 0) {
-             // OPDATERET: Colspan er nu 8 pga. ny statuskolonne
              inventoryTableBody.innerHTML = `<tr><td colspan="8">Dit varelager er tomt. Tilføj en vare for at starte.</td></tr>`;
              return;
         }
@@ -333,13 +353,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
             
-            // Logik for beholdningsstatus
             const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
-            let stockColor = '#4CAF50'; // Grøn
-            if (stockPercentage < 50) stockColor = '#FFC107'; // Gul
-            if (stockPercentage < 20) stockColor = '#F44336'; // Rød
+            let stockColor = '#4CAF50';
+            if (stockPercentage < 50) stockColor = '#FFC107';
+            if (stockPercentage < 20) stockColor = '#F44336';
 
-            // NYT: Tekst-baseret status
             let stockStatus = { text: 'På lager', className: 'status-ok' };
             if (item.max_stock && item.max_stock > 0) {
                 if (stockPercentage < 50) stockStatus = { text: 'Lav', className: 'status-low' };
@@ -349,7 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 stockStatus = { text: '-', className: 'status-unknown' };
             }
 
-            // OPDATERET: Tabelrække med ny statuskolonne
             tr.innerHTML = `
                 <td>${item.name || ''}</td>
                 <td>
@@ -794,10 +811,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK
+    // 7. INDKØBSLISTE LOGIK (OPDATERET FOR FIRESTORE)
     // =================================================================
     
-    generateWeeklyShoppingListBtn.addEventListener('click', () => {
+    async function updateShoppingListInFirestore(newList) {
+        if (!currentUser) return;
+        try {
+            const shoppingListRef = doc(db, 'shopping_lists', currentUser.uid);
+            await setDoc(shoppingListRef, { items: newList });
+        } catch (error) {
+            console.error("Fejl ved opdatering af indkøbsliste:", error);
+            showNotification({title: "Fejl", message: "Kunne ikke gemme indkøbslisten."});
+        }
+    }
+    
+    async function generateWeeklyShoppingList() {
         const allIngredientsNeeded = [];
         const start = getStartOfWeek(currentDate); 
 
@@ -812,12 +840,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (meal && meal.recipeId && meal.type === 'recipe') {
                         const recipe = currentRecipes.find(r => r.id === meal.recipeId);
                         if (recipe) {
-                            const scaleFactor = 1; 
                             recipe.ingredients.forEach(ing => {
-                                allIngredientsNeeded.push({
-                                    ...ing,
-                                    quantity: (ing.quantity || 0) * scaleFactor
-                                });
+                                allIngredientsNeeded.push({ ...ing });
                             });
                         }
                     }
@@ -825,13 +849,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        addToShoppingList(allIngredientsNeeded, `madplanen for uge ${getWeekNumber(start)}`);
-    });
+        await addToShoppingList(allIngredientsNeeded, `madplanen for uge ${getWeekNumber(start)}`);
+    }
+    generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
-    function addToShoppingList(ingredients, sourceText) {
+    async function addToShoppingList(ingredients, sourceText) {
+        const updatedList = { ...currentShoppingList };
+
         ingredients.forEach(ing => {
             const key = ing.name.toLowerCase();
-            const existingItem = currentShoppingList[key];
+            const existingItem = updatedList[key];
             
             if (existingItem) {
                 existingItem.quantity_to_buy += ing.quantity || 0;
@@ -842,7 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const toBuy = needed - inStock;
 
                 if (toBuy > 0) {
-                    currentShoppingList[key] = {
+                    updatedList[key] = {
                         name: ing.name,
                         quantity_to_buy: toBuy,
                         unit: ing.unit || '',
@@ -854,14 +881,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        for (const key in currentShoppingList) {
-            const item = currentShoppingList[key];
+        for (const key in updatedList) {
+            const item = updatedList[key];
             if (item.unit !== 'g' && item.unit !== 'kg' && item.unit !== 'l' && item.unit !== 'ml') {
                 item.quantity_to_buy = Math.ceil(item.quantity_to_buy);
             }
         }
         
-        renderShoppingList();
+        await updateShoppingListInFirestore(updatedList);
         if (sourceText) {
             showNotification({ title: "Opdateret", message: `Varer fra ${sourceText} er tilføjet til indkøbslisten.` });
         }
@@ -878,17 +905,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     confirmPurchaseBtn.addEventListener('click', async () => {
-        const checkedItems = [];
+        const checkedItemsNames = [];
         document.querySelectorAll('.shopping-list-checkbox:checked').forEach(checkbox => {
             const itemName = checkbox.closest('.shopping-list-item').dataset.itemName;
-            checkedItems.push(currentShoppingList[itemName.toLowerCase()]);
+            checkedItemsNames.push(itemName);
         });
 
-        if (checkedItems.length === 0) {
+        if (checkedItemsNames.length === 0) {
             await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt." });
             return;
         }
 
+        const checkedItems = checkedItemsNames.map(name => currentShoppingList[name.toLowerCase()]);
         const itemsWithoutInventory = checkedItems.filter(item => !currentInventoryItems.some(inv => inv.name.toLowerCase() === item.name.toLowerCase()));
 
         if (itemsWithoutInventory.length > 0) {
@@ -904,6 +932,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirmedPurchase) return;
 
         const batch = writeBatch(db);
+        const updatedList = { ...currentShoppingList };
         
         checkedItems.forEach(item => {
             const inventoryItem = currentInventoryItems.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
@@ -912,12 +941,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
                 batch.update(itemRef, { current_stock: newStock });
             }
-            delete currentShoppingList[item.name.toLowerCase()];
+            delete updatedList[item.name.toLowerCase()];
         });
 
         try {
             await batch.commit();
-            renderShoppingList();
+            await updateShoppingListInFirestore(updatedList); // Update the shopping list in Firestore
             await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
         } catch (error) {
             console.error("Fejl ved bekræftelse af indkøb:", error);
@@ -930,7 +959,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('item-quantity-input') || target.classList.contains('item-unit-input')) {
             const listItem = target.closest('.shopping-list-item');
             const itemName = listItem.dataset.itemName.toLowerCase();
-            const item = currentShoppingList[itemName];
+            const updatedList = { ...currentShoppingList };
+            const item = updatedList[itemName];
 
             if(item) {
                 if (target.classList.contains('item-quantity-input')) {
@@ -939,8 +969,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (target.classList.contains('item-unit-input')) {
                     item.unit = target.value;
                 }
+                updateShoppingListInFirestore(updatedList);
             }
-            calculateAndRenderShoppingListTotal();
         }
     });
 
@@ -957,8 +987,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const removeItemBtn = e.target.closest('.remove-from-list-btn');
         if(removeItemBtn) {
             const itemName = removeItemBtn.closest('.shopping-list-item').dataset.itemName;
-            delete currentShoppingList[itemName.toLowerCase()];
-            renderShoppingList();
+            const updatedList = { ...currentShoppingList };
+            delete updatedList[itemName.toLowerCase()];
+            updateShoppingListInFirestore(updatedList);
         }
     });
 
@@ -1060,15 +1091,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const recipeDiv = document.createElement('div');
                 recipeDiv.className = 'planned-recipe';
                 if (isLeftovers) recipeDiv.classList.add('leftovers');
+                if (mealData.status === 'cooked') recipeDiv.classList.add('cooked');
                 
                 recipeDiv.draggable = true;
                 recipeDiv.dataset.sourceDate = date;
                 recipeDiv.dataset.sourceMeal = meal;
                 recipeDiv.dataset.mealData = JSON.stringify(mealData);
 
+                const isCooked = mealData.status === 'cooked';
+                const cookedBtnClass = isCooked ? 'cooked' : '';
+                const cookedBtnTitle = isCooked ? 'Retten er markeret som lavet' : 'Marker som lavet (nedskriv fra lager)';
+
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
-                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
+                    <div class="planned-recipe-actions">
+                        <button class="btn-icon mark-cooked-btn ${cookedBtnClass}" title="${cookedBtnTitle}" ${isCooked ? 'disabled' : ''}><i class="fas fa-utensils"></i></button>
+                        <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
+                    </div>
                 `;
                 slot.appendChild(recipeDiv);
             }
@@ -1284,6 +1323,34 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Fejl ved sletning af måltid:", error);
                 showNotification({title: "Fejl", message: "Kunne ikke fjerne måltidet."});
+            }
+            return; // Stop further execution
+        }
+
+        const cookedBtn = e.target.closest('.mark-cooked-btn');
+        if (cookedBtn && !cookedBtn.disabled) {
+            const slot = cookedBtn.closest('.meal-slot');
+            const date = slot.dataset.date;
+            const mealType = slot.dataset.meal;
+
+            const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
+            if (!confirmed) return;
+
+            const year = new Date(date).getFullYear();
+            const mealPlanDocId = `plan_${year}`;
+            const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
+            const fieldPath = `${date}.${mealType}.status`;
+            const eventIdPath = `${date}.${mealType}.cookedEventId`;
+
+            try {
+                await updateDoc(mealPlanRef, { 
+                    [fieldPath]: "cooked",
+                    [eventIdPath]: crypto.randomUUID()
+                });
+                showNotification({title: "Ret Lavet", message: "Retten er markeret, og lageret vil blive opdateret."});
+            } catch (error) {
+                console.error("Fejl ved markering af måltid:", error);
+                showNotification({title: "Fejl", message: "Kunne ikke markere måltidet."});
             }
         }
     });
