@@ -394,6 +394,23 @@
         </div>
     </div>
 
+    <!-- NYT: Dialogboks til bekræftelse af indkøbsliste -->
+    <div id="shopping-list-preview-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Tilføj til Indkøbsliste</h3>
+            <p>Følgende varer vil blive tilføjet til din indkøbsliste. Bekræft venligst.</p>
+            <div id="shopping-list-preview-container" class="preview-list">
+                <!-- Preview af listen indsættes her af JS -->
+            </div>
+            <div id="shopping-list-preview-errors" class="error-message"></div>
+            <div class="form-actions">
+                <button id="cancel-shopping-list-preview" class="btn btn-secondary">Annuller</button>
+                <button id="confirm-shopping-list-preview" class="btn btn-primary">Bekræft og Tilføj</button>
+             </div>
+        </div>
+    </div>
+
     <!-- Notifikations Modal -->
     <div id="notification-modal" class="modal-overlay hidden">
         <div class="modal-content modal-notification">
