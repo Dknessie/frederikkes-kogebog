@@ -924,7 +924,6 @@ nav {
     gap: 1rem 1.5rem;
 }
 
-/* NYT: Grid layout for varekort-modal */
 .form-grid-3-col {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -932,7 +931,6 @@ nav {
     align-items: end;
 }
 
-/* NYT: Styling for beregnede felter */
 .calculated-field {
     display: block;
     width: 100%;
@@ -988,18 +986,31 @@ nav {
     max-height: 300px; 
     object-fit: cover;
 }
-#recipe-edit-modal .ingredient-row {
-    background: #f9f9f9;
-    border: 1px solid #eee;
+
+/* OPDATERET: Styling for ingrediensliste i opskrifts-modal */
+#ingredients-container {
+    background-color: #fdfdfd;
+    padding: 0.5rem 1rem;
     border-radius: var(--border-radius);
-    padding: 1rem;
-    display: grid;
-    grid-template-columns: 1fr 100px 100px 40px;
-    gap: 1rem;
-    align-items: center;
+    border: 1px solid var(--border-color);
     margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
 }
+
+#recipe-edit-modal .ingredient-row {
+    display: grid;
+    grid-template-columns: 1fr 100px 100px auto; /* Giver skraldespand auto-bredde */
+    gap: 0.75rem; /* Mindre mellemrum */
+    align-items: center;
+    padding: 0.75rem 0; /* Padding i top/bund i stedet for en boks */
+    border-bottom: 1px solid var(--border-color); /* Separator-linje */
+    margin-bottom: 0; /* Fjerner den gamle margin */
+}
+
+#ingredients-container .ingredient-row:last-child {
+    border-bottom: none; /* Fjerner den sidste linje for et renere look */
+}
+
+
 #recipe-edit-modal .form-actions {
     margin-top: 2rem; 
 }
