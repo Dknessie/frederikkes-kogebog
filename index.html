@@ -56,7 +56,6 @@
                     <aside class="meal-planner-sidebar-left">
                         <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
                         <div class="sidebar-actions">
-                             <!-- OPDATERET: Knapper med tekst og nye klasser -->
                              <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld Liste</button>
                              <button id="confirm-purchase-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Bekræft Køb</button>
                         </div>
@@ -82,7 +81,6 @@
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-actions">
-                             <!-- OPDATERET: Knap styling styres nu bedre af CSS -->
                             <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér Madplan</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
@@ -120,7 +118,7 @@
                 <div id="recipe-filter-container" class="filter-container">
                     <!-- Tag-filtre indsættes her af JS -->
                 </div>
-                <div class="recipe-grid">
+                <div id="recipe-grid" class="recipe-grid">
                     <!-- Data indsættes her fra app.js -->
                 </div>
             </section>
@@ -145,7 +143,6 @@
                         <tr>
                             <th>Vare</th>
                             <th>Beholdning</th>
-                            <!-- NYT: Status kolonne -->
                             <th>Status</th>
                             <th>Kategori</th>
                             <th>kr/kg</th>
@@ -183,7 +180,6 @@
             <h3 id="inventory-modal-title">Tilføj ny vare</h3>
             <form id="inventory-item-form">
                 <input type="hidden" id="inventory-item-id">
-                <!-- OPDATERET: Klassen .form-grid vil nu style dette i et kompakt gitter -->
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="item-name">Varenavn</label>
@@ -251,7 +247,7 @@
             <form id="recipe-form">
                 <input type="hidden" id="recipe-id">
                 <div class="image-upload-container">
-                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL" alt="Billede af opskrift">
+                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                 </div>
                 <div class="input-group">
                     <label for="recipe-imageUrl">Billede URL (valgfri)</label>
@@ -329,7 +325,7 @@
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <div id="recipe-read-view-content">
-                <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image">
+                <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                 <h3 id="read-view-title"></h3>
                 <div class="read-view-meta">
                     <span id="read-view-category"></span>
