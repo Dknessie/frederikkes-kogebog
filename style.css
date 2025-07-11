@@ -164,6 +164,27 @@ hr {
     cursor: not-allowed;
 }
 
+.btn-link {
+    background: transparent;
+    border: none;
+    font-weight: 600;
+    color: var(--accent-color);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-link:hover {
+    text-decoration: underline;
+}
+
+.btn-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+}
+
 
 /* ===== App Layout (Header & Main) ===== */
 #app-container {
@@ -985,7 +1006,7 @@ nav {
     object-fit: cover;
 }
 
-#ingredients-container, #extra-ingredients-container {
+#ingredients-container {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1080,6 +1101,75 @@ nav {
 }
 .autocomplete-suggestion strong {
     color: var(--primary-color);
+}
+
+/* ================================================= */
+/* NY STYLING: Kompakt "Tilføj Måltid" Modal         */
+/* ================================================= */
+
+.modal-content.modal-compact {
+    max-width: 500px;
+}
+
+.modal-compact h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-section {
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.modal-section-alt {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    text-align: center;
+}
+
+.input-label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+.modal-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(209, 96, 61, 0.2);
+}
+
+#extra-ingredients-toggle {
+    text-align: center;
+}
+
+#extra-ingredients-section {
+    text-align: left;
+}
+
+#extra-ingredients-section #add-extra-ingredient-btn {
+    margin-top: 0.75rem;
+}
+
+#extra-ingredients-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    /* Ingen ekstra baggrund eller padding her, da det styres af .modal-section-alt */
 }
 
 /* ================================================= */
