@@ -307,7 +307,8 @@ nav {
 .meal-slots {
     flex-grow: 1;
     display: grid;
-    grid-template-rows: 90px 90px 1fr;
+    /* OPDATERET: Giver mere plads til morgenmad og frokost */
+    grid-template-rows: 150px 150px 1fr;
 }
 
 .meal-slot {
