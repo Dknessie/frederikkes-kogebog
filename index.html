@@ -83,6 +83,7 @@
                         </div>
                         <div class="calendar-actions">
                             <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér</button>
+                            <button id="update-stock-btn" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Ajourfør Lager</button>
                             <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
@@ -93,6 +94,9 @@
                     <!-- Højre Sidebar med opskrifter -->
                     <aside class="meal-planner-sidebar-right">
                         <h3><i class="fas fa-book-open"></i> Opskrifter</h3>
+                        <div class="sidebar-actions">
+                            <button id="add-leftovers-btn" class="btn btn-secondary" draggable="true"><i class="fas fa-box-open"></i> Tilføj Rester</button>
+                        </div>
                         <div class="sidebar-search">
                             <i class="fas fa-search"></i>
                             <input type="search" id="sidebar-recipe-search" placeholder="Søg i opskrifter...">
@@ -225,6 +229,10 @@
                         <span id="item-price-per-unit" class="calculated-field">0.00 kr</span>
                     </div>
                 </div>
+                 <div class="input-group">
+                    <label for="item-aliases">Aliaser (separer med komma)</label>
+                    <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
+                </div>
                  <hr>
                  <div class="form-grid">
                     <div class="input-group">
@@ -342,7 +350,6 @@
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
-                    <button id="read-view-add-to-meal-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Føj til Madplan</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
                 </div>
@@ -359,6 +366,46 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- NYT: Modal til at vælge portioner og tilføje ekstra ingredienser -->
+    <div id="add-meal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="add-meal-modal-title">Tilføj måltid til madplan</h3>
+            <form id="add-meal-form">
+                <div class="input-group">
+                    <label for="meal-portions">Antal portioner</label>
+                    <input type="number" id="meal-portions" min="1" step="1" required>
+                </div>
+                <hr>
+                <h4>Ekstra ingredienser (valgfri)</h4>
+                <div id="extra-ingredients-container">
+                    <!-- Ekstra ingredienser indsættes her -->
+                </div>
+                <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ekstra</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj til madplan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NYT: Modal til at ajourføre lager -->
+    <div id="update-stock-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Ajourfør Lager</h3>
+            <p>Vælg de måltider fra fortiden, du har lavet, men glemt at registrere.</p>
+            <form id="update-stock-form">
+                <div id="update-stock-list" class="preview-list">
+                    <!-- Listen af glemte måltider indsættes her -->
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Marker valgte som lavet</button>
+                </div>
+            </form>
         </div>
     </div>
 
