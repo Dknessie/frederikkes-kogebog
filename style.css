@@ -12,6 +12,7 @@
     --status-green: #4CAF50;
     --status-yellow: #FFC107;
     --status-red: #F44336;
+    --deleted-color: #757575;
 }
 
 body {
@@ -158,6 +159,11 @@ hr {
 .btn-icon:hover {
     color: var(--primary-color);
 }
+.btn-icon:disabled {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
 
 /* ===== App Layout (Header & Main) ===== */
 #app-container {
@@ -298,11 +304,10 @@ nav {
     text-align: center;
 }
 
-/* OPDATERET: Rækkehøjder er justeret */
 .meal-slots {
     flex-grow: 1;
     display: grid;
-    grid-template-rows: 90px 90px 1fr; /* Højere fast højde til morgen/frokost */
+    grid-template-rows: 90px 90px 1fr;
 }
 
 .meal-slot {
@@ -351,6 +356,14 @@ nav {
 .planned-recipe.cooked {
     background-color: #e8f5e9;
     border-left-color: var(--status-green);
+}
+/* NYT: Styling for slettede opskrifter i madplanen */
+.planned-recipe.deleted {
+    background-color: #f5f5f5;
+    border-left-color: var(--deleted-color);
+    color: var(--deleted-color);
+    font-style: italic;
+    cursor: not-allowed;
 }
 
 .planned-recipe span {
@@ -718,6 +731,16 @@ nav {
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
+    background-color: #eee; /* Baggrundsfarve mens billedet loader */
+}
+
+/* NYT: Styling for lazy loading af billeder */
+.lazy-load {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+}
+.lazy-load[src] {
+    opacity: 1;
 }
 
 .recipe-card-content {
