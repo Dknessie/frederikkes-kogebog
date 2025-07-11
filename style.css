@@ -353,9 +353,7 @@ nav {
     cursor: grabbing;
     box-shadow: var(--shadow);
 }
-.planned-recipe.leftovers {
-    border-left-color: var(--accent-color);
-}
+
 .planned-recipe.cooked {
     background-color: #e8f5e9;
     border-left-color: var(--status-green);
@@ -987,7 +985,7 @@ nav {
     object-fit: cover;
 }
 
-#ingredients-container {
+#ingredients-container, #extra-ingredients-container {
     background-color: #fdfdfd;
     padding: 0.5rem 1rem;
     border-radius: var(--border-radius);
@@ -995,7 +993,7 @@ nav {
     margin-bottom: 1rem;
 }
 
-#recipe-edit-modal .ingredient-row {
+#recipe-edit-modal .ingredient-row, #add-meal-modal .ingredient-row {
     display: grid;
     grid-template-columns: 1fr 100px 100px auto;
     gap: 0.75rem;
@@ -1005,7 +1003,7 @@ nav {
     margin-bottom: 0;
 }
 
-#ingredients-container .ingredient-row:last-child {
+#ingredients-container .ingredient-row:last-child, #extra-ingredients-container .ingredient-row:last-child {
     border-bottom: none;
 }
 
