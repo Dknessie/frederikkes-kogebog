@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryItemModal.classList.remove('hidden');
     });
 
-    ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price'].forEach(id => {
+    ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price', 'item-buy-whole'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateCalculatedFields);
     });
 
@@ -675,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
             grams_per_unit: gramsPerUnit,
             grams_in_stock: gramsInStock,
-            buy_as_whole_unit: document.getElementById('item-buy-whole').checked, // Gemmer den nye værdi
+            buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
             home_location: document.getElementById('item-home-location').value,
         };
         try {
@@ -932,7 +932,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // RETTET: Kalder nu direkte `addToShoppingList`
     generateWeeklyShoppingListBtn.addEventListener('click', () => {
         const allIngredientsNeeded = [];
         const start = getStartOfWeek(state.currentDate); 
@@ -963,41 +962,44 @@ document.addEventListener('DOMContentLoaded', () => {
         addToShoppingList(allIngredientsNeeded, `madplanen for uge ${getWeekNumber(start)}`);
     });
     
-    // RETTET: Implementerer den korrekte, direkte logik
+    // FINALISERET: Denne funktion håndterer nu alle scenarier korrekt.
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
         let conversionErrors = [];
         const itemsToBuy = {};
+        const wholeUnitItemsNeeded = new Set();
 
+        // Første loop: Beregn hvad der skal købes
         for (const ing of ingredients) {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
             
             let quantityToBuy = ing.quantity || 1;
             let unitToBuy = ing.unit || 'stk';
-            let storeSection = 'Andet';
+            let storeSection = inventoryItem ? inventoryItem.category : 'Andet';
 
             if (inventoryItem) {
-                storeSection = inventoryItem.category || 'Andet';
-
-                // NYT: Tjek for "køb hel enhed" logik
                 if (inventoryItem.buy_as_whole_unit) {
                     if ((inventoryItem.current_stock || 0) === 0) {
-                        quantityToBuy = 1;
-                        unitToBuy = inventoryItem.unit || 'stk';
+                        wholeUnitItemsNeeded.add(inventoryItem.name);
+                    }
+                    continue; // Gå videre til næste ingrediens
+                }
+
+                const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
+                if (conversionResult.convertedQuantity !== null) {
+                    const neededInGrams = conversionResult.convertedQuantity;
+                    const inStockInGrams = inventoryItem.grams_in_stock || 0;
+                    const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
+                    
+                    if (neededFromStoreInGrams > 0) {
+                        // RETTET: Tilføj den originale mængde og enhed, ikke gram.
+                        quantityToBuy = ing.quantity;
+                        unitToBuy = ing.unit;
                     } else {
-                        quantityToBuy = 0; // Har allerede en, køb ikke mere
+                        quantityToBuy = 0;
                     }
                 } else {
-                    // Standard logik for varer, der ikke købes som hel enhed
-                    const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
-                    if (conversionResult.convertedQuantity !== null) {
-                        const neededInGrams = conversionResult.convertedQuantity;
-                        const inStockInGrams = inventoryItem.grams_in_stock || 0;
-                        quantityToBuy = Math.max(0, neededInGrams - inStockInGrams);
-                        unitToBuy = 'g';
-                    } else {
-                        if(ing.unit) conversionErrors.push(ing.name);
-                    }
+                    if(ing.unit) conversionErrors.push(ing.name);
                 }
             }
             
@@ -1015,6 +1017,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
+
+        // Andet loop: Håndter "køb hel enhed"-varer
+        wholeUnitItemsNeeded.forEach(itemName => {
+            const inventoryItem = state.inventory.find(item => item.name === itemName);
+            const unit = inventoryItem.unit || 'stk';
+            const key = `${itemName.toLowerCase()}_${unit}`;
+            if (!itemsToBuy[key]) { // Tilføj kun hvis den ikke allerede er på listen
+                 itemsToBuy[key] = {
+                    name: itemName,
+                    quantity_to_buy: 1,
+                    unit: unit,
+                    store_section: inventoryItem.category || 'Andet',
+                };
+            }
+        });
 
         // Flet den beregnede liste med den eksisterende indkøbsliste
         for(const key in itemsToBuy) {
