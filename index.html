@@ -56,8 +56,9 @@
                     <aside class="meal-planner-sidebar-left">
                         <h3><i class="fas fa-cart-shopping"></i> Indkøbsliste</h3>
                         <div class="sidebar-actions">
-                             <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld Liste</button>
-                             <button id="confirm-purchase-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Bekræft Køb</button>
+                             <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld</button>
+                             <button id="clear-shopping-list-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
+                             <button id="confirm-purchase-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Køb</button>
                         </div>
                         <div id="shopping-list-total-container" class="shopping-list-total">
                             <!-- Totalpris indsættes her af JS -->
@@ -81,7 +82,8 @@
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-actions">
-                            <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér Madplan</button>
+                            <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér</button>
+                            <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid">
                             <!-- Kalender genereres af JS -->
