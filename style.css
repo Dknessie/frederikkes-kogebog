@@ -151,6 +151,9 @@ hr {
     font-size: 1.2rem;
     color: #777;
     padding: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 .btn-icon:hover {
     color: var(--primary-color);
@@ -275,7 +278,6 @@ nav {
 
 .calendar-grid {
     display: grid;
-    /* OPDATERET: minmax(0, 1fr) forhindrer kolonner i at udvide sig pga. indhold */
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 0.5rem;
     flex-grow: 1;
@@ -333,9 +335,12 @@ nav {
     border-left: 3px solid var(--primary-color);
     cursor: grab; 
     position: relative;
-    transition: box-shadow 0.2s ease;
+    transition: box-shadow 0.2s ease, background-color 0.3s ease;
     width: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 .planned-recipe:active {
     cursor: grabbing;
@@ -344,37 +349,58 @@ nav {
 .planned-recipe.leftovers {
     border-left-color: var(--accent-color);
 }
+.planned-recipe.cooked {
+    background-color: #e8f5e9; /* Lys grøn baggrund for "lavet" retter */
+    border-left-color: var(--status-green);
+}
 
-/* OPDATERET: Sikrer at teksten ombrydes korrekt */
 .planned-recipe span {
     display: block;
-    white-space: normal; /* Tillad ombrydning */
-    word-break: break-word; /* Bryd lange ord om nødvendigt */
-    overflow: hidden; /* Skjul eventuelt overflow */
+    white-space: normal;
+    word-break: break-word;
+    overflow: hidden;
 }
+
+.planned-recipe-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* OPDATERET: Styling for fjern-knap for korrekt centrering */
 .remove-meal-btn {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.05);
     border-radius: 50%;
     color: var(--text-color);
     cursor: pointer;
     font-size: 0.9rem;
-    width: 20px;
-    height: 20px;
-    line-height: 20px;
+    width: 22px;
+    height: 22px;
+    line-height: 1; /* Vigtig for vertikal centrering af ikon */
     text-align: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.planned-recipe:hover .remove-meal-btn {
-    opacity: 1;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .remove-meal-btn:hover {
     background: var(--status-red);
     color: white;
 }
+
+/* NYT: Styling for "Lavet"-knap */
+.mark-cooked-btn {
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+.mark-cooked-btn:hover {
+    color: #3a5a40;
+}
+.mark-cooked-btn.cooked {
+    color: var(--status-green);
+    cursor: not-allowed;
+}
+
 
 /* Sidebar (Generel styling for begge) */
 .meal-planner-sidebar-left, .meal-planner-sidebar-right {
