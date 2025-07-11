@@ -202,10 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.toISOString().split('T')[0]; // YYYY-MM-DD
     }
 
-    // Note: This function is still needed to interpret recipe ingredients,
-    // even with the new `grams_in_stock` field.
     function convertToPrimaryUnit(quantity, fromUnit, inventoryItem) {
-        // For now, we assume the primary unit for conversion is always grams.
         const primaryUnit = 'g';
         fromUnit = (fromUnit || '').toLowerCase();
 
@@ -213,17 +210,14 @@ document.addEventListener('DOMContentLoaded', () => {
             return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
         }
         
-        // Simple fallback for 'kg'
         if (fromUnit === 'kg') {
             return { convertedQuantity: quantity * 1000, finalUnit: primaryUnit, error: null };
         }
 
-        // If the item itself is measured in grams, no conversion is needed
         if ((inventoryItem.unit || '').toLowerCase() === 'g') {
              return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
         }
         
-        // Use grams_per_unit for 'stk' etc.
         if (inventoryItem.grams_per_unit) {
             return { convertedQuantity: quantity * inventoryItem.grams_per_unit, finalUnit: primaryUnit, error: null };
         }
@@ -402,7 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
             
-            // Status bar is now based on grams_in_stock and max_stock (which should be in grams)
             const stockPercentage = (item.grams_in_stock && item.max_stock) ? (item.grams_in_stock / item.max_stock) * 100 : 100;
             let stockColor = '#4CAF50';
             if (stockPercentage < 50) stockColor = '#FFC107';
@@ -623,7 +616,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. CRUD & INTELLIGENS FOR VARELAGER (OPDATERET)
     // =================================================================
     
-    // NYT: Funktion til at opdatere beregnede felter i realtid
     function updateCalculatedFields() {
         const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
         const unit = document.getElementById('item-unit').value.toLowerCase();
@@ -649,11 +641,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
         document.getElementById('inventory-item-id').value = '';
-        updateCalculatedFields(); // Nulstil beregnede felter
+        updateCalculatedFields();
         inventoryItemModal.classList.remove('hidden');
     });
 
-    // NYT: Event listeners til realtidsberegning
     ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateCalculatedFields);
     });
@@ -681,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             unit: unit,
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
             grams_per_unit: gramsPerUnit,
-            grams_in_stock: gramsInStock, // Gemmer den beregnede værdi
+            grams_in_stock: gramsInStock,
             home_location: document.getElementById('item-home-location').value,
         };
         try {
@@ -724,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 
-                updateCalculatedFields(); // Opdater beregnede felter ved åbning
+                updateCalculatedFields();
                 inventoryItemModal.classList.remove('hidden');
             }
         }
@@ -924,7 +915,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK
+    // 7. INDKØBSLISTE LOGIK (RETTET)
     // =================================================================
     
     async function updateShoppingListInFirestore(newList) {
@@ -965,6 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     generateWeeklyShoppingListBtn.addEventListener('click', generateWeeklyShoppingList);
     
+    // RETTET: Denne funktion håndterer nu korrekt alle scenarier.
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
         let conversionErrors = [];
@@ -972,39 +964,47 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const ing of ingredients) {
             const key = ing.name.toLowerCase();
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
+            
+            // Start med den fulde mængde fra opskriften som standard
             let quantityToBuy = ing.quantity || 1;
             let unitToBuy = ing.unit || 'stk';
+            let storeSection = 'Andet'; // Standard sektion
 
+            // Hvis varen findes i varelageret, prøv at justere mængden der skal købes
             if (inventoryItem) {
+                storeSection = inventoryItem.category || 'Andet';
                 const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
 
                 if (conversionResult.convertedQuantity !== null) {
+                    // Omregning lykkedes, beregn hvad der mangler
                     const neededInGrams = conversionResult.convertedQuantity;
                     const inStockInGrams = inventoryItem.grams_in_stock || 0;
-                    const neededFromStore = Math.max(0, neededInGrams - inStockInGrams);
+                    const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
                     
-                    // We need to convert back to a logical unit for the shopping list
-                    // This is a simplification: we buy in the primary unit (grams)
-                    quantityToBuy = neededFromStore;
-                    unitToBuy = 'g';
-
+                    quantityToBuy = neededFromStoreInGrams;
+                    unitToBuy = 'g'; // Standardiser til gram for indkøb
                 } else {
-                    quantityToBuy = ing.quantity;
-                    unitToBuy = ing.unit;
+                    // Omregning fejlede for en eksisterende vare.
+                    // Behold den oprindelige mængde og enhed, og log fejlen.
                     if(ing.unit) conversionErrors.push(ing.name);
                 }
             }
-            
+            // Hvis varen ikke findes, bruger vi bare standardværdierne (fuld mængde).
+
+            // Tilføj varen til listen, hvis vi skal købe noget af den
             if (quantityToBuy > 0) {
                 const existingShoppingListItem = updatedList[key];
+                
+                // Hvis varen allerede er på listen OG enheden er den samme, læg til
                 if (existingShoppingListItem && (existingShoppingListItem.unit || '').toLowerCase() === (unitToBuy || '').toLowerCase()) {
                     existingShoppingListItem.quantity_to_buy += quantityToBuy;
                 } else {
+                    // Ellers, tilføj den som en ny vare (eller overskriv hvis enheden er forskellig)
                      updatedList[key] = {
                         name: ing.name,
                         quantity_to_buy: quantityToBuy,
                         unit: unitToBuy,
-                        store_section: inventoryItem ? inventoryItem.category : 'Andet',
+                        store_section: storeSection,
                         kg_price: inventoryItem ? inventoryItem.kg_price : null,
                         grams_per_unit: inventoryItem ? inventoryItem.grams_per_unit : null
                     };
@@ -1012,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // Afrund mængder for ikke-gram enheder
         for (const key in updatedList) {
             const item = updatedList[key];
             if ((item.unit || '').toLowerCase() !== 'g' && (item.unit || '').toLowerCase() !== 'kg') {
@@ -1023,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sourceText) {
             let message = `Varer fra ${sourceText} er tilføjet til indkøbslisten.`;
             if (conversionErrors.length > 0) {
-                message += `<br><br>Bemærk: Kunne ikke omregne enheder for: ${[...new Set(conversionErrors)].join(', ')}.`;
+                message += `<br><br>Bemærk: Kunne ikke omregne enheder for: ${[...new Set(conversionErrors)].join(', ')}. De er tilføjet med den originale enhed.`;
             }
             showNotification({ title: "Opdateret", message: message });
         }
@@ -1073,14 +1074,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
             if (inventoryItem) {
                 const itemRef = doc(db, "inventory_items", inventoryItem.id);
-                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
                 
-                // Update both stock values
+                // Opdater current_stock og grams_in_stock
+                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
                 let newGramsInStock = inventoryItem.grams_in_stock || 0;
-                if(item.unit.toLowerCase() === 'g') {
-                    newGramsInStock += item.quantity_to_buy;
-                } else if (inventoryItem.grams_per_unit) {
-                    newGramsInStock += item.quantity_to_buy * inventoryItem.grams_per_unit;
+                const conversionResult = convertToPrimaryUnit(item.quantity_to_buy, item.unit, inventoryItem);
+                if (conversionResult.convertedQuantity !== null) {
+                    newGramsInStock += conversionResult.convertedQuantity;
                 }
 
                 batch.update(itemRef, { 
@@ -1140,7 +1140,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function getQuantityInKg(quantity, unit, inventoryItem) {
-        // This function is now less critical but can be kept for price calculations
         const conversion = convertToPrimaryUnit(quantity, unit, inventoryItem);
         if(conversion.convertedQuantity !== null) {
             return conversion.convertedQuantity / 1000;
