@@ -84,12 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarSearchInput = document.getElementById('sidebar-recipe-search');
     const sidebarTagFilters = document.getElementById('sidebar-tag-filters');
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
+    const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn'); // NYT
 
     // --- Indkøbsliste (nu i sidebar) ---
     const shoppingListContainer = document.getElementById('shopping-list-container');
     const shoppingListTotalContainer = document.getElementById('shopping-list-total-container');
     const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
+    const clearShoppingListBtn = document.getElementById('clear-shopping-list-btn'); // NYT
     const addShoppingItemForm = document.getElementById('add-shopping-item-form');
 
     // --- Inspiration Side ---
@@ -961,7 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
         addToShoppingList(allIngredientsNeeded, `madplanen for uge ${getWeekNumber(start)}`);
     });
     
-    // FINALISERET: Denne funktion håndterer nu alle scenarier korrekt.
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
         let conversionErrors = [];
@@ -1004,7 +1005,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
                         
                         if (neededFromStoreInGrams > 0) {
-                            // Konverter tilbage til den originale enhed for at finde ud af, hvor mange "stk" etc. der mangler
                             if (inventoryItem.grams_per_unit > 0) {
                                 quantityToBuy = Math.ceil(neededFromStoreInGrams / inventoryItem.grams_per_unit);
                                 unitToBuy = inventoryItem.unit;
@@ -1056,6 +1056,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification({ title: "Opdateret", message: message });
         }
     }
+
+    // NYT: Event listener for at rydde indkøbslisten
+    clearShoppingListBtn.addEventListener('click', async () => {
+        const confirmed = await showNotification({
+            title: "Ryd Indkøbsliste",
+            message: "Er du sikker på, at du vil slette alle varer på din indkøbsliste?",
+            type: 'confirm'
+        });
+        if (confirmed) {
+            await updateShoppingListInFirestore({});
+            showNotification({title: "Indkøbsliste Tømt", message: "Alle varer er blevet fjernet."});
+        }
+    });
 
     addShoppingItemForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1302,6 +1315,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // NYT: Event listener for at rydde madplanen
+    clearMealPlanBtn.addEventListener('click', async () => {
+        const confirmed = await showNotification({
+            title: "Ryd Madplan",
+            message: "Er du sikker på, at du vil fjerne alle måltider fra denne uge?",
+            type: 'confirm'
+        });
+        if (!confirmed) return;
+
+        const year = state.currentDate.getFullYear();
+        const mealPlanDocId = `plan_${year}`;
+        const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
+
+        const batch = writeBatch(db);
+        const start = getStartOfWeek(state.currentDate);
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(start);
+            dayDate.setDate(start.getDate() + i);
+            const dateString = formatDate(dayDate);
+            batch.update(mealPlanRef, { [dateString]: deleteField() });
+        }
+
+        try {
+            await batch.commit();
+            showNotification({title: "Madplan Tømt", message: "Alle måltider for denne uge er fjernet."});
+        } catch (error) {
+            handleError(error, "Madplanen kunne ikke ryddes. Måske er den allerede tom.");
+        }
+    });
 
     function renderSidebarRecipeList() {
         sidebarRecipeList.innerHTML = '';
