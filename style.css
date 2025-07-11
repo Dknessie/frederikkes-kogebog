@@ -298,11 +298,11 @@ nav {
     text-align: center;
 }
 
-/* OPDATERET: Fra flex til grid for rækkekontrol */
+/* OPDATERET: Rækkehøjder er justeret */
 .meal-slots {
     flex-grow: 1;
     display: grid;
-    grid-template-rows: 60px 60px 1fr; /* Fast højde til morgen/frokost, resten til aften */
+    grid-template-rows: 90px 90px 1fr; /* Højere fast højde til morgen/frokost */
 }
 
 .meal-slot {
