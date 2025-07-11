@@ -1466,6 +1466,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // =================================================================
+    // FIX: DRAG & DROP EVENT LISTENERS
+    // =================================================================
+    
+    // The 'dragover' event must be canceled to allow a drop.
+    calendarGrid.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.add('drag-over');
+        }
+    });
+
+    // Clean up the visual feedback when the dragged item leaves a slot.
+    calendarGrid.addEventListener('dragleave', (e) => {
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.remove('drag-over');
+        }
+    });
+
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
