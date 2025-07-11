@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addMealModalTitle = document.getElementById('add-meal-modal-title');
     const extraIngredientsContainer = document.getElementById('extra-ingredients-container');
     const addExtraIngredientBtn = document.getElementById('add-extra-ingredient-btn');
+    const showExtraIngredientsBtn = document.getElementById('show-extra-ingredients-btn');
+    const extraIngredientsSection = document.getElementById('extra-ingredients-section');
     const updateStockModal = document.getElementById('update-stock-modal');
     const updateStockForm = document.getElementById('update-stock-form');
     const updateStockList = document.getElementById('update-stock-list');
@@ -746,7 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. OPSKRIFTER & IMPORT (MED NYT INGREDIENS-DESIGN)
     // =================================================================
     
-    // Fjerner eksisterende autocomplete lister
     function removeAutocomplete(row) {
         const suggestions = row.querySelector('.autocomplete-suggestions');
         if (suggestions) {
@@ -754,7 +755,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Opretter en ny ingrediensrække med det nye design
     const createIngredientRow = (container, ingredient = { name: '', quantity: '', unit: '' }) => {
         const row = document.createElement('div');
         row.className = 'ingredient-row';
@@ -770,7 +770,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         nameInput.addEventListener('input', (e) => {
             const value = e.target.value.toLowerCase();
-            removeAutocomplete(row); // Fjern gamle forslag
+            removeAutocomplete(row);
 
             if (value.length < 1) return;
 
@@ -782,12 +782,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (suggestions.length > 0) {
                 const suggestionsContainer = document.createElement('div');
                 suggestionsContainer.className = 'autocomplete-suggestions';
-                suggestions.slice(0, 5).forEach(item => { // Vis maks 5 forslag
+                suggestions.slice(0, 5).forEach(item => {
                     const suggestionDiv = document.createElement('div');
                     suggestionDiv.className = 'autocomplete-suggestion';
                     suggestionDiv.innerHTML = item.name.replace(new RegExp(`^${value}`, 'i'), `<strong>$&</strong>`);
                     
-                    suggestionDiv.addEventListener('mousedown', (event) => { // Mousedown for at undgå at blur fjerner listen før klik
+                    suggestionDiv.addEventListener('mousedown', (event) => {
                         event.preventDefault();
                         nameInput.value = item.name;
                         row.querySelector('.ingredient-unit').value = item.unit || '';
@@ -799,9 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Fjern autocomplete når brugeren klikker væk
         nameInput.addEventListener('blur', () => {
-            // Lille forsinkelse så klik på forslag kan nå at blive registreret
             setTimeout(() => removeAutocomplete(row), 150);
         });
     };
@@ -842,15 +840,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('recipe-id').value = '';
         ingredientsContainer.innerHTML = '';
         recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
-        createIngredientRow(ingredientsContainer); // Tilføj første tomme række
+        createIngredientRow(ingredientsContainer);
         recipeEditModal.classList.remove('hidden');
     });
 
     addIngredientBtn.addEventListener('click', () => createIngredientRow(ingredientsContainer));
-    addExtraIngredientBtn.addEventListener('click', () => createIngredientRow(extraIngredientsContainer));
-
-
-    // Event listener for slet-knap (virker for begge beholdere)
+    
     recipeEditModal.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
             e.target.closest('.ingredient-row').remove();
@@ -1035,7 +1030,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let conversionErrors = [];
         const totalNeeds = {};
 
-        // Trin 1: Aggreger alle behov
         for (const ing of ingredients) {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
             const key = `${(inventoryItem || ing).name.toLowerCase()}_${(ing.unit || 'stk').toLowerCase()}`;
@@ -1049,7 +1043,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemsToBuy = {};
         
-        // Trin 2: Gennemgå de samlede behov og sammenlign med lager
         for (const key in totalNeeds) {
             const neededIng = totalNeeds[key];
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase());
@@ -1105,7 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Trin 3: Flet den beregnede liste med den eksisterende indkøbsliste
         for(const key in itemsToBuy) {
             const item = itemsToBuy[key];
             const existingKey = item.name.toLowerCase();
@@ -1518,25 +1510,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // =================================================================
-    // DRAG & DROP EVENT LISTENERS
-    // =================================================================
-    
-    calendarGrid.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.add('drag-over');
-        }
-    });
-
-    calendarGrid.addEventListener('dragleave', (e) => {
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.remove('drag-over');
-        }
-    });
-
     document.addEventListener('dragstart', (e) => {
         if (!e.target.closest('.meal-planner-layout')) return;
         e.target.style.opacity = '0.5';
@@ -1561,6 +1534,21 @@ document.addEventListener('DOMContentLoaded', () => {
         e.target.style.opacity = '1';
     });
 
+    calendarGrid.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.add('drag-over');
+        }
+    });
+
+    calendarGrid.addEventListener('dragleave', (e) => {
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.remove('drag-over');
+        }
+    });
+
     calendarGrid.addEventListener('drop', async (e) => {
         e.preventDefault();
         const slot = e.target.closest('.meal-slot');
@@ -1578,10 +1566,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         targetDate: targetDate,
                         targetMeal: targetMeal,
                     };
+                    
+                    // Nulstil og klargør den nye modal
                     addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
                     document.getElementById('meal-portions').value = recipe.portions || 1;
-                    extraIngredientsContainer.innerHTML = ''; // Ryd gamle
-                    createIngredientRow(extraIngredientsContainer); // Tilføj første tomme række
+                    extraIngredientsContainer.innerHTML = ''; 
+                    extraIngredientsSection.classList.add('hidden');
+                    showExtraIngredientsBtn.parentElement.classList.remove('hidden');
+
                     addMealModal.classList.remove('hidden');
                 }
             } else if (dragData.type === 'move-item') {
@@ -1871,6 +1863,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 handleError(error, "Den autogenererede madplan kunne ikke gemmes.");
             }
+        }
+    });
+
+    showExtraIngredientsBtn.addEventListener('click', () => {
+        showExtraIngredientsBtn.parentElement.classList.add('hidden');
+        extraIngredientsSection.classList.remove('hidden');
+        if (extraIngredientsContainer.children.length === 0) {
+            createIngredientRow(extraIngredientsContainer);
+        }
+    });
+
+    addExtraIngredientBtn.addEventListener('click', () => createIngredientRow(extraIngredientsContainer));
+    
+    addMealModal.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-ingredient-btn')) {
+            e.target.closest('.ingredient-row').remove();
         }
     });
 
