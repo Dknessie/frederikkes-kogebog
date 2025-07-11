@@ -224,10 +224,19 @@
                     </div>
                 </div>
                  <hr>
-                 <div class="input-group">
-                    <label for="item-max-stock">Normal beholdning (til status)</label>
-                    <input type="number" id="item-max-stock" placeholder="F.eks. 1000 (i gram)">
-                </div>
+                 <div class="form-grid">
+                    <div class="input-group">
+                        <label for="item-max-stock">Normal beholdning (i antal)</label>
+                        <input type="number" id="item-max-stock" placeholder="F.eks. 2 (for status)">
+                    </div>
+                    <div class="input-group switch-group">
+                        <label for="item-buy-whole">Købes altid som hel enhed</label>
+                        <label class="switch">
+                            <input type="checkbox" id="item-buy-whole">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
                 </div>
@@ -391,23 +400,6 @@
                     <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Generér Forslag</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- NYT: Dialogboks til bekræftelse af indkøbsliste -->
-    <div id="shopping-list-preview-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Tilføj til Indkøbsliste</h3>
-            <p>Følgende varer vil blive tilføjet til din indkøbsliste. Bekræft venligst.</p>
-            <div id="shopping-list-preview-container" class="preview-list">
-                <!-- Preview af listen indsættes her af JS -->
-            </div>
-            <div id="shopping-list-preview-errors" class="error-message"></div>
-            <div class="form-actions">
-                <button id="cancel-shopping-list-preview" class="btn btn-secondary">Annuller</button>
-                <button id="confirm-shopping-list-preview" class="btn btn-primary">Bekræft og Tilføj</button>
-             </div>
         </div>
     </div>
 
