@@ -394,7 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const tr = document.createElement('tr');
             tr.dataset.id = item.id;
             
-            // RETTET: Status baseres nu på current_stock (antal) vs max_stock (antal)
             const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
             let stockColor = '#4CAF50';
             if (stockPercentage < 50) stockColor = '#FFC107';
@@ -966,50 +965,69 @@ document.addEventListener('DOMContentLoaded', () => {
     async function addToShoppingList(ingredients, sourceText) {
         const updatedList = { ...state.shoppingList };
         let conversionErrors = [];
-        const itemsToBuy = {};
-        const wholeUnitItemsNeeded = new Set();
+        const totalNeeds = {};
 
-        // Første loop: Beregn hvad der skal købes
+        // Trin 1: Aggreger alle behov fra opskrifterne
         for (const ing of ingredients) {
-            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-            
-            let quantityToBuy = ing.quantity || 1;
-            let unitToBuy = ing.unit || 'stk';
-            let storeSection = inventoryItem ? inventoryItem.category : 'Andet';
+            const key = `${ing.name.toLowerCase()}_${(ing.unit || 'stk').toLowerCase()}`;
+            if (totalNeeds[key]) {
+                totalNeeds[key].quantity += (ing.quantity || 0);
+            } else {
+                totalNeeds[key] = { ...ing };
+            }
+        }
 
+        const itemsToBuy = {};
+        
+        // Trin 2: Gennemgå de samlede behov og sammenlign med lager
+        for (const key in totalNeeds) {
+            const neededIng = totalNeeds[key];
+            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase());
+
+            let quantityToBuy = neededIng.quantity || 1;
+            let unitToBuy = neededIng.unit || 'stk';
+            let storeSection = inventoryItem ? inventoryItem.category : 'Andet';
+            
             if (inventoryItem) {
                 if (inventoryItem.buy_as_whole_unit) {
                     if ((inventoryItem.current_stock || 0) === 0) {
-                        wholeUnitItemsNeeded.add(inventoryItem.name);
-                    }
-                    continue; // Gå videre til næste ingrediens
-                }
-
-                const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
-                if (conversionResult.convertedQuantity !== null) {
-                    const neededInGrams = conversionResult.convertedQuantity;
-                    const inStockInGrams = inventoryItem.grams_in_stock || 0;
-                    const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
-                    
-                    if (neededFromStoreInGrams > 0) {
-                        // RETTET: Tilføj den originale mængde og enhed, ikke gram.
-                        quantityToBuy = ing.quantity;
-                        unitToBuy = ing.unit;
+                        quantityToBuy = 1;
+                        unitToBuy = inventoryItem.unit;
                     } else {
                         quantityToBuy = 0;
                     }
                 } else {
-                    if(ing.unit) conversionErrors.push(ing.name);
+                    const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
+                    if (conversionResult.convertedQuantity !== null) {
+                        const neededInGrams = conversionResult.convertedQuantity;
+                        const inStockInGrams = inventoryItem.grams_in_stock || 0;
+                        const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
+                        
+                        if (neededFromStoreInGrams > 0) {
+                            // Konverter tilbage til den originale enhed for at finde ud af, hvor mange "stk" etc. der mangler
+                            if (inventoryItem.grams_per_unit > 0) {
+                                quantityToBuy = Math.ceil(neededFromStoreInGrams / inventoryItem.grams_per_unit);
+                                unitToBuy = inventoryItem.unit;
+                            } else {
+                                quantityToBuy = neededFromStoreInGrams;
+                                unitToBuy = 'g';
+                            }
+                        } else {
+                            quantityToBuy = 0;
+                        }
+                    } else {
+                        if (neededIng.unit) conversionErrors.push(neededIng.name);
+                    }
                 }
             }
-            
+
             if (quantityToBuy > 0) {
-                const key = `${ing.name.toLowerCase()}_${unitToBuy}`;
-                if (itemsToBuy[key]) {
-                    itemsToBuy[key].quantity_to_buy += quantityToBuy;
+                const buyKey = `${neededIng.name.toLowerCase()}_${unitToBuy.toLowerCase()}`;
+                if (itemsToBuy[buyKey]) {
+                    itemsToBuy[buyKey].quantity_to_buy += quantityToBuy;
                 } else {
-                    itemsToBuy[key] = {
-                        name: ing.name,
+                    itemsToBuy[buyKey] = {
+                        name: neededIng.name,
                         quantity_to_buy: quantityToBuy,
                         unit: unitToBuy,
                         store_section: storeSection,
@@ -1018,26 +1036,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Andet loop: Håndter "køb hel enhed"-varer
-        wholeUnitItemsNeeded.forEach(itemName => {
-            const inventoryItem = state.inventory.find(item => item.name === itemName);
-            const unit = inventoryItem.unit || 'stk';
-            const key = `${itemName.toLowerCase()}_${unit}`;
-            if (!itemsToBuy[key]) { // Tilføj kun hvis den ikke allerede er på listen
-                 itemsToBuy[key] = {
-                    name: itemName,
-                    quantity_to_buy: 1,
-                    unit: unit,
-                    store_section: inventoryItem.category || 'Andet',
-                };
-            }
-        });
-
-        // Flet den beregnede liste med den eksisterende indkøbsliste
+        // Trin 3: Flet den beregnede liste med den eksisterende indkøbsliste
         for(const key in itemsToBuy) {
             const item = itemsToBuy[key];
             const existingKey = item.name.toLowerCase();
-            if(updatedList[existingKey] && updatedList[existingKey].unit === item.unit) {
+            if(updatedList[existingKey] && updatedList[existingKey].unit.toLowerCase() === item.unit.toLowerCase()) {
                 updatedList[existingKey].quantity_to_buy += item.quantity_to_buy;
             } else {
                 updatedList[existingKey] = item;
