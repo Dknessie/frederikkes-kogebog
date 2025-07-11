@@ -156,8 +156,6 @@ hr {
     color: var(--primary-color);
 }
 
-/* FJERNET: .btn-icon-text og .btn-confirm-purchase er erstattet af standard .btn klasser */
-
 /* ===== App Layout (Header & Main) ===== */
 #app-container {
     display: flex;
@@ -270,7 +268,6 @@ nav {
     margin-bottom: 1rem;
 }
 
-/* OPDATERET: Sikrer at knappen ikke strækker sig unødigt */
 .calendar-actions .btn {
     width: auto;
     max-width: 280px;
@@ -278,7 +275,8 @@ nav {
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    /* OPDATERET: minmax(0, 1fr) forhindrer kolonner i at udvide sig pga. indhold */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 0.5rem;
     flex-grow: 1;
 }
@@ -311,7 +309,6 @@ nav {
     position: relative;
     min-height: 80px;
     transition: background-color 0.2s ease;
-    /* NYT: Forhindrer indhold i at bryde layoutet */
     overflow: hidden;
 }
 .meal-slot:last-child {
@@ -337,7 +334,6 @@ nav {
     cursor: grab; 
     position: relative;
     transition: box-shadow 0.2s ease;
-    /* NYT: Sikrer at kortet ikke bliver bredere end sin container */
     width: 100%;
     box-sizing: border-box;
 }
@@ -348,12 +344,13 @@ nav {
 .planned-recipe.leftovers {
     border-left-color: var(--accent-color);
 }
-/* OPDATERET: Denne regel sikrer, at lang tekst bliver afkortet */
+
+/* OPDATERET: Sikrer at teksten ombrydes korrekt */
 .planned-recipe span {
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal; /* Tillad ombrydning */
+    word-break: break-word; /* Bryd lange ord om nødvendigt */
+    overflow: hidden; /* Skjul eventuelt overflow */
 }
 .remove-meal-btn {
     position: absolute;
@@ -495,7 +492,6 @@ nav {
 }
 
 /* Venstre Sidebar (Indkøbsliste) */
-/* OPDATERET: Styling for knapper i sidebar */
 .sidebar-actions {
     display: flex;
     gap: 0.5rem;
@@ -798,7 +794,6 @@ nav {
     vertical-align: middle;
 }
 
-/* NYT: Styling for status-indikator i varelager */
 .stock-display {
     display: flex;
     flex-direction: column;
@@ -877,7 +872,6 @@ nav {
     text-align: center;
 }
 
-/* NYT: Generel form-grid styling */
 .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
