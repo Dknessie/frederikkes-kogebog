@@ -598,13 +598,16 @@ nav {
 /* Indkøbsliste & Køkkenbord Styling */
 .sidebar-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
 #shopping-list-panel .sidebar-actions {
     grid-template-columns: repeat(3, 1fr);
 }
+#kitchen-counter-panel .sidebar-actions {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 
 .sidebar-actions .btn {
     font-size: 0.9rem;
