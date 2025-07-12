@@ -375,10 +375,6 @@ nav {
     box-shadow: var(--shadow);
 }
 
-.planned-recipe.cooked {
-    background-color: #e8f5e9;
-    border-left-color: var(--status-green);
-}
 .planned-recipe.deleted {
     background-color: #f5f5f5;
     border-left-color: var(--deleted-color);
@@ -398,6 +394,7 @@ nav {
     display: flex;
     justify-content: flex-end;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .remove-meal-btn {
@@ -420,18 +417,12 @@ nav {
     color: white;
 }
 
-.mark-cooked-btn {
+.cook-meal-btn {
     color: var(--accent-color);
-    font-size: 1.1rem;
 }
-.mark-cooked-btn:hover {
+.cook-meal-btn:hover {
     color: #3a5a40;
 }
-.mark-cooked-btn.cooked {
-    color: var(--status-green);
-    cursor: not-allowed;
-}
-
 
 /* Sidebar (Generel styling for begge) */
 .meal-planner-sidebar-left, .meal-planner-sidebar-right {
@@ -459,6 +450,51 @@ nav {
     padding-right: 0.5rem; 
 }
 
+/* ================================================= */
+/* NY STYLING: Venstre Sidebar Paneler               */
+/* ================================================= */
+
+.sidebar-panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.panel-tab {
+    flex: 1;
+    padding: 0.75rem;
+    text-align: center;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: #777;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.panel-tab.active, .panel-tab:hover {
+    color: var(--primary-color);
+}
+
+.panel-tab.active {
+    border-bottom-color: var(--primary-color);
+}
+
+.sidebar-panel {
+    display: none; /* Skjult som standard */
+    flex-direction: column;
+    height: 100%;
+}
+.sidebar-panel.active {
+    display: flex; /* Vises når aktiv */
+}
+
+
 /* Højre Sidebar (Opskrifter) */
 .sidebar-search {
     position: relative;
@@ -483,6 +519,10 @@ nav {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(209, 96, 61, 0.2);
+}
+
+#search-autocomplete-container {
+    position: relative; /* Container for autocomplete listen */
 }
 
 .sidebar-tabs {
@@ -548,18 +588,21 @@ nav {
     object-fit: cover;
 }
 
-/* Venstre Sidebar (Indkøbsliste) */
+/* Indkøbsliste & Køkkenbord Styling */
 .sidebar-actions {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
+#shopping-list-panel .sidebar-actions {
+    grid-template-columns: repeat(3, 1fr);
+}
+
 .sidebar-actions .btn {
     font-size: 0.9rem;
     padding: 0.6rem 0.25rem;
 }
-
 
 .shopping-list-total {
     padding: 0.75rem;
@@ -571,7 +614,7 @@ nav {
     font-size: 1.1rem;
 }
 
-#shopping-list-container {
+#shopping-list-container, #kitchen-counter-container {
     padding-top: 0.5rem;
 }
 
@@ -595,7 +638,7 @@ nav {
     padding: 0;
 }
 
-.shopping-list-item {
+.shopping-list-item, .kitchen-counter-item {
     padding: 0.75rem 0.25rem;
     display: flex;
     align-items: flex-start;
@@ -603,24 +646,24 @@ nav {
     gap: 0.5rem;
     border-bottom: 1px solid #f0f0f0;
 }
-.shopping-list-item:last-child {
+.shopping-list-item:last-child, .kitchen-counter-item:last-child {
     border-bottom: none;
 }
 
-.shopping-list-item .item-main-info {
+.shopping-list-item .item-main-info, .kitchen-counter-item .item-main-info {
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
     flex-grow: 1;
     min-width: 0; 
 }
-.shopping-list-item .item-name-details {
+.shopping-list-item .item-name-details, .kitchen-counter-item .item-name-details {
     display: flex;
     flex-direction: column;
     min-width: 0;
 }
 
-.shopping-list-item .item-name-details label {
+.shopping-list-item .item-name-details label, .kitchen-counter-item .item-name-details .item-name {
     font-weight: 600;
     margin-bottom: 0.25rem;
     white-space: nowrap;
@@ -628,10 +671,12 @@ nav {
     text-overflow: ellipsis;
 }
 
-.shopping-list-item .item-details {
+.shopping-list-item .item-details, .kitchen-counter-item .item-details {
     display: flex;
     gap: 0.5rem;
     align-items: center;
+    font-size: 0.9rem;
+    color: #666;
 }
 .shopping-list-item .item-quantity-input {
     width: 50px;
@@ -647,7 +692,7 @@ nav {
     border-radius: 4px;
 }
 
-.shopping-list-item .item-actions {
+.shopping-list-item .item-actions, .kitchen-counter-item .item-actions {
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -702,26 +747,35 @@ nav {
     margin-bottom: 1.5rem;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .filter-tag {
     background-color: #fff;
     border: 1px solid #ddd;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1.25rem;
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .filter-tag:hover {
-    background-color: #f0f0f0;
+    background-color: var(--secondary-color);
+    border-color: #ccc;
 }
 
 .filter-tag.active {
     background-color: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+}
+
+.filter-tag .fa-check {
+    font-size: 0.8em;
 }
 
 .recipe-grid {
@@ -737,7 +791,6 @@ nav {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative; 
 }
@@ -752,6 +805,7 @@ nav {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     background-color: #eee;
+    cursor: pointer;
 }
 
 .lazy-load {
@@ -767,6 +821,7 @@ nav {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    cursor: pointer;
 }
 
 .recipe-card-category {
@@ -1017,10 +1072,6 @@ nav {
     margin-bottom: 1rem;
 }
 
-/* ================================================= */
-/* NY STYLING: Smart Input Rækker                    */
-/* ================================================= */
-
 .ingredient-row {
     display: flex;
     align-items: center;
@@ -1030,7 +1081,7 @@ nav {
     border-radius: var(--border-radius);
     padding: 0.75rem;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    position: relative; /* Vigtigt for autocomplete */
+    position: relative;
 }
 .ingredient-row:focus-within {
     border-color: var(--primary-color);
@@ -1057,11 +1108,11 @@ nav {
 .ingredient-row .ingredient-quantity {
     width: 60px;
     text-align: right;
-    -moz-appearance: textfield; /* Fjerner pile i Firefox */
+    -moz-appearance: textfield;
 }
 .ingredient-row .ingredient-quantity::-webkit-outer-spin-button,
 .ingredient-row .ingredient-quantity::-webkit-inner-spin-button {
-    -webkit-appearance: none; /* Fjerner pile i Chrome/Safari */
+    -webkit-appearance: none;
     margin: 0;
 }
 
@@ -1102,10 +1153,6 @@ nav {
 .autocomplete-suggestion strong {
     color: var(--primary-color);
 }
-
-/* ================================================= */
-/* NY STYLING: Kompakt "Tilføj Måltid" Modal         */
-/* ================================================= */
 
 .modal-content.modal-compact {
     max-width: 500px;
@@ -1169,10 +1216,7 @@ nav {
     flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 1rem;
-    /* Ingen ekstra baggrund eller padding her, da det styres af .modal-section-alt */
 }
-
-/* ================================================= */
 
 #recipe-edit-modal .form-actions {
     margin-top: 2rem; 
