@@ -120,11 +120,17 @@ hr {
     text-decoration: none;
 }
 
+.btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    color: #888;
+}
+
 .btn-primary {
     background-color: var(--primary-color);
     color: white;
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background-color: #b95535;
 }
 
@@ -133,7 +139,7 @@ hr {
     color: var(--text-color);
     border: 1px solid #ddd;
 }
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
     background-color: #e0e0e0;
 }
 
@@ -141,7 +147,7 @@ hr {
     background-color: #D32F2F;
     color: white;
 }
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
     background-color: #C62828;
 }
 
@@ -331,7 +337,7 @@ nav {
 .meal-slots {
     flex-grow: 1;
     display: grid;
-    grid-template-rows: 180px 180px 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
 }
 
 .meal-slot {
@@ -339,7 +345,7 @@ nav {
     border-bottom: 1px dashed #eee;
     position: relative;
     transition: background-color 0.2s ease;
-    overflow: hidden;
+    overflow-y: auto;
 }
 .meal-slot:last-child {
     border-bottom: none;
@@ -369,6 +375,7 @@ nav {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    margin-top: 0.25rem;
 }
 .planned-recipe:active {
     cursor: grabbing;
@@ -1287,42 +1294,4 @@ input:checked + .slider:before {
 }
 .slider.round:before {
   border-radius: 50%;
-}
-
-.preview-list {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 1rem;
-    margin: 1.5rem 0;
-    background-color: #fdfdfd;
-}
-
-.preview-list ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.preview-list li {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid #f0f0f0;
-    display: flex;
-    justify-content: space-between;
-}
-
-.preview-list li:last-child {
-    border-bottom: none;
-}
-
-.preview-list .item-name {
-    font-weight: 600;
-}
-
-#update-stock-list label {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    cursor: pointer;
 }
