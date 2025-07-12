@@ -728,6 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateDropdown(selectElement, options) {
+        if (!selectElement) return;
         selectElement.innerHTML = '';
         options.forEach(optionValue => {
             const option = document.createElement('option');
@@ -738,17 +739,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     addInventoryItemBtn.addEventListener('click', () => {
-        inventoryModalTitle.textContent = 'Tilføj ny vare';
-        inventoryItemForm.reset();
-        
-        populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
-        populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
-        document.getElementById('item-description').value = 'Madvare';
+        try {
+            inventoryModalTitle.textContent = 'Tilføj ny vare';
+            inventoryItemForm.reset();
+            
+            populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
+            populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
+            document.getElementById('item-description').value = 'Madvare';
 
-        buyWholeOptions.classList.add('hidden');
-        document.getElementById('inventory-item-id').value = '';
-        updateCalculatedFields();
-        inventoryItemModal.classList.remove('hidden');
+            buyWholeOptions.classList.add('hidden');
+            document.getElementById('inventory-item-id').value = '';
+            updateCalculatedFields();
+            inventoryItemModal.classList.remove('hidden');
+        } catch (error) {
+            handleError(error, "Kunne ikke åbne tilføj-vare vinduet.");
+        }
     });
 
     buyWholeCheckbox.addEventListener('change', () => {
@@ -831,38 +836,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (target.classList.contains('edit-item')) {
-            const item = state.inventory.find(i => i.id === docId);
-            if (item) {
-                inventoryModalTitle.textContent = 'Rediger vare';
-                
-                populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
-                populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
+            try {
+                const item = state.inventory.find(i => i.id === docId);
+                if (item) {
+                    inventoryModalTitle.textContent = 'Rediger vare';
+                    
+                    populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
+                    populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
 
-                document.getElementById('inventory-item-id').value = item.id;
-                document.getElementById('item-name').value = item.name || '';
-                document.getElementById('item-description').value = item.description || 'Madvare';
-                document.getElementById('item-category').value = item.category || '';
-                document.getElementById('item-home-location').value = item.home_location || '';
-                document.getElementById('item-current-stock').value = item.current_stock || 0;
-                document.getElementById('item-max-stock').value = item.max_stock || '';
-                document.getElementById('item-unit').value = item.unit || '';
-                document.getElementById('item-kg-price').value = item.kg_price || '';
-                document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
-                document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
-                
-                buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
-                buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
+                    document.getElementById('inventory-item-id').value = item.id;
+                    document.getElementById('item-name').value = item.name || '';
+                    document.getElementById('item-description').value = item.description || 'Madvare';
+                    document.getElementById('item-category').value = item.category || '';
+                    document.getElementById('item-home-location').value = item.home_location || '';
+                    document.getElementById('item-current-stock').value = item.current_stock || 0;
+                    document.getElementById('item-max-stock').value = item.max_stock || '';
+                    document.getElementById('item-unit').value = item.unit || '';
+                    document.getElementById('item-kg-price').value = item.kg_price || '';
+                    document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
+                    document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
+                    
+                    buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
+                    buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
 
-                if (item.purchase_unit) {
-                    document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
-                    document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
-                } else {
-                    document.getElementById('item-buy-unit-name').value = '';
-                    document.getElementById('item-buy-unit-quantity').value = '';
+                    if (item.purchase_unit) {
+                        document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
+                        document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
+                    } else {
+                        document.getElementById('item-buy-unit-name').value = '';
+                        document.getElementById('item-buy-unit-quantity').value = '';
+                    }
+
+                    updateCalculatedFields();
+                    inventoryItemModal.classList.remove('hidden');
                 }
-
-                updateCalculatedFields();
-                inventoryItemModal.classList.remove('hidden');
+            } catch (error) {
+                handleError(error, "Kunne ikke åbne rediger-vare vinduet.");
             }
         }
     });
