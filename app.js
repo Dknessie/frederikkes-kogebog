@@ -398,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, error => handleError(error, "Kunne ikke hente indkøbsliste."));
 
-        // RETTET: Bruger flertal 'kitchen_counters' for konsistens
         const kitchenCounterRef = doc(db, 'kitchen_counters', userId);
         state.listeners.kitchenCounter = onSnapshot(kitchenCounterRef, (doc) => {
             state.kitchenCounter = doc.exists() ? doc.data().items || {} : {};
@@ -1597,15 +1596,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const mealPlanDocId = `plan_${year}`;
                 const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
                 
-                let updates = {};
-                const targetFieldPath = `${targetDate}.${targetMeal}`;
-                updates[targetFieldPath] = dragData.mealData;
-                const sourceFieldPath = `${dragData.sourceDate}.${dragData.sourceMeal}`;
-                if (sourceFieldPath !== targetFieldPath) {
-                    updates[sourceFieldPath] = deleteField();
-                }
+                const fieldPathTarget = `${targetDate}.${targetMeal}`;
+                const fieldPathSource = `${dragData.sourceDate}.${dragData.sourceMeal}`;
 
-                await updateDoc(mealPlanRef, updates);
+                await updateDoc(mealPlanRef, {
+                    [fieldPathTarget]: dragData.mealData,
+                    [fieldPathSource]: deleteField()
+                });
             }
         } catch (error) {
             handleError(error, "Kunne ikke behandle drop-handlingen.");
@@ -1865,13 +1862,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         
         try {
-            await setDoc(mealPlanRef, {
-                [targetDate]: {
-                    [targetMeal]: mealData
-                }
-            }, { merge: true });
+            // RETTET: Bruger updateDoc med dot notation for at undgå at overskrive andre måltider på samme dag.
+            const fieldPath = `${targetDate}.${targetMeal}`;
+            await updateDoc(mealPlanRef, { [fieldPath]: mealData });
         } catch (error) {
-            handleError(error, "Kunne ikke tilføje måltidet.");
+            // Hvis dokumentet eller datofeltet ikke findes, fejler updateDoc.
+            // Vi fanger fejlen og bruger setDoc med merge for at oprette det.
+            if (error.code === 'not-found') {
+                await setDoc(mealPlanRef, { [targetDate]: { [targetMeal]: mealData } }, { merge: true });
+            } else {
+                handleError(error, "Kunne ikke tilføje måltidet.");
+            }
         } finally {
             addMealModal.classList.add('hidden');
             state.pendingMeal = null;
