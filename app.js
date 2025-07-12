@@ -55,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const addInventoryItemBtn = document.getElementById('add-inventory-item-btn');
     const inventoryModalTitle = document.getElementById('inventory-modal-title');
     const inventoryTableBody = document.querySelector('.inventory-table tbody');
+    const buyWholeCheckbox = document.getElementById('item-buy-whole');
+    const buyWholeOptions = document.getElementById('buy-whole-options');
     
     // --- Opskrift Elementer ---
     const recipeEditModal = document.getElementById('recipe-edit-modal');
@@ -717,9 +719,14 @@ document.addEventListener('DOMContentLoaded', () => {
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
+        buyWholeOptions.classList.add('hidden');
         document.getElementById('inventory-item-id').value = '';
         updateCalculatedFields();
         inventoryItemModal.classList.remove('hidden');
+    });
+
+    buyWholeCheckbox.addEventListener('change', () => {
+        buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
     });
 
     ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price', 'item-buy-whole'].forEach(id => {
@@ -742,6 +749,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const aliases = document.getElementById('item-aliases').value.split(',').map(a => a.trim()).filter(a => a);
+        const buyAsWhole = document.getElementById('item-buy-whole').checked;
 
         const itemData = {
             name: document.getElementById('item-name').value,
@@ -752,10 +760,23 @@ document.addEventListener('DOMContentLoaded', () => {
             kg_price: Number(document.getElementById('item-kg-price').value) || null,
             grams_per_unit: gramsPerUnit,
             grams_in_stock: gramsInStock,
-            buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
+            buy_as_whole_unit: buyAsWhole,
             aliases: aliases,
             home_location: document.getElementById('item-home-location').value,
+            purchase_unit: null
         };
+
+        if (buyAsWhole) {
+            const purchaseUnitName = document.getElementById('item-buy-unit-name').value.trim();
+            const purchaseUnitQuantity = parseFloat(document.getElementById('item-buy-unit-quantity').value) || null;
+            if (purchaseUnitName && purchaseUnitQuantity) {
+                itemData.purchase_unit = {
+                    name: purchaseUnitName,
+                    quantity: purchaseUnitQuantity
+                };
+            }
+        }
+
         try {
             if (itemId) {
                 await updateDoc(doc(db, 'inventory_items', itemId), itemData);
@@ -794,10 +815,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('item-unit').value = item.unit || '';
                 document.getElementById('item-kg-price').value = item.kg_price || '';
                 document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
-                document.getElementById('item-buy-whole').checked = item.buy_as_whole_unit || false;
                 document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
                 document.getElementById('item-home-location').value = item.home_location || '';
                 
+                // Handle new fields for whole unit purchase
+                buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
+                buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
+
+                if (item.purchase_unit) {
+                    document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
+                    document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
+                } else {
+                    document.getElementById('item-buy-unit-name').value = '';
+                    document.getElementById('item-buy-unit-quantity').value = '';
+                }
+
                 updateCalculatedFields();
                 inventoryItemModal.classList.remove('hidden');
             }
@@ -1125,9 +1157,29 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (inventoryItem) {
                 if (inventoryItem.buy_as_whole_unit) {
-                    if ((inventoryItem.current_stock || 0) === 0) {
-                        quantityToBuy = 1;
-                        unitToBuy = inventoryItem.unit;
+                    const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
+                    let needsBuying = false;
+
+                    if (conversionResult.error) {
+                        needsBuying = true;
+                    } else if (conversionResult.convertedQuantity !== null) {
+                        if (conversionResult.convertedQuantity > (inventoryItem.grams_in_stock || 0)) {
+                            needsBuying = true;
+                        }
+                    } else if (conversionResult.directMatch) {
+                        if (conversionResult.quantity > (inventoryItem.current_stock || 0)) {
+                            needsBuying = true;
+                        }
+                    }
+
+                    if (needsBuying) {
+                        if (inventoryItem.purchase_unit && inventoryItem.purchase_unit.name) {
+                            quantityToBuy = 1;
+                            unitToBuy = inventoryItem.purchase_unit.name;
+                        } else {
+                            quantityToBuy = 1;
+                            unitToBuy = inventoryItem.unit; // Fallback
+                        }
                     } else {
                         quantityToBuy = 0;
                     }
@@ -1135,7 +1187,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
                     if (conversionResult.error) {
                         if (neededIng.unit) conversionErrors.push(neededIng.name);
-                        // Keep original quantity if conversion fails
                     } else if (conversionResult.convertedQuantity !== null) {
                         const neededInGrams = conversionResult.convertedQuantity;
                         const inStockInGrams = inventoryItem.grams_in_stock || 0;
@@ -1153,7 +1204,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             quantityToBuy = 0;
                         }
                     } else if (conversionResult.directMatch) {
-                        // Handle direct unit matches like 'stk'
                         const inStock = inventoryItem.current_stock || 0;
                         quantityToBuy = Math.max(0, conversionResult.quantity - inStock);
                     }
@@ -1266,11 +1316,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (inventoryItem) {
                 const itemRef = doc(db, "inventory_items", inventoryItem.id);
                 
-                const newStock = (inventoryItem.current_stock || 0) + item.quantity_to_buy;
+                let newStock = (inventoryItem.current_stock || 0);
                 let newGramsInStock = inventoryItem.grams_in_stock || 0;
-                const conversionResult = convertToPrimaryUnit(item.quantity_to_buy, item.unit, inventoryItem);
-                if (conversionResult.convertedQuantity !== null) {
-                    newGramsInStock += conversionResult.convertedQuantity;
+
+                if (inventoryItem.buy_as_whole_unit && inventoryItem.purchase_unit) {
+                    newStock += item.quantity_to_buy;
+                    newGramsInStock += (inventoryItem.purchase_unit.quantity * item.quantity_to_buy);
+                } else {
+                    newStock += item.quantity_to_buy;
+                    const conversionResult = convertToPrimaryUnit(item.quantity_to_buy, item.unit, inventoryItem);
+                    if (conversionResult.convertedQuantity !== null) {
+                        newGramsInStock += conversionResult.convertedQuantity;
+                    }
                 }
 
                 batch.update(itemRef, { 
@@ -1330,6 +1387,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function getQuantityInKg(quantity, unit, inventoryItem) {
+        if (inventoryItem.buy_as_whole_unit && inventoryItem.purchase_unit) {
+            // Assumes the purchase_unit quantity corresponds to the item's main unit (e.g., g)
+            return (inventoryItem.purchase_unit.quantity * quantity) / 1000;
+        }
         const conversion = convertToPrimaryUnit(quantity, unit, inventoryItem);
         if(conversion.convertedQuantity !== null) {
             return conversion.convertedQuantity / 1000;
@@ -1542,7 +1603,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // *** FIX: Replaced dragstart and dragend listeners with more robust versions ***
     document.addEventListener('dragstart', (e) => {
         const sidebarItem = e.target.closest('.sidebar-recipe-item');
         const plannedItem = e.target.closest('.planned-recipe');
@@ -1569,14 +1629,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.addEventListener('dragend', (e) => {
-        const sidebarItem = e.target.closest('.sidebar-recipe-item');
-        if (sidebarItem) {
-            sidebarItem.style.opacity = '1';
-        }
-    
-        const plannedItem = e.target.closest('.planned-recipe');
-        if (plannedItem) {
-            plannedItem.style.opacity = '1';
+        const draggableItem = e.target.closest('.sidebar-recipe-item, .planned-recipe');
+        if (draggableItem) {
+            draggableItem.style.opacity = '1';
         }
     });
 
@@ -1604,7 +1659,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const dragDataString = e.dataTransfer.getData('application/json');
             if (!dragDataString) {
-                // If no data was set, do nothing. This can happen with external drags.
                 return;
             }
             const dragData = JSON.parse(dragDataString);
@@ -1637,7 +1691,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fieldPathTarget = `${targetDate}.${targetMeal}`;
                 const fieldPathSource = `${dragData.sourceDate}.${dragData.sourceMeal}`;
 
-                // Prevent dropping on itself
                 if (fieldPathTarget === fieldPathSource) return;
 
                 await updateDoc(mealPlanRef, {
@@ -1719,7 +1772,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     canBeMade = false;
                 }
             } else {
-                // This case occurs if units don't match and can't be converted to grams.
                 missingCount++;
                 canBeMade = false;
             }
