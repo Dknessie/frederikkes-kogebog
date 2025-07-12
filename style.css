@@ -289,6 +289,16 @@ nav {
     border-radius: var(--border-radius);
     display: flex;
     flex-direction: column;
+    transition: background-color 0.3s ease;
+}
+
+.calendar-day.is-today {
+    background-color: #e8f5e9; /* Light green */
+    border-color: var(--accent-color);
+}
+.calendar-day.is-today .calendar-day-header {
+    color: var(--accent-color);
+    font-weight: 700;
 }
 
 .calendar-day-header {
@@ -707,7 +717,7 @@ nav {
 .ingredient-row .remove-ingredient-btn { color: #adb5bd; }
 .ingredient-row .remove-ingredient-btn:hover { color: var(--status-red); }
 
-/* Switch Toggle */
+/* Switch Toggle & Whole Unit Options */
 .switch-group {
     display: flex;
     justify-content: space-between;
@@ -725,3 +735,15 @@ input:checked + .slider { background-color: var(--accent-color); }
 input:checked + .slider:before { transform: translateX(22px); }
 .slider.round { border-radius: 28px; }
 .slider.round:before { border-radius: 50%; }
+
+#buy-whole-options {
+    grid-column: 1 / -1; /* Span all columns in the grid */
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-m) var(--spacing-l);
+    background-color: var(--secondary-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    margin-top: calc(-1 * var(--spacing-m)); /* Pull up to reduce space */
+    border-top: 1px solid var(--border-color);
+}
