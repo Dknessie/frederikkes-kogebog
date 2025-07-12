@@ -38,6 +38,17 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// =================================================================
+// KONSTANTER & KONFIGURATION
+// =================================================================
+const STORE_CATEGORIES = [
+    "Frugt & Grønt", "Kød & Fisk", "Mejeri & Æg", "Brød & Kornprodukter", 
+    "Kolonial (tørvarer)", "Drikkevarer", "Frost", "Snacks & Slik", 
+    "Husholdning", "Personlig Pleje", "Andet"
+];
+
+const HOME_LOCATIONS = ["Køleskab", "Fryser", "Køkkenskab", "Svaleskab", "Andet"];
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- Globale Elementer ---
@@ -716,9 +727,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('item-price-per-unit').textContent = `${pricePerUnit.toFixed(2)} kr`;
     }
 
+    function populateDropdown(selectElement, options) {
+        selectElement.innerHTML = '';
+        options.forEach(optionValue => {
+            const option = document.createElement('option');
+            option.value = optionValue;
+            option.textContent = optionValue;
+            selectElement.appendChild(option);
+        });
+    }
+
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
+        
+        populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
+        populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
+        document.getElementById('item-description').value = 'Madvare';
+
         buyWholeOptions.classList.add('hidden');
         document.getElementById('inventory-item-id').value = '';
         updateCalculatedFields();
@@ -753,7 +779,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemData = {
             name: document.getElementById('item-name').value,
+            description: document.getElementById('item-description').value,
             category: document.getElementById('item-category').value,
+            home_location: document.getElementById('item-home-location').value,
             current_stock: quantity,
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
             unit: unit,
@@ -762,7 +790,6 @@ document.addEventListener('DOMContentLoaded', () => {
             grams_in_stock: gramsInStock,
             buy_as_whole_unit: buyAsWhole,
             aliases: aliases,
-            home_location: document.getElementById('item-home-location').value,
             purchase_unit: null
         };
 
@@ -807,18 +834,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = state.inventory.find(i => i.id === docId);
             if (item) {
                 inventoryModalTitle.textContent = 'Rediger vare';
+                
+                populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
+                populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
+
                 document.getElementById('inventory-item-id').value = item.id;
                 document.getElementById('item-name').value = item.name || '';
+                document.getElementById('item-description').value = item.description || 'Madvare';
                 document.getElementById('item-category').value = item.category || '';
+                document.getElementById('item-home-location').value = item.home_location || '';
                 document.getElementById('item-current-stock').value = item.current_stock || 0;
                 document.getElementById('item-max-stock').value = item.max_stock || '';
                 document.getElementById('item-unit').value = item.unit || '';
                 document.getElementById('item-kg-price').value = item.kg_price || '';
                 document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
                 document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
-                document.getElementById('item-home-location').value = item.home_location || '';
                 
-                // Handle new fields for whole unit purchase
                 buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
                 buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
 
@@ -833,6 +864,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateCalculatedFields();
                 inventoryItemModal.classList.remove('hidden');
             }
+        }
+    });
+
+    function guessItemDetails(itemName) {
+        const existingItem = state.inventory.find(item => item.name.toLowerCase() === itemName.toLowerCase());
+        if (existingItem) {
+            document.getElementById('item-description').value = existingItem.description || 'Madvare';
+            document.getElementById('item-category').value = existingItem.category || '';
+            document.getElementById('item-home-location').value = existingItem.home_location || '';
+            document.getElementById('item-unit').value = existingItem.unit || '';
+            document.getElementById('item-grams-per-unit').value = existingItem.grams_per_unit || '';
+            document.getElementById('item-aliases').value = (existingItem.aliases || []).join(', ');
+        }
+    }
+    const debouncedGuess = debounce(guessItemDetails, 400);
+    document.getElementById('item-name').addEventListener('input', (e) => {
+        if (!document.getElementById('inventory-item-id').value) { // Only guess for new items
+            debouncedGuess(e.target.value);
         }
     });
 
@@ -1437,6 +1486,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const start = getStartOfWeek(state.currentDate);
         calendarTitle.textContent = `Uge ${getWeekNumber(start)}, ${start.getFullYear()}`;
         const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+        const todayString = formatDate(new Date());
 
         const fragment = document.createDocumentFragment();
         for(let i = 0; i < 7; i++) {
@@ -1446,6 +1496,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day';
+            if (dateString === todayString) {
+                dayDiv.classList.add('is-today');
+            }
+
             dayDiv.innerHTML = `
                 <div class="calendar-day-header">${days[i]} <span class="date-number">${dayDate.getDate()}.</span></div>
                 <div class="meal-slots">
