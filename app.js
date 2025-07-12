@@ -1862,17 +1862,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         
         try {
-            // RETTET: Bruger updateDoc med dot notation for at undgå at overskrive andre måltider på samme dag.
-            const fieldPath = `${targetDate}.${targetMeal}`;
-            await updateDoc(mealPlanRef, { [fieldPath]: mealData });
+            // RETTET: Går tilbage til den mere robuste setDoc med merge:true
+            await setDoc(mealPlanRef, {
+                [targetDate]: {
+                    [targetMeal]: mealData
+                }
+            }, { merge: true });
         } catch (error) {
-            // Hvis dokumentet eller datofeltet ikke findes, fejler updateDoc.
-            // Vi fanger fejlen og bruger setDoc med merge for at oprette det.
-            if (error.code === 'not-found') {
-                await setDoc(mealPlanRef, { [targetDate]: { [targetMeal]: mealData } }, { merge: true });
-            } else {
-                handleError(error, "Kunne ikke tilføje måltidet.");
-            }
+            handleError(error, "Kunne ikke tilføje måltidet.");
         } finally {
             addMealModal.classList.add('hidden');
             state.pendingMeal = null;
@@ -1970,7 +1967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearKitchenCounterBtn.addEventListener('click', async () => {
         const confirmed = await showNotification({
             title: "Ryd Køkkenbord",
-            message: "Er du sikker på, du vil fjerne alle varer fra dit køkkenbord?",
+            message: "Er du sikker på, at du vil fjerne alle varer fra dit køkkenbord?",
             type: 'confirm'
         });
         if (confirmed) {
