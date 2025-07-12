@@ -199,11 +199,11 @@
                         <input type="number" id="item-current-stock" value="0" required>
                     </div>
                     <div class="input-group">
-                        <label for="item-unit">Enhed (stk, g, ml)</label>
-                        <input type="text" id="item-unit" placeholder="f.eks. stk" required>
+                        <label for="item-unit">Standard enhed (g, ml, stk)</label>
+                        <input type="text" id="item-unit" placeholder="f.eks. g" required>
                     </div>
                     <div class="input-group">
-                        <label for="item-grams-per-unit">Gram pr. enhed</label>
+                        <label for="item-grams-per-unit">Gram pr. 'stk'</label>
                         <input type="number" id="item-grams-per-unit" placeholder="Hvis enhed er 'stk'">
                     </div>
                     <div class="input-group">
@@ -237,6 +237,17 @@
                         </label>
                     </div>
                  </div>
+                 <!-- NEW: Options for whole unit purchase -->
+                 <div id="buy-whole-options" class="hidden">
+                    <div class="input-group">
+                        <label for="item-buy-unit-name">Navn på købsenhed</label>
+                        <input type="text" id="item-buy-unit-name" placeholder="F.eks. Dåse, Bakke, Pose">
+                    </div>
+                    <div class="input-group">
+                        <label for="item-buy-unit-quantity">Indhold pr. købsenhed</label>
+                        <input type="number" step="any" id="item-buy-unit-quantity" placeholder="F.eks. 400 (svarer til 400g)">
+                    </div>
+                </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
                 </div>
