@@ -588,7 +588,13 @@ nav {
     position: relative; 
 }
 .recipe-card:hover { transform: translateY(-5px); }
-.recipe-card-image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+
+.recipe-card-image {
+    width: 100%;
+    height: 180px; /* Fast højde for billedet */
+    object-fit: cover; /* Sikrer billedet dækker uden at blive forvrænget */
+}
+
 .recipe-card-content { padding: var(--spacing-m); flex-grow: 1; cursor: pointer; }
 .recipe-card-category { font-size: 0.75rem; font-weight: 600; color: var(--primary-color); }
 .recipe-card h4 { margin: var(--spacing-xs) 0 var(--spacing-s); color: var(--text-color); }
