@@ -706,11 +706,29 @@ nav {
     background-color: #f0f0f0;
 }
 
+.read-view-actions {
+    margin-top: var(--spacing-l); /* Added space */
+    display: flex;
+    gap: var(--spacing-m);
+}
+
 .read-view-main-content {
     display: grid;
     grid-template-columns: minmax(200px, 1fr) 2fr;
     gap: var(--spacing-l);
     margin-top: var(--spacing-l);
+}
+
+.read-view-ingredients {
+    background-color: var(--secondary-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+}
+
+.read-view-ingredients ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 #ingredients-container {
