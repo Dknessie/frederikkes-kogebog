@@ -187,12 +187,16 @@
                         <input type="text" id="item-name" required>
                     </div>
                     <div class="input-group">
-                        <label for="item-category">Kategori</label>
-                        <input type="text" id="item-category" placeholder="F.eks. Frugt & Grønt">
+                        <label for="item-description">Beskrivelse</label>
+                        <input type="text" id="item-description" placeholder="F.eks. Madvare, Rengøring...">
                     </div>
                      <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
-                        <input type="text" id="item-home-location" placeholder="F.eks. Køleskab, Skuffe">
+                        <select id="item-home-location"></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="item-category">Kategori (Butik)</label>
+                        <select id="item-category"></select>
                     </div>
                     <div class="input-group">
                         <label for="item-current-stock">Antal på lager</label>
@@ -205,10 +209,6 @@
                     <div class="input-group">
                         <label for="item-grams-per-unit">Gram pr. 'stk'</label>
                         <input type="number" id="item-grams-per-unit" placeholder="Hvis enhed er 'stk'">
-                    </div>
-                    <div class="input-group">
-                        <label for="item-grams-in-stock">Gram på lager (beregnet)</label>
-                        <span id="item-grams-in-stock" class="calculated-field">0 g</span>
                     </div>
                      <div class="input-group">
                         <label for="item-kg-price">Pris pr. kg (valgfri)</label>
@@ -237,7 +237,6 @@
                         </label>
                     </div>
                  </div>
-                 <!-- NEW: Options for whole unit purchase -->
                  <div id="buy-whole-options" class="hidden">
                     <div class="input-group">
                         <label for="item-buy-unit-name">Navn på købsenhed</label>
