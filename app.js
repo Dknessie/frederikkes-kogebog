@@ -727,25 +727,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('item-price-per-unit').textContent = `${pricePerUnit.toFixed(2)} kr`;
     }
 
-    function populateDropdown(selectElement, options) {
-        if (!selectElement) return;
-        selectElement.innerHTML = '';
-        options.forEach(optionValue => {
-            const option = document.createElement('option');
-            option.value = optionValue;
-            option.textContent = optionValue;
-            selectElement.appendChild(option);
-        });
-    }
-
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
-        
-        populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
-        populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
         document.getElementById('item-description').value = 'Madvare';
-
         buyWholeOptions.classList.add('hidden');
         document.getElementById('inventory-item-id').value = '';
         updateCalculatedFields();
@@ -836,9 +821,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item) {
                 inventoryModalTitle.textContent = 'Rediger vare';
                 
-                populateDropdown(document.getElementById('item-category'), STORE_CATEGORIES);
-                populateDropdown(document.getElementById('item-home-location'), HOME_LOCATIONS);
-
                 document.getElementById('inventory-item-id').value = item.id;
                 document.getElementById('item-name').value = item.name || '';
                 document.getElementById('item-description').value = item.description || 'Madvare';
