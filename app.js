@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         mealPlan: {},
         shoppingList: {},
-        kitchenCounter: {}, // NYT: State for Køkkenbordet
+        kitchenCounter: {}, 
         activeRecipeFilterTags: new Set(),
         activeSidebarTags: new Set(),
         currentDate: new Date(),
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recipes: null,
             mealPlan: null,
             shoppingList: null,
-            kitchenCounter: null, // NYT: Listener for Køkkenbordet
+            kitchenCounter: null,
         }
     };
 
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case '#recipes':
                 renderRecipes();
-                renderTagFilters();
+                renderPageTagFilters();
                 break;
             case '#inspiration':
                 renderInspirationPage();
@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.recipes = onSnapshot(recipesRef, (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (document.querySelector('#recipes:not(.hidden)')) {
-                renderTagFilters(recipeFilterContainer, 'activeRecipeFilterTags', renderRecipes);
+                renderPageTagFilters();
                 renderRecipes();
             }
             if (document.querySelector('#meal-planner:not(.hidden)')) {
@@ -398,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, error => handleError(error, "Kunne ikke hente indkøbsliste."));
 
-        // NYT: Listener for Køkkenbordet
-        const kitchenCounterRef = doc(db, 'kitchen_counter', userId);
+        // RETTET: Bruger flertal 'kitchen_counters' for konsistens
+        const kitchenCounterRef = doc(db, 'kitchen_counters', userId);
         state.listeners.kitchenCounter = onSnapshot(kitchenCounterRef, (doc) => {
             state.kitchenCounter = doc.exists() ? doc.data().items || {} : {};
             if (document.querySelector('#meal-planner:not(.hidden)')) {
@@ -1481,7 +1481,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchTerm = sidebarSearchInput.value.toLowerCase();
         renderSidebarRecipeList();
         
-        // Autocomplete logic
         const autocompleteContainer = searchAutocompleteContainer;
         autocompleteContainer.innerHTML = '';
         if (searchTerm.length > 1) {
@@ -1567,8 +1566,10 @@ document.addEventListener('DOMContentLoaded', () => {
     calendarGrid.addEventListener('drop', async (e) => {
         e.preventDefault();
         const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.remove('drag-over');
+        if (!slot) return;
+        slot.classList.remove('drag-over');
+
+        try {
             const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
             const targetDate = slot.dataset.date;
             const targetMeal = slot.dataset.meal;
@@ -1604,12 +1605,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     updates[sourceFieldPath] = deleteField();
                 }
 
-                try {
-                    await updateDoc(mealPlanRef, updates);
-                } catch (error) {
-                    handleError(error, "Kunne ikke flytte måltidet.");
-                }
+                await updateDoc(mealPlanRef, updates);
             }
+        } catch (error) {
+            handleError(error, "Kunne ikke behandle drop-handlingen.");
         }
     });
     
@@ -1880,7 +1879,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // =================================================================
-    // 10. NYT KØKKENBORD LOGIK
+    // 10. KØKKENBORD LOGIK
     // =================================================================
 
     panelTabs.forEach(tab => {
@@ -1898,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function addToKitchenCounter(ingredients) {
         if (!state.currentUser) return;
         
-        const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+        const kitchenCounterRef = doc(db, 'kitchen_counters', state.currentUser.uid);
         const currentCounter = { ...state.kitchenCounter };
         
         ingredients.forEach(ing => {
@@ -1974,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
             type: 'confirm'
         });
         if (confirmed) {
-            const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+            const kitchenCounterRef = doc(db, 'kitchen_counters', state.currentUser.uid);
             await setDoc(kitchenCounterRef, { items: {} });
         }
     });
@@ -1985,7 +1984,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemName = removeBtn.dataset.itemName.toLowerCase();
             const updatedCounter = { ...state.kitchenCounter };
             delete updatedCounter[itemName];
-            const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+            const kitchenCounterRef = doc(db, 'kitchen_counters', state.currentUser.uid);
             await setDoc(kitchenCounterRef, { items: updatedCounter });
         }
     });
@@ -2061,7 +2060,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     transaction.update(update.ref, update.data);
                 });
 
-                const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+                const kitchenCounterRef = doc(db, 'kitchen_counters', state.currentUser.uid);
                 transaction.set(kitchenCounterRef, { items: {} });
             });
             showNotification({title: "Succes!", message: "Dit lager er blevet opdateret, og køkkenbordet er ryddet."});
