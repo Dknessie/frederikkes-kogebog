@@ -19,7 +19,8 @@ import {
     deleteDoc,
     setDoc,
     writeBatch,
-    deleteField
+    deleteField,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Opskrift Læsevisning Modal Elementer ---
     const recipeReadModal = document.getElementById('recipe-read-modal');
+    const readViewCookBtn = document.getElementById('read-view-cook-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
     const readViewDeleteBtn = document.getElementById('read-view-delete-btn');
     const readViewPrice = document.getElementById('read-view-price');
@@ -81,20 +83,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarRecipeList = document.getElementById('sidebar-recipe-list');
     const sidebarTabs = document.querySelectorAll('.sidebar-tab');
     const sidebarSearchInput = document.getElementById('sidebar-recipe-search');
+    const searchAutocompleteContainer = document.getElementById('search-autocomplete-container');
     const sidebarTagFilters = document.getElementById('sidebar-tag-filters');
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
     const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn');
-    const updateStockBtn = document.getElementById('update-stock-btn');
-
-    // --- Indkøbsliste (nu i sidebar) ---
+    
+    // --- Venstre Sidebar Paneler ---
+    const panelTabs = document.querySelectorAll('.panel-tab');
+    const sidebarPanels = document.querySelectorAll('.sidebar-panel');
     const shoppingListContainer = document.getElementById('shopping-list-container');
     const shoppingListTotalContainer = document.getElementById('shopping-list-total-container');
     const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
     const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
     const clearShoppingListBtn = document.getElementById('clear-shopping-list-btn');
     const addShoppingItemForm = document.getElementById('add-shopping-item-form');
+    const kitchenCounterContainer = document.getElementById('kitchen-counter-container');
+    const confirmCookingBtn = document.getElementById('confirm-cooking-btn');
+    const clearKitchenCounterBtn = document.getElementById('clear-kitchen-counter-btn');
 
-    // --- Nye Modaler ---
+    // --- "Tilføj Måltid" Modal Elementer ---
     const addMealModal = document.getElementById('add-meal-modal');
     const addMealForm = document.getElementById('add-meal-form');
     const addMealModalTitle = document.getElementById('add-meal-modal-title');
@@ -102,9 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const addExtraIngredientBtn = document.getElementById('add-extra-ingredient-btn');
     const showExtraIngredientsBtn = document.getElementById('show-extra-ingredients-btn');
     const extraIngredientsSection = document.getElementById('extra-ingredients-section');
-    const updateStockModal = document.getElementById('update-stock-modal');
-    const updateStockForm = document.getElementById('update-stock-form');
-    const updateStockList = document.getElementById('update-stock-list');
 
     // --- Inspiration Side ---
     const inspirationGrid = document.getElementById('inspiration-grid');
@@ -127,6 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         mealPlan: {},
         shoppingList: {},
+        kitchenCounter: {}, // NYT: State for Køkkenbordet
         activeRecipeFilterTags: new Set(),
         activeSidebarTags: new Set(),
         currentDate: new Date(),
@@ -137,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recipes: null,
             mealPlan: null,
             shoppingList: null,
+            kitchenCounter: null, // NYT: Listener for Køkkenbordet
         }
     };
 
@@ -298,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSidebarRecipeList();
                 renderSidebarTagFilters();
                 renderShoppingList();
+                renderKitchenCounter();
                 break;
             case '#recipes':
                 renderRecipes();
@@ -351,13 +358,14 @@ document.addEventListener('DOMContentLoaded', () => {
             state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
             if (document.querySelector('#inspiration:not(.hidden)')) renderInspirationPage();
+            if (document.querySelector('#meal-planner:not(.hidden)')) renderKitchenCounter();
         }, error => handleError(error, "Kunne ikke hente varelager."));
 
         const recipesRef = collection(db, 'recipes');
         state.listeners.recipes = onSnapshot(recipesRef, (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (document.querySelector('#recipes:not(.hidden)')) {
-                renderTagFilters(); 
+                renderTagFilters(recipeFilterContainer, 'activeRecipeFilterTags', renderRecipes);
                 renderRecipes();
             }
             if (document.querySelector('#meal-planner:not(.hidden)')) {
@@ -389,6 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderShoppingList();
             }
         }, error => handleError(error, "Kunne ikke hente indkøbsliste."));
+
+        // NYT: Listener for Køkkenbordet
+        const kitchenCounterRef = doc(db, 'kitchen_counter', userId);
+        state.listeners.kitchenCounter = onSnapshot(kitchenCounterRef, (doc) => {
+            state.kitchenCounter = doc.exists() ? doc.data().items || {} : {};
+            if (document.querySelector('#meal-planner:not(.hidden)')) {
+                renderKitchenCounter();
+            }
+        }, error => handleError(error, "Kunne ikke hente køkkenbord."));
     }
 
     // =================================================================
@@ -456,79 +473,111 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function renderRecipes() {
+    function renderRecipes(container = recipeGrid, filterStateKey = 'activeRecipeFilterTags') {
         const fragment = document.createDocumentFragment();
-        recipeGrid.innerHTML = '';
+        container.innerHTML = '';
         let recipesToRender = state.recipes;
 
-        if (state.activeRecipeFilterTags.size > 0) {
+        if (state[filterStateKey].size > 0) {
             recipesToRender = recipesToRender.filter(r => {
                 if (!r.tags) return false;
-                return [...state.activeRecipeFilterTags].every(tag => r.tags.includes(tag));
+                return [...state[filterStateKey]].every(tag => r.tags.includes(tag));
             });
+        }
+        
+        const searchTerm = sidebarSearchInput.value.toLowerCase();
+        if (container === sidebarRecipeList && searchTerm) {
+             recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
+        }
+
+        if (container === sidebarRecipeList) {
+            const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
+            if (activeTab === 'favorites') {
+                recipesToRender = recipesToRender.filter(r => r.is_favorite);
+            }
         }
 
         if (recipesToRender.length === 0) {
-            recipeGrid.innerHTML = `<p>Ingen opskrifter matcher dit filter.</p>`;
+            container.innerHTML = `<p class="empty-state">Ingen opskrifter matcher dine valg.</p>`;
             return;
         }
 
         recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
             const card = document.createElement('div');
-            card.className = 'recipe-card';
+            card.className = container === sidebarRecipeList ? 'sidebar-recipe-item' : 'recipe-card';
             card.dataset.id = recipe.id;
-            const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
             
-            const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
-                ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
-                : '';
+            if (container === sidebarRecipeList) {
+                card.draggable = true;
+                card.innerHTML = `
+                    <div class="sidebar-recipe-header">
+                        <span>${recipe.title}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="sidebar-recipe-body">
+                        <img src="${recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+                    </div>`;
+            } else {
+                const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
+                const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+                const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
+                    ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
+                    : '';
 
-            card.innerHTML = `
-                <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-                <div class="recipe-card-content">
-                    <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
-                    <h4>${recipe.title}</h4>
-                    <div class="recipe-card-tags">${tagsHTML}</div>
-                </div>
-                <div class="recipe-card-actions">
-                    <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
-                    <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
-                </div>`;
+                card.innerHTML = `
+                    <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+                    <div class="recipe-card-content">
+                        <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
+                        <h4>${recipe.title}</h4>
+                        <div class="recipe-card-tags">${tagsHTML}</div>
+                    </div>
+                    <div class="recipe-card-actions">
+                        <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                        <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
+                        <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
+                    </div>`;
+            }
             fragment.appendChild(card);
         });
-        recipeGrid.appendChild(fragment);
-        document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
+        container.appendChild(fragment);
+        if (container !== sidebarRecipeList) {
+            document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
+        }
     }
+    
+    const renderSidebarRecipeList = () => renderRecipes(sidebarRecipeList, 'activeSidebarTags');
 
-    function renderTagFilters() {
+    function renderTagFilters(container, stateKey, renderFn) {
         const allTags = new Set();
         state.recipes.forEach(r => {
             if (r.tags) r.tags.forEach(tag => allTags.add(tag));
         });
 
-        recipeFilterContainer.innerHTML = '';
+        container.innerHTML = '';
         const fragment = document.createDocumentFragment();
         
         [...allTags].sort().forEach(tag => {
             const tagButton = document.createElement('button');
-            tagButton.className = 'filter-tag';
-            tagButton.textContent = tag;
-            if (state.activeRecipeFilterTags.has(tag)) tagButton.classList.add('active');
+            const isActive = state[stateKey].has(tag);
+            tagButton.className = `filter-tag ${isActive ? 'active' : ''}`;
+            tagButton.innerHTML = isActive ? `<i class="fas fa-check"></i> ${tag}` : tag;
             
             tagButton.addEventListener('click', () => {
-                if (state.activeRecipeFilterTags.has(tag)) {
-                    state.activeRecipeFilterTags.delete(tag);
+                if (state[stateKey].has(tag)) {
+                    state[stateKey].delete(tag);
                 } else {
-                    state.activeRecipeFilterTags.add(tag);
+                    state[stateKey].add(tag);
                 }
-                renderTagFilters();
-                renderRecipes();
+                renderTagFilters(container, stateKey, renderFn);
+                renderFn();
             });
             fragment.appendChild(tagButton);
         });
-        recipeFilterContainer.appendChild(fragment);
+        container.appendChild(fragment);
     }
+    
+    const renderPageTagFilters = () => renderTagFilters(recipeFilterContainer, 'activeRecipeFilterTags', () => renderRecipes());
+    const renderSidebarTagFilters = () => renderTagFilters(sidebarTagFilters, 'activeSidebarTags', renderSidebarRecipeList);
     
     function renderShoppingList() {
         shoppingListContainer.innerHTML = '';
@@ -541,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (Object.keys(groupedList).length === 0) {
-            shoppingListContainer.innerHTML = `<p>Din indkøbsliste er tom.</p>`;
+            shoppingListContainer.innerHTML = `<p class="empty-state">Din indkøbsliste er tom.</p>`;
             shoppingListTotalContainer.classList.add('hidden');
             confirmPurchaseBtn.style.display = 'none';
             return;
@@ -629,7 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 5. CRUD & INTELLIGENS FOR VARELAGER (OPDATERET)
+    // 5. CRUD & INTELLIGENS FOR VARELAGER
     // =================================================================
     
     function updateCalculatedFields() {
@@ -745,7 +794,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // =================================================================
-    // 6. OPSKRIFTER & IMPORT (MED NYT INGREDIENS-DESIGN)
+    // 6. OPSKRIFTER & IMPORT
     // =================================================================
     
     function removeAutocomplete(row) {
@@ -793,7 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         row.querySelector('.ingredient-unit').value = item.unit || '';
                         removeAutocomplete(row);
                     });
-                    suggestionsContainer.appendChild(suggestionDiv);
+                    suggestionsContainer.appendChild(suggestionsContainer);
                 });
                 row.appendChild(suggestionsContainer);
             }
@@ -909,6 +958,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus."); }
             return;
         }
+        
+        if (e.target.closest('.cook-meal-btn')) {
+            await addToKitchenCounterFromRecipe(docId);
+            return;
+        }
 
         if (e.target.closest('.delete-recipe-btn')) {
             e.stopPropagation(); 
@@ -930,6 +984,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    readViewCookBtn.addEventListener('click', async () => {
+        await addToKitchenCounterFromRecipe(state.currentlyViewedRecipeId);
+        recipeReadModal.classList.add('hidden');
+    });
+
     readViewEditBtn.addEventListener('click', () => {
         const recipe = state.recipes.find(r => r.id === state.currentlyViewedRecipeId);
         if (recipe) {
@@ -976,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 7. INDKØBSLISTE LOGIK (FINALISERET)
+    // 7. INDKØBSLISTE & KØKKENBORD LOGIK
     // =================================================================
     
     async function updateShoppingListInFirestore(newList) {
@@ -1350,24 +1409,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const recipeDiv = document.createElement('div');
                 recipeDiv.className = 'planned-recipe';
                 if (isLeftovers) recipeDiv.classList.add('leftovers');
-                if (mealData.status === 'cooked') recipeDiv.classList.add('cooked');
                 if (!recipeExists) recipeDiv.classList.add('deleted');
 
                 recipeDiv.draggable = recipeExists;
                 recipeDiv.dataset.sourceDate = date;
                 recipeDiv.dataset.sourceMeal = meal;
                 recipeDiv.dataset.mealData = JSON.stringify(mealData);
-
-                const isCooked = mealData.status === 'cooked';
-                const cookedBtnClass = isCooked ? 'cooked' : '';
-                const cookedBtnTitle = isCooked ? 'Retten er markeret som lavet' : 'Marker som lavet (nedskriv fra lager)';
                 
-                const cookedBtnHTML = recipeExists && !isLeftovers ? `<button class="btn-icon mark-cooked-btn ${cookedBtnClass}" title="${cookedBtnTitle}" ${isCooked ? 'disabled' : ''}><i class="fas fa-utensils"></i></button>` : '';
+                const cookBtnHTML = recipeExists && !isLeftovers ? `<button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>` : '';
 
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
                     <div class="planned-recipe-actions">
-                        ${cookedBtnHTML}
+                        ${cookBtnHTML}
                         <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
                     </div>
                 `;
@@ -1405,77 +1459,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function renderSidebarRecipeList() {
-        sidebarRecipeList.innerHTML = '';
-        const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
-        const searchTerm = sidebarSearchInput.value.toLowerCase();
-        
-        let recipesToRender = state.recipes;
-        if (activeTab === 'favorites') {
-            recipesToRender = recipesToRender.filter(r => r.is_favorite);
-        }
-
-        if (searchTerm) {
-            recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
-        }
-
-        if (state.activeSidebarTags.size > 0) {
-            recipesToRender = recipesToRender.filter(r => {
-                if (!r.tags) return false;
-                return [...state.activeSidebarTags].every(tag => r.tags.includes(tag));
-            });
-        }
-        
-        const fragment = document.createDocumentFragment();
-        recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
-            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
-            const div = document.createElement('div');
-            div.className = 'sidebar-recipe-item';
-            div.draggable = true;
-            div.dataset.recipeId = recipe.id;
-            div.innerHTML = `
-                <div class="sidebar-recipe-header">
-                    <span>${recipe.title}</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="sidebar-recipe-body">
-                    <img src="${imageUrl}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-                </div>
-            `;
-            fragment.appendChild(div);
-        });
-        sidebarRecipeList.appendChild(fragment);
-    }
-
-    function renderSidebarTagFilters() {
-        const allTags = new Set();
-        state.recipes.forEach(r => {
-            if (r.tags) r.tags.forEach(tag => allTags.add(tag));
-        });
-
-        sidebarTagFilters.innerHTML = '';
-        const fragment = document.createDocumentFragment();
-        
-        [...allTags].sort().forEach(tag => {
-            const tagButton = document.createElement('button');
-            tagButton.className = 'filter-tag';
-            tagButton.textContent = tag;
-            if (state.activeSidebarTags.has(tag)) tagButton.classList.add('active');
-            
-            tagButton.addEventListener('click', () => {
-                if (state.activeSidebarTags.has(tag)) {
-                    state.activeSidebarTags.delete(tag);
-                } else {
-                    state.activeSidebarTags.add(tag);
-                }
-                renderSidebarTagFilters();
-                renderSidebarRecipeList();
-            });
-            fragment.appendChild(tagButton);
-        });
-        sidebarTagFilters.appendChild(fragment);
-    }
-
     prevWeekBtn.addEventListener('click', () => {
         state.currentDate.setDate(state.currentDate.getDate() - 7);
         renderMealPlanner();
@@ -1494,7 +1477,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    sidebarSearchInput.addEventListener('input', debounce(renderSidebarRecipeList, 300));
+    sidebarSearchInput.addEventListener('input', debounce(() => {
+        const searchTerm = sidebarSearchInput.value.toLowerCase();
+        renderSidebarRecipeList();
+        
+        // Autocomplete logic
+        const autocompleteContainer = searchAutocompleteContainer;
+        autocompleteContainer.innerHTML = '';
+        if (searchTerm.length > 1) {
+            const suggestions = state.recipes.filter(r => r.title.toLowerCase().includes(searchTerm)).slice(0, 5);
+            if (suggestions.length > 0) {
+                const suggestionsWrapper = document.createElement('div');
+                suggestionsWrapper.className = 'autocomplete-suggestions';
+                suggestions.forEach(recipe => {
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.className = 'autocomplete-suggestion';
+                    suggestionDiv.textContent = recipe.title;
+                    suggestionDiv.addEventListener('mousedown', () => {
+                        sidebarSearchInput.value = recipe.title;
+                        renderSidebarRecipeList();
+                        autocompleteContainer.innerHTML = '';
+                    });
+                    suggestionsWrapper.appendChild(suggestionDiv);
+                });
+                autocompleteContainer.appendChild(suggestionsWrapper);
+            }
+        }
+    }, 300));
+
+    document.addEventListener('click', (e) => {
+        if (!sidebarSearchInput.contains(e.target)) {
+            searchAutocompleteContainer.innerHTML = '';
+        }
+    });
 
     sidebarRecipeList.addEventListener('click', (e) => {
         const header = e.target.closest('.sidebar-recipe-header');
@@ -1567,8 +1582,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         targetMeal: targetMeal,
                     };
                     
-                    // Nulstil og klargør den nye modal
                     addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
+                    addMealForm.reset();
                     document.getElementById('meal-portions').value = recipe.portions || 1;
                     extraIngredientsContainer.innerHTML = ''; 
                     extraIngredientsSection.classList.add('hidden');
@@ -1599,6 +1614,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     calendarGrid.addEventListener('click', async (e) => {
+        const cookBtn = e.target.closest('.cook-meal-btn');
+        if (cookBtn) {
+            const mealData = JSON.parse(cookBtn.closest('.planned-recipe').dataset.mealData);
+            await addToKitchenCounterFromRecipe(mealData.recipeId, mealData.portions);
+            return;
+        }
+
         const removeBtn = e.target.closest('.remove-meal-btn');
         if (removeBtn) {
             const slot = removeBtn.closest('.meal-slot');
@@ -1617,73 +1639,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await updateDoc(mealPlanRef, { [fieldPath]: deleteField() });
             } catch (error) {
                 handleError(error, "Måltidet kunne ikke fjernes.");
-            }
-            return; 
-        }
-
-        const cookedBtn = e.target.closest('.mark-cooked-btn');
-        if (cookedBtn && !cookedBtn.disabled) {
-            const slot = cookedBtn.closest('.meal-slot');
-            const date = slot.dataset.date;
-            const mealType = slot.dataset.meal;
-            const mealData = JSON.parse(slot.querySelector('.planned-recipe').dataset.mealData);
-            const recipe = state.recipes.find(r => r.id === mealData.recipeId);
-
-            if (!recipe || !recipe.ingredients) {
-                showNotification({title: "Fejl", message: "Opskriften eller dens ingredienser kunne ikke findes."});
-                return;
-            }
-
-            let validationErrors = [];
-            for (const ingredient of recipe.ingredients) {
-                const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ingredient.name.toLowerCase() || (item.aliases || []).includes(ingredient.name.toLowerCase()));
-
-                if (!inventoryItem) {
-                    validationErrors.push(`Varen '${ingredient.name}' er ikke oprettet i dit varelager.`);
-                    continue;
-                }
-
-                const conversionResult = convertToPrimaryUnit(ingredient.quantity, ingredient.unit, inventoryItem);
-                
-                if (conversionResult.error) {
-                    validationErrors.push(`For '${ingredient.name}': ${conversionResult.error}`);
-                    continue;
-                }
-                
-                const neededInGrams = conversionResult.convertedQuantity;
-                const inStockInGrams = inventoryItem.grams_in_stock || 0;
-
-                if (inStockInGrams < neededInGrams) {
-                    validationErrors.push(`Mangler ${neededInGrams - inStockInGrams} g '${ingredient.name}'.`);
-                }
-            }
-
-            if (validationErrors.length > 0) {
-                const message = "Du kan ikke lave denne ret af følgende årsager:<br><br>" + validationErrors.join('<br>');
-                showNotification({title: "Manglende Varer", message: message});
-                return;
-            }
-
-            const confirmed = await showNotification({title: "Bekræft Madlavning", message: "Vil du markere denne ret som 'lavet'? Dette vil trække ingredienserne fra dit varelager.", type: 'confirm'});
-            if (!confirmed) return;
-            
-            cookedBtn.disabled = true;
-
-            const year = new Date(date).getFullYear();
-            const mealPlanDocId = `plan_${year}`;
-            const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-            const fieldPath = `${date}.${mealType}.status`;
-            const eventIdPath = `${date}.${mealType}.cookedEventId`;
-
-            try {
-                await updateDoc(mealPlanRef, { 
-                    [fieldPath]: "cooked",
-                    [eventIdPath]: crypto.randomUUID()
-                });
-                showNotification({title: "Ret Lavet", message: "Retten er markeret, og lageret vil blive opdateret."});
-            } catch (error) {
-                handleError(error, "Kunne ikke markere måltidet.");
-                cookedBtn.disabled = false;
             }
         }
     });
@@ -1732,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (recipesWithMatch.length === 0) {
-            inspirationGrid.innerHTML = `<p>Du har ingen opskrifter endnu. Tilføj en for at få inspiration.</p>`;
+            inspirationGrid.innerHTML = `<p class="empty-state">Du har ingen opskrifter endnu. Tilføj en for at få inspiration.</p>`;
             return;
         }
 
@@ -1768,6 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="recipe-card-actions">
                     <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                    <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
                     <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
                 </div>`;
             fragment.appendChild(card);
@@ -1842,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', () => {
             usedRecipeIds.add(chosenRecipe.id);
             
             weeklyPlan[dateString] = {
-                dinner: { recipeId: chosenRecipe.id, type: 'recipe', status: 'planned', portions: chosenRecipe.portions }
+                dinner: { recipeId: chosenRecipe.id, type: 'recipe', portions: chosenRecipe.portions }
             };
         }
         
@@ -1901,7 +1857,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const mealData = {
             recipeId,
             type: 'recipe',
-            status: 'planned',
             portions,
             extra_ingredients
         };
@@ -1923,132 +1878,195 @@ document.addEventListener('DOMContentLoaded', () => {
             state.pendingMeal = null;
         }
     });
+    
+    // =================================================================
+    // 10. NYT KØKKENBORD LOGIK
+    // =================================================================
 
-    updateStockBtn.addEventListener('click', () => {
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const uncookedMeals = [];
+    panelTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            panelTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
 
-        for (const dateString in state.mealPlan) {
-            const mealDate = new Date(dateString);
-            if (mealDate < today) {
-                for (const mealType in state.mealPlan[dateString]) {
-                    const meal = state.mealPlan[dateString][mealType];
-                    if (meal.type === 'recipe' && meal.status !== 'cooked') {
-                        const recipe = state.recipes.find(r => r.id === meal.recipeId);
-                        if (recipe) {
-                            uncookedMeals.push({
-                                date: dateString,
-                                mealType: mealType,
-                                title: recipe.title,
-                                mealData: meal
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        updateStockList.innerHTML = '';
-        if (uncookedMeals.length === 0) {
-            updateStockList.innerHTML = '<p>Der er ingen glemte måltider at ajourføre.</p>';
-        } else {
-            const ul = document.createElement('ul');
-            uncookedMeals.forEach(meal => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <label>
-                        <input type="checkbox" data-date="${meal.date}" data-meal-type="${meal.mealType}">
-                        <span><strong>${new Date(meal.date).toLocaleDateString('da-DK')}:</strong> ${meal.title}</span>
-                    </label>
-                `;
-                ul.appendChild(li);
+            const targetPanelId = tab.dataset.panel;
+            sidebarPanels.forEach(panel => {
+                panel.classList.toggle('active', panel.id === targetPanelId);
             });
-            updateStockList.appendChild(ul);
-        }
-        updateStockModal.classList.remove('hidden');
+        });
     });
 
-    updateStockForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const checkedMealsInputs = updateStockList.querySelectorAll('input:checked');
-        if (checkedMealsInputs.length === 0) {
-            updateStockModal.classList.add('hidden');
-            return;
-        }
-
-        const validationErrors = [];
-        const allIngredientsToDeduct = {};
-
-        for (const checkbox of checkedMealsInputs) {
-            const date = checkbox.dataset.date;
-            const mealType = checkbox.dataset.mealType;
-            const mealData = state.mealPlan[date][mealType];
-            const recipe = state.recipes.find(r => r.id === mealData.recipeId);
-            
-            if (!recipe) continue;
-
-            const scaleFactor = (mealData.portions || recipe.portions) / recipe.portions;
-            const ingredients = [...(recipe.ingredients || []), ...(mealData.extra_ingredients || [])];
-
-            for (const ingredient of ingredients) {
-                const scaledQuantity = (ingredient.quantity || 0) * scaleFactor;
-                const key = `${ingredient.name.toLowerCase()}_${(ingredient.unit || 'stk').toLowerCase()}`;
-                if (allIngredientsToDeduct[key]) {
-                    allIngredientsToDeduct[key].quantity += scaledQuantity;
-                } else {
-                    allIngredientsToDeduct[key] = { ...ingredient, quantity: scaledQuantity };
-                }
+    async function addToKitchenCounter(ingredients) {
+        if (!state.currentUser) return;
+        
+        const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+        const currentCounter = { ...state.kitchenCounter };
+        
+        ingredients.forEach(ing => {
+            const key = ing.name.toLowerCase();
+            if (currentCounter[key] && currentCounter[key].unit === ing.unit) {
+                currentCounter[key].quantity += ing.quantity;
+            } else {
+                currentCounter[key] = { ...ing };
             }
-        }
-
-        for (const key in allIngredientsToDeduct) {
-            const neededIng = allIngredientsToDeduct[key];
-            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase() || (item.aliases || []).includes(neededIng.name.toLowerCase()));
-            
-            if (!inventoryItem) {
-                validationErrors.push(`Varen '${neededIng.name}' findes ikke på lager.`);
-                continue;
-            }
-
-            const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
-            if (conversionResult.error) {
-                validationErrors.push(`For '${neededIng.name}': ${conversionResult.error}`);
-                continue;
-            }
-
-            if ((inventoryItem.grams_in_stock || 0) < conversionResult.convertedQuantity) {
-                validationErrors.push(`Ikke nok '${neededIng.name}' på lager.`);
-            }
-        }
-
-        if (validationErrors.length > 0) {
-            showNotification({title: "Lagerfejl", message: "Kunne ikke ajourføre. Følgende problemer blev fundet:<br><br>" + [...new Set(validationErrors)].join('<br>')});
-            return;
-        }
-
-        const batch = writeBatch(db);
-        const year = state.currentDate.getFullYear();
-        const mealPlanDocId = `plan_${year}`;
-        const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-
-        checkedMealsInputs.forEach(checkbox => {
-            const date = checkbox.dataset.date;
-            const mealType = checkbox.dataset.mealType;
-            const fieldPathStatus = `${date}.${mealType}.status`;
-            const fieldPathEventId = `${date}.${mealType}.cookedEventId`;
-            batch.update(mealPlanRef, {
-                [fieldPathStatus]: 'cooked',
-                [fieldPathEventId]: crypto.randomUUID()
-            });
         });
 
         try {
-            await batch.commit();
-            updateStockModal.classList.add('hidden');
-            showNotification({title: "Lager Ajourført", message: `${checkedMealsInputs.length} måltid(er) er blevet markeret som lavet.`});
+            await setDoc(kitchenCounterRef, { items: currentCounter });
+            showNotification({ title: "Tilføjet", message: "Ingredienser er lagt på køkkenbordet." });
         } catch (error) {
-            handleError(error, "Lageret kunne ikke ajourføres.");
+            handleError(error, "Kunne ikke opdatere køkkenbordet.");
+        }
+    }
+
+    async function addToKitchenCounterFromRecipe(recipeId, portions) {
+        const recipe = state.recipes.find(r => r.id === recipeId);
+        if (!recipe) return;
+
+        let ingredientsToAdd = recipe.ingredients;
+        if (portions && recipe.portions) {
+            const scaleFactor = portions / recipe.portions;
+            ingredientsToAdd = ingredientsToAdd.map(ing => ({...ing, quantity: ing.quantity * scaleFactor }));
+        }
+        
+        await addToKitchenCounter(ingredientsToAdd);
+    }
+    
+    function renderKitchenCounter() {
+        kitchenCounterContainer.innerHTML = '';
+        const items = Object.values(state.kitchenCounter);
+
+        if (items.length === 0) {
+            kitchenCounterContainer.innerHTML = `<p class="empty-state">Dit køkkenbord er tomt. Tilføj en opskrift for at starte.</p>`;
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'kitchen-counter-item';
+            
+            const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            const stockStatus = inventoryItem && inventoryItem.current_stock >= item.quantity ? 'status-green' : 'status-red';
+
+            li.innerHTML = `
+                <div class="item-main-info">
+                    <span class="status-indicator ${stockStatus}" title="${stockStatus === 'status-green' ? 'På lager' : 'Ikke nok på lager'}"></span>
+                    <div class="item-name-details">
+                        <span class="item-name">${item.name}</span>
+                        <div class="item-details">
+                            <span>${item.quantity || ''} ${item.unit || ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn-icon remove-from-list-btn" data-item-name="${item.name}" title="Fjern fra køkkenbord"><i class="fas fa-times-circle"></i></button>
+                </div>
+            `;
+            fragment.appendChild(li);
+        });
+        kitchenCounterContainer.appendChild(fragment);
+    }
+
+    clearKitchenCounterBtn.addEventListener('click', async () => {
+        const confirmed = await showNotification({
+            title: "Ryd Køkkenbord",
+            message: "Er du sikker på, du vil fjerne alle varer fra dit køkkenbord?",
+            type: 'confirm'
+        });
+        if (confirmed) {
+            const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+            await setDoc(kitchenCounterRef, { items: {} });
+        }
+    });
+
+    kitchenCounterContainer.addEventListener('click', async (e) => {
+        const removeBtn = e.target.closest('.remove-from-list-btn');
+        if (removeBtn) {
+            const itemName = removeBtn.dataset.itemName.toLowerCase();
+            const updatedCounter = { ...state.kitchenCounter };
+            delete updatedCounter[itemName];
+            const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+            await setDoc(kitchenCounterRef, { items: updatedCounter });
+        }
+    });
+
+    confirmCookingBtn.addEventListener('click', async () => {
+        const itemsToCook = Object.values(state.kitchenCounter);
+        if (itemsToCook.length === 0) {
+            showNotification({title: "Tomt Køkkenbord", message: "Der er ingen ingredienser på dit køkkenbord."});
+            return;
+        }
+
+        const confirmed = await showNotification({
+            title: "Bekræft Madlavning",
+            message: "Er du sikker på, du vil nedskrive disse ingredienser fra dit lager?",
+            type: 'confirm'
+        });
+        if (!confirmed) return;
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const validationErrors = [];
+                const updates = [];
+
+                for (const item of itemsToCook) {
+                    const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+                    if (!inventoryItem) {
+                        validationErrors.push(`Varen '${item.name}' findes ikke på lager.`);
+                        continue;
+                    }
+
+                    const neededInGrams = convertToPrimaryUnit(item.quantity, item.unit, inventoryItem).convertedQuantity;
+                    if (neededInGrams === null) {
+                        validationErrors.push(`Kunne ikke omregne enhed for '${item.name}'.`);
+                        continue;
+                    }
+                    
+                    const itemRef = doc(db, "inventory_items", inventoryItem.id);
+                    const invDoc = await transaction.get(itemRef);
+                    if (!invDoc.exists()) {
+                         validationErrors.push(`Varen '${item.name}' blev ikke fundet i databasen.`);
+                         continue;
+                    }
+
+                    const currentData = invDoc.data();
+                    const inStockInGrams = currentData.grams_in_stock || 0;
+
+                    if (inStockInGrams < neededInGrams) {
+                        validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededInGrams - inStockInGrams}g.`);
+                    } else {
+                        const newGramsInStock = inStockInGrams - neededInGrams;
+                        let newStock = currentData.current_stock;
+                        if (currentData.grams_per_unit > 0) {
+                            newStock = newGramsInStock / currentData.grams_per_unit;
+                        } else if (currentData.unit.toLowerCase() === 'g') {
+                            newStock = newGramsInStock;
+                        }
+                        
+                        updates.push({
+                            ref: itemRef,
+                            data: {
+                                current_stock: newStock,
+                                grams_in_stock: newGramsInStock
+                            }
+                        });
+                    }
+                }
+
+                if (validationErrors.length > 0) {
+                    throw new Error(validationErrors.join('\n'));
+                }
+
+                updates.forEach(update => {
+                    transaction.update(update.ref, update.data);
+                });
+
+                const kitchenCounterRef = doc(db, 'kitchen_counter', state.currentUser.uid);
+                transaction.set(kitchenCounterRef, { items: {} });
+            });
+            showNotification({title: "Succes!", message: "Dit lager er blevet opdateret, og køkkenbordet er ryddet."});
+        } catch (error) {
+            handleError(error, `Madlavning fejlede: <br><br>${error.message.replace(/\n/g, '<br>')}`);
         }
     });
 
