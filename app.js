@@ -23,6 +23,8 @@ import {
     runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// WARNING: It is strongly recommended to use environment variables or a secure key management system
+// instead of hardcoding your Firebase configuration in a client-side script.
 const firebaseConfig = {
   apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
@@ -201,6 +203,16 @@ document.addEventListener('DOMContentLoaded', () => {
             notificationModal.classList.remove('hidden');
         });
     }
+    
+    function normalizeUnit(unit) {
+        const u = (unit || '').toLowerCase().trim();
+        if (['g', 'gram', 'grams'].includes(u)) return 'g';
+        if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg';
+        if (['ml', 'milliliter'].includes(u)) return 'ml';
+        if (['l', 'liter'].includes(u)) return 'l';
+        if (['stk', 'styk', 'styks'].includes(u)) return 'stk';
+        return u;
+    }
 
     function getWeekNumber(d) {
         d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -223,25 +235,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function convertToPrimaryUnit(quantity, fromUnit, inventoryItem) {
         const primaryUnit = 'g';
-        fromUnit = (fromUnit || '').toLowerCase();
+        const normalizedFromUnit = normalizeUnit(fromUnit);
 
-        if (fromUnit === primaryUnit) {
-            return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
+        if (normalizedFromUnit === primaryUnit) {
+            return { convertedQuantity: quantity, error: null };
         }
         
-        if (fromUnit === 'kg') {
-            return { convertedQuantity: quantity * 1000, finalUnit: primaryUnit, error: null };
+        if (normalizedFromUnit === 'kg') {
+            return { convertedQuantity: quantity * 1000, error: null };
         }
 
-        if ((inventoryItem.unit || '').toLowerCase() === 'g') {
-             return { convertedQuantity: quantity, finalUnit: primaryUnit, error: null };
-        }
-        
         if (inventoryItem.grams_per_unit) {
-            return { convertedQuantity: quantity * inventoryItem.grams_per_unit, finalUnit: primaryUnit, error: null };
+            return { convertedQuantity: quantity * inventoryItem.grams_per_unit, error: null };
+        }
+        
+        // If units are the same but not convertible to grams (e.g. 'stk' to 'stk'), return null for grams but no error for direct comparison.
+        if (normalizeUnit(inventoryItem.unit) === normalizedFromUnit) {
+            return { convertedQuantity: null, error: null, directMatch: true, quantity: quantity };
         }
 
-        return { convertedQuantity: null, finalUnit: primaryUnit, error: `Kan ikke omregne fra '${fromUnit}' til '${primaryUnit}'.` };
+        return { convertedQuantity: null, error: `Kan ikke omregne fra '${fromUnit}' til '${primaryUnit}'.` };
     }
 
 
@@ -359,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
             if (document.querySelector('#inspiration:not(.hidden)')) renderInspirationPage();
             if (document.querySelector('#meal-planner:not(.hidden)')) renderKitchenCounter();
-        }, error => handleError(error, "Kunne ikke hente varelager."));
+        }, (error) => handleError(error, "Kunne ikke hente varelager. Forbindelsen blev muligvis afbrudt."));
 
         const recipesRef = collection(db, 'recipes');
         state.listeners.recipes = onSnapshot(recipesRef, (snapshot) => {
@@ -378,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('profile-recipe-count').textContent = state.recipes.length;
             const favoriteCount = state.recipes.filter(r => r.is_favorite).length;
             document.getElementById('profile-favorite-count').textContent = favoriteCount;
-        }, error => handleError(error, "Kunne ikke hente opskrifter."));
+        }, (error) => handleError(error, "Kunne ikke hente opskrifter. Forbindelsen blev muligvis afbrudt."));
 
         const year = state.currentDate.getFullYear();
         const mealPlanDocId = `plan_${year}`; 
@@ -388,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderMealPlanner(); 
             }
-        }, error => handleError(error, "Kunne ikke hente madplan."));
+        }, (error) => handleError(error, "Kunne ikke hente madplan. Forbindelsen blev muligvis afbrudt."));
 
         const shoppingListRef = doc(db, 'shopping_lists', userId);
         state.listeners.shoppingList = onSnapshot(shoppingListRef, (doc) => {
@@ -396,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderShoppingList();
             }
-        }, error => handleError(error, "Kunne ikke hente indkøbsliste."));
+        }, (error) => handleError(error, "Kunne ikke hente indkøbsliste. Forbindelsen blev muligvis afbrudt."));
 
         const kitchenCounterRef = doc(db, 'kitchen_counters', userId);
         state.listeners.kitchenCounter = onSnapshot(kitchenCounterRef, (doc) => {
@@ -404,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderKitchenCounter();
             }
-        }, error => handleError(error, "Kunne ikke hente køkkenbord."));
+        }, (error) => handleError(error, "Kunne ikke hente køkkenbord. Forbindelsen blev muligvis afbrudt."));
     }
 
     // =================================================================
@@ -722,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
 
         let gramsInStock = 0;
-        if (unit.toLowerCase() === 'g' || unit.toLowerCase() === 'gram') {
+        if (normalizeUnit(unit) === 'g') {
             gramsInStock = quantity;
         } else if (gramsPerUnit) {
             gramsInStock = quantity * gramsPerUnit;
@@ -841,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         row.querySelector('.ingredient-unit').value = item.unit || '';
                         removeAutocomplete(row);
                     });
-                    suggestionsContainer.appendChild(suggestionsContainer);
+                    suggestionsContainer.appendChild(suggestionDiv);
                 });
                 row.appendChild(suggestionsContainer);
             }
@@ -1090,12 +1103,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const ing of ingredients) {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
-            const key = `${(inventoryItem || ing).name.toLowerCase()}_${(ing.unit || 'stk').toLowerCase()}`;
+            const normalizedUnit = normalizeUnit(ing.unit || 'stk');
+            const key = `${(inventoryItem || ing).name.toLowerCase()}_${normalizedUnit}`;
             
             if (totalNeeds[key]) {
                 totalNeeds[key].quantity += (ing.quantity || 0);
             } else {
-                totalNeeds[key] = { ...ing, name: (inventoryItem || ing).name };
+                totalNeeds[key] = { ...ing, name: (inventoryItem || ing).name, unit: normalizedUnit };
             }
         }
 
@@ -1106,7 +1120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === neededIng.name.toLowerCase());
 
             let quantityToBuy = neededIng.quantity || 1;
-            let unitToBuy = neededIng.unit || 'stk';
+            let unitToBuy = neededIng.unit;
             let storeSection = inventoryItem ? inventoryItem.category : 'Andet';
             
             if (inventoryItem) {
@@ -1119,7 +1133,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 } else {
                     const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
-                    if (conversionResult.convertedQuantity !== null) {
+                    if (conversionResult.error) {
+                        if (neededIng.unit) conversionErrors.push(neededIng.name);
+                        // Keep original quantity if conversion fails
+                    } else if (conversionResult.convertedQuantity !== null) {
                         const neededInGrams = conversionResult.convertedQuantity;
                         const inStockInGrams = inventoryItem.grams_in_stock || 0;
                         const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
@@ -1135,14 +1152,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             quantityToBuy = 0;
                         }
-                    } else {
-                        if (neededIng.unit) conversionErrors.push(neededIng.name);
+                    } else if (conversionResult.directMatch) {
+                        // Handle direct unit matches like 'stk'
+                        const inStock = inventoryItem.current_stock || 0;
+                        quantityToBuy = Math.max(0, conversionResult.quantity - inStock);
                     }
                 }
             }
 
             if (quantityToBuy > 0) {
-                const buyKey = `${neededIng.name.toLowerCase()}_${unitToBuy.toLowerCase()}`;
+                const buyKey = `${neededIng.name.toLowerCase()}_${normalizeUnit(unitToBuy)}`;
                 if (itemsToBuy[buyKey]) {
                     itemsToBuy[buyKey].quantity_to_buy += quantityToBuy;
                 } else {
@@ -1159,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for(const key in itemsToBuy) {
             const item = itemsToBuy[key];
             const existingKey = item.name.toLowerCase();
-            if(updatedList[existingKey] && updatedList[existingKey].unit.toLowerCase() === item.unit.toLowerCase()) {
+            if(updatedList[existingKey] && normalizeUnit(updatedList[existingKey].unit) === normalizeUnit(item.unit)) {
                 updatedList[existingKey].quantity_to_buy += item.quantity_to_buy;
             } else {
                 updatedList[existingKey] = item;
@@ -1170,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sourceText) {
             let message = `Varer fra ${sourceText} er tilføjet til indkøbslisten.`;
             if (conversionErrors.length > 0) {
-                message += `<br><br>Bemærk: Kunne ikke omregne enheder for: ${[...new Set(conversionErrors)].join(', ')}.`;
+                message += `<br><br>Bemærk: Kunne ikke omregne enheder for: ${[...new Set(conversionErrors)].join(', ')}. Disse er tilføjet som de er.`;
             }
             showNotification({ title: "Opdateret", message: message });
         }
@@ -1529,7 +1548,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('sidebar-recipe-item')) { 
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'new-item',
-                recipeId: e.target.dataset.recipeId
+                // *** FIX: Changed from e.target.dataset.recipeId to e.target.dataset.id ***
+                recipeId: e.target.dataset.id 
             }));
         }
         if (e.target.classList.contains('planned-recipe')) {
@@ -1645,29 +1665,45 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateRecipeMatch(recipe) {
         let missingCount = 0;
         if (!recipe.ingredients || recipe.ingredients.length === 0) {
-            return { ...recipe, missingCount: 99 };
+            return { ...recipe, missingCount: 99, canBeMade: false };
         }
 
+        let canBeMade = true;
         recipe.ingredients.forEach(ing => {
             const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
             if (!inventoryItem) {
                 missingCount++;
+                canBeMade = false;
                 return;
             }
             
             const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
             if(conversionResult.error) {
                 missingCount++;
+                canBeMade = false;
                 return;
             }
 
-            const neededInGrams = conversionResult.convertedQuantity;
-            const inStockInGrams = inventoryItem.grams_in_stock || 0;
-            if (neededInGrams > inStockInGrams) {
+            if (conversionResult.convertedQuantity !== null) {
+                const neededInGrams = conversionResult.convertedQuantity;
+                const inStockInGrams = inventoryItem.grams_in_stock || 0;
+                if (neededInGrams > inStockInGrams) {
+                    missingCount++;
+                    canBeMade = false;
+                }
+            } else if (conversionResult.directMatch) {
+                const inStock = inventoryItem.current_stock || 0;
+                if (conversionResult.quantity > inStock) {
+                    missingCount++;
+                    canBeMade = false;
+                }
+            } else {
+                // This case occurs if units don't match and can't be converted to grams.
                 missingCount++;
+                canBeMade = false;
             }
         });
-        return { ...recipe, missingCount };
+        return { ...recipe, missingCount, canBeMade };
     }
 
     function renderInspirationPage() {
@@ -1862,7 +1898,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         
         try {
-            // RETTET: Går tilbage til den mere robuste setDoc med merge:true
             await setDoc(mealPlanRef, {
                 [targetDate]: {
                     [targetMeal]: mealData
@@ -1900,7 +1935,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         ingredients.forEach(ing => {
             const key = ing.name.toLowerCase();
-            if (currentCounter[key] && currentCounter[key].unit === ing.unit) {
+            if (currentCounter[key] && normalizeUnit(currentCounter[key].unit) === normalizeUnit(ing.unit)) {
                 currentCounter[key].quantity += ing.quantity;
             } else {
                 currentCounter[key] = { ...ing };
@@ -1934,16 +1969,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (items.length === 0) {
             kitchenCounterContainer.innerHTML = `<p class="empty-state">Dit køkkenbord er tomt. Tilføj en opskrift for at starte.</p>`;
+            confirmCookingBtn.disabled = true;
+            clearKitchenCounterBtn.disabled = true;
             return;
         }
         
+        confirmCookingBtn.disabled = false;
+        clearKitchenCounterBtn.disabled = false;
+
         const fragment = document.createDocumentFragment();
         items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
             const li = document.createElement('li');
             li.className = 'kitchen-counter-item';
             
-            const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
-            const stockStatus = inventoryItem && inventoryItem.current_stock >= item.quantity ? 'status-green' : 'status-red';
+            const recipeMatch = calculateRecipeMatch({ ingredients: [item] });
+            const stockStatus = recipeMatch.canBeMade ? 'status-green' : 'status-red';
 
             li.innerHTML = `
                 <div class="item-main-info">
@@ -2013,40 +2053,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         continue;
                     }
 
-                    const neededInGrams = convertToPrimaryUnit(item.quantity, item.unit, inventoryItem).convertedQuantity;
-                    if (neededInGrams === null) {
-                        validationErrors.push(`Kunne ikke omregne enhed for '${item.name}'.`);
-                        continue;
-                    }
-                    
                     const itemRef = doc(db, "inventory_items", inventoryItem.id);
                     const invDoc = await transaction.get(itemRef);
                     if (!invDoc.exists()) {
                          validationErrors.push(`Varen '${item.name}' blev ikke fundet i databasen.`);
                          continue;
                     }
-
                     const currentData = invDoc.data();
-                    const inStockInGrams = currentData.grams_in_stock || 0;
+                    
+                    const conversionResult = convertToPrimaryUnit(item.quantity, item.unit, inventoryItem);
 
-                    if (inStockInGrams < neededInGrams) {
-                        validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededInGrams - inStockInGrams}g.`);
-                    } else {
-                        const newGramsInStock = inStockInGrams - neededInGrams;
-                        let newStock = currentData.current_stock;
-                        if (currentData.grams_per_unit > 0) {
-                            newStock = newGramsInStock / currentData.grams_per_unit;
-                        } else if (currentData.unit.toLowerCase() === 'g') {
-                            newStock = newGramsInStock;
-                        }
-                        
-                        updates.push({
-                            ref: itemRef,
-                            data: {
-                                current_stock: newStock,
-                                grams_in_stock: newGramsInStock
+                    if (conversionResult.error) {
+                        validationErrors.push(`Kunne ikke omregne enhed for '${item.name}'.`);
+                        continue;
+                    }
+                    
+                    if (conversionResult.convertedQuantity !== null) {
+                        const neededInGrams = conversionResult.convertedQuantity;
+                        const inStockInGrams = currentData.grams_in_stock || 0;
+                        if (inStockInGrams < neededInGrams) {
+                            validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededInGrams - inStockInGrams}g.`);
+                        } else {
+                            const newGramsInStock = inStockInGrams - neededInGrams;
+                            let newStock = currentData.current_stock;
+                            if (currentData.grams_per_unit > 0) {
+                                newStock = newGramsInStock / currentData.grams_per_unit;
+                            } else if (normalizeUnit(currentData.unit) === 'g') {
+                                newStock = newGramsInStock;
                             }
-                        });
+                            updates.push({ ref: itemRef, data: { current_stock: newStock, grams_in_stock: newGramsInStock } });
+                        }
+                    } else if (conversionResult.directMatch) {
+                        const neededQuantity = conversionResult.quantity;
+                        const inStock = currentData.current_stock || 0;
+                        if (inStock < neededQuantity) {
+                            validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededQuantity - inStock} ${item.unit}.`);
+                        } else {
+                            updates.push({ ref: itemRef, data: { current_stock: inStock - neededQuantity } });
+                        }
+                    } else {
+                        validationErrors.push(`Ukendt konverteringsproblem for '${item.name}'.`);
                     }
                 }
 
