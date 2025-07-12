@@ -1542,29 +1542,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // *** FIX: Replaced dragstart and dragend listeners with more robust versions ***
     document.addEventListener('dragstart', (e) => {
-        if (!e.target.closest('.meal-planner-layout')) return;
-        e.target.style.opacity = '0.5';
-        if (e.target.classList.contains('sidebar-recipe-item')) { 
+        const sidebarItem = e.target.closest('.sidebar-recipe-item');
+        const plannedItem = e.target.closest('.planned-recipe');
+    
+        if (sidebarItem) {
+            sidebarItem.style.opacity = '0.5';
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'new-item',
-                // *** FIX: Changed from e.target.dataset.recipeId to e.target.dataset.id ***
-                recipeId: e.target.dataset.id 
+                recipeId: sidebarItem.dataset.id
             }));
+            return;
         }
-        if (e.target.classList.contains('planned-recipe')) {
+    
+        if (plannedItem && plannedItem.draggable) {
+            plannedItem.style.opacity = '0.5';
             e.dataTransfer.setData('application/json', JSON.stringify({
                 type: 'move-item',
-                sourceDate: e.target.dataset.sourceDate,
-                sourceMeal: e.target.dataset.sourceMeal,
-                mealData: JSON.parse(e.target.dataset.mealData)
+                sourceDate: plannedItem.dataset.sourceDate,
+                sourceMeal: plannedItem.dataset.sourceMeal,
+                mealData: JSON.parse(plannedItem.dataset.mealData)
             }));
+            return;
         }
     });
-
+    
     document.addEventListener('dragend', (e) => {
-        if (!e.target.closest('.meal-planner-layout')) return;
-        e.target.style.opacity = '1';
+        const sidebarItem = e.target.closest('.sidebar-recipe-item');
+        if (sidebarItem) {
+            sidebarItem.style.opacity = '1';
+        }
+    
+        const plannedItem = e.target.closest('.planned-recipe');
+        if (plannedItem) {
+            plannedItem.style.opacity = '1';
+        }
     });
 
     calendarGrid.addEventListener('dragover', (e) => {
@@ -1589,7 +1602,12 @@ document.addEventListener('DOMContentLoaded', () => {
         slot.classList.remove('drag-over');
 
         try {
-            const dragData = JSON.parse(e.dataTransfer.getData('application/json'));
+            const dragDataString = e.dataTransfer.getData('application/json');
+            if (!dragDataString) {
+                // If no data was set, do nothing. This can happen with external drags.
+                return;
+            }
+            const dragData = JSON.parse(dragDataString);
             const targetDate = slot.dataset.date;
             const targetMeal = slot.dataset.meal;
             
@@ -1618,6 +1636,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const fieldPathTarget = `${targetDate}.${targetMeal}`;
                 const fieldPathSource = `${dragData.sourceDate}.${dragData.sourceMeal}`;
+
+                // Prevent dropping on itself
+                if (fieldPathTarget === fieldPathSource) return;
 
                 await updateDoc(mealPlanRef, {
                     [fieldPathTarget]: dragData.mealData,
