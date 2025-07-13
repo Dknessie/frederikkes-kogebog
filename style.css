@@ -384,10 +384,10 @@ header {
     opacity: 1;
 }
 
-.cook-this-meal-btn { color: var(--accent-color); }
-.cook-this-meal-btn:hover { color: #3a5a40; }
+.cook-meal-btn { color: var(--accent-color); }
+.cook-meal-btn:hover { color: #3a5a40; }
 
-/* ===== 6. Sidebar (Indkøbsliste) & Paneler ===== */
+/* ===== 6. Sidebars (Venstre & Højre) ===== */
 .sidebar-panel-tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
@@ -431,13 +431,14 @@ header {
     padding-right: var(--spacing-s); 
 }
 
-/* Indkøbsliste Specifik */
+/* Venstre Sidebar Specifik (Indkøbsliste & Køkkenbord) */
 .sidebar-actions {
     display: grid;
     gap: var(--spacing-s);
     margin-bottom: var(--spacing-m);
-    grid-template-columns: repeat(3, 1fr);
 }
+#shopping-list-panel .sidebar-actions { grid-template-columns: repeat(3, 1fr); }
+#kitchen-counter-panel .sidebar-actions { grid-template-columns: repeat(2, 1fr); }
 .sidebar-actions .btn { font-size: 0.8rem; padding: 0.6rem 0.25rem; }
 
 .shopping-list-total {
@@ -460,7 +461,7 @@ header {
 }
 .store-section ul { list-style: none; padding: 0; }
 
-.shopping-list-item {
+.shopping-list-item, .kitchen-counter-item {
     padding: var(--spacing-m) var(--spacing-xs);
     display: flex;
     align-items: flex-start;
@@ -468,7 +469,7 @@ header {
     gap: var(--spacing-s);
     border-bottom: 1px solid #f0f0f0;
 }
-.shopping-list-item:last-child { border-bottom: none; }
+.shopping-list-item:last-child, .kitchen-counter-item:last-child { border-bottom: none; }
 
 .item-main-info {
     display: flex;
@@ -674,12 +675,6 @@ header {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: var(--spacing-l);
 }
-.card {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
-    padding: var(--spacing-l);
-}
 #inventory-summary-card .summary-item {
     display: flex;
     justify-content: space-between;
@@ -711,7 +706,7 @@ header {
     padding: var(--spacing-l);
     box-sizing: border-box;
 }
-#plan-meal-modal, #confirm-cooking-modal {
+#plan-meal-modal {
     z-index: 2010;
 }
 
@@ -726,7 +721,7 @@ header {
     overflow-y: auto;
 }
 #plan-meal-modal .modal-content,
-#confirm-cooking-modal .modal-content {
+#add-meal-modal .modal-content {
     max-width: 450px;
 }
 
@@ -895,39 +890,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-top: 1px solid var(--border-color);
 }
 
-/* NYT: Confirm Cooking Modal Liste */
-.confirm-cooking-list {
-    list-style: none;
-    padding: var(--spacing-m);
-    margin: var(--spacing-m) 0;
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-    max-height: 200px;
-    overflow-y: auto;
-}
-.confirm-cooking-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid var(--border-color);
-}
-.confirm-cooking-list li:last-child {
-    border-bottom: none;
-}
-.confirm-cooking-list .item-name {
-    font-weight: 600;
-}
-.confirm-cooking-list .item-amount {
-    color: #555;
-}
-.confirm-cooking-list .stock-ok {
-    color: var(--status-green);
-}
-.confirm-cooking-list .stock-error {
-    color: var(--status-red);
-    font-weight: 700;
-}
-
 /* ===== 9. Mobil-specifikke Styles ===== */
 .mobile-tab-bar {
     display: none; /* Skjult som standard */
@@ -978,7 +940,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-top-left-radius: var(--card-border-radius);
     border-top-right-radius: var(--card-border-radius);
     padding: var(--spacing-l);
-    box-sizing: border-box;
     box-shadow: var(--strong-shadow);
     transform: translateY(100%);
     transition: transform 0.3s ease;
@@ -996,18 +957,13 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-bottom: 1px solid var(--border-color);
     padding-bottom: var(--spacing-m);
     margin-bottom: var(--spacing-m);
-    flex-shrink: 0;
 }
 .mobile-panel-header h3 {
     margin: 0;
 }
-.mobile-panel .sidebar-content {
-    flex-grow: 1;
-    overflow-y: auto;
-}
 
 
-/* Media Query for mobil (breakpoint 992px) */
+/* Media Query for mobil */
 @media (max-width: 992px) {
     .desktop-nav {
         display: none;
@@ -1020,7 +976,7 @@ input:checked + .slider:before { transform: translateX(22px); }
         height: auto;
     }
     #meal-planner-sidebar-left {
-        display: none; /* Fjern venstre sidebar på mobil */
+        display: none;
     }
     .page {
         padding: var(--spacing-m);
@@ -1030,21 +986,5 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .calendar-day-header .date-number {
         display: block;
-    }
-    .recipe-actions-bar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--spacing-m);
-    }
-    
-    /* Mobilvenlig opskriftsvisning (Læse-modal) */
-    .read-view-main-content {
-        grid-template-columns: 1fr; /* Stack ingredienser og fremgangsmåde */
-    }
-    .read-view-ingredients {
-        order: 1; /* Vis ingredienser først */
-    }
-    .read-view-instructions {
-        order: 2; /* Vis fremgangsmåde bagefter */
     }
 }
