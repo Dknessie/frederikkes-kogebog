@@ -982,13 +982,16 @@ input:checked + .slider:before { transform: translateX(22px); }
     background-color: rgba(0,0,0,0.5);
     z-index: 1002;
     transition: opacity 0.3s ease;
-    opacity: 0; /* Start usynlig */
-    pointer-events: none; /* Kan ikke klikkes når usynlig */
 }
-.mobile-panel-overlay.active {
+.mobile-panel-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.mobile-panel-overlay:not(.hidden) {
     opacity: 1;
     pointer-events: auto;
 }
+
 
 .mobile-panel {
     position: absolute;
