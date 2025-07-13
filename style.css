@@ -706,6 +706,9 @@ header {
     padding: var(--spacing-l);
     box-sizing: border-box;
 }
+#plan-meal-modal {
+    z-index: 2010;
+}
 
 .modal-content {
     background: var(--white-color);
