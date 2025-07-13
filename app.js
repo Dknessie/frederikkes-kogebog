@@ -397,6 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // **NYT: Luk modal ved klik udenfor**
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.add('hidden');
+                }
+            });
+        });
+
         // Håndtering af desktop sidebar tabs
         elements.desktopPanelTabs.forEach(tab => {
             tab.addEventListener('click', () => {
