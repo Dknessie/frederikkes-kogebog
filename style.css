@@ -178,6 +178,11 @@ hr {
     background-color: #eee;
     color: var(--accent-color);
 }
+.btn-icon.remove-meal-btn {
+    font-size: 1rem;
+    width: 24px;
+    height: 24px;
+}
 .btn-icon.remove-meal-btn:hover {
     background-color: transparent;
     color: var(--status-red);
@@ -682,8 +687,12 @@ nav {
     border-top: 1px solid var(--border-color);
     padding-top: var(--spacing-m);
 }
-.add-reference-form input {
+.add-reference-form .input-group {
     flex-grow: 1;
+    margin-bottom: 0;
+}
+.add-reference-form input {
+    width: 100%;
 }
 .add-reference-form .btn {
     padding: var(--spacing-m);
