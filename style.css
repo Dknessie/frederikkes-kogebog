@@ -219,6 +219,10 @@ header {
     height: 65px;
 }
 
+.header-title-link {
+    text-decoration: none; /* Fjern understregning */
+}
+
 .header-title {
     font-family: var(--heading-font);
     font-size: 1.5rem;
@@ -824,6 +828,23 @@ header {
     padding: 0;
     margin: 0;
 }
+/* **NYT** Styling for ingrediens-liste i læse-visning */
+.read-view-ingredients li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.read-view-ingredients li:last-child {
+    border-bottom: none;
+}
+.ingredient-stock-status {
+    font-size: 1.2rem;
+    margin-left: var(--spacing-m);
+}
+.ingredient-stock-status.in-stock { color: var(--status-green); }
+.ingredient-stock-status.out-of-stock { color: var(--status-red); }
 
 #read-view-instructions-text p {
     margin-top: 0;
@@ -951,6 +972,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: 4px;
 }
 
+/* **FORBEDRET MOBIL PANEL** */
 .mobile-panel-overlay {
     position: fixed;
     top: 0;
@@ -960,10 +982,12 @@ input:checked + .slider:before { transform: translateX(22px); }
     background-color: rgba(0,0,0,0.5);
     z-index: 1002;
     transition: opacity 0.3s ease;
+    opacity: 0; /* Start usynlig */
+    pointer-events: none; /* Kan ikke klikkes når usynlig */
 }
-.mobile-panel-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
+.mobile-panel-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .mobile-panel {
@@ -979,11 +1003,10 @@ input:checked + .slider:before { transform: translateX(22px); }
     transform: translateY(100%);
     transition: transform 0.3s ease;
     max-height: 80vh;
-    display: none; /* Hide by default, show with .active */
+    display: flex;
     flex-direction: column;
 }
 .mobile-panel.active {
-    display: flex;
     transform: translateY(0);
 }
 .mobile-panel-header {
