@@ -20,7 +20,9 @@ import {
     setDoc,
     writeBatch,
     deleteField,
-    runTransaction
+    runTransaction,
+    arrayUnion,
+    arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // WARNING: It is strongly recommended to use environment variables or a secure key management system
@@ -70,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const recipeImagePreview = document.getElementById('recipe-image-preview');
     const recipeImageUrlInput = document.getElementById('recipe-imageUrl');
     const recipeFilterContainer = document.getElementById('recipe-filter-container');
+    const sortByStockToggle = document.getElementById('sort-by-stock-toggle');
     
     // --- Opskrift Læsevisning Modal Elementer ---
     const recipeReadModal = document.getElementById('recipe-read-modal');
@@ -113,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const showExtraIngredientsBtn = document.getElementById('show-extra-ingredients-btn');
     const extraIngredientsSection = document.getElementById('extra-ingredients-section');
 
-    // --- Inspiration Side ---
-    const inspirationGrid = document.getElementById('inspiration-grid');
+    // --- Referencer Side ---
+    const referencesContainer = document.getElementById('references-container');
 
     // --- Autogen Modal ---
     const autogenModal = document.getElementById('autogen-modal');
@@ -132,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentUser: null,
         inventory: [],
         recipes: [],
+        references: {},
         mealPlan: {},
         shoppingList: {},
         kitchenCounter: {}, 
@@ -146,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mealPlan: null,
             shoppingList: null,
             kitchenCounter: null,
+            references: null,
         }
     };
 
@@ -323,8 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderRecipes();
                 renderPageTagFilters();
                 break;
-            case '#inspiration':
-                renderInspirationPage();
+            case '#references':
+                renderReferencesPage();
                 break;
             case '#inventory':
                 renderInventory();
@@ -370,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.inventory = onSnapshot(inventoryRef, (snapshot) => {
             state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
-            if (document.querySelector('#inspiration:not(.hidden)')) renderInspirationPage();
+            if (document.querySelector('#recipes:not(.hidden)')) renderRecipes();
             if (document.querySelector('#meal-planner:not(.hidden)')) renderKitchenCounter();
         }, (error) => handleError(error, "Kunne ikke hente varelager. Forbindelsen blev muligvis afbrudt."));
 
@@ -384,9 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#meal-planner:not(.hidden)')) {
                 renderSidebarRecipeList();
                 renderSidebarTagFilters();
-            }
-            if (document.querySelector('#inspiration:not(.hidden)')) {
-                renderInspirationPage();
             }
             document.getElementById('profile-recipe-count').textContent = state.recipes.length;
             const favoriteCount = state.recipes.filter(r => r.is_favorite).length;
@@ -418,6 +420,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderKitchenCounter();
             }
         }, (error) => handleError(error, "Kunne ikke hente køkkenbord. Forbindelsen blev muligvis afbrudt."));
+        
+        const referencesRef = doc(db, 'references', userId);
+        state.listeners.references = onSnapshot(referencesRef, (doc) => {
+            state.references = doc.exists() ? doc.data() : {
+                itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
+                itemLocations: ['Køleskab', 'Fryser', 'Skab']
+            };
+            if (document.querySelector('#references:not(.hidden)')) {
+                renderReferencesPage();
+            }
+        }, (error) => handleError(error, "Kunne ikke hente referencelister."));
     }
 
     // =================================================================
@@ -488,7 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderRecipes(container = recipeGrid, filterStateKey = 'activeRecipeFilterTags') {
         const fragment = document.createDocumentFragment();
         container.innerHTML = '';
-        let recipesToRender = state.recipes;
+        
+        let recipesToRender = state.recipes.map(calculateRecipeMatch);
 
         if (state[filterStateKey].size > 0) {
             recipesToRender = recipesToRender.filter(r => {
@@ -497,6 +511,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
+        if (container === recipeGrid && sortByStockToggle.checked) {
+            recipesToRender.sort((a, b) => {
+                if (a.missingCount !== b.missingCount) {
+                    return a.missingCount - b.missingCount;
+                }
+                return a.title.localeCompare(b.title);
+            });
+        } else {
+            recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
+        }
+
         const searchTerm = sidebarSearchInput.value.toLowerCase();
         if (container === sidebarRecipeList && searchTerm) {
              recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
@@ -514,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        recipesToRender.sort((a,b) => a.title.localeCompare(b.title)).forEach(recipe => {
+        recipesToRender.forEach(recipe => {
             const card = document.createElement('div');
             card.className = container === sidebarRecipeList ? 'sidebar-recipe-item' : 'recipe-card';
             card.dataset.id = recipe.id;
@@ -530,6 +555,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <img src="${recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                     </div>`;
             } else {
+                let statusClass = 'status-red';
+                let statusTitle = `Mangler ${recipe.missingCount} ingrediens(er)`;
+                if (recipe.missingCount === 0) {
+                    statusClass = 'status-green';
+                    statusTitle = 'Du har alle ingredienser';
+                } else if (recipe.missingCount === 1) {
+                    statusClass = 'status-yellow';
+                    statusTitle = 'Mangler 1 ingrediens';
+                }
+
                 const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
                 const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
                 const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
@@ -537,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : '';
 
                 card.innerHTML = `
+                    <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
                     <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                     <div class="recipe-card-content">
                         <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
@@ -698,6 +734,44 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeReadModal.classList.remove('hidden');
     }
 
+    function renderReferencesPage() {
+        referencesContainer.innerHTML = '';
+        const referenceData = {
+            itemCategories: {
+                title: 'Varekategorier',
+                items: state.references.itemCategories || []
+            },
+            itemLocations: {
+                title: 'Placeringer i Hjemmet',
+                items: state.references.itemLocations || []
+            }
+        };
+
+        for (const key in referenceData) {
+            const data = referenceData[key];
+            const card = document.createElement('div');
+            card.className = 'reference-card';
+            card.dataset.key = key;
+
+            const listItems = data.items.map(item => `
+                <li class="reference-item">
+                    <span>${item}</span>
+                    <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
+                </li>
+            `).join('');
+
+            card.innerHTML = `
+                <h4>${data.title}</h4>
+                <ul class="reference-list">${listItems}</ul>
+                <form class="add-reference-form">
+                    <input type="text" placeholder="Tilføj ny..." required>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                </form>
+            `;
+            referencesContainer.appendChild(card);
+        }
+    }
+
     // =================================================================
     // 5. CRUD & INTELLIGENS FOR VARELAGER
     // =================================================================
@@ -841,6 +915,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 6. OPSKRIFTER & IMPORT
     // =================================================================
     
+    sortByStockToggle.addEventListener('change', () => renderRecipes());
+
     function removeAutocomplete(row) {
         const suggestions = row.querySelector('.autocomplete-suggestions');
         if (suggestions) {
@@ -1388,7 +1464,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getQuantityInKg(quantity, unit, inventoryItem) {
         if (inventoryItem.buy_as_whole_unit && inventoryItem.purchase_unit) {
-            // Assumes the purchase_unit quantity corresponds to the item's main unit (e.g., g)
             return (inventoryItem.purchase_unit.quantity * quantity) / 1000;
         }
         const conversion = convertToPrimaryUnit(quantity, unit, inventoryItem);
@@ -1684,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('meal-portions').value = recipe.portions || 1;
                     extraIngredientsContainer.innerHTML = ''; 
                     extraIngredientsSection.classList.add('hidden');
-                    showExtraIngredientsBtn.parentElement.classList.remove('hidden');
+                    showExtraIngredientsBtn.classList.remove('hidden');
 
                     addMealModal.classList.remove('hidden');
                 }
@@ -1784,64 +1859,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return { ...recipe, missingCount, canBeMade };
     }
 
-    function renderInspirationPage() {
-        inspirationGrid.innerHTML = '';
-        
-        const recipesWithMatch = state.recipes.map(calculateRecipeMatch);
-        
-        recipesWithMatch.sort((a, b) => {
-            if (a.missingCount !== b.missingCount) {
-                return a.missingCount - b.missingCount;
-            }
-            return a.title.localeCompare(b.title);
-        });
-
-        if (recipesWithMatch.length === 0) {
-            inspirationGrid.innerHTML = `<p class="empty-state">Du har ingen opskrifter endnu. Tilføj en for at få inspiration.</p>`;
-            return;
-        }
-
-        const fragment = document.createDocumentFragment();
-        recipesWithMatch.forEach(recipe => {
-            let statusClass = 'status-red';
-            let statusTitle = `Mangler ${recipe.missingCount} ingredienser`;
-            if (recipe.missingCount === 0) {
-                statusClass = 'status-green';
-                statusTitle = 'Du har alle ingredienser';
-            } else if (recipe.missingCount === 1) {
-                statusClass = 'status-yellow';
-                statusTitle = 'Mangler 1 ingrediens';
-            }
-
-            const card = document.createElement('div');
-            card.className = 'recipe-card';
-            card.dataset.id = recipe.id;
-            const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
-            
-            const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
-                ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
-                : '';
-
-            card.innerHTML = `
-                <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
-                <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-                <div class="recipe-card-content">
-                    <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
-                    <h4>${recipe.title}</h4>
-                    <div class="recipe-card-tags">${tagsHTML}</div>
-                </div>
-                <div class="recipe-card-actions">
-                    <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
-                    <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
-                    <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
-                </div>`;
-            fragment.appendChild(card);
-        });
-        inspirationGrid.appendChild(fragment);
-        document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
-    }
-
     autogenPlanBtn.addEventListener('click', () => {
         const allTags = new Set();
         state.recipes.forEach(r => {
@@ -1933,7 +1950,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     showExtraIngredientsBtn.addEventListener('click', () => {
-        showExtraIngredientsBtn.parentElement.classList.add('hidden');
+        showExtraIngredientsBtn.classList.add('hidden');
         extraIngredientsSection.classList.remove('hidden');
         if (extraIngredientsContainer.children.length === 0) {
             createIngredientRow(extraIngredientsContainer);
@@ -2188,6 +2205,52 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification({title: "Succes!", message: "Dit lager er blevet opdateret, og køkkenbordet er ryddet."});
         } catch (error) {
             handleError(error, `Madlavning fejlede: <br><br>${error.message.replace(/\n/g, '<br>')}`);
+        }
+    });
+
+    // =================================================================
+    // 11. REFERENCER SIDE LOGIK
+    // =================================================================
+    referencesContainer.addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-reference-item');
+        if (deleteBtn) {
+            const value = deleteBtn.dataset.value;
+            const key = deleteBtn.closest('.reference-card').dataset.key;
+            if (!state.currentUser || !key || !value) return;
+
+            const confirmed = await showNotification({title: "Slet Reference", message: `Er du sikker på du vil slette "${value}"?`, type: 'confirm'});
+            if (!confirmed) return;
+
+            const ref = doc(db, 'references', state.currentUser.uid);
+            try {
+                await updateDoc(ref, {
+                    [key]: arrayRemove(value)
+                });
+            } catch (error) {
+                handleError(error, "Referencen kunne ikke slettes.");
+            }
+        }
+    });
+
+    referencesContainer.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (e.target.classList.contains('add-reference-form')) {
+            const input = e.target.querySelector('input');
+            const value = input.value.trim();
+            const key = e.target.closest('.reference-card').dataset.key;
+
+            if (!state.currentUser || !key || !value) return;
+
+            const ref = doc(db, 'references', state.currentUser.uid);
+            try {
+                // Use setDoc with merge to create the document if it doesn't exist
+                await setDoc(ref, {
+                    [key]: arrayUnion(value)
+                }, { merge: true });
+                input.value = '';
+            } catch (error) {
+                handleError(error, "Referencen kunne ikke tilføjes.");
+            }
         }
     });
 
