@@ -35,6 +35,7 @@
     --spacing-m: 0.75rem;  /* 12px */
     --spacing-l: 1.25rem;  /* 20px */
     --spacing-xl: 2rem;    /* 32px */
+    --mobile-tab-bar-height: 60px;
 }
 
 body {
@@ -49,7 +50,7 @@ body {
 .hidden { display: none !important; }
 
 .page {
-    padding: var(--spacing-xl);
+    padding: var(--spacing-l);
     max-width: 1600px; 
     margin: 0 auto;
     animation: fadeIn 0.5s ease-in-out;
@@ -203,7 +204,7 @@ hr {
 header {
     background-color: var(--white-color);
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    padding: 0 var(--spacing-xl);
+    padding: 0 var(--spacing-l);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -224,7 +225,7 @@ header {
     color: var(--primary-color);
 }
 
-nav {
+.desktop-nav {
     display: flex;
     gap: var(--spacing-m);
 }
@@ -260,14 +261,17 @@ nav {
     color: var(--primary-color);
 }
 
-#app-main-content { flex-grow: 1; }
+#app-main-content { 
+    flex-grow: 1; 
+    padding-bottom: var(--mobile-tab-bar-height);
+}
 
 /* ===== 5. Madplan Side ===== */
 .meal-planner-layout {
     display: grid;
     grid-template-columns: 300px 1fr 320px; 
     gap: var(--spacing-l);
-    height: calc(100vh - 65px - (var(--spacing-xl) * 2)); 
+    height: calc(100vh - 65px - (var(--spacing-l) * 2)); 
 }
 
 .meal-planner-main, .meal-planner-sidebar-left, .meal-planner-sidebar-right {
@@ -898,4 +902,100 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-radius: var(--border-radius);
     margin-top: calc(-1 * var(--spacing-m)); /* Pull up to reduce space */
     border-top: 1px solid var(--border-color);
+}
+
+/* ===== 9. Mobil-specifikke Styles ===== */
+.mobile-tab-bar {
+    display: none; /* Skjult som standard */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-tab-bar-height);
+    background-color: var(--white-color);
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    z-index: 1001;
+}
+.mobile-tab-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    text-decoration: none;
+    color: #999;
+    font-size: 0.7rem;
+    transition: color 0.2s ease;
+}
+.mobile-tab-link.active {
+    color: var(--primary-color);
+}
+.mobile-tab-link i {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.mobile-panel-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1002;
+    transition: opacity 0.3s ease;
+}
+.mobile-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--white-color);
+    border-top-left-radius: var(--card-border-radius);
+    border-top-right-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--strong-shadow);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+.mobile-panel.active {
+    transform: translateY(0);
+}
+.mobile-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-m);
+    margin-bottom: var(--spacing-m);
+}
+.mobile-panel-header h3 {
+    margin: 0;
+}
+
+
+/* Media Query for mobil */
+@media (max-width: 992px) {
+    .desktop-nav {
+        display: none;
+    }
+    .mobile-tab-bar {
+        display: flex;
+    }
+    .meal-planner-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .meal-planner-sidebar-left, .meal-planner-sidebar-right {
+        display: none;
+    }
+    .page {
+        padding: var(--spacing-m);
+    }
+    .header-content {
+        padding: 0 var(--spacing-m);
+    }
 }
