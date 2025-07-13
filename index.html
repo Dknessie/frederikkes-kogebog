@@ -90,7 +90,11 @@
                     <div class="meal-planner-main">
                         <div class="calendar-header">
                             <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <h2 id="calendar-title"></h2>
+                            <div class="calendar-title-container">
+                                <h2 id="calendar-title"></h2>
+                                <!-- NYT: Ugepris display -->
+                                <div id="weekly-price-display" class="weekly-price-display"></div>
+                            </div>
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-actions">
@@ -155,6 +159,26 @@
             <section id="overview" class="page hidden">
                 <h2>Oversigt</h2>
                 <div class="overview-layout">
+                    <!-- NYT: Budget Kort -->
+                    <div id="budget-card" class="card">
+                        <div class="card-header">
+                            <h3>Budget</h3>
+                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
+                        </div>
+                        <div class="budget-summary">
+                            <div class="budget-item">
+                                <span class="budget-label">Forbrug (Måned)</span>
+                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
+                            </div>
+                            <div class="budget-item">
+                                <span class="budget-label">Budget</span>
+                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
+                            </div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="budget-progress-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
                     <div id="inventory-summary-card" class="card">
                         <!-- Indhold genereres af JavaScript -->
                     </div>
@@ -217,6 +241,24 @@
     </div>
     
     <!-- ===== Modaler ===== -->
+
+    <!-- NYT: Rediger Budget Modal -->
+    <div id="edit-budget-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Rediger Månedligt Budget</h3>
+            <form id="edit-budget-form">
+                <div class="input-group">
+                    <label for="monthly-budget-input">Budget (kr.)</label>
+                    <input type="number" id="monthly-budget-input" min="0" step="100" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Budget</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Planlæg Måltid Modal -->
     <div id="plan-meal-modal" class="modal-overlay hidden">
@@ -335,7 +377,6 @@
                     <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                 </div>
                 
-                <!-- **NYT BILLEDE UPLOAD** -->
                 <div class="image-options">
                     <label for="recipe-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
                     <input type="file" id="recipe-image-upload" accept="image/*" class="hidden">
@@ -497,7 +538,6 @@
         </div>
     </div>
 
-    <!-- VIGTIGT: Script-stien er opdateret til at pege ind i den nye 'js' mappe -->
     <script type="module" src="js/app.js"></script>
 
 </body>
