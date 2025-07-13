@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appContainer = document.getElementById('app-container');
     const loginForm = document.getElementById('login-form');
     const logoutButtons = [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')];
-    const navLinks = document.querySelectorAll('.nav-link');
+    const navLinks = document.querySelectorAll('.desktop-nav .nav-link');
     const pages = document.querySelectorAll('#app-main-content .page');
     const headerTitleLink = document.querySelector('.header-title-link');
 
@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Opskrift Læsevisning Modal Elementer ---
     const recipeReadModal = document.getElementById('recipe-read-modal');
+    const readViewPlanBtn = document.getElementById('read-view-plan-btn');
     const readViewCookBtn = document.getElementById('read-view-cook-btn');
     const readViewEditBtn = document.getElementById('read-view-edit-btn');
     const readViewDeleteBtn = document.getElementById('read-view-delete-btn');
@@ -86,10 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarTitle = document.getElementById('calendar-title');
     const prevWeekBtn = document.getElementById('prev-week-btn');
     const nextWeekBtn = document.getElementById('next-week-btn');
-    const sidebarRecipeList = document.getElementById('sidebar-recipe-list');
-    const sidebarTabs = document.querySelectorAll('.sidebar-tab');
-    const sidebarSearchInput = document.getElementById('sidebar-recipe-search');
-    const sidebarTagFilters = document.getElementById('sidebar-tag-filters');
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
     const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn');
     
@@ -106,14 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmCookingBtn = document.getElementById('confirm-cooking-btn');
     const clearKitchenCounterBtn = document.getElementById('clear-kitchen-counter-btn');
 
-    // --- "Tilføj Måltid" Modal Elementer ---
-    const addMealModal = document.getElementById('add-meal-modal');
-    const addMealForm = document.getElementById('add-meal-form');
-    const addMealModalTitle = document.getElementById('add-meal-modal-title');
-    const extraIngredientsContainer = document.getElementById('extra-ingredients-container');
-    const addExtraIngredientBtn = document.getElementById('add-extra-ingredient-btn');
-    const showExtraIngredientsBtn = document.getElementById('show-extra-ingredients-btn');
-    const extraIngredientsSection = document.getElementById('extra-ingredients-section');
+    // --- "Planlæg Måltid" Modal Elementer ---
+    const planMealModal = document.getElementById('plan-meal-modal');
+    const planMealForm = document.getElementById('plan-meal-form');
+    const planMealModalTitle = document.getElementById('plan-meal-modal-title');
+    const mealTypeSelector = planMealModal.querySelector('.meal-type-selector');
 
     // --- Referencer Side ---
     const referencesContainer = document.getElementById('references-container');
@@ -126,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileTabLinks = document.querySelectorAll('.mobile-tab-link');
     const mobilePanelOverlay = document.getElementById('mobile-panel-overlay');
     const mobileShoppingListPanel = document.getElementById('mobile-shopping-list-panel');
-    const mobileRecipeListPanel = document.getElementById('mobile-recipe-list-panel');
 
 
     // --- Autogen Modal ---
@@ -150,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingList: {},
         kitchenCounter: {}, 
         activeRecipeFilterTags: new Set(),
-        activeSidebarTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
         pendingMeal: null, 
@@ -338,8 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#meal-planner':
             case '':
                 renderMealPlanner();
-                renderSidebarRecipeList();
-                renderSidebarTagFilters();
                 renderShoppingList();
                 renderKitchenCounter();
                 break;
@@ -408,10 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#recipes:not(.hidden)')) {
                 renderPageTagFilters();
                 renderRecipes();
-            }
-            if (document.querySelector('#meal-planner:not(.hidden)')) {
-                renderSidebarRecipeList();
-                renderSidebarTagFilters();
             }
             document.getElementById('profile-recipe-count').textContent = state.recipes.length;
             const favoriteCount = state.recipes.filter(r => r.is_favorite).length;
@@ -533,20 +519,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function renderRecipes(container = recipeGrid, filterStateKey = 'activeRecipeFilterTags') {
+    function renderRecipes() {
         const fragment = document.createDocumentFragment();
-        container.innerHTML = '';
+        recipeGrid.innerHTML = '';
         
         let recipesToRender = state.recipes.map(calculateRecipeMatch);
 
-        if (state[filterStateKey].size > 0) {
+        if (state.activeRecipeFilterTags.size > 0) {
             recipesToRender = recipesToRender.filter(r => {
                 if (!r.tags) return false;
-                return [...state[filterStateKey]].every(tag => r.tags.includes(tag));
+                return [...state.activeRecipeFilterTags].every(tag => r.tags.includes(tag));
             });
         }
         
-        if (container === recipeGrid && sortByStockToggle.checked) {
+        if (sortByStockToggle.checked) {
             recipesToRender.sort((a, b) => {
                 if (a.missingCount !== b.missingCount) {
                     return a.missingCount - b.missingCount;
@@ -557,79 +543,52 @@ document.addEventListener('DOMContentLoaded', () => {
             recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
         }
 
-        const searchTerm = sidebarSearchInput.value.toLowerCase();
-        if (container === sidebarRecipeList && searchTerm) {
-             recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(searchTerm));
-        }
-
-        if (container === sidebarRecipeList) {
-            const activeTab = document.querySelector('.sidebar-tab.active').dataset.tab;
-            if (activeTab === 'favorites') {
-                recipesToRender = recipesToRender.filter(r => r.is_favorite);
-            }
-        }
-
         if (recipesToRender.length === 0) {
-            container.innerHTML = `<p class="empty-state">Ingen opskrifter matcher dine valg.</p>`;
+            recipeGrid.innerHTML = `<p class="empty-state">Ingen opskrifter matcher dine valg.</p>`;
             return;
         }
 
         recipesToRender.forEach(recipe => {
             const card = document.createElement('div');
-            card.className = container === sidebarRecipeList ? 'sidebar-recipe-item' : 'recipe-card';
+            card.className = 'recipe-card';
             card.dataset.id = recipe.id;
             
-            if (container === sidebarRecipeList) {
-                card.draggable = true;
-                card.innerHTML = `
-                    <div class="sidebar-recipe-header">
-                        <span>${recipe.title}</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div class="sidebar-recipe-body">
-                        <img src="${recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-                    </div>`;
-            } else {
-                let statusClass = 'status-red';
-                let statusTitle = `Mangler ${recipe.missingCount} ingrediens(er)`;
-                if (recipe.missingCount === 0) {
-                    statusClass = 'status-green';
-                    statusTitle = 'Du har alle ingredienser';
-                } else if (recipe.missingCount === 1) {
-                    statusClass = 'status-yellow';
-                    statusTitle = 'Mangler 1 ingrediens';
-                }
-
-                const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-                const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
-                const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
-                    ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
-                    : '';
-
-                card.innerHTML = `
-                    <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
-                    <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-                    <div class="recipe-card-content">
-                        <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
-                        <h4>${recipe.title}</h4>
-                        <div class="recipe-card-tags">${tagsHTML}</div>
-                    </div>
-                    <div class="recipe-card-actions">
-                        <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
-                        <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
-                        <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
-                    </div>`;
+            let statusClass = 'status-red';
+            let statusTitle = `Mangler ${recipe.missingCount} ingrediens(er)`;
+            if (recipe.missingCount === 0) {
+                statusClass = 'status-green';
+                statusTitle = 'Du har alle ingredienser';
+            } else if (recipe.missingCount === 1) {
+                statusClass = 'status-yellow';
+                statusTitle = 'Mangler 1 ingrediens';
             }
+
+            const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
+            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+            const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
+                ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
+                : '';
+
+            card.innerHTML = `
+                <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
+                <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+                <div class="recipe-card-content">
+                    <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
+                    <h4>${recipe.title}</h4>
+                    <div class="recipe-card-tags">${tagsHTML}</div>
+                </div>
+                <div class="recipe-card-actions">
+                    <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
+                    <button class="btn-icon add-to-plan-btn" title="Føj til madplan"><i class="fas fa-calendar-plus"></i></button>
+                    <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
+                    <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
+                </div>`;
             fragment.appendChild(card);
         });
-        container.appendChild(fragment);
-        if (container !== sidebarRecipeList) {
-            document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
-        }
+        recipeGrid.appendChild(fragment);
+        document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
     }
     
-    const renderSidebarRecipeList = () => renderRecipes(sidebarRecipeList, 'activeSidebarTags');
-
     function renderTagFilters(container, stateKey, renderFn) {
         const allTags = new Set();
         state.recipes.forEach(r => {
@@ -660,7 +619,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const renderPageTagFilters = () => renderTagFilters(recipeFilterContainer, 'activeRecipeFilterTags', () => renderRecipes());
-    const renderSidebarTagFilters = () => renderTagFilters(sidebarTagFilters, 'activeSidebarTags', renderSidebarRecipeList);
     
     function renderShoppingList() {
         shoppingListContainer.innerHTML = '';
@@ -1142,6 +1100,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        if (e.target.closest('.add-to-plan-btn')) {
+            openPlanMealModal(docId);
+            return;
+        }
+
         if (e.target.closest('.cook-meal-btn')) {
             await addToKitchenCounterFromRecipe(docId);
             return;
@@ -1167,6 +1130,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    readViewPlanBtn.addEventListener('click', () => {
+        openPlanMealModal(state.currentlyViewedRecipeId);
+    });
+
     readViewCookBtn.addEventListener('click', async () => {
         await addToKitchenCounterFromRecipe(state.currentlyViewedRecipeId);
         recipeReadModal.classList.add('hidden');
@@ -1690,130 +1657,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentDate.setDate(state.currentDate.getDate() + 7);
         renderMealPlanner();
     });
-
-    sidebarTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            sidebarTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            renderSidebarRecipeList();
-        });
-    });
-    
-    sidebarSearchInput.addEventListener('input', debounce(renderSidebarRecipeList, 300));
-
-    sidebarRecipeList.addEventListener('click', (e) => {
-        const header = e.target.closest('.sidebar-recipe-header');
-        if (header) {
-            const item = header.closest('.sidebar-recipe-item');
-            const wasExpanded = item.classList.contains('expanded');
-            
-            sidebarRecipeList.querySelectorAll('.sidebar-recipe-item').forEach(i => i.classList.remove('expanded'));
-            
-            if (!wasExpanded) {
-                item.classList.add('expanded');
-            }
-        }
-    });
-
-    document.addEventListener('dragstart', (e) => {
-        const sidebarItem = e.target.closest('.sidebar-recipe-item');
-        const plannedItem = e.target.closest('.planned-recipe');
-    
-        if (sidebarItem) {
-            sidebarItem.style.opacity = '0.5';
-            e.dataTransfer.setData('application/json', JSON.stringify({
-                type: 'new-item',
-                recipeId: sidebarItem.dataset.id
-            }));
-            return;
-        }
-    
-        if (plannedItem && plannedItem.draggable) {
-            plannedItem.style.opacity = '0.5';
-            e.dataTransfer.setData('application/json', JSON.stringify({
-                type: 'move-item',
-                sourceDate: plannedItem.dataset.sourceDate,
-                sourceMeal: plannedItem.dataset.sourceMeal,
-                mealData: JSON.parse(plannedItem.dataset.mealData)
-            }));
-            return;
-        }
-    });
-    
-    document.addEventListener('dragend', (e) => {
-        const draggableItem = e.target.closest('.sidebar-recipe-item, .planned-recipe');
-        if (draggableItem) {
-            draggableItem.style.opacity = '1';
-        }
-    });
-
-    calendarGrid.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.add('drag-over');
-        }
-    });
-
-    calendarGrid.addEventListener('dragleave', (e) => {
-        const slot = e.target.closest('.meal-slot');
-        if (slot) {
-            slot.classList.remove('drag-over');
-        }
-    });
-
-    calendarGrid.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        const slot = e.target.closest('.meal-slot');
-        if (!slot) return;
-        slot.classList.remove('drag-over');
-
-        try {
-            const dragDataString = e.dataTransfer.getData('application/json');
-            if (!dragDataString) {
-                return;
-            }
-            const dragData = JSON.parse(dragDataString);
-            const targetDate = slot.dataset.date;
-            const targetMeal = slot.dataset.meal;
-            
-            if (dragData.type === 'new-item') {
-                const recipe = state.recipes.find(r => r.id === dragData.recipeId);
-                if (recipe) {
-                    state.pendingMeal = {
-                        recipeId: recipe.id,
-                        targetDate: targetDate,
-                        targetMeal: targetMeal,
-                    };
-                    
-                    addMealModalTitle.textContent = `Tilføj "${recipe.title}"`;
-                    addMealForm.reset();
-                    document.getElementById('meal-portions').value = recipe.portions || 1;
-                    extraIngredientsContainer.innerHTML = ''; 
-                    extraIngredientsSection.classList.add('hidden');
-                    showExtraIngredientsBtn.classList.remove('hidden');
-
-                    addMealModal.classList.remove('hidden');
-                }
-            } else if (dragData.type === 'move-item') {
-                const year = new Date(targetDate).getFullYear();
-                const mealPlanDocId = `plan_${year}`;
-                const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
-                
-                const fieldPathTarget = `${targetDate}.${targetMeal}`;
-                const fieldPathSource = `${dragData.sourceDate}.${dragData.sourceMeal}`;
-
-                if (fieldPathTarget === fieldPathSource) return;
-
-                await updateDoc(mealPlanRef, {
-                    [fieldPathTarget]: dragData.mealData,
-                    [fieldPathSource]: deleteField()
-                });
-            }
-        } catch (error) {
-            handleError(error, "Kunne ikke behandle drop-handlingen.");
-        }
-    });
     
     calendarGrid.addEventListener('click', async (e) => {
         const cookBtn = e.target.closest('.cook-meal-btn');
@@ -1846,7 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 9. AUTOGEN LOGIK
+    // 9. AUTOGEN LOGIK & PLANLÆGNING
     // =================================================================
     function calculateRecipeMatch(recipe) {
         let missingCount = 0;
@@ -1981,60 +1824,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    showExtraIngredientsBtn.addEventListener('click', () => {
-        showExtraIngredientsBtn.classList.add('hidden');
-        extraIngredientsSection.classList.remove('hidden');
-        if (extraIngredientsContainer.children.length === 0) {
-            createIngredientRow(extraIngredientsContainer);
-        }
+    function openPlanMealModal(recipeId) {
+        const recipe = state.recipes.find(r => r.id === recipeId);
+        if (!recipe) return;
+
+        planMealModalTitle.textContent = `Planlæg: ${recipe.title}`;
+        planMealForm.reset();
+        document.getElementById('plan-meal-recipe-id').value = recipeId;
+        document.getElementById('plan-meal-portions').value = recipe.portions || 1;
+        document.getElementById('plan-meal-date').value = formatDate(new Date());
+        
+        // Reset meal type buttons
+        mealTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+
+        planMealModal.classList.remove('hidden');
+    }
+
+    mealTypeSelector.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        mealTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
     });
 
-    addExtraIngredientBtn.addEventListener('click', () => createIngredientRow(extraIngredientsContainer));
-    
-    addMealModal.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-ingredient-btn')) {
-            e.target.closest('.ingredient-row').remove();
-        }
-    });
-
-    addMealForm.addEventListener('submit', async (e) => {
+    planMealForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!state.pendingMeal) return;
+        
+        const recipeId = document.getElementById('plan-meal-recipe-id').value;
+        const date = document.getElementById('plan-meal-date').value;
+        const portions = Number(document.getElementById('plan-meal-portions').value);
+        const mealTypeBtn = mealTypeSelector.querySelector('.btn.active');
 
-        const { recipeId, targetDate, targetMeal } = state.pendingMeal;
-        const portions = Number(document.getElementById('meal-portions').value);
-        const extra_ingredients = [];
-        extraIngredientsContainer.querySelectorAll('.ingredient-row').forEach(row => {
-            const name = row.querySelector('.ingredient-name').value.trim();
-            const quantity = row.querySelector('.ingredient-quantity').value;
-            const unit = row.querySelector('.ingredient-unit').value.trim();
-            if (name) {
-                extra_ingredients.push({ name, quantity: Number(quantity) || null, unit });
-            }
-        });
+        if (!recipeId || !date || !portions || !mealTypeBtn) {
+            handleError(new Error("Udfyld venligst alle felter."), "Udfyld venligst alle felter for at planlægge måltidet.");
+            return;
+        }
+        
+        const mealType = mealTypeBtn.dataset.meal;
 
         const mealData = {
             recipeId,
             type: 'recipe',
             portions,
-            extra_ingredients
         };
 
-        const year = new Date(targetDate).getFullYear();
+        const year = new Date(date).getFullYear();
         const mealPlanDocId = `plan_${year}`;
         const mealPlanRef = doc(db, 'meal_plans', mealPlanDocId);
         
         try {
             await setDoc(mealPlanRef, {
-                [targetDate]: {
-                    [targetMeal]: mealData
+                [date]: {
+                    [mealType]: mealData
                 }
             }, { merge: true });
+
+            planMealModal.classList.add('hidden');
+            showNotification({title: "Planlagt!", message: "Retten er blevet føjet til din madplan."});
+
         } catch (error) {
-            handleError(error, "Kunne ikke tilføje måltidet.");
-        } finally {
-            addMealModal.classList.add('hidden');
-            state.pendingMeal = null;
+            handleError(error, "Kunne ikke tilføje måltidet til madplanen.");
         }
     });
     
@@ -2295,7 +2145,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Hide all panels first
         mobileShoppingListPanel.classList.remove('active');
-        mobileRecipeListPanel.classList.remove('active');
 
         // Show the correct panel
         if (panelId === 'shopping-list') {
@@ -2303,18 +2152,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const shoppingListClone = document.getElementById('meal-planner-sidebar-left').cloneNode(true);
             mobileShoppingListPanel.appendChild(shoppingListClone);
             mobileShoppingListPanel.classList.add('active');
-        } else if (panelId === 'recipe-list') {
-            mobileRecipeListPanel.innerHTML = ''; // Clear previous
-            const recipeListClone = document.getElementById('meal-planner-sidebar-right').cloneNode(true);
-            mobileRecipeListPanel.appendChild(recipeListClone);
-            mobileRecipeListPanel.classList.add('active');
         }
     }
 
     function hideMobilePanel() {
         mobilePanelOverlay.classList.add('hidden');
         mobileShoppingListPanel.classList.remove('active');
-        mobileRecipeListPanel.classList.remove('active');
     }
 
     mobileTabBar.addEventListener('click', (e) => {
