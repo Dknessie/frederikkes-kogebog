@@ -38,18 +38,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// =================================================================
-// KONSTANTER & KONFIGURATION
-// =================================================================
-const STORE_CATEGORIES = [
-    "Frugt & Grønt", "Kød & Fisk", "Mejeri & Æg", "Brød & Kornprodukter", 
-    "Kolonial (tørvarer)", "Drikkevarer", "Frost", "Snacks & Slik", 
-    "Husholdning", "Personlig Pleje", "Andet"
-];
-
-const HOME_LOCATIONS = ["Køleskab", "Fryser", "Køkkenskab", "Svaleskab", "Andet"];
-
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- Globale Elementer ---
     const loginPage = document.getElementById('login-page');
@@ -696,7 +684,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        document.getElementById('read-view-instructions-text').textContent = recipe.instructions || '';
+        const instructionsContainer = document.getElementById('read-view-instructions-text');
+        instructionsContainer.innerHTML = ''; // Clear previous
+        const instructions = recipe.instructions || '';
+        instructions.split('\n').forEach(line => {
+            if (line.trim() !== '') {
+                const p = document.createElement('p');
+                p.textContent = line;
+                instructionsContainer.appendChild(p);
+            }
+        });
         
         state.currentlyViewedRecipeId = recipe.id;
         recipeReadModal.classList.remove('hidden');
