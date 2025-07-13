@@ -1001,6 +1001,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     .calendar-day-header .date-number {
         display: block;
     }
+}
+
+@media (max-width: 768px) {
     .read-view-main-content {
         grid-template-columns: 1fr;
     }
@@ -1011,5 +1014,17 @@ input:checked + .slider:before { transform: translateX(22px); }
         flex-direction: column;
         align-items: stretch;
         gap: var(--spacing-m);
+    }
+
+    /* Gør "Rediger Opskrift" modalen mobilvenlig */
+    #recipe-edit-modal .modal-content {
+        padding: var(--spacing-m);
+        max-height: 95vh;
+    }
+    #recipe-edit-modal .form-grid {
+        grid-template-columns: 1fr; /* Stack form fields vertically */
+    }
+    #recipe-edit-modal .image-upload-container img {
+        height: 150px; /* Reduce image height on mobile */
     }
 }
