@@ -118,6 +118,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Referencer Side ---
     const referencesContainer = document.getElementById('references-container');
 
+    // --- Oversigt Side ---
+    const inventorySummaryCard = document.getElementById('inventory-summary-card');
+
     // --- Autogen Modal ---
     const autogenModal = document.getElementById('autogen-modal');
     const autogenForm = document.getElementById('autogen-form');
@@ -333,6 +336,9 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#inventory':
                 renderInventory();
                 break;
+            case '#overview':
+                renderInventorySummary();
+                break;
         }
     };
     
@@ -376,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
             if (document.querySelector('#recipes:not(.hidden)')) renderRecipes();
             if (document.querySelector('#meal-planner:not(.hidden)')) renderKitchenCounter();
+            if (document.querySelector('#overview:not(.hidden)')) renderInventorySummary();
         }, (error) => handleError(error, "Kunne ikke hente varelager. Forbindelsen blev muligvis afbrudt."));
 
         const recipesRef = collection(db, 'recipes');
@@ -425,7 +432,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (doc.exists()) {
                 state.references = doc.data();
             } else {
-                // If the document doesn't exist, create it with default values
                 const defaultReferences = {
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab']
@@ -776,12 +782,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h4>${data.title}</h4>
                 <ul class="reference-list">${listItems}</ul>
                 <form class="add-reference-form">
-                    <input type="text" placeholder="Tilføj ny..." required>
+                    <div class="input-group">
+                        <input type="text" placeholder="Tilføj ny..." required>
+                    </div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
                 </form>
             `;
             referencesContainer.appendChild(card);
         }
+    }
+
+    function renderInventorySummary() {
+        let totalValue = 0;
+        let totalGrams = 0;
+
+        state.inventory.forEach(item => {
+            if (item.grams_in_stock) {
+                totalGrams += item.grams_in_stock;
+                if (item.kg_price) {
+                    totalValue += (item.grams_in_stock / 1000) * item.kg_price;
+                }
+            }
+        });
+
+        inventorySummaryCard.innerHTML = `
+            <h3>Lagerstatus</h3>
+            <div class="summary-item">
+                <span>Samlet lagerværdi</span>
+                <span class="summary-value">${totalValue.toFixed(2)} kr.</span>
+            </div>
+            <div class="summary-item">
+                <span>Samlet vægt på lager</span>
+                <span class="summary-value">${(totalGrams / 1000).toFixed(2)} kg</span>
+            </div>
+        `;
     }
 
     // =================================================================
