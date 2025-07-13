@@ -227,9 +227,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = (unit || '').toLowerCase().trim();
         if (['g', 'gram', 'grams'].includes(u)) return 'g';
         if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg';
-        if (['ml', 'milliliter'].includes(u)) return 'ml';
-        if (['l', 'liter'].includes(u)) return 'l';
-        if (['stk', 'styk', 'styks'].includes(u)) return 'stk';
+        if (['ml', 'milliliter', 'milliliters'].includes(u)) return 'ml';
+        if (['l', 'liter', 'liters'].includes(u)) return 'l';
+        if (['stk', 'stk.', 'styk', 'styks'].includes(u)) return 'stk';
+        if (['tsk', 'tsk.'].includes(u)) return 'tsk';
+        if (['spsk', 'spsk.'].includes(u)) return 'spsk';
+        if (['dl', 'dl.'].includes(u)) return 'dl';
+        if (['fed'].includes(u)) return 'fed';
+        if (['dåse', 'dåser'].includes(u)) return 'dåse';
         return u;
     }
 
@@ -896,8 +901,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // ... (resten af render-funktionerne)
-
     // =================================================================
     // 7. CRUD & LOGIK FOR VARELAGER
     // =================================================================
@@ -1096,25 +1099,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const text = elements.recipeImportTextarea.value;
             if (!text) return;
             
-            const ingredientRegex = /^\s*([\d.,]+)?\s*([a-zA-ZæøåÆØÅ]+)?\s*(.+)\s*$/;
-            
+            // Forbedret Regex til at fange mængde, enhed og navn mere robust.
+            // 1. ([\d.,]+)? - Fanger tal (mængde)
+            // 2. ([a-zA-ZæøåÆØÅ.]{1,10})? - Fanger enhed (op til 10 bogstaver/punktum)
+            // 3. (.+) - Fanger resten som navn
+            const ingredientRegex = /^\s*(?:-|\*|\d+\.?\s*)?\s*([\d.,]+)?\s*([a-zA-ZæøåÆØÅ.]{1,10})?\s*(.+)$/;
+
             const lines = text.split('\n');
             elements.ingredientsContainer.innerHTML = ''; 
             
             lines.forEach(line => {
-                if (line.trim() === '') return;
+                line = line.trim();
+                if (line === '') return;
                 
                 const match = line.match(ingredientRegex);
-                let ingredientData = { name: line.trim(), quantity: '', unit: '' };
+                let ingredientData = { name: line, quantity: '', unit: '' }; // Fallback
+                
                 if (match) {
+                    // Tildel de fangede grupper til data, og rens dem.
                     const quantity = (match[1] || '').replace(',', '.').trim();
                     const unit = (match[2] || '').trim();
-                    const name = (match[3] || '').trim();
+                    let name = (match[3] || '').trim();
+
+                    // Fjern overflødig information fra navnet, hvis det blev fanget i enhed.
+                    if (unit && name.toLowerCase().startsWith(unit.toLowerCase())) {
+                        name = name.substring(unit.length).trim();
+                    }
                     
                     ingredientData = {
                         name: name,
                         quantity: quantity ? parseFloat(quantity) : '',
-                        unit: unit
+                        unit: normalizeUnit(unit) // Normaliser enheden
                     };
                 }
                 createIngredientRow(elements.ingredientsContainer, ingredientData);
@@ -1341,9 +1356,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (meal && meal.recipeId && meal.type === 'recipe') {
                         const recipe = state.recipes.find(r => r.id === meal.recipeId);
                         if (recipe && recipe.ingredients) {
+                            // **PORTION SCALING LOGIC**
+                            // Skalerer ingredienser baseret på portioner angivet i madplanen.
                             const scaleFactor = (meal.portions || recipe.portions) / (recipe.portions || 1);
                             recipe.ingredients.forEach(ing => {
-                                allIngredientsNeeded.push({ ...ing, quantity: ing.quantity * scaleFactor });
+                                allIngredientsNeeded.push({ ...ing, quantity: (ing.quantity || 0) * scaleFactor });
                             });
                         }
                     }
@@ -1683,9 +1700,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!recipe || !recipe.ingredients) return;
 
         let ingredientsToAdd = recipe.ingredients;
+        // **PORTION SCALING LOGIC**
+        // Skalerer ingredienser baseret på de ønskede portioner.
         if (portions && recipe.portions) {
             const scaleFactor = portions / recipe.portions;
-            ingredientsToAdd = ingredientsToAdd.map(ing => ({...ing, quantity: ing.quantity * scaleFactor }));
+            ingredientsToAdd = ingredientsToAdd.map(ing => ({...ing, quantity: (ing.quantity || 0) * scaleFactor }));
         }
         
         await addToKitchenCounter(ingredientsToAdd);
@@ -1716,7 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="item-name-details">
                             <span class="item-name">${item.name}</span>
                             <div class="item-details">
-                                <span>${item.quantity || ''} ${item.unit || ''}</span>
+                                <span>${item.quantity ? item.quantity.toFixed(2).replace(/\.00$/, '') : ''} ${item.unit || ''}</span>
                             </div>
                         </div>
                     </div>
