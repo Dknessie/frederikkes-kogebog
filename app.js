@@ -1963,12 +1963,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 dayDiv.classList.add('is-today');
             }
 
+            // **MOBIL UI FIX:** Fjernet titler (Morgen, Frokost, Aften) fra de tomme slots.
             dayDiv.innerHTML = `
                 <div class="calendar-day-header">${days[i]} <span class="date-number">${dayDate.getDate()}.</span></div>
                 <div class="meal-slots">
-                    <div class="meal-slot" data-date="${dateString}" data-meal="breakfast"><span class="meal-slot-title">Morgen</span></div>
-                    <div class="meal-slot" data-date="${dateString}" data-meal="lunch"><span class="meal-slot-title">Frokost</span></div>
-                    <div class="meal-slot" data-date="${dateString}" data-meal="dinner"><span class="meal-slot-title">Aften</span></div>
+                    <div class="meal-slot" data-date="${dateString}" data-meal="breakfast"></div>
+                    <div class="meal-slot" data-date="${dateString}" data-meal="lunch"></div>
+                    <div class="meal-slot" data-date="${dateString}" data-meal="dinner"></div>
                 </div>
             `;
             fragment.appendChild(dayDiv);
