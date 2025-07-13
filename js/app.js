@@ -3,7 +3,6 @@
 // This is the main entry point for the application.
 // It initializes all modules and manages the central state and data listeners.
 
-// Firebase services
 import { db } from './firebase.js';
 import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -16,6 +15,7 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingList } from './shoppingList.js';
 import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
+import { initOverview, renderBudgetOverview } from './overview.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- Global State ---
@@ -26,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
         references: {},
         mealPlan: {},
         shoppingList: {},
-        kitchenCounter: {}, 
+        kitchenCounter: {},
+        budget: { monthlyAmount: 4000 }, // Default budget
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
@@ -35,7 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- DOM Element Cache ---
-    // Caching all elements here once for performance and easy access.
     const elements = {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
@@ -97,6 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
         notificationActions: document.getElementById('notification-actions'),
+        // Budget elements
+        editBudgetModal: document.getElementById('edit-budget-modal'),
+        editBudgetForm: document.getElementById('edit-budget-form'),
+        monthlyBudgetInput: document.getElementById('monthly-budget-input'),
+        budgetSpentEl: document.getElementById('budget-spent'),
+        budgetTotalEl: document.getElementById('budget-total'),
+        budgetProgressBar: document.getElementById('budget-progress-bar'),
+        weeklyPriceDisplay: document.getElementById('weekly-price-display'),
+        // Shopping List elements
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
@@ -127,10 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    /**
-     * Sets up real-time data listeners from Firestore.
-     * @param {string} userId - The current user's ID.
-     */
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
@@ -154,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
             if (document.querySelector('#meal-planner:not(.hidden)')) renderMealPlanner();
+            if (document.querySelector('#overview:not(.hidden)')) renderBudgetOverview();
         }, (error) => commonErrorHandler(error, 'madplan'));
 
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
@@ -166,7 +172,20 @@ document.addEventListener('DOMContentLoaded', () => {
             renderKitchenCounter();
         }, (error) => commonErrorHandler(error, 'køkkenbord'));
         
-        state.listeners.references = onSnapshot(doc(db, 'references', userId), (doc) => {
+        // Listener for user-specific settings like budget
+        const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
+        state.listeners.budget = onSnapshot(settingsRef, (doc) => {
+            if (doc.exists()) {
+                state.budget = doc.data();
+            } else {
+                // Create a default budget if none exists
+                setDoc(settingsRef, state.budget).catch(e => handleError(e, "Kunne ikke oprette standardbudget."));
+            }
+            if (document.querySelector('#overview:not(.hidden)')) renderBudgetOverview();
+        }, (error) => commonErrorHandler(error, 'budget'));
+
+        const referencesRef = doc(db, 'references', userId);
+        state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
             } else {
@@ -174,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab']
                 };
-                setDoc(doc(db, 'references', userId), defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
+                setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
             }
             if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
         }, (error) => commonErrorHandler(error, 'referencer'));
@@ -219,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case '#overview':
                 renderInventorySummary();
+                renderBudgetOverview();
                 break;
         }
     }
@@ -234,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initKitchenCounter(state, elements);
         initMealPlanner(state, elements);
         initReferences(state, elements);
+        initOverview(state, elements);
 
         window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
     }
