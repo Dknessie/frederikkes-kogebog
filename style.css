@@ -263,7 +263,7 @@ header {
 
 #app-main-content { 
     flex-grow: 1; 
-    padding-bottom: var(--mobile-tab-bar-height);
+    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m)); /* Add padding for mobile tab bar */
 }
 
 /* ===== 5. Madplan Side ===== */
@@ -437,8 +437,8 @@ header {
     gap: var(--spacing-s);
     margin-bottom: var(--spacing-m);
 }
-#shopping-list-panel .sidebar-actions { grid-template-columns: repeat(3, 1fr); }
-#kitchen-counter-panel .sidebar-actions { grid-template-columns: repeat(2, 1fr); }
+#shopping-list-panel-desktop .sidebar-actions, #mobile-shopping-list-panel .sidebar-actions { grid-template-columns: repeat(3, 1fr); }
+#kitchen-counter-panel-desktop .sidebar-actions, #mobile-kitchen-counter-panel .sidebar-actions { grid-template-columns: repeat(2, 1fr); }
 .sidebar-actions .btn { font-size: 0.8rem; padding: 0.6rem 0.25rem; }
 
 .shopping-list-total {
@@ -516,9 +516,9 @@ header {
     padding-top: var(--spacing-m);
     border-top: 1px solid var(--border-color);
 }
-#add-shopping-item-form { display: flex; gap: var(--spacing-s); }
-#add-shopping-item-form input { flex-grow: 1; }
-#add-shopping-item-form button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
+#add-shopping-item-form, #add-shopping-item-form-mobile { display: flex; gap: var(--spacing-s); }
+#add-shopping-item-form input, #add-shopping-item-form-mobile input { flex-grow: 1; }
+#add-shopping-item-form button, #add-shopping-item-form-mobile button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
 
 
 /* ===== 7. Opskrifter & Referencer Sider ===== */
@@ -931,6 +931,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     z-index: 1002;
     transition: opacity 0.3s ease;
 }
+.mobile-panel-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 .mobile-panel {
     position: absolute;
     bottom: 0;
@@ -944,10 +949,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     transform: translateY(100%);
     transition: transform 0.3s ease;
     max-height: 80vh;
-    display: flex;
+    display: none; /* Hide by default, show with .active */
     flex-direction: column;
 }
 .mobile-panel.active {
+    display: flex;
     transform: translateY(0);
 }
 .mobile-panel-header {
@@ -962,8 +968,16 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
+.close-mobile-panel-btn {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
 
-/* Media Query for mobil */
+/* ===== 10. Responsive Design ===== */
 @media (max-width: 992px) {
     .desktop-nav {
         display: none;
@@ -986,5 +1000,16 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .calendar-day-header .date-number {
         display: block;
+    }
+    .read-view-main-content {
+        grid-template-columns: 1fr;
+    }
+    .form-grid-3-col {
+        grid-template-columns: 1fr;
+    }
+    .recipe-actions-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-m);
     }
 }
