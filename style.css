@@ -902,7 +902,25 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-top: 1px solid var(--border-color);
 }
 
-/* ===== 9. Mobil-specifikke Styles ===== */
+/* ===== 9. Billedupload Styling ===== */
+.image-options {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-m);
+    flex-wrap: wrap;
+}
+.image-options .input-group {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+.image-option-divider {
+    color: #777;
+    font-weight: 600;
+}
+
+
+/* ===== 10. Mobil-specifikke Styles ===== */
 .mobile-tab-bar {
     display: none; /* Skjult som standard */
     position: fixed;
@@ -989,7 +1007,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     line-height: 1;
 }
 
-/* ===== 10. Responsive Design ===== */
+/* ===== 11. Responsive Design ===== */
 @media (max-width: 992px) {
     .desktop-nav {
         display: none;
