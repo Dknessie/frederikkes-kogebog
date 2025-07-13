@@ -447,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showMobilePanel(panelId) {
+        elements.mobilePanelOverlay.classList.remove('hidden');
         elements.mobilePanelOverlay.classList.add('active'); // Start fade-in af overlay
         
         let targetPanel;
@@ -463,13 +464,19 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.mobileKitchenCounterPanel.classList.remove('active');
         
         // Start slide-up animation
-        targetPanel.classList.add('active');
+        setTimeout(() => targetPanel.classList.add('active'), 10); // Lille forsinkelse for at sikre at display er sat før transition
     }
 
     function hideMobilePanels() {
         elements.mobilePanelOverlay.classList.remove('active');
         elements.mobileShoppingListPanel.classList.remove('active');
         elements.mobileKitchenCounterPanel.classList.remove('active');
+        // Skjul overlay efter transition er færdig
+        setTimeout(() => {
+            if (!elements.mobilePanelOverlay.classList.contains('active')) {
+                elements.mobilePanelOverlay.classList.add('hidden');
+            }
+        }, 300); // Matcher transition-duration i CSS
     }
 
     // =================================================================
