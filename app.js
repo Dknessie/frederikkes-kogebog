@@ -121,6 +121,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Oversigt Side ---
     const inventorySummaryCard = document.getElementById('inventory-summary-card');
 
+    // --- Mobil UI Elementer ---
+    const mobileTabBar = document.getElementById('mobile-tab-bar');
+    const mobileTabLinks = document.querySelectorAll('.mobile-tab-link');
+    const mobilePanelOverlay = document.getElementById('mobile-panel-overlay');
+    const mobileShoppingListPanel = document.getElementById('mobile-shopping-list-panel');
+    const mobileRecipeListPanel = document.getElementById('mobile-recipe-list-panel');
+
+
     // --- Autogen Modal ---
     const autogenModal = document.getElementById('autogen-modal');
     const autogenForm = document.getElementById('autogen-form');
@@ -314,9 +322,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.getElementById('meal-planner').classList.remove('hidden');
         }
+        
+        // Desktop Nav
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === hash);
         });
+        
+        // Mobile Nav
+        mobileTabLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === hash);
+        });
+
+
         switch(hash) {
             case '#meal-planner':
             case '':
@@ -1557,7 +1574,7 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarGrid.innerHTML = '';
         const start = getStartOfWeek(state.currentDate);
         calendarTitle.textContent = `Uge ${getWeekNumber(start)}, ${start.getFullYear()}`;
-        const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+        const days = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
         const todayString = formatDate(new Date());
 
         const fragment = document.createDocumentFragment();
@@ -2266,6 +2283,60 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 handleError(error, "Referencen kunne ikke tilføjes.");
             }
+        }
+    });
+
+    // =================================================================
+    // 12. MOBIL UI LOGIK
+    // =================================================================
+    
+    function showMobilePanel(panelId) {
+        mobilePanelOverlay.classList.remove('hidden');
+        
+        // Hide all panels first
+        mobileShoppingListPanel.classList.remove('active');
+        mobileRecipeListPanel.classList.remove('active');
+
+        // Show the correct panel
+        if (panelId === 'shopping-list') {
+            mobileShoppingListPanel.innerHTML = ''; // Clear previous
+            const shoppingListClone = document.getElementById('meal-planner-sidebar-left').cloneNode(true);
+            mobileShoppingListPanel.appendChild(shoppingListClone);
+            mobileShoppingListPanel.classList.add('active');
+        } else if (panelId === 'recipe-list') {
+            mobileRecipeListPanel.innerHTML = ''; // Clear previous
+            const recipeListClone = document.getElementById('meal-planner-sidebar-right').cloneNode(true);
+            mobileRecipeListPanel.appendChild(recipeListClone);
+            mobileRecipeListPanel.classList.add('active');
+        }
+    }
+
+    function hideMobilePanel() {
+        mobilePanelOverlay.classList.add('hidden');
+        mobileShoppingListPanel.classList.remove('active');
+        mobileRecipeListPanel.classList.remove('active');
+    }
+
+    mobileTabBar.addEventListener('click', (e) => {
+        const link = e.target.closest('.mobile-tab-link');
+        if (!link) return;
+        
+        e.preventDefault();
+        
+        const page = link.dataset.page;
+        const panel = link.dataset.panel;
+
+        if (page) {
+            navigateTo(`#${page}`);
+        } else if (panel) {
+            showMobilePanel(panel);
+        }
+    });
+
+    mobilePanelOverlay.addEventListener('click', (e) => {
+        // If click is on the overlay itself (not the panel content), close it
+        if (e.target === mobilePanelOverlay) {
+            hideMobilePanel();
         }
     });
 
