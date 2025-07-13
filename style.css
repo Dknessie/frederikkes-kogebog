@@ -269,12 +269,12 @@ header {
 /* ===== 5. Madplan Side ===== */
 .meal-planner-layout {
     display: grid;
-    grid-template-columns: 300px 1fr 320px; 
+    grid-template-columns: 300px 1fr; 
     gap: var(--spacing-l);
     height: calc(100vh - 65px - (var(--spacing-l) * 2)); 
 }
 
-.meal-planner-main, .meal-planner-sidebar-left, .meal-planner-sidebar-right {
+.meal-planner-main, .meal-planner-sidebar-left {
     display: flex;
     flex-direction: column;
     background: var(--white-color);
@@ -388,13 +388,13 @@ header {
 .cook-meal-btn:hover { color: #3a5a40; }
 
 /* ===== 6. Sidebars (Venstre & Højre) ===== */
-.sidebar-panel-tabs, .sidebar-tabs {
+.sidebar-panel-tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: var(--spacing-m);
 }
 
-.panel-tab, .sidebar-tab {
+.panel-tab {
     flex: 1;
     padding: var(--spacing-m);
     text-align: center;
@@ -411,10 +411,10 @@ header {
     gap: var(--spacing-s);
     font-size: var(--small-font-size);
 }
-.panel-tab.active, .panel-tab:hover, .sidebar-tab.active, .sidebar-tab:hover {
+.panel-tab.active, .panel-tab:hover {
     color: var(--primary-color);
 }
-.panel-tab.active, .sidebar-tab.active {
+.panel-tab.active {
     border-bottom-color: var(--primary-color);
 }
 
@@ -429,39 +429,6 @@ header {
     flex-grow: 1;
     overflow-y: auto; 
     padding-right: var(--spacing-s); 
-}
-
-/* Højre Sidebar Specifik */
-.sidebar-recipe-item {
-    background-color: var(--light-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-s);
-    cursor: grab;
-}
-.sidebar-recipe-header {
-    padding: var(--spacing-m);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 600;
-    cursor: pointer; 
-}
-.sidebar-recipe-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-    padding: 0 var(--spacing-m);
-}
-.sidebar-recipe-item.expanded .sidebar-recipe-body {
-    max-height: 300px;
-    padding: 0 var(--spacing-m) var(--spacing-m);
-}
-.sidebar-recipe-body img {
-    width: 100%;
-    border-radius: var(--border-radius);
-    aspect-ratio: 16/9;
-    object-fit: cover;
 }
 
 /* Venstre Sidebar Specifik (Indkøbsliste & Køkkenbord) */
@@ -750,6 +717,7 @@ header {
     max-height: 90vh;
     overflow-y: auto;
 }
+#plan-meal-modal .modal-content,
 #add-meal-modal .modal-content {
     max-width: 450px;
 }
@@ -803,6 +771,20 @@ header {
     box-shadow: 0 0 0 3px rgba(209, 96, 61, 0.15);
 }
 
+.meal-type-selector {
+    display: flex;
+    gap: var(--spacing-s);
+}
+.meal-type-selector .btn {
+    flex: 1;
+}
+.meal-type-selector .btn.active {
+    background-color: var(--accent-color);
+    color: var(--white-color);
+    border-color: var(--accent-color);
+}
+
+
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--spacing-m) var(--spacing-l); }
 .form-grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-m) var(--spacing-l); align-items: end; }
 
@@ -819,6 +801,7 @@ header {
 .read-view-actions {
     margin-top: var(--spacing-l); /* Added space */
     display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-m);
 }
 
@@ -989,13 +972,16 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
         height: auto;
     }
-    .meal-planner-sidebar-left, .meal-planner-sidebar-right {
+    #meal-planner-sidebar-left {
         display: none;
     }
     .page {
         padding: var(--spacing-m);
     }
-    .header-content {
+    header {
         padding: 0 var(--spacing-m);
+    }
+    .calendar-day-header .date-number {
+        display: block;
     }
 }
