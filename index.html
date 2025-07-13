@@ -99,21 +99,6 @@
                         </div>
                         <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
-
-                    <!-- Højre Sidebar (Desktop) -->
-                    <aside id="meal-planner-sidebar-right" class="meal-planner-sidebar-right">
-                        <h3><i class="fas fa-book-open"></i> Opskrifter</h3>
-                        <div class="input-group with-icon">
-                             <i class="fas fa-search"></i>
-                            <input type="search" id="sidebar-recipe-search" placeholder="Søg i opskrifter...">
-                        </div>
-                        <div id="sidebar-tag-filters" class="filter-container"></div>
-                        <div class="sidebar-tabs">
-                            <button class="sidebar-tab active" data-tab="my-recipes">Alle</button>
-                            <button class="sidebar-tab" data-tab="favorites">Favoritter</button>
-                        </div>
-                        <div id="sidebar-recipe-list" class="sidebar-content"></div>
-                    </aside>
                 </div>
             </section>
 
@@ -189,19 +174,48 @@
             <a href="#meal-planner" class="mobile-tab-link active" data-page="meal-planner"><i class="fas fa-calendar-alt"></i><span>Madplan</span></a>
             <a href="#recipes" class="mobile-tab-link" data-page="recipes"><i class="fas fa-book-open"></i><span>Opskrifter</span></a>
             <a href="#" class="mobile-tab-link" data-panel="shopping-list"><i class="fas fa-cart-shopping"></i><span>Indkøb</span></a>
-            <a href="#" class="mobile-tab-link" data-panel="recipe-list"><i class="fas fa-utensils"></i><span>Tilføj Ret</span></a>
+            <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Lager</span></a>
             <a href="#overview" class="mobile-tab-link" data-page="overview"><i class="fas fa-chart-pie"></i><span>Oversigt</span></a>
         </nav>
 
         <!-- Mobil Slide-in Paneler -->
         <div id="mobile-panel-overlay" class="mobile-panel-overlay hidden">
             <div id="mobile-shopping-list-panel" class="mobile-panel"></div>
-            <div id="mobile-recipe-list-panel" class="mobile-panel"></div>
         </div>
 
     </div>
     
     <!-- ===== Modaler ===== -->
+
+    <!-- Planlæg Måltid Modal -->
+    <div id="plan-meal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="plan-meal-modal-title">Planlæg Måltid</h3>
+            <form id="plan-meal-form">
+                <input type="hidden" id="plan-meal-recipe-id">
+                <div class="input-group">
+                    <label for="plan-meal-date">Vælg dato</label>
+                    <input type="date" id="plan-meal-date" required>
+                </div>
+                <div class="input-group">
+                    <label>Vælg måltid</label>
+                    <div class="meal-type-selector">
+                        <button type="button" class="btn btn-secondary" data-meal="breakfast">Morgen</button>
+                        <button type="button" class="btn btn-secondary" data-meal="lunch">Frokost</button>
+                        <button type="button" class="btn btn-secondary" data-meal="dinner">Aften</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="plan-meal-portions">Antal portioner</label>
+                    <input type="number" id="plan-meal-portions" min="1" step="1" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Vare Modal (Tilføj/Rediger) -->
     <div id="inventory-item-modal" class="modal-overlay hidden">
@@ -373,7 +387,8 @@
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
-                    <button id="read-view-cook-btn" class="btn btn-primary"><i class="fas fa-concierge-bell"></i> Læg på Køkkenbord</button>
+                    <button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
+                    <button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-concierge-bell"></i> Læg på Køkkenbord</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
                 </div>
@@ -390,35 +405,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- "Tilføj Måltid" Modal -->
-    <div id="add-meal-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <form id="add-meal-form">
-                <h3 id="add-meal-modal-title"></h3>
-                <div class="input-group">
-                    <label for="meal-portions">Antal portioner</label>
-                    <input type="number" id="meal-portions" min="1" step="1" required>
-                </div>
-                <div class="input-group">
-                     <button type="button" id="show-extra-ingredients-btn" class="btn btn-secondary">
-                        <i class="fas fa-plus-circle"></i> Tilføj ekstra ingredienser
-                    </button>
-                </div>
-
-                <div id="extra-ingredients-section" class="hidden">
-                    <hr>
-                    <label class="input-label">Ekstra ingredienser</label>
-                    <div id="extra-ingredients-container"></div>
-                    <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary btn-small"><i class="fas fa-plus"></i> Tilføj</button>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj til madplan</button>
-                </div>
-            </form>
         </div>
     </div>
 
