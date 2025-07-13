@@ -42,7 +42,7 @@
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
-                    <a href="#profile" class="nav-link"><i class="fas fa-user-circle"></i> Profil</a>
+                    <a href="#overview" class="nav-link"><i class="fas fa-chart-pie"></i> Oversigt</a>
                 </nav>
                  <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
@@ -166,15 +166,20 @@
                 </table>
             </section>
 
-            <!-- Profil Side -->
-            <section id="profile" class="page hidden">
-                <h2>Profil</h2>
-                <div class="card">
-                    <h3>Statistik</h3>
-                    <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                    <p><strong>Antal opskrifter:</strong> <span id="profile-recipe-count">0</span></p>
-                    <p><strong>Favoritopskrifter:</strong> <span id="profile-favorite-count">0</span></p>
-                    <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+            <!-- Oversigt Side -->
+            <section id="overview" class="page hidden">
+                <h2>Oversigt</h2>
+                <div class="overview-layout">
+                    <div id="inventory-summary-card" class="card">
+                        <!-- Indhold genereres af JavaScript -->
+                    </div>
+                    <div id="profile-card" class="card">
+                        <h3>Profil</h3>
+                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
+                        <p><strong>Antal opskrifter:</strong> <span id="profile-recipe-count">0</span></p>
+                        <p><strong>Favoritopskrifter:</strong> <span id="profile-favorite-count">0</span></p>
+                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                    </div>
                 </div>
             </section>
         </main>
