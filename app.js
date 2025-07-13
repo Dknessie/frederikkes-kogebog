@@ -90,18 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
     const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn');
     
-    // --- Venstre Sidebar Paneler ---
-    const panelTabs = document.querySelectorAll('.panel-tab');
-    const sidebarPanels = document.querySelectorAll('.sidebar-panel');
-    const shoppingListContainer = document.getElementById('shopping-list-container');
-    const shoppingListTotalContainer = document.getElementById('shopping-list-total-container');
-    const confirmPurchaseBtn = document.getElementById('confirm-purchase-btn');
-    const generateWeeklyShoppingListBtn = document.getElementById('generate-weekly-shopping-list-btn');
-    const clearShoppingListBtn = document.getElementById('clear-shopping-list-btn');
-    const addShoppingItemForm = document.getElementById('add-shopping-item-form');
-    const kitchenCounterContainer = document.getElementById('kitchen-counter-container');
-    const confirmCookingBtn = document.getElementById('confirm-cooking-btn');
-    const clearKitchenCounterBtn = document.getElementById('clear-kitchen-counter-btn');
+    // --- Venstre Sidebar Paneler (kun til kloning) ---
+    const desktopShoppingListPanel = document.getElementById('shopping-list-panel');
+    const desktopKitchenCounterPanel = document.getElementById('kitchen-counter-panel');
 
     // --- "Planlæg Måltid" Modal Elementer ---
     const planMealModal = document.getElementById('plan-meal-modal');
@@ -120,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileTabLinks = document.querySelectorAll('.mobile-tab-link');
     const mobilePanelOverlay = document.getElementById('mobile-panel-overlay');
     const mobileShoppingListPanel = document.getElementById('mobile-shopping-list-panel');
+    const mobileKitchenCounterPanel = document.getElementById('mobile-kitchen-counter-panel');
 
 
     // --- Autogen Modal ---
@@ -145,7 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        pendingMeal: null, 
         listeners: {
             inventory: null,
             recipes: null,
@@ -621,7 +612,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderPageTagFilters = () => renderTagFilters(recipeFilterContainer, 'activeRecipeFilterTags', () => renderRecipes());
     
     function renderShoppingList() {
-        shoppingListContainer.innerHTML = '';
+        const container = document.getElementById('shopping-list-container');
+        if(!container) return;
+        container.innerHTML = '';
         const groupedList = {};
 
         Object.values(state.shoppingList).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
@@ -631,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (Object.keys(groupedList).length === 0) {
-            shoppingListContainer.innerHTML = `<p class="empty-state">Din indkøbsliste er tom.</p>`;
+            container.innerHTML = `<p class="empty-state">Din indkøbsliste er tom.</p>`;
             shoppingListTotalContainer.classList.add('hidden');
             confirmPurchaseBtn.style.display = 'none';
             return;
@@ -675,7 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionDiv.innerHTML = `<h4>${section}</h4><ul>${listItemsHTML}</ul>`;
             fragment.appendChild(sectionDiv);
         }
-        shoppingListContainer.appendChild(fragment);
+        container.appendChild(fragment);
         calculateAndRenderShoppingListTotal();
     }
     
@@ -1131,6 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     readViewPlanBtn.addEventListener('click', () => {
+        recipeReadModal.classList.add('hidden');
         openPlanMealModal(state.currentlyViewedRecipeId);
     });
 
@@ -1217,9 +1211,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             recipe.ingredients.forEach(ing => {
                                 allIngredientsNeeded.push({ ...ing, quantity: ing.quantity * scaleFactor });
                             });
-                        }
-                        if (meal.extra_ingredients) {
-                            allIngredientsNeeded.push(...meal.extra_ingredients);
                         }
                     }
                 });
@@ -1941,18 +1932,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderKitchenCounter() {
-        kitchenCounterContainer.innerHTML = '';
+        const container = document.getElementById('kitchen-counter-container');
+        if (!container) return;
+        container.innerHTML = '';
         const items = Object.values(state.kitchenCounter);
 
         if (items.length === 0) {
-            kitchenCounterContainer.innerHTML = `<p class="empty-state">Dit køkkenbord er tomt. Tilføj en opskrift for at starte.</p>`;
-            confirmCookingBtn.disabled = true;
-            clearKitchenCounterBtn.disabled = true;
+            container.innerHTML = `<p class="empty-state">Dit køkkenbord er tomt. Tilføj en opskrift for at starte.</p>`;
+            const confirmBtn = document.getElementById('confirm-cooking-btn');
+            const clearBtn = document.getElementById('clear-kitchen-counter-btn');
+            if(confirmBtn) confirmBtn.disabled = true;
+            if(clearBtn) clearBtn.disabled = true;
             return;
         }
         
-        confirmCookingBtn.disabled = false;
-        clearKitchenCounterBtn.disabled = false;
+        const confirmBtn = document.getElementById('confirm-cooking-btn');
+        const clearBtn = document.getElementById('clear-kitchen-counter-btn');
+        if(confirmBtn) confirmBtn.disabled = false;
+        if(clearBtn) clearBtn.disabled = false;
 
         const fragment = document.createDocumentFragment();
         items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
@@ -1978,7 +1975,7 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             fragment.appendChild(li);
         });
-        kitchenCounterContainer.appendChild(fragment);
+        container.appendChild(fragment);
     }
 
     clearKitchenCounterBtn.addEventListener('click', async () => {
@@ -2143,21 +2140,50 @@ document.addEventListener('DOMContentLoaded', () => {
     function showMobilePanel(panelId) {
         mobilePanelOverlay.classList.remove('hidden');
         
+        let targetPanel;
+        let sourceElement;
+        let title;
+
+        if (panelId === 'shopping-list') {
+            targetPanel = mobileShoppingListPanel;
+            sourceElement = desktopShoppingListPanel;
+            title = "Indkøbsliste";
+        } else if (panelId === 'kitchen-counter') {
+            targetPanel = mobileKitchenCounterPanel;
+            sourceElement = desktopKitchenCounterPanel;
+            title = "Køkkenbord";
+        } else {
+            return;
+        }
+
         // Hide all panels first
         mobileShoppingListPanel.classList.remove('active');
+        mobileKitchenCounterPanel.classList.remove('active');
 
-        // Show the correct panel
-        if (panelId === 'shopping-list') {
-            mobileShoppingListPanel.innerHTML = ''; // Clear previous
-            const shoppingListClone = document.getElementById('meal-planner-sidebar-left').cloneNode(true);
-            mobileShoppingListPanel.appendChild(shoppingListClone);
-            mobileShoppingListPanel.classList.add('active');
-        }
+        // Populate and show the correct panel
+        targetPanel.innerHTML = ''; // Clear previous content
+        
+        const header = document.createElement('div');
+        header.className = 'mobile-panel-header';
+        header.innerHTML = `<h3>${title}</h3><button class="close-modal-btn">&times;</button>`;
+        header.querySelector('.close-modal-btn').onclick = hideMobilePanel;
+        
+        const content = document.createElement('div');
+        content.className = 'sidebar-content';
+        content.innerHTML = sourceElement.innerHTML;
+        
+        targetPanel.append(header, content);
+        
+        // Use a short timeout to allow the element to be in the DOM before adding the 'active' class for the transition
+        setTimeout(() => {
+            targetPanel.classList.add('active');
+        }, 10);
     }
 
     function hideMobilePanel() {
         mobilePanelOverlay.classList.add('hidden');
         mobileShoppingListPanel.classList.remove('active');
+        mobileKitchenCounterPanel.classList.remove('active');
     }
 
     mobileTabBar.addEventListener('click', (e) => {
