@@ -1,10 +1,8 @@
 // js/recipes.js
 
-// Handles all logic for the recipes page and recipe modals.
-
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { showNotification, handleError, navigateTo } from './ui.js';
+import { showNotification, handleError } from './ui.js';
 import { normalizeUnit, convertToPrimaryUnit } from './utils.js';
 import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
 import { openPlanMealModal } from './mealPlanner.js';
@@ -23,11 +21,6 @@ const lazyImageObserver = new IntersectionObserver((entries, observer) => {
     });
 });
 
-/**
- * Initializes the recipes module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initRecipes(state, elements) {
     appState = state;
     appElements = elements;
@@ -39,7 +32,6 @@ export function initRecipes(state, elements) {
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
     appElements.recipeGrid.addEventListener('click', handleGridClick);
     
-    // Edit modal listeners
     appElements.recipeEditModal.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
             e.target.closest('.ingredient-row').remove();
@@ -48,7 +40,6 @@ export function initRecipes(state, elements) {
     appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
     appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
 
-    // Read modal listeners
     appElements.readViewPlanBtn.addEventListener('click', () => {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
@@ -61,14 +52,11 @@ export function initRecipes(state, elements) {
     appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
 }
 
-/**
- * Renders the recipe grid based on current state and filters.
- */
 export function renderRecipes() {
     const fragment = document.createDocumentFragment();
     appElements.recipeGrid.innerHTML = '';
     
-    let recipesToRender = appState.recipes.map(calculateRecipeMatch);
+    let recipesToRender = appState.recipes.map(recipe => calculateRecipeMatch(recipe, appState.inventory));
 
     if (appState.activeRecipeFilterTags.size > 0) {
         recipesToRender = recipesToRender.filter(r => {
@@ -79,9 +67,7 @@ export function renderRecipes() {
     
     if (appElements.sortByStockToggle.checked) {
         recipesToRender.sort((a, b) => {
-            if (a.missingCount !== b.missingCount) {
-                return a.missingCount - b.missingCount;
-            }
+            if (a.missingCount !== b.missingCount) return a.missingCount - b.missingCount;
             return a.title.localeCompare(b.title);
         });
     } else {
@@ -101,11 +87,6 @@ export function renderRecipes() {
     document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
 }
 
-/**
- * Creates a single recipe card element.
- * @param {object} recipe - The recipe data object.
- * @returns {HTMLElement} The recipe card element.
- */
 function createRecipeCard(recipe) {
     const card = document.createElement('div');
     card.className = 'recipe-card';
@@ -144,9 +125,6 @@ function createRecipeCard(recipe) {
     return card;
 }
 
-/**
- * Renders the tag filters for the recipes page.
- */
 export function renderPageTagFilters() {
     const container = appElements.recipeFilterContainer;
     const allTags = new Set();
@@ -169,19 +147,14 @@ export function renderPageTagFilters() {
             } else {
                 appState.activeRecipeFilterTags.add(tag);
             }
-            renderPageTagFilters(); // Re-render filters to update their style
-            renderRecipes(); // Re-render recipes with the new filter
+            renderPageTagFilters();
+            renderRecipes();
         });
         fragment.appendChild(tagButton);
     });
     container.appendChild(fragment);
 }
 
-
-/**
- * Renders the read-only view of a recipe in a modal.
- * @param {object} recipe - The recipe to display.
- */
 function renderReadView(recipe) {
     const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
     document.getElementById('read-view-image').src = imageUrl;
@@ -191,8 +164,6 @@ function renderReadView(recipe) {
     document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
     
-    // This calculation requires access to inventory state.
-    // We assume it's available via appState.
     const recipePrice = calculateRecipePrice(recipe, appState.inventory);
     appElements.readViewPrice.innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
 
@@ -214,7 +185,7 @@ function renderReadView(recipe) {
     if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ing => {
             const li = document.createElement('li');
-            const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] });
+            const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] }, appState.inventory);
             
             const statusIcon = canBeMade 
                 ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>`
@@ -226,7 +197,7 @@ function renderReadView(recipe) {
     }
     
     const instructionsContainer = document.getElementById('read-view-instructions-text');
-    instructionsContainer.innerHTML = ''; // Clear previous
+    instructionsContainer.innerHTML = '';
     const instructions = recipe.instructions || '';
     instructions.split('\n').forEach(line => {
         if (line.trim() !== '') {
@@ -519,7 +490,7 @@ async function handleDeleteRecipeFromReadView() {
     }
 }
 
-export function calculateRecipeMatch(recipe) {
+export function calculateRecipeMatch(recipe, inventory) {
     let missingCount = 0;
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
         return { ...recipe, missingCount: 99, canBeMade: false };
@@ -527,7 +498,7 @@ export function calculateRecipeMatch(recipe) {
 
     let canBeMade = true;
     recipe.ingredients.forEach(ing => {
-        const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
+        const inventoryItem = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
         if (!inventoryItem) {
             missingCount++;
             canBeMade = false;
@@ -562,14 +533,17 @@ export function calculateRecipeMatch(recipe) {
     return { ...recipe, missingCount, canBeMade };
 }
 
-export function calculateRecipePrice(recipe, inventory) {
+export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     let totalPrice = 0;
     if (!recipe.ingredients) return 0;
+
+    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
 
     recipe.ingredients.forEach(ing => {
         const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
         if(inventoryItem && inventoryItem.kg_price) {
-            const quantityInKg = getQuantityInKg(ing.quantity, ing.unit, inventoryItem);
+            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
+            const quantityInKg = getQuantityInKg(scaledQuantity, ing.unit, inventoryItem);
             if (quantityInKg !== null) {
                 totalPrice += quantityInKg * inventoryItem.kg_price;
             }
