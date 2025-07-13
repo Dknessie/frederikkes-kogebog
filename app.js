@@ -703,34 +703,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. CRUD & INTELLIGENS FOR VARELAGER
     // =================================================================
     
-    function updateCalculatedFields() {
-        const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
-        const unit = document.getElementById('item-unit').value.toLowerCase();
-        const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || 0;
-        const kgPrice = parseFloat(document.getElementById('item-kg-price').value) || 0;
-
-        let totalGrams = 0;
-        if (unit === 'g' || unit === 'gram') {
-            totalGrams = quantity;
-        } else if (gramsPerUnit > 0) {
-            totalGrams = quantity * gramsPerUnit;
-        }
-        document.getElementById('item-grams-in-stock').textContent = `${totalGrams.toFixed(0)} g`;
-
-        let pricePerUnit = 0;
-        if (kgPrice > 0 && gramsPerUnit > 0) {
-            pricePerUnit = (kgPrice / 1000) * gramsPerUnit;
-        }
-        document.getElementById('item-price-per-unit').textContent = `${pricePerUnit.toFixed(2)} kr`;
-    }
-
     addInventoryItemBtn.addEventListener('click', () => {
         inventoryModalTitle.textContent = 'Tilføj ny vare';
         inventoryItemForm.reset();
-        document.getElementById('item-description').value = 'Madvare';
         buyWholeOptions.classList.add('hidden');
         document.getElementById('inventory-item-id').value = '';
-        updateCalculatedFields();
         inventoryItemModal.classList.remove('hidden');
     });
 
@@ -738,16 +715,12 @@ document.addEventListener('DOMContentLoaded', () => {
         buyWholeOptions.classList.toggle('hidden', !buyWholeCheckbox.checked);
     });
 
-    ['item-current-stock', 'item-unit', 'item-grams-per-unit', 'item-kg-price', 'item-buy-whole'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updateCalculatedFields);
-    });
-
     inventoryItemForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const itemId = document.getElementById('inventory-item-id').value;
         
         const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
-        const unit = document.getElementById('item-unit').value;
+        const unit = (document.getElementById('item-unit').value || '').trim();
         const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
 
         let gramsInStock = 0;
@@ -757,14 +730,14 @@ document.addEventListener('DOMContentLoaded', () => {
             gramsInStock = quantity * gramsPerUnit;
         }
 
-        const aliases = document.getElementById('item-aliases').value.split(',').map(a => a.trim()).filter(a => a);
+        const aliases = (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a);
         const buyAsWhole = document.getElementById('item-buy-whole').checked;
 
         const itemData = {
-            name: document.getElementById('item-name').value,
-            description: document.getElementById('item-description').value,
-            category: document.getElementById('item-category').value,
-            home_location: document.getElementById('item-home-location').value,
+            name: (document.getElementById('item-name').value || '').trim(),
+            description: (document.getElementById('item-description').value || '').trim(),
+            category: (document.getElementById('item-category').value || '').trim(),
+            home_location: (document.getElementById('item-home-location').value || '').trim(),
             current_stock: quantity,
             max_stock: Number(document.getElementById('item-max-stock').value) || null,
             unit: unit,
@@ -777,7 +750,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (buyAsWhole) {
-            const purchaseUnitName = document.getElementById('item-buy-unit-name').value.trim();
+            const purchaseUnitName = (document.getElementById('item-buy-unit-name').value || '').trim();
             const purchaseUnitQuantity = parseFloat(document.getElementById('item-buy-unit-quantity').value) || null;
             if (purchaseUnitName && purchaseUnitQuantity) {
                 itemData.purchase_unit = {
@@ -820,7 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 document.getElementById('inventory-item-id').value = item.id;
                 document.getElementById('item-name').value = item.name || '';
-                document.getElementById('item-description').value = item.description || 'Madvare';
+                document.getElementById('item-description').value = item.description || '';
                 document.getElementById('item-category').value = item.category || '';
                 document.getElementById('item-home-location').value = item.home_location || '';
                 document.getElementById('item-current-stock').value = item.current_stock || 0;
@@ -841,7 +814,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('item-buy-unit-quantity').value = '';
                 }
 
-                updateCalculatedFields();
                 inventoryItemModal.classList.remove('hidden');
             }
         }
@@ -850,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function guessItemDetails(itemName) {
         const existingItem = state.inventory.find(item => item.name.toLowerCase() === itemName.toLowerCase());
         if (existingItem) {
-            document.getElementById('item-description').value = existingItem.description || 'Madvare';
+            document.getElementById('item-description').value = existingItem.description || '';
             document.getElementById('item-category').value = existingItem.category || '';
             document.getElementById('item-home-location').value = existingItem.home_location || '';
             document.getElementById('item-unit').value = existingItem.unit || '';
