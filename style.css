@@ -342,15 +342,10 @@ header {
     border-bottom: 1px dashed #eee;
     transition: background-color 0.2s ease;
     overflow-y: auto;
+    min-height: 40px; /* Giver plads til at droppe elementer */
 }
 .meal-slot:last-child { border-bottom: none; }
 .meal-slot.drag-over { background-color: #d1e7dd; }
-
-.meal-slot-title {
-    font-size: 0.7rem;
-    color: #999;
-    text-transform: uppercase;
-}
 
 .planned-recipe {
     background-color: var(--secondary-color);
@@ -706,9 +701,12 @@ header {
     padding: var(--spacing-l);
     box-sizing: border-box;
 }
-#plan-meal-modal {
-    z-index: 2010;
-}
+
+/* ** Z-INDEX FIX **
+   Sikrer at notifikationer altid vises øverst. */
+#plan-meal-modal { z-index: 2010; }
+#notification-modal { z-index: 2020; }
+
 
 .modal-content {
     background: var(--white-color);
@@ -853,10 +851,24 @@ header {
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
 }
-.ingredient-row .ingredient-name { flex-grow: 1; }
-.ingredient-row .ingredient-quantity { width: 70px; text-align: right; }
-.ingredient-row .ingredient-unit { width: 80px; }
-.ingredient-row .remove-ingredient-btn { color: #adb5bd; }
+
+/* **MOBIL FIX FOR INGREDIENSER**
+   Sikrer at navnefeltet kan vokse og ombryde tekst, mens de andre felter har fast størrelse. */
+.ingredient-row .ingredient-name {
+    flex: 1 1 auto; /* Tillad at feltet kan vokse og krympe */
+    min-width: 0; /* Vigtigt for at flexbox kan krympe feltet korrekt */
+}
+.ingredient-row .ingredient-quantity { 
+    width: 70px;
+    text-align: right;
+    flex-shrink: 0; /* Forhindrer at feltet krymper */
+}
+.ingredient-row .ingredient-unit {
+    width: 80px;
+    flex-shrink: 0; /* Forhindrer at feltet krymper */
+}
+
+.ingredient-row .remove-ingredient-btn { color: #adb5bd; flex-shrink: 0; }
 .ingredient-row .remove-ingredient-btn:hover { color: var(--status-red); }
 
 /* Switch Toggle & Whole Unit Options */
