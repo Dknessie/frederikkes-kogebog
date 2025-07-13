@@ -1095,43 +1095,59 @@ document.addEventListener('DOMContentLoaded', () => {
             nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
         };
 
+        // **AVANCERET INGREDIENS-PARSER**
         elements.importIngredientsBtn.addEventListener('click', () => {
             const text = elements.recipeImportTextarea.value;
             if (!text) return;
-            
-            // Forbedret Regex til at fange mængde, enhed og navn mere robust.
-            // 1. ([\d.,]+)? - Fanger tal (mængde)
-            // 2. ([a-zA-ZæøåÆØÅ.]{1,10})? - Fanger enhed (op til 10 bogstaver/punktum)
-            // 3. (.+) - Fanger resten som navn
-            const ingredientRegex = /^\s*(?:-|\*|\d+\.?\s*)?\s*([\d.,]+)?\s*([a-zA-ZæøåÆØÅ.]{1,10})?\s*(.+)$/;
 
             const lines = text.split('\n');
             elements.ingredientsContainer.innerHTML = ''; 
             
+            const knownUnits = ['g', 'gram', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse'];
+            const unitRegex = new RegExp(`^(${knownUnits.join('|')})s?(\\.|s)?`, 'i');
+
             lines.forEach(line => {
                 line = line.trim();
                 if (line === '') return;
-                
-                const match = line.match(ingredientRegex);
-                let ingredientData = { name: line, quantity: '', unit: '' }; // Fallback
-                
-                if (match) {
-                    // Tildel de fangede grupper til data, og rens dem.
-                    const quantity = (match[1] || '').replace(',', '.').trim();
-                    const unit = (match[2] || '').trim();
-                    let name = (match[3] || '').trim();
 
-                    // Fjern overflødig information fra navnet, hvis det blev fanget i enhed.
-                    if (unit && name.toLowerCase().startsWith(unit.toLowerCase())) {
-                        name = name.substring(unit.length).trim();
-                    }
-                    
-                    ingredientData = {
-                        name: name,
-                        quantity: quantity ? parseFloat(quantity) : '',
-                        unit: normalizeUnit(unit) // Normaliser enheden
-                    };
+                let quantity = '';
+                let unit = '';
+                let name = '';
+
+                // Fjern foranstillede punktummer eller stjerner
+                line = line.replace(/^[-*]\s*/, '');
+
+                // 1. Find tallet (mængden) først
+                const quantityMatch = line.match(/^[\d.,]+/);
+                if (quantityMatch) {
+                    quantity = quantityMatch[0].replace(',', '.');
+                    line = line.substring(quantityMatch[0].length).trim();
                 }
+
+                // 2. Find en kendt enhed
+                const unitMatch = line.match(unitRegex);
+                if (unitMatch) {
+                    unit = unitMatch[0];
+                    line = line.substring(unitMatch[0].length).trim();
+                }
+
+                // 3. Håndter specialtilfælde som "1 løg" -> unit = 'stk'
+                if (quantity && !unit) {
+                    unit = 'stk';
+                }
+                
+                // 4. Resten er navnet. Rens det og gør første bogstav stort.
+                name = line.replace(/^af\s+/, '').trim(); // Fjern "af " hvis det står foran
+                if (name) {
+                    name = name.charAt(0).toUpperCase() + name.slice(1);
+                }
+                
+                const ingredientData = {
+                    name: name,
+                    quantity: quantity ? parseFloat(quantity) : '',
+                    unit: normalizeUnit(unit)
+                };
+
                 createIngredientRow(elements.ingredientsContainer, ingredientData);
             });
             elements.recipeImportTextarea.value = '';
