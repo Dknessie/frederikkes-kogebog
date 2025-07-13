@@ -689,6 +689,27 @@ nav {
     padding: var(--spacing-m);
 }
 
+/* Oversigt Side */
+.overview-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-l);
+}
+#inventory-summary-card .summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m) 0;
+    font-size: 1.1rem;
+}
+#inventory-summary-card .summary-item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+#inventory-summary-card .summary-value {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
 
 /* ===== 8. Modaler ===== */
 .modal-overlay {
