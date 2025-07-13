@@ -166,14 +166,27 @@ hr {
     color: #777;
     padding: var(--spacing-s);
     box-shadow: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 .btn-icon:hover {
+    background-color: #eee;
     color: var(--accent-color);
+}
+.btn-icon.remove-meal-btn:hover {
+    background-color: var(--status-red);
+    color: var(--white-color);
 }
 .btn-icon:disabled {
     color: #ccc;
     cursor: not-allowed;
 }
+
 
 /* ===== 4. App Layout (Header & Main) ===== */
 #app-container {
@@ -338,6 +351,9 @@ nav {
     border-left: 3px solid var(--primary-color);
     cursor: grab;
     margin-top: var(--spacing-s);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .planned-recipe:active { cursor: grabbing; }
 
@@ -350,21 +366,13 @@ nav {
 
 .planned-recipe-actions {
     display: flex;
-    justify-content: flex-end;
     align-items: center;
     gap: var(--spacing-xs);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
 }
-
-.remove-meal-btn {
-    font-size: 0.9rem;
-    width: 20px;
-    height: 20px;
-    transition: all 0.2s ease;
-}
-.remove-meal-btn:hover { 
-    background: var(--status-red); 
-    color: white;
-    transform: scale(1.1);
+.planned-recipe:hover .planned-recipe-actions {
+    opacity: 1;
 }
 
 .cook-meal-btn { color: var(--accent-color); }
@@ -419,15 +427,16 @@ nav {
     position: relative;
     margin-bottom: var(--spacing-m);
 }
-.sidebar-search i {
+.sidebar-search .search-icon {
     position: absolute;
-    left: 12px;
+    left: var(--spacing-m);
     top: 50%;
     transform: translateY(-50%);
     color: #aaa;
+    pointer-events: none;
 }
 #sidebar-recipe-search {
-    padding-left: 2.25rem;
+    padding-left: calc(var(--spacing-m) * 2 + 1em);
 }
 
 .sidebar-recipe-item {
