@@ -250,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return { convertedQuantity: quantity * inventoryItem.grams_per_unit, error: null };
         }
         
-        // If units are the same but not convertible to grams (e.g. 'stk' to 'stk'), return null for grams but no error for direct comparison.
         if (normalizeUnit(inventoryItem.unit) === normalizedFromUnit) {
             return { convertedQuantity: null, error: null, directMatch: true, quantity: quantity };
         }
@@ -1507,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span>${recipeName}</span>
                     <div class="planned-recipe-actions">
                         ${cookBtnHTML}
-                        <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-times"></i></button>
+                        <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>
                     </div>
                 `;
                 slot.appendChild(recipeDiv);
