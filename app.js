@@ -89,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarRecipeList = document.getElementById('sidebar-recipe-list');
     const sidebarTabs = document.querySelectorAll('.sidebar-tab');
     const sidebarSearchInput = document.getElementById('sidebar-recipe-search');
-    const searchAutocompleteContainer = document.getElementById('search-autocomplete-container');
     const sidebarTagFilters = document.getElementById('sidebar-tag-filters');
     const autogenPlanBtn = document.getElementById('autogen-plan-btn');
     const clearMealPlanBtn = document.getElementById('clear-meal-plan-btn');
@@ -423,14 +422,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const referencesRef = doc(db, 'references', userId);
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
-            state.references = doc.exists() ? doc.data() : {
-                itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
-                itemLocations: ['Køleskab', 'Fryser', 'Skab']
-            };
+            if (doc.exists()) {
+                state.references = doc.data();
+            } else {
+                // If the document doesn't exist, create it with default values
+                const defaultReferences = {
+                    itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
+                    itemLocations: ['Køleskab', 'Fryser', 'Skab']
+                };
+                setDoc(referencesRef, defaultReferences)
+                    .then(() => {
+                        state.references = defaultReferences;
+                        if (document.querySelector('#references:not(.hidden)')) {
+                            renderReferencesPage();
+                        }
+                    })
+                    .catch(e => handleError(e, "Kunne ikke oprette standard referencelister."));
+            }
             if (document.querySelector('#references:not(.hidden)')) {
                 renderReferencesPage();
             }
-        }, (error) => handleError(error, "Kunne ikke hente referencelister."));
+        }, (error) => handleError(error, "Kunne ikke hente referencelister. Tjek venligst dine Firebase sikkerhedsregler."));
     }
 
     // =================================================================
@@ -753,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'reference-card';
             card.dataset.key = key;
 
-            const listItems = data.items.map(item => `
+            const listItems = (data.items || []).map(item => `
                 <li class="reference-item">
                     <span>${item}</span>
                     <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
@@ -1636,38 +1648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     
-    sidebarSearchInput.addEventListener('input', debounce(() => {
-        const searchTerm = sidebarSearchInput.value.toLowerCase();
-        renderSidebarRecipeList();
-        
-        const autocompleteContainer = searchAutocompleteContainer;
-        autocompleteContainer.innerHTML = '';
-        if (searchTerm.length > 1) {
-            const suggestions = state.recipes.filter(r => r.title.toLowerCase().includes(searchTerm)).slice(0, 5);
-            if (suggestions.length > 0) {
-                const suggestionsWrapper = document.createElement('div');
-                suggestionsWrapper.className = 'autocomplete-suggestions';
-                suggestions.forEach(recipe => {
-                    const suggestionDiv = document.createElement('div');
-                    suggestionDiv.className = 'autocomplete-suggestion';
-                    suggestionDiv.textContent = recipe.title;
-                    suggestionDiv.addEventListener('mousedown', () => {
-                        sidebarSearchInput.value = recipe.title;
-                        renderSidebarRecipeList();
-                        autocompleteContainer.innerHTML = '';
-                    });
-                    suggestionsWrapper.appendChild(suggestionDiv);
-                });
-                autocompleteContainer.appendChild(suggestionsWrapper);
-            }
-        }
-    }, 300));
-
-    document.addEventListener('click', (e) => {
-        if (!sidebarSearchInput.contains(e.target)) {
-            searchAutocompleteContainer.innerHTML = '';
-        }
-    });
+    sidebarSearchInput.addEventListener('input', debounce(renderSidebarRecipeList, 300));
 
     sidebarRecipeList.addEventListener('click', (e) => {
         const header = e.target.closest('.sidebar-recipe-header');
@@ -1814,7 +1795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // =================================================================
-    // 9. INSPIRATION & AUTOGEN LOGIK
+    // 9. AUTOGEN LOGIK
     // =================================================================
     function calculateRecipeMatch(recipe) {
         let missingCount = 0;
