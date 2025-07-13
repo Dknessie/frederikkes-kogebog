@@ -40,7 +40,7 @@
                 <nav>
                     <a href="#meal-planner" class="nav-link active"><i class="fas fa-calendar-alt"></i> Madplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
-                    <a href="#inspiration" class="nav-link"><i class="fas fa-lightbulb"></i> Inspiration</a>
+                    <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
                     <a href="#profile" class="nav-link"><i class="fas fa-user-circle"></i> Profil</a>
                 </nav>
@@ -121,18 +121,27 @@
             <!-- Opskrifter Side -->
             <section id="recipes" class="page hidden">
                 <h2>Opskrifter</h2>
-                <div class="actions-bar">
+                <div class="actions-bar recipe-actions-bar">
                     <button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
+                    <div class="switch-group">
+                        <label for="sort-by-stock-toggle">Vis retter jeg kan lave først</label>
+                        <label class="switch">
+                            <input type="checkbox" id="sort-by-stock-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
                 <div id="recipe-filter-container" class="filter-container"></div>
                 <div id="recipe-grid" class="recipe-grid"></div>
             </section>
             
-            <!-- Inspiration Side -->
-            <section id="inspiration" class="page hidden">
-                <h2>Inspiration</h2>
-                <p>Her er de retter du kan lave, baseret på dit nuværende varelager.</p>
-                <div id="inspiration-grid" class="recipe-grid"></div>
+            <!-- Referencer Side -->
+            <section id="references" class="page hidden">
+                <h2>Referencer</h2>
+                <p>Administrér lister, der kan genbruges i applikationen, f.eks. til dropdown-menuer.</p>
+                <div id="references-container" class="references-layout">
+                    <!-- Indhold genereres af JavaScript -->
+                </div>
             </section>
 
             <!-- Varelager Side -->
@@ -366,25 +375,25 @@
 
     <!-- "Tilføj Måltid" Modal -->
     <div id="add-meal-modal" class="modal-overlay hidden">
-        <div class="modal-content modal-compact">
+        <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <form id="add-meal-form">
                 <h3 id="add-meal-modal-title"></h3>
-                <div class="modal-section">
-                    <label for="meal-portions" class="input-label">Antal portioner</label>
-                    <input type="number" id="meal-portions" class="modal-input" min="1" step="1" required>
+                <div class="input-group">
+                    <label for="meal-portions">Antal portioner</label>
+                    <input type="number" id="meal-portions" min="1" step="1" required>
                 </div>
-                <div class="modal-section-alt">
-                    <div id="extra-ingredients-toggle">
-                        <button type="button" id="show-extra-ingredients-btn" class="btn-link">
-                            <i class="fas fa-plus-circle"></i> Tilføj ekstra ingredienser (valgfrit)
-                        </button>
-                    </div>
-                    <div id="extra-ingredients-section" class="hidden">
-                        <label class="input-label">Ekstra ingredienser</label>
-                        <div id="extra-ingredients-container"></div>
-                        <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary btn-small"><i class="fas fa-plus"></i> Tilføj</button>
-                    </div>
+                <div class="input-group">
+                     <button type="button" id="show-extra-ingredients-btn" class="btn btn-secondary">
+                        <i class="fas fa-plus-circle"></i> Tilføj ekstra ingredienser
+                    </button>
+                </div>
+
+                <div id="extra-ingredients-section" class="hidden">
+                    <hr>
+                    <label class="input-label">Ekstra ingredienser</label>
+                    <div id="extra-ingredients-container"></div>
+                    <button type="button" id="add-extra-ingredient-btn" class="btn btn-secondary btn-small"><i class="fas fa-plus"></i> Tilføj</button>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Tilføj til madplan</button>
