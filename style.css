@@ -179,8 +179,8 @@ hr {
     color: var(--accent-color);
 }
 .btn-icon.remove-meal-btn:hover {
-    background-color: var(--status-red);
-    color: var(--white-color);
+    background-color: transparent;
+    color: var(--status-red);
 }
 .btn-icon:disabled {
     color: #ccc;
@@ -423,22 +423,6 @@ nav {
 }
 
 /* Højre Sidebar Specifik */
-.sidebar-search {
-    position: relative;
-    margin-bottom: var(--spacing-m);
-}
-.sidebar-search .search-icon {
-    position: absolute;
-    left: var(--spacing-m);
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    pointer-events: none;
-}
-#sidebar-recipe-search {
-    padding-left: calc(var(--spacing-m) * 2 + 1em);
-}
-
 .sidebar-recipe-item {
     background-color: var(--light-bg-color);
     border: 1px solid var(--border-color);
@@ -701,6 +685,10 @@ nav {
 .add-reference-form input {
     flex-grow: 1;
 }
+.add-reference-form .btn {
+    padding: var(--spacing-m);
+}
+
 
 /* ===== 8. Modaler ===== */
 .modal-overlay {
@@ -760,6 +748,21 @@ nav {
     border-radius: var(--border-radius);
     box-sizing: border-box;
 }
+.input-group.with-icon {
+    position: relative;
+}
+.input-group.with-icon i {
+    position: absolute;
+    left: var(--spacing-m);
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    pointer-events: none;
+}
+.input-group.with-icon input {
+    padding-left: calc(var(--spacing-m) * 2 + 1em);
+}
+
 .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
     outline: none;
     border-color: var(--primary-color);
@@ -809,7 +812,7 @@ nav {
     margin-bottom: 1em;
 }
 
-#ingredients-container {
+#ingredients-container, #extra-ingredients-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
