@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
+        recipeFormImage: { type: null, data: null }, // Holder styr på det valgte billede (url eller base64)
         listeners: { // Holder styr på Firestore listeners, så de kan afmeldes ved logout
             inventory: null,
             recipes: null,
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
+        recipeImageUploadInput: document.getElementById('recipe-image-upload'),
         recipeFilterContainer: document.getElementById('recipe-filter-container'),
         sortByStockToggle: document.getElementById('sort-by-stock-toggle'),
         recipeReadModal: document.getElementById('recipe-read-modal'),
@@ -658,7 +660,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-            const imageUrl = recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+            
+            // Prioriter Base64 billede, fald tilbage til URL, og til sidst placeholder
+            const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+            
             const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
                 ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
                 : '';
@@ -788,7 +793,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderReadView(recipe) {
-        document.getElementById('read-view-image').src = recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        // Prioriter Base64 billede, fald tilbage til URL, og til sidst placeholder
+        const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        document.getElementById('read-view-image').src = imageUrl;
+
         document.getElementById('read-view-title').textContent = recipe.title;
         document.getElementById('read-view-category').textContent = recipe.category || '';
         document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
@@ -1103,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const lines = text.split('\n');
             elements.ingredientsContainer.innerHTML = ''; 
             
-            const knownUnits = ['g', 'gram', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse'];
+            const knownUnits = ['g', 'gram', 'grams', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse'];
             const unitRegex = new RegExp(`^(${knownUnits.join('|')})s?(\\.|s)?`, 'i');
 
             lines.forEach(line => {
@@ -1158,7 +1166,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.recipeForm.reset();
             document.getElementById('recipe-id').value = '';
             elements.ingredientsContainer.innerHTML = '';
-            elements.recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
+            elements.recipeImagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+            state.recipeFormImage = { type: null, data: null }; // Nulstil billede
             createIngredientRow(elements.ingredientsContainer);
             elements.recipeEditModal.classList.remove('hidden');
         });
@@ -1171,8 +1180,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
+        // **BILLEDE UPLOAD LOGIK**
+        elements.recipeImageUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    elements.recipeImagePreview.src = event.target.result;
+                    state.recipeFormImage = { type: 'base64', data: event.target.result };
+                    elements.recipeImageUrlInput.value = ''; // Ryd URL-feltet
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
         elements.recipeImageUrlInput.addEventListener('input', (e) => {
-            elements.recipeImagePreview.src = e.target.value || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
+            const url = e.target.value;
+            elements.recipeImagePreview.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+            if (url) {
+                state.recipeFormImage = { type: 'url', data: url };
+                elements.recipeImageUploadInput.value = ''; // Ryd fil-input
+            }
         });
 
         elements.recipeForm.addEventListener('submit', async (e) => {
@@ -1200,9 +1228,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 instructions: document.getElementById('recipe-instructions').value,
                 source_url: document.getElementById('recipe-source-url').value,
                 ingredients: ingredients,
-                imageUrl: document.getElementById('recipe-imageUrl').value || null,
-                is_favorite: state.recipes.find(r => r.id === recipeId)?.is_favorite || false
+                is_favorite: state.recipes.find(r => r.id === recipeId)?.is_favorite || false,
+                // Nulstil billede-felter før de sættes
+                imageUrl: null,
+                imageBase64: null,
             };
+
+            // Sæt det korrekte billede-felt baseret på hvad brugeren har valgt
+            if (state.recipeFormImage.type === 'url') {
+                recipeData.imageUrl = state.recipeFormImage.data;
+            } else if (state.recipeFormImage.type === 'base64') {
+                recipeData.imageBase64 = state.recipeFormImage.data;
+            }
+
 
             try {
                 if (recipeId) {
@@ -1275,6 +1313,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.recipeReadModal.classList.add('hidden');
                 
                 elements.recipeEditModalTitle.textContent = 'Rediger opskrift';
+                elements.recipeForm.reset(); // Nulstil formularen først
+                state.recipeFormImage = { type: null, data: null }; // Nulstil billede state
+
                 document.getElementById('recipe-id').value = recipe.id;
                 document.getElementById('recipe-title').value = recipe.title || '';
                 document.getElementById('recipe-category').value = recipe.category || '';
@@ -1284,9 +1325,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('recipe-notes').value = recipe.notes || '';
                 document.getElementById('recipe-instructions').value = recipe.instructions || '';
                 document.getElementById('recipe-source-url').value = recipe.source_url || '';
-                document.getElementById('recipe-imageUrl').value = recipe.imageUrl || '';
                 
-                elements.recipeImagePreview.src = recipe.imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Indsæt+URL';
+                const imageUrl = recipe.imageBase64 || recipe.imageUrl;
+                elements.recipeImagePreview.src = imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+                if(recipe.imageUrl) {
+                    elements.recipeImageUrlInput.value = recipe.imageUrl;
+                    state.recipeFormImage = { type: 'url', data: recipe.imageUrl };
+                } else if (recipe.imageBase64) {
+                    state.recipeFormImage = { type: 'base64', data: recipe.imageBase64 };
+                }
 
                 elements.ingredientsContainer.innerHTML = '';
                 if (recipe.ingredients && recipe.ingredients.length > 0) {
