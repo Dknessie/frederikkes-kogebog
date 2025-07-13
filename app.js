@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showMobilePanel(panelId) {
-        elements.mobilePanelOverlay.classList.remove('hidden');
+        elements.mobilePanelOverlay.classList.add('active'); // Start fade-in af overlay
         
         let targetPanel;
         if (panelId === 'shopping-list') {
@@ -453,13 +453,12 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.mobileShoppingListPanel.classList.remove('active');
         elements.mobileKitchenCounterPanel.classList.remove('active');
         
-        setTimeout(() => {
-            targetPanel.classList.add('active');
-        }, 10);
+        // Start slide-up animation
+        targetPanel.classList.add('active');
     }
 
     function hideMobilePanels() {
-        elements.mobilePanelOverlay.classList.add('hidden');
+        elements.mobilePanelOverlay.classList.remove('active');
         elements.mobileShoppingListPanel.classList.remove('active');
         elements.mobileKitchenCounterPanel.classList.remove('active');
     }
@@ -823,7 +822,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recipe.ingredients && recipe.ingredients.length > 0) {
             recipe.ingredients.forEach(ing => {
                 const li = document.createElement('li');
-                li.textContent = `${ing.quantity || ''} ${ing.unit || ''} ${ing.name}`;
+                const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] });
+                
+                const statusIcon = canBeMade 
+                    ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>`
+                    : `<span class="ingredient-stock-status out-of-stock"><i class="fas fa-times-circle"></i></span>`;
+
+                li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name}</span> ${statusIcon}`;
                 ingredientsList.appendChild(li);
             });
         }
