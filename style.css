@@ -295,6 +295,16 @@ header {
     margin-bottom: var(--spacing-m);
 }
 
+/* NYT: Styling for ugepris */
+.calendar-title-container {
+    text-align: center;
+}
+.weekly-price-display {
+    font-size: var(--small-font-size);
+    color: #666;
+    font-weight: 600;
+}
+
 .calendar-actions {
     display: flex;
     justify-content: center;
@@ -347,6 +357,9 @@ header {
     transition: background-color 0.2s ease;
     overflow-y: auto;
     min-height: 40px; /* Giver plads til at droppe elementer */
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
 }
 .meal-slot:last-child { border-bottom: none; }
 .meal-slot.drag-over { background-color: #d1e7dd; }
@@ -358,7 +371,6 @@ header {
     font-size: 0.8rem;
     border-left: 3px solid var(--primary-color);
     cursor: grab;
-    margin-top: var(--spacing-s);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -674,6 +686,21 @@ header {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: var(--spacing-l);
 }
+.card {
+    background: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    padding: var(--spacing-l);
+}
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m);
+}
+.card-header h3 {
+    margin: 0;
+}
 #inventory-summary-card .summary-item {
     display: flex;
     justify-content: space-between;
@@ -688,6 +715,43 @@ header {
     font-weight: 700;
     color: var(--primary-color);
 }
+
+/* NYT: Budget Kort Styling */
+.budget-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-l);
+}
+.budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.budget-label {
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.budget-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.progress-bar-container {
+    background-color: #eee;
+    border-radius: 20px;
+    height: 12px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+.progress-bar.green { background-color: var(--status-green); }
+.progress-bar.yellow { background-color: var(--status-yellow); }
+.progress-bar.red { background-color: var(--status-red); }
 
 
 /* ===== 8. Modaler ===== */
@@ -706,9 +770,7 @@ header {
     box-sizing: border-box;
 }
 
-/* ** Z-INDEX FIX **
-   Sikrer at notifikationer altid vises øverst. */
-#plan-meal-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -723,7 +785,8 @@ header {
     overflow-y: auto;
 }
 #plan-meal-modal .modal-content,
-#add-meal-modal .modal-content {
+#add-meal-modal .modal-content,
+#edit-budget-modal .modal-content {
     max-width: 450px;
 }
 
@@ -828,7 +891,6 @@ header {
     padding: 0;
     margin: 0;
 }
-/* **NYT** Styling for ingrediens-liste i læse-visning */
 .read-view-ingredients li {
     display: flex;
     justify-content: space-between;
@@ -873,20 +935,18 @@ header {
     border-radius: var(--border-radius);
 }
 
-/* **MOBIL FIX FOR INGREDIENSER**
-   Sikrer at navnefeltet kan vokse og ombryde tekst, mens de andre felter har fast størrelse. */
 .ingredient-row .ingredient-name {
-    flex: 1 1 auto; /* Tillad at feltet kan vokse og krympe */
-    min-width: 0; /* Vigtigt for at flexbox kan krympe feltet korrekt */
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .ingredient-row .ingredient-quantity { 
     width: 70px;
     text-align: right;
-    flex-shrink: 0; /* Forhindrer at feltet krymper */
+    flex-shrink: 0;
 }
 .ingredient-row .ingredient-unit {
     width: 80px;
-    flex-shrink: 0; /* Forhindrer at feltet krymper */
+    flex-shrink: 0;
 }
 
 .ingredient-row .remove-ingredient-btn { color: #adb5bd; flex-shrink: 0; }
@@ -912,14 +972,14 @@ input:checked + .slider:before { transform: translateX(22px); }
 .slider.round:before { border-radius: 50%; }
 
 #buy-whole-options {
-    grid-column: 1 / -1; /* Span all columns in the grid */
+    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-m) var(--spacing-l);
     background-color: var(--secondary-color);
     padding: var(--spacing-m);
     border-radius: var(--border-radius);
-    margin-top: calc(-1 * var(--spacing-m)); /* Pull up to reduce space */
+    margin-top: calc(-1 * var(--spacing-m));
     border-top: 1px solid var(--border-color);
 }
 
@@ -943,7 +1003,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* ===== 10. Mobil-specifikke Styles ===== */
 .mobile-tab-bar {
-    display: none; /* Skjult som standard */
+    display: none;
     position: fixed;
     bottom: 0;
     left: 0;
@@ -972,7 +1032,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: 4px;
 }
 
-/* **FORBEDRET MOBIL PANEL** */
 .mobile-panel-overlay {
     position: fixed;
     top: 0;
@@ -1072,15 +1131,14 @@ input:checked + .slider:before { transform: translateX(22px); }
         gap: var(--spacing-m);
     }
 
-    /* Gør "Rediger Opskrift" modalen mobilvenlig */
     #recipe-edit-modal .modal-content {
         padding: var(--spacing-m);
         max-height: 95vh;
     }
     #recipe-edit-modal .form-grid {
-        grid-template-columns: 1fr; /* Stack form fields vertically */
+        grid-template-columns: 1fr;
     }
     #recipe-edit-modal .image-upload-container img {
-        height: 150px; /* Reduce image height on mobile */
+        height: 150px;
     }
 }
