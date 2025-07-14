@@ -188,7 +188,7 @@ hr {
     justify-content: center;
     transition: all 0.2s ease;
 }
-.btn-icon:hover {
+.btn-icon:hover:not(:disabled) {
     background-color: #eee;
     color: var(--accent-color);
 }
@@ -657,7 +657,7 @@ header {
 .inventory-controls {
     display: flex;
     gap: var(--spacing-l);
-    margin-bottom: var(--spacing-m);
+    margin-bottom: var(--spacing-l); /* Changed from --spacing-m */
     align-items: center;
     flex-wrap: wrap;
 }
@@ -783,6 +783,12 @@ header {
 .inventory-item-actions {
     text-align: right;
 }
+.inventory-item-actions .btn-icon:disabled {
+    color: #e0e0e0;
+    cursor: not-allowed;
+    background-color: transparent;
+}
+
 
 .unprocessed-items-section {
     background-color: var(--secondary-color);
@@ -842,12 +848,21 @@ header {
 .reference-item:last-child {
     border-bottom: none;
 }
-.reference-item .shelf-life-input {
-    width: 80px;
+.reference-item.combined-item {
+    gap: var(--spacing-m);
+}
+.shelf-life-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.shelf-life-input {
+    width: 60px; /* Reduced width */
     text-align: right;
     padding: var(--spacing-s);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
+    box-sizing: border-box; /* Ensures padding is included in width */
 }
 
 .add-reference-form {
