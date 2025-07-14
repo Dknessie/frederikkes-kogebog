@@ -1,7 +1,5 @@
 // js/shoppingList.js
 
-// Handles all logic for the shopping list.
-
 import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
@@ -11,11 +9,6 @@ import { calculateRecipePrice } from './recipes.js';
 let appState;
 let appElements;
 
-/**
- * Initializes the shopping list module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initShoppingList(state, elements) {
     appState = state;
     appElements = elements;
@@ -39,9 +32,6 @@ export function initShoppingList(state, elements) {
     });
 }
 
-/**
- * Renders the shopping list for both desktop and mobile views.
- */
 export function renderShoppingList() {
     const containers = [appElements.shoppingList.container, appElements.shoppingListMobile.container];
     const groupedList = {};
@@ -124,12 +114,9 @@ async function updateShoppingListInFirestore(newList) {
 
 function handleGenerateShoppingList() {
     const allIngredientsNeeded = [];
-    // This correctly gets the Monday of the *currently viewed* week from the global state.
     const start = getStartOfWeek(appState.currentDate); 
 
     for (let i = 0; i < 7; i++) {
-        // BUG FIX: Using setDate() is the most reliable way to iterate through days,
-        // as it correctly handles all edge cases like DST and different timezones.
         const dayDate = new Date(start);
         dayDate.setDate(start.getDate() + i); 
         const dateString = formatDate(dayDate);
@@ -162,7 +149,8 @@ function handleGenerateShoppingList() {
     addToShoppingList(allIngredientsNeeded, `madplanen for uge ${getWeekNumber(start)}`);
 }
 
-async function addToShoppingList(ingredients, sourceText) {
+// This function needs to be exported to be used by inventory.js
+export async function addToShoppingList(ingredients, sourceText) {
     const updatedList = { ...appState.shoppingList };
     let conversionErrors = [];
     const totalNeeds = {};
