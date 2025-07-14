@@ -1,12 +1,8 @@
 // js/app.js
 
-// This is the main entry point for the application.
-// It initializes all modules and manages the central state and data listeners.
-
 import { db } from './firebase.js';
 import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// App Modules
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, renderInventorySummary } from './inventory.js';
@@ -18,7 +14,6 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initOverview, renderBudgetOverview } from './overview.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Global State ---
     const state = {
         currentUser: null,
         inventory: [],
@@ -27,15 +22,14 @@ document.addEventListener('DOMContentLoaded', () => {
         mealPlan: {},
         shoppingList: {},
         kitchenCounter: {},
-        budget: { monthlyAmount: 4000 }, // Default budget
+        budget: { monthlyAmount: 4000 },
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
         recipeFormImage: { type: null, data: null },
-        listeners: {} // To hold Firestore unsubscribers
+        listeners: {}
     };
 
-    // --- DOM Element Cache ---
     const elements = {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
@@ -97,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
         notificationActions: document.getElementById('notification-actions'),
-        // Budget elements
         editBudgetModal: document.getElementById('edit-budget-modal'),
         editBudgetForm: document.getElementById('edit-budget-form'),
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
@@ -105,7 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetTotalEl: document.getElementById('budget-total'),
         budgetProgressBar: document.getElementById('budget-progress-bar'),
         weeklyPriceDisplay: document.getElementById('weekly-price-display'),
-        // Shopping List elements
+        reorderAssistantBtn: document.getElementById('reorder-assistant-btn'),
+        reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
+        reorderListContainer: document.getElementById('reorder-list-container'),
+        reorderForm: document.getElementById('reorder-form'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
@@ -172,13 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderKitchenCounter();
         }, (error) => commonErrorHandler(error, 'køkkenbord'));
         
-        // Listener for user-specific settings like budget
         const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
         state.listeners.budget = onSnapshot(settingsRef, (doc) => {
             if (doc.exists()) {
                 state.budget = doc.data();
             } else {
-                // Create a default budget if none exists
                 setDoc(settingsRef, state.budget).catch(e => handleError(e, "Kunne ikke oprette standardbudget."));
             }
             if (document.querySelector('#overview:not(.hidden)')) renderBudgetOverview();
@@ -243,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- App Initialization ---
     function init() {
         initAuth(onLogin, onLogout);
         setupAuthEventListeners(elements);
