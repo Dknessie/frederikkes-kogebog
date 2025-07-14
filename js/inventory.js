@@ -59,8 +59,7 @@ export function initInventory(state, elements) {
             handleDeleteItem(button.dataset.id);
         }
     });
-    
-    // Listeners for the new conversion rules UI
+
     document.getElementById('add-conversion-rule-btn').addEventListener('click', () => addConversionRuleRow());
     document.getElementById('conversion-rules-container').addEventListener('click', e => {
         if (e.target.closest('.delete-rule-btn')) {
@@ -73,15 +72,46 @@ export function initInventory(state, elements) {
             updateLiveFeedback();
         }
     });
+    
+    document.getElementById('unprocessed-items-container').addEventListener('click', e => {
+        const createBtn = e.target.closest('.create-item-from-unprocessed-btn');
+        if(createBtn) {
+            const itemName = createBtn.dataset.itemName;
+            openEditModal(null, itemName);
+        }
+    });
+}
+
+function renderUnprocessedItems() {
+    const unprocessedItemsContainer = document.getElementById('unprocessed-items-container');
+    const unprocessedItemsSection = document.getElementById('unprocessed-items-section');
+    const unprocessedItems = Object.values(appState.shoppingList).filter(item => item.is_unprocessed);
+
+    unprocessedItemsContainer.innerHTML = '';
+    if(unprocessedItems.length > 0) {
+        unprocessedItems.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'unprocessed-item';
+            itemDiv.innerHTML = `
+                <span>${item.name}</span>
+                <button class="btn btn-secondary btn-sm create-item-from-unprocessed-btn" data-item-name="${item.name}">+ Opret i Varelager</button>
+            `;
+            unprocessedItemsContainer.appendChild(itemDiv);
+        });
+        unprocessedItemsSection.classList.remove('hidden');
+    } else {
+        unprocessedItemsSection.classList.add('hidden');
+    }
 }
 
 export function renderInventory() {
+    renderUnprocessedItems();
     let items = appState.inventory;
     if (inventoryState.searchTerm) {
         items = items.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm) || (item.aliases || []).some(a => a.toLowerCase().includes(inventoryState.searchTerm)));
     }
     if (inventoryState.activeFilter === 'low') {
-        items = items.filter(item => item.max_stock > 0 && (item.current_stock || 0) < item.max_stock / 2);
+        items = items.filter(item => item.max_stock > 0 && (item.current_stock || 0) < item.max_stock);
     }
     if (inventoryState.activeFilter === 'critical') {
         items = items.filter(item => item.is_critical);
@@ -135,7 +165,7 @@ function renderItemGroup(container, location, items) {
         itemRow.className = 'inventory-item-row';
         
         const criticalIcon = item.is_critical ? `<i class="fas fa-fire-alt critical-item-icon" title="Kritisk vare"></i>` : '';
-        const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
+        const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 0;
         let stockColor = '#4CAF50';
         if (stockPercentage < 50) stockColor = '#FFC107';
         if (stockPercentage < 20) stockColor = '#F44336';
@@ -145,14 +175,14 @@ function renderItemGroup(container, location, items) {
             const stockLevel = item.current_stock || 0;
             if (stockLevel === 0) {
                 stockStatus = { text: 'Tom', className: 'status-critical' };
-            } else if (stockLevel < item.max_stock / 2) {
+            } else if (stockLevel < item.max_stock) {
                 stockStatus = { text: 'Lav', className: 'status-low' };
             }
         } else {
             stockStatus = { text: '-', className: 'status-unknown' };
         }
         
-        const displayStock = `${item.current_stock || 0} ${item.display_unit || 'g'}`;
+        const displayStock = `${(item.current_stock || 0).toFixed(1).replace(/\.0$/, '')} ${item.display_unit || 'g'}`;
 
         itemRow.innerHTML = `
             <div class="item-name-cell">${criticalIcon}<span>${item.name || ''}</span></div>
@@ -207,7 +237,6 @@ async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
     
-    // Read all conversion rules from the UI
     const conversionRules = {};
     document.querySelectorAll('#conversion-rules-container .conversion-rule-row').forEach(row => {
         const unit = row.querySelector('.rule-unit-select').value;
@@ -227,13 +256,21 @@ async function handleSaveItem(e) {
         gramsInStock = currentStock;
     } else if (conversionRules[displayUnit]) {
         gramsInStock = currentStock * conversionRules[displayUnit];
+    } else if (Object.keys(conversionRules).length > 0) {
+        showNotification({title: "Fejl i Standardenhed", message: `Vælg venligst en gyldig standardenhed for lageropgørelse.`});
+        return;
     } else {
-        showNotification({title: "Fejl i Standardenhed", message: `Den valgte standardenhed '${displayUnit}' har ikke en gyldig gram-værdi.`});
+        gramsInStock = 0; // No rules, no grams
+    }
+    
+    const itemName = document.getElementById('item-name').value.trim();
+    if (!itemName) {
+        showNotification({title: "Manglende Navn", message: "Varen skal have et navn."});
         return;
     }
 
     const itemData = {
-        name: document.getElementById('item-name').value.trim(),
+        name: itemName,
         description: document.getElementById('item-description').value.trim(),
         category: document.getElementById('item-category').value,
         home_location: document.getElementById('item-home-location').value,
@@ -245,6 +282,8 @@ async function handleSaveItem(e) {
         kg_price: Number(document.getElementById('item-kg-price').value) || null,
         is_critical: document.getElementById('item-is-critical').checked,
         aliases: (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a),
+        buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
+        purchase_size_grams: Number(document.getElementById('item-purchase-size-grams').value) || null,
     };
 
     try {
@@ -298,7 +337,6 @@ function addConversionRuleRow(rule = { unit: '', grams: '' }) {
     `;
     row.querySelector('.input-group:nth-child(2)').appendChild(unitSelect);
     
-    // Update radio button value when select changes
     unitSelect.addEventListener('change', () => {
         row.querySelector('input[type="radio"]').value = unitSelect.value;
     });
@@ -329,27 +367,26 @@ function updateLiveFeedback() {
         totalGrams = stockAmount * rules[displayUnit];
     }
 
-    document.getElementById('total-grams-display').textContent = totalGrams.toFixed(2);
+    document.getElementById('total-grams-display').textContent = totalGrams.toFixed(1).replace(/\.0$/, '');
 
     const equivalentsContainer = document.getElementById('equivalent-units-display');
     equivalentsContainer.innerHTML = '';
     for (const unit in rules) {
-        if (unit !== displayUnit) {
+        if (unit !== 'g') {
             const equivalentAmount = totalGrams / rules[unit];
             const p = document.createElement('p');
-            p.textContent = `Svarer til ca. ${equivalentAmount.toFixed(1)} ${unit}`;
+            p.textContent = `≈ ${equivalentAmount.toFixed(1).replace(/\.0$/, '')} ${unit}`;
             equivalentsContainer.appendChild(p);
         }
     }
 }
 
 
-function openEditModal(item) {
+function openEditModal(item, prefilledName = null) {
     appElements.inventoryItemForm.reset();
     document.getElementById('conversion-rules-container').innerHTML = '';
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
 
-    // Populate static dropdowns
     populateReferenceDropdown(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
     populateReferenceDropdown(document.getElementById('item-home-location'), appState.references.itemLocations, 'Vælg placering...', item?.home_location);
     
@@ -362,14 +399,18 @@ function openEditModal(item) {
         document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
         document.getElementById('item-is-critical').checked = item.is_critical || false;
+        document.getElementById('item-buy-whole').checked = item.buy_as_whole_unit || false;
+        document.getElementById('item-purchase-size-grams').value = item.purchase_size_grams || '';
         
-        // Populate conversion rules
         const rules = item.conversion_rules || {};
-        for (const unit in rules) {
-            addConversionRuleRow({ unit: unit, grams: rules[unit] });
+        if (Object.keys(rules).length > 0) {
+            for (const unit in rules) {
+                addConversionRuleRow({ unit: unit, grams: rules[unit] });
+            }
+        } else {
+            addConversionRuleRow({ unit: 'g', grams: 1 });
         }
         
-        // Set the radio button for the display unit
         const displayUnit = item.display_unit || 'g';
         const radioToSelect = document.querySelector(`input[name="display-unit-radio"][value="${displayUnit}"]`);
         if (radioToSelect) {
@@ -378,9 +419,10 @@ function openEditModal(item) {
 
     } else {
         document.getElementById('inventory-item-id').value = '';
-        // Add a default 'g' rule for new items
+        document.getElementById('item-name').value = prefilledName || '';
         addConversionRuleRow({ unit: 'g', grams: 1 });
-        document.querySelector('input[name="display-unit-radio"]').checked = true;
+        const radio = document.querySelector('input[name="display-unit-radio"]');
+        if(radio) radio.checked = true;
     }
     
     updateLiveFeedback();
@@ -412,7 +454,7 @@ function openReorderAssistant() {
                     <label for="reorder-${item.id}">
                         <span class="item-name">${item.name}</span>
                         ${item.is_critical ? '<i class="fas fa-fire-alt critical-item-icon" title="Kritisk vare"></i>' : ''}
-                        <span class="stock-info">(${item.current_stock} / ${item.max_stock} ${item.display_unit || 'g'})</span>
+                        <span class="stock-info">(${item.current_stock.toFixed(1).replace(/\.0$/,'')} / ${item.max_stock} ${item.display_unit || 'g'})</span>
                     </label>
                 </div>
             `;
