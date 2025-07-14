@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
         inventoryModalTitle: document.getElementById('inventory-modal-title'),
-        inventoryTableBody: document.querySelector('.inventory-table tbody'),
+        // BUG FIX: Removed reference to the old inventory table which no longer exists.
+        // inventoryTableBody: document.querySelector('.inventory-table tbody'),
         buyWholeCheckbox: document.getElementById('item-buy-whole'),
         buyWholeOptions: document.getElementById('buy-whole-options'),
         recipeEditModal: document.getElementById('recipe-edit-modal'),
