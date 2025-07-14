@@ -356,15 +356,22 @@
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj mål</button>
                 </div>
                 <hr>
+                <!-- **FIXED SECTION** -->
+                <h4>Beholdning & Pris</h4>
                 <div class="form-grid-2-col">
                     <div class="input-group">
-                        <label for="item-aliases">Aliaser (separer med komma)</label>
-                        <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
+                        <label for="item-max-stock">Normal beholdning (valgfri)</label>
+                        <input type="number" id="item-max-stock" placeholder="F.eks. 500 (i standardenhed)">
+                        <p class="small-text">Bruges af genbestillings-assistenten.</p>
                     </div>
                     <div class="input-group">
-                        <label for="item-kg-price">Pris pr. kg</label>
-                        <input type="number" step="0.01" id="item-kg-price">
+                        <label for="item-kg-price">Pris pr. kg (valgfri)</label>
+                        <input type="number" step="0.01" id="item-kg-price" placeholder="F.eks. 89.95">
                     </div>
+                </div>
+                <div class="input-group">
+                    <label for="item-aliases">Aliaser (separer med komma)</label>
+                    <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
                 </div>
                  <div class="input-group switch-group">
                     <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
