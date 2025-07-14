@@ -294,30 +294,33 @@
                 <input type="hidden" id="inventory-item-id">
                 <div class="form-grid-3-col">
                     <div class="input-group">
-                        <label for="item-name">Varenavn</label>
-                        <input type="text" id="item-name" required>
+                        <label for="item-name-select">Varenavn</label>
+                        <select id="item-name-select"></select>
+                        <input type="text" id="item-name-custom" class="hidden" placeholder="Angiv nyt varenavn...">
                     </div>
-                    <!-- ÆNDRING: Fra input til select for Beskrivelse -->
                     <div class="input-group">
                         <label for="item-description">Beskrivelse</label>
                         <select id="item-description"></select>
+                        <input type="text" id="item-description-custom" class="hidden" placeholder="Angiv ny beskrivelse...">
                     </div>
                      <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
                         <select id="item-home-location"></select>
+                        <input type="text" id="item-home-location-custom" class="hidden" placeholder="Angiv ny placering...">
                     </div>
                     <div class="input-group">
                         <label for="item-category">Kategori (Butik)</label>
                         <select id="item-category"></select>
+                        <input type="text" id="item-category-custom" class="hidden" placeholder="Angiv ny kategori...">
                     </div>
                     <div class="input-group">
                         <label for="item-current-stock">Antal på lager</label>
                         <input type="number" id="item-current-stock" value="0" required>
                     </div>
-                    <!-- ÆNDRING: Fra input til select for Enhed -->
                     <div class="input-group">
-                        <label for="item-unit">Standardenhed</label>
-                        <select id="item-unit"></select>
+                        <label for="item-unit-select">Standardenhed</label>
+                        <select id="item-unit-select"></select>
+                        <input type="text" id="item-unit-custom" class="hidden" placeholder="Angiv ny enhed...">
                     </div>
                     <div class="input-group">
                         <label for="item-grams-per-unit">Gram pr. 'stk'</label>
