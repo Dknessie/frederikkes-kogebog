@@ -1,7 +1,5 @@
 // js/references.js
 
-// Handles logic for the references page.
-
 import { db } from './firebase.js';
 import { doc, setDoc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
@@ -9,11 +7,6 @@ import { showNotification, handleError } from './ui.js';
 let appState;
 let appElements;
 
-/**
- * Initializes the references module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initReferences(state, elements) {
     appState = state;
     appElements = elements;
@@ -22,19 +15,24 @@ export function initReferences(state, elements) {
     appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
 }
 
-/**
- * Renders the references page with lists of categories and locations.
- */
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
     const referenceData = {
+        itemDescriptions: {
+            title: 'Varebeskrivelser',
+            items: appState.references.itemDescriptions || []
+        },
         itemCategories: {
-            title: 'Varekategorier',
+            title: 'Varekategorier (Butik)',
             items: appState.references.itemCategories || []
         },
         itemLocations: {
             title: 'Placeringer i Hjemmet',
             items: appState.references.itemLocations || []
+        },
+        standardUnits: {
+            title: 'Standardenheder',
+            items: appState.references.standardUnits || []
         }
     };
 
@@ -97,7 +95,6 @@ async function handleFormSubmit(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            // Using setDoc with merge to ensure the document is created if it doesn't exist
             await setDoc(ref, {
                 [key]: arrayUnion(value)
             }, { merge: true });
