@@ -615,7 +615,7 @@ header {
 .status-indicator.status-yellow { background-color: var(--status-yellow); }
 .status-indicator.status-red { background-color: var(--status-red); }
 
-/* NYT: Varelager Dashboard Styling */
+/* Varelager Dashboard Styling */
 .inventory-dashboard {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
@@ -624,14 +624,14 @@ header {
 }
 
 .inventory-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: var(--spacing-l);
     margin-bottom: var(--spacing-m);
-    flex-wrap: wrap;
+    align-items: center;
 }
 
 .search-bar {
-    flex-grow: 1;
     position: relative;
 }
 .search-bar i {
@@ -661,6 +661,7 @@ header {
     gap: var(--spacing-m);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: var(--spacing-l);
+    flex-wrap: wrap;
 }
 .location-tab {
     padding: var(--spacing-m);
@@ -669,6 +670,10 @@ header {
     color: #777;
     border-bottom: 3px solid transparent;
     transition: all 0.2s ease;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
 }
 .location-tab.active, .location-tab:hover {
     color: var(--primary-color);
