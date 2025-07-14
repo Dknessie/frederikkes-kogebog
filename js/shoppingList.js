@@ -124,12 +124,14 @@ async function updateShoppingListInFirestore(newList) {
 
 function handleGenerateShoppingList() {
     const allIngredientsNeeded = [];
+    // This correctly gets the Monday of the *currently viewed* week from the global state.
     const start = getStartOfWeek(appState.currentDate); 
 
     for (let i = 0; i < 7; i++) {
-        // BUG FIX: Using a more robust timestamp-based calculation for dates.
-        const dayTimestamp = start.getTime() + (i * 24 * 60 * 60 * 1000);
-        const dayDate = new Date(dayTimestamp);
+        // BUG FIX: Using setDate() is the most reliable way to iterate through days,
+        // as it correctly handles all edge cases like DST and different timezones.
+        const dayDate = new Date(start);
+        dayDate.setDate(start.getDate() + i); 
         const dateString = formatDate(dayDate);
         const dayPlan = appState.mealPlan[dateString];
 
