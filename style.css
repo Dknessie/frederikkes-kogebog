@@ -509,19 +509,43 @@ header {
     font-size: var(--small-font-size);
     color: #666;
 }
-.item-quantity-input, .item-unit-input {
+
+.quantity-adjuster {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.quantity-adjuster .btn-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+    color: var(--primary-color);
+}
+.item-quantity-input {
     width: 50px;
     padding: var(--spacing-xs);
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    text-align: center;
+    -moz-appearance: textfield;
 }
+.item-quantity-input::-webkit-outer-spin-button,
+.item-quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.item-unit-display {
+    font-weight: 600;
+}
+
+
 .item-actions {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
     flex-shrink: 0;
 }
-.shopping-list-item input[type="checkbox"]:checked + .item-name-details label {
+.shopping-list-item input[type="checkbox"]:checked + .item-main-info .item-name-details label {
     text-decoration: line-through;
     color: #999;
 }
