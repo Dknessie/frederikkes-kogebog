@@ -1,30 +1,19 @@
 // js/inventory.js
 
-// Handles all logic related to the inventory page.
-
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { debounce } from './utils.js';
+import { debounce, normalizeUnit } from './utils.js';
 
 let appState;
 let appElements;
 
-/**
- * Initializes the inventory module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initInventory(state, elements) {
     appState = state;
     appElements = elements;
 
     appElements.addInventoryItemBtn.addEventListener('click', () => {
-        appElements.inventoryModalTitle.textContent = 'Tilføj ny vare';
-        appElements.inventoryItemForm.reset();
-        appElements.buyWholeOptions.classList.add('hidden');
-        document.getElementById('inventory-item-id').value = '';
-        appElements.inventoryItemModal.classList.remove('hidden');
+        openEditModal(null); // Pass null to indicate a new item
     });
 
     appElements.buyWholeCheckbox.addEventListener('change', () => {
@@ -37,15 +26,12 @@ export function initInventory(state, elements) {
     
     const debouncedGuess = debounce(guessItemDetails, 400);
     document.getElementById('item-name').addEventListener('input', (e) => {
-        if (!document.getElementById('inventory-item-id').value) { // Guess only for new items
+        if (!document.getElementById('inventory-item-id').value) {
             debouncedGuess(e.target.value);
         }
     });
 }
 
-/**
- * Renders the inventory table based on the current state.
- */
 export function renderInventory() {
     const items = appState.inventory;
     const fragment = document.createDocumentFragment();
@@ -132,7 +118,7 @@ async function handleSaveItem(e) {
     const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
 
     let gramsInStock = 0;
-    if (unit.toLowerCase() === 'g') {
+    if (normalizeUnit(unit) === 'g') {
         gramsInStock = quantity;
     } else if (gramsPerUnit) {
         gramsInStock = quantity * gramsPerUnit;
@@ -144,8 +130,8 @@ async function handleSaveItem(e) {
     const itemData = {
         name: (document.getElementById('item-name').value || '').trim(),
         description: (document.getElementById('item-description').value || '').trim(),
-        category: (document.getElementById('item-category').value || '').trim(),
-        home_location: (document.getElementById('item-home-location').value || '').trim(),
+        category: document.getElementById('item-category').value,
+        home_location: document.getElementById('item-home-location').value,
         current_stock: quantity,
         max_stock: Number(document.getElementById('item-max-stock').value) || null,
         unit: unit,
@@ -202,32 +188,67 @@ async function handleTableClick(e) {
     }
 }
 
-function openEditModal(item) {
-    appElements.inventoryModalTitle.textContent = 'Rediger vare';
-    
-    document.getElementById('inventory-item-id').value = item.id;
-    document.getElementById('item-name').value = item.name || '';
-    document.getElementById('item-description').value = item.description || '';
-    document.getElementById('item-category').value = item.category || '';
-    document.getElementById('item-home-location').value = item.home_location || '';
-    document.getElementById('item-current-stock').value = item.current_stock || 0;
-    document.getElementById('item-max-stock').value = item.max_stock || '';
-    document.getElementById('item-unit').value = item.unit || '';
-    document.getElementById('item-kg-price').value = item.kg_price || '';
-    document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
-    document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
-    
-    appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
-    appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
+function populateReferenceDropdowns() {
+    const categorySelect = document.getElementById('item-category');
+    const locationSelect = document.getElementById('item-home-location');
 
-    if (item.purchase_unit) {
-        document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
-        document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
+    // Clear existing options
+    categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
+    locationSelect.innerHTML = '<option value="">Vælg placering...</option>';
+
+    // Populate categories
+    const categories = appState.references.itemCategories || [];
+    categories.forEach(cat => {
+        const option = new Option(cat, cat);
+        categorySelect.add(option);
+    });
+
+    // Populate locations
+    const locations = appState.references.itemLocations || [];
+    locations.forEach(loc => {
+        const option = new Option(loc, loc);
+        locationSelect.add(option);
+    });
+}
+
+
+function openEditModal(item) {
+    // Først, fyld dropdowns med de nyeste referencer
+    populateReferenceDropdowns();
+    
+    // Nulstil formularen og sæt titel
+    appElements.inventoryItemForm.reset();
+    appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
+    
+    // Udfyld formularen, hvis vi redigerer en eksisterende vare
+    if (item) {
+        document.getElementById('inventory-item-id').value = item.id;
+        document.getElementById('item-name').value = item.name || '';
+        document.getElementById('item-description').value = item.description || '';
+        document.getElementById('item-category').value = item.category || '';
+        document.getElementById('item-home-location').value = item.home_location || '';
+        document.getElementById('item-current-stock').value = item.current_stock || 0;
+        document.getElementById('item-max-stock').value = item.max_stock || '';
+        document.getElementById('item-unit').value = item.unit || '';
+        document.getElementById('item-kg-price').value = item.kg_price || '';
+        document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
+        document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
+        
+        appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
+
+        if (item.purchase_unit) {
+            document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
+            document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
+        }
     } else {
-        document.getElementById('item-buy-unit-name').value = '';
-        document.getElementById('item-buy-unit-quantity').value = '';
+        // Sikrer at ID-feltet er tomt for nye varer
+        document.getElementById('inventory-item-id').value = '';
     }
 
+    // Håndter synlighed af "køb hel"-sektionen
+    appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
+
+    // Til sidst, vis modalen
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
