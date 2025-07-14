@@ -90,7 +90,6 @@
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-actions">
-                            <button id="autogen-plan-btn" class="btn btn-primary"><i class="fas fa-robot"></i> Autogenerér</button>
                             <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
                         </div>
                         <div id="calendar-grid" class="calendar-grid"></div>
@@ -140,10 +139,30 @@
                             <i class="fas fa-search"></i>
                             <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
                         </div>
-                        <div id="inventory-filter-buttons" class="filter-buttons">
-                            <button class="btn btn-secondary active" data-filter="all">Alle</button>
-                            <button class="btn btn-secondary" data-filter="low">Lav Beholdning</button>
-                            <button class="btn btn-secondary" data-filter="critical">Kritiske</button>
+                        <div class="filter-controls">
+                            <div id="inventory-filter-buttons" class="filter-buttons">
+                                <button class="btn btn-secondary active" data-filter="all">Alle</button>
+                                <button class="btn btn-secondary" data-filter="low">Lav Beholdning</button>
+                                <button class="btn btn-secondary" data-filter="expiring">Udløber Snart</button>
+                            </div>
+                            <button id="advanced-filter-btn" class="btn btn-secondary"><i class="fas fa-filter"></i> Filtrér</button>
+                        </div>
+                    </div>
+                    <div id="advanced-filter-panel" class="advanced-filter-panel hidden">
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label>Filtrér på kategori</label>
+                                <div id="filter-category-container" class="checkbox-group"></div>
+                            </div>
+                            <div class="input-group">
+                                <label for="sort-inventory-by">Sortér efter</label>
+                                <select id="sort-inventory-by">
+                                    <option value="name_asc">Navn (A-Å)</option>
+                                    <option value="name_desc">Navn (Å-A)</option>
+                                    <option value="stock_asc">Lagerstatus (Lavest først)</option>
+                                    <option value="expiry_asc">Udløbsdato (Først)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div id="inventory-location-tabs" class="location-tabs"></div>
@@ -155,6 +174,12 @@
             <section id="overview" class="page hidden">
                 <h2>Oversigt</h2>
                 <div class="overview-layout">
+                    <div id="expiring-items-card" class="card">
+                        <h3>Udløber Snart</h3>
+                        <div id="expiring-items-list">
+                            <p class="empty-state">Alt ser godt ud!</p>
+                        </div>
+                    </div>
                     <div id="budget-card" class="card">
                         <div class="card-header">
                             <h3>Budget</h3>
@@ -316,20 +341,11 @@
                     </div>
                 </div>
                 <hr>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label id="item-stock-label" for="item-current-stock">Lagerbeholdning (g)</label>
-                        <input type="number" id="item-current-stock" value="0" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="item-max-stock">Normal beholdning</label>
-                        <input type="number" id="item-max-stock" placeholder="F.eks. 2 (hvis i dåser)">
-                    </div>
+                <h4>Lagerbeholdning</h4>
+                <div id="item-batches-container">
+                    <!-- Batches indsættes her af JS -->
                 </div>
-                <div id="item-stock-feedback" class="stock-feedback">
-                    <p><strong>Samlet på lager:</strong> <span id="total-grams-display">0</span>g</p>
-                    <div id="equivalent-units-display"></div>
-                </div>
+                <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ny batch</button>
                 <hr>
                 <div class="conversion-rules-section">
                     <h4>Konverteringsmål</h4>
@@ -492,46 +508,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div id="autogen-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Autogenerér Madplan</h3>
-            <p>Indstil dine præferencer for den kommende uge.</p>
-            <form id="autogen-form">
-                <div class="form-grid">
-                    <div class="input-group">
-                        <label for="autogen-budget">Maks. Budget (kr.)</label>
-                        <input type="number" id="autogen-budget" placeholder="F.eks. 500">
-                    </div>
-                    <div class="input-group">
-                        <label for="autogen-time">Maks. Tid pr. Ret (min)</label>
-                        <select id="autogen-time">
-                            <option value="999">Ubegrænset</option>
-                            <option value="20">Under 20 min</option>
-                            <option value="30" selected>Under 30 min</option>
-                            <option value="45">Under 45 min</option>
-                            <option value="60">Under 60 min</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label>Kostpræferencer (Tags)</label>
-                    <div class="checkbox-group" id="autogen-diet-tags"></div>
-                </div>
-                <div class="input-group switch-group">
-                    <label for="autogen-use-leftovers">Prioritér varer på lager</label>
-                    <label class="switch">
-                        <input type="checkbox" id="autogen-use-leftovers" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Generér Forslag</button>
-                </div>
-            </form>
         </div>
     </div>
 
