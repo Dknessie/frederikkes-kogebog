@@ -330,7 +330,7 @@ header {
     border-radius: var(--border-radius);
     display: flex;
     flex-direction: column;
-    transition: background-color 0.3s ease;
+    transition: background-color: 0.3s ease;
 }
 
 .calendar-day.is-today {
@@ -913,6 +913,12 @@ header {
     border: 1px solid #ccc;
     border-radius: var(--border-radius);
     box-sizing: border-box;
+}
+.input-group input:not([type="checkbox"]), .input-group select {
+    margin-top: var(--spacing-xs);
+}
+.input-group input.hidden {
+    margin-top: var(--spacing-s);
 }
 .input-group.with-icon {
     position: relative;
