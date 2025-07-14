@@ -760,6 +760,28 @@ header {
     text-align: right;
 }
 
+.unprocessed-items-section {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    margin-bottom: var(--spacing-l);
+}
+.unprocessed-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.unprocessed-item:last-child {
+    border-bottom: none;
+}
+.unprocessed-item span {
+    font-weight: 600;
+}
+
+
 /* Referencer Side */
 .references-layout {
     display: grid;
@@ -1110,18 +1132,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 .slider.round { border-radius: 28px; }
 .slider.round:before { border-radius: 50%; }
 
-#buy-whole-options {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-m) var(--spacing-l);
-    background-color: var(--secondary-color);
-    padding: var(--spacing-m);
-    border-radius: var(--border-radius);
-    margin-top: calc(-1 * var(--spacing-m));
-    border-top: 1px solid var(--border-color);
-}
-
 #reorder-list-container {
     max-height: 50vh;
     overflow-y: auto;
@@ -1195,12 +1205,17 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .conversion-rule-row {
     display: grid;
-    grid-template-columns: 20px 1fr 1fr 20px;
+    grid-template-columns: 20px 1fr 1fr auto;
     gap: var(--spacing-m);
     align-items: center;
 }
 .conversion-rule-row .input-group {
     margin-bottom: 0;
+}
+.conversion-rule-row .input-group:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .stock-feedback {
@@ -1215,6 +1230,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 #equivalent-units-display {
     font-size: var(--small-font-size);
     color: #666;
+}
+#equivalent-units-display p {
+    margin: 0;
 }
 
 /* ===== 10. Mobil-specifikke Styles ===== */
