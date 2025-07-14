@@ -1,7 +1,7 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, normalizeUnit } from './utils.js';
 import { addToShoppingList } from './shoppingList.js';
@@ -198,15 +198,20 @@ async function handleSaveItem(e) {
     const itemCategory = document.getElementById('item-category').value;
     const itemLocation = document.getElementById('item-home-location').value;
     const itemUnit = document.getElementById('item-unit').value;
-
     const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
-    const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
-    let gramsInStock = 0;
-    if (normalizeUnit(itemUnit) === 'g') {
-        gramsInStock = quantity;
-    } else if (gramsPerUnit) {
-        gramsInStock = quantity * gramsPerUnit;
+    let gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
+
+    // Auto-set grams_per_unit for g and kg
+    const normalizedDispUnit = normalizeUnit(itemUnit);
+    if (normalizedDispUnit === 'g') gramsPerUnit = 1;
+    if (normalizedDispUnit === 'kg') gramsPerUnit = 1000;
+
+    if (!gramsPerUnit && quantity > 0) {
+        showNotification({title: "Manglende Info", message: "Udfyld venligst 'Gram pr. enhed' for at kunne lagerstyre varen korrekt."});
+        return;
     }
+
+    const gramsInStock = quantity * (gramsPerUnit || 0);
 
     const itemData = {
         name: itemName,
@@ -214,11 +219,11 @@ async function handleSaveItem(e) {
         category: itemCategory,
         home_location: itemLocation,
         current_stock: quantity,
-        max_stock: Number(document.getElementById('item-max-stock').value) || null,
-        unit: itemUnit,
-        kg_price: Number(document.getElementById('item-kg-price').value) || null,
+        unit: itemUnit, // This is the display unit
         grams_per_unit: gramsPerUnit,
         grams_in_stock: gramsInStock,
+        max_stock: Number(document.getElementById('item-max-stock').value) || null,
+        kg_price: Number(document.getElementById('item-kg-price').value) || null,
         is_critical: document.getElementById('item-is-critical').checked,
         buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
         aliases: (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a),
@@ -339,7 +344,7 @@ async function handleReorderSubmit(e) {
                 selectedItems.push({
                     name: item.name,
                     quantity: needed,
-                    unit: item.unit,
+                    unit: item.unit, // The display unit
                     store_section: item.category
                 });
             }
