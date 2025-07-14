@@ -866,6 +866,26 @@ header {
     margin: 0;
 }
 
+.reference-actions {
+    display: flex;
+    align-items: center;
+}
+.edit-container {
+    display: flex;
+    flex-grow: 1;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.edit-reference-input {
+    flex-grow: 1;
+    padding: var(--spacing-s);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+}
+.edit-actions {
+    display: flex;
+}
+
 .add-reference-form {
     display: flex;
     gap: var(--spacing-s);
