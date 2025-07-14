@@ -17,26 +17,19 @@ export function initReferences(state, elements) {
 
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
+    // Simplified to only show the lists that are actually used as dropdowns.
     const referenceData = {
-        itemDescriptions: {
-            title: 'Varebeskrivelser & Typer',
-            items: appState.references.itemDescriptions || [],
-            isSimpleList: false // This is now a complex list
-        },
         itemCategories: {
             title: 'Varekategorier (Butik)',
-            items: appState.references.itemCategories || [],
-            isSimpleList: true
+            items: appState.references.itemCategories || []
         },
         itemLocations: {
             title: 'Placeringer i Hjemmet',
-            items: appState.references.itemLocations || [],
-            isSimpleList: true
+            items: appState.references.itemLocations || []
         },
         standardUnits: {
             title: 'Standardenheder',
-            items: appState.references.standardUnits || [],
-            isSimpleList: true
+            items: appState.references.standardUnits || []
         }
     };
 
@@ -46,25 +39,13 @@ export function renderReferencesPage() {
         card.className = 'reference-card';
         card.dataset.key = key;
 
-        let listItemsHTML = '';
-        if (data.isSimpleList) {
-            listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
-                <li class="reference-item">
-                    <span>${item}</span>
-                    <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
-                </li>
-            `).join('');
-        } else { // Handle complex list for itemDescriptions
-            listItemsHTML = (data.items || []).sort((a,b) => a.navn.localeCompare(b.navn)).map(item => `
-                <li class="reference-item">
-                    <div>
-                        <strong>${item.navn}</strong>
-                        <div style="font-size: 0.8em; color: #666;">Underkategorier: ${(item.underkategorier || []).join(', ') || 'Ingen'}</div>
-                    </div>
-                    <button class="btn-icon delete-reference-item" data-value="${item.navn}"><i class="fas fa-trash"></i></button>
-                </li>
-            `).join('');
-        }
+        // All lists are now simple string arrays.
+        const listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
+            <li class="reference-item">
+                <span>${item}</span>
+                <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
+            </li>
+        `).join('');
 
         card.innerHTML = `
             <h4>${data.title}</h4>
@@ -92,20 +73,9 @@ async function handleListClick(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            let updatePayload;
-            // Handle complex objects for itemDescriptions
-            if (key === 'itemDescriptions') {
-                const itemToRemove = (appState.references.itemDescriptions || []).find(t => t.navn === value);
-                if (itemToRemove) {
-                    updatePayload = { [key]: arrayRemove(itemToRemove) };
-                }
-            } else { // Handle simple string arrays
-                updatePayload = { [key]: arrayRemove(value) };
-            }
-
-            if (updatePayload) {
-                await updateDoc(ref, updatePayload);
-            }
+            // All lists are simple arrays, so arrayRemove is sufficient.
+            const updatePayload = { [key]: arrayRemove(value) };
+            await updateDoc(ref, updatePayload);
         } catch (error) {
             handleError(error, "Referencen kunne ikke slettes.", "deleteReference");
         }
@@ -123,14 +93,8 @@ async function handleFormSubmit(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            let updatePayload;
-            // For itemDescriptions, we create a new object
-            if (key === 'itemDescriptions') {
-                updatePayload = { [key]: arrayUnion({ navn: value, underkategorier: [] }) };
-            } else { // For other lists, we add a simple string
-                updatePayload = { [key]: arrayUnion(value) };
-            }
-            
+            // All lists are simple arrays, so arrayUnion is sufficient.
+            const updatePayload = { [key]: arrayUnion(value) };
             await setDoc(ref, updatePayload, { merge: true });
             input.value = '';
         } catch (error) {
