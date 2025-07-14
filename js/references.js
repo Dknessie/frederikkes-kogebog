@@ -13,23 +13,31 @@ export function initReferences(state, elements) {
 
     appElements.referencesContainer.addEventListener('click', handleListClick);
     appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    appElements.referencesContainer.addEventListener('change', handleShelfLifeChange);
 }
 
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
-    // Simplified to only show the lists that are actually used as dropdowns.
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier (Butik)',
-            items: appState.references.itemCategories || []
+            items: appState.references.itemCategories || [],
+            isSimpleList: true
         },
         itemLocations: {
             title: 'Placeringer i Hjemmet',
-            items: appState.references.itemLocations || []
+            items: appState.references.itemLocations || [],
+            isSimpleList: true
         },
         standardUnits: {
             title: 'Standardenheder',
-            items: appState.references.standardUnits || []
+            items: appState.references.standardUnits || [],
+            isSimpleList: true
+        },
+        shelfLife: {
+            title: 'Standard Holdbarhed (dage)',
+            items: appState.references.itemCategories || [], // Use categories as the base
+            isShelfLife: true
         }
     };
 
@@ -39,25 +47,57 @@ export function renderReferencesPage() {
         card.className = 'reference-card';
         card.dataset.key = key;
 
-        // All lists are now simple string arrays.
-        const listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
-            <li class="reference-item">
-                <span>${item}</span>
-                <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
-            </li>
-        `).join('');
-
-        card.innerHTML = `
-            <h4>${data.title}</h4>
-            <ul class="reference-list">${listItemsHTML}</ul>
-            <form class="add-reference-form">
-                <div class="input-group">
-                    <input type="text" placeholder="Tilføj ny..." required>
-                </div>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-            </form>
-        `;
+        let listItemsHTML = '';
+        if (data.isSimpleList) {
+            listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
+                <li class="reference-item">
+                    <span>${item}</span>
+                    <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
+                </li>
+            `).join('');
+            card.innerHTML = `
+                <h4>${data.title}</h4>
+                <ul class="reference-list">${listItemsHTML}</ul>
+                <form class="add-reference-form">
+                    <div class="input-group">
+                        <input type="text" placeholder="Tilføj ny..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                </form>
+            `;
+        } else if (data.isShelfLife) {
+            const shelfLifeRules = appState.references.shelfLife || {};
+            listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(category => `
+                <li class="reference-item">
+                    <label for="shelf-life-${category}">${category}</label>
+                    <input type="number" id="shelf-life-${category}" class="shelf-life-input" data-category="${category}" value="${shelfLifeRules[category] || ''}" placeholder="dage">
+                </li>
+            `).join('');
+             card.innerHTML = `
+                <h4>${data.title}</h4>
+                <ul class="reference-list">${listItemsHTML}</ul>
+            `;
+        }
+        
         appElements.referencesContainer.appendChild(card);
+    }
+}
+
+async function handleShelfLifeChange(e) {
+    if (e.target.classList.contains('shelf-life-input')) {
+        const category = e.target.dataset.category;
+        const days = e.target.value ? parseInt(e.target.value, 10) : null;
+        
+        if (!appState.currentUser || !category) return;
+        
+        const ref = doc(db, 'references', appState.currentUser.uid);
+        try {
+            await updateDoc(ref, {
+                [`shelfLife.${category}`]: days
+            });
+        } catch (error) {
+            handleError(error, "Holdbarhed kunne ikke opdateres.", "updateShelfLife");
+        }
     }
 }
 
@@ -73,7 +113,6 @@ async function handleListClick(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            // All lists are simple arrays, so arrayRemove is sufficient.
             const updatePayload = { [key]: arrayRemove(value) };
             await updateDoc(ref, updatePayload);
         } catch (error) {
@@ -93,7 +132,6 @@ async function handleFormSubmit(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            // All lists are simple arrays, so arrayUnion is sufficient.
             const updatePayload = { [key]: arrayUnion(value) };
             await setDoc(ref, updatePayload, { merge: true });
             input.value = '';
