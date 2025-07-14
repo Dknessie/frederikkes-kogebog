@@ -1,9 +1,9 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { debounce } from './utils.js';
+import { debounce, formatDate } from './utils.js';
 import { addToShoppingList } from './shoppingList.js';
 
 let appState;
@@ -11,7 +11,8 @@ let appElements;
 let inventoryState = {
     searchTerm: '',
     activeFilter: 'all',
-    activeLocation: 'all'
+    activeCategories: new Set(),
+    sortBy: 'name_asc'
 };
 
 export function initInventory(state, elements) {
@@ -39,6 +40,26 @@ export function initInventory(state, elements) {
         }
     });
 
+    document.getElementById('advanced-filter-btn').addEventListener('click', () => {
+        document.getElementById('advanced-filter-panel').classList.toggle('hidden');
+    });
+
+    document.getElementById('filter-category-container').addEventListener('change', e => {
+        if (e.target.type === 'checkbox') {
+            if (e.target.checked) {
+                inventoryState.activeCategories.add(e.target.value);
+            } else {
+                inventoryState.activeCategories.delete(e.target.value);
+            }
+            renderInventory();
+        }
+    });
+
+    document.getElementById('sort-inventory-by').addEventListener('change', e => {
+        inventoryState.sortBy = e.target.value;
+        renderInventory();
+    });
+
     appElements.inventoryLocationTabs.addEventListener('click', e => {
         const tab = e.target.closest('.location-tab');
         if (tab) {
@@ -64,12 +85,6 @@ export function initInventory(state, elements) {
     document.getElementById('conversion-rules-container').addEventListener('click', e => {
         if (e.target.closest('.delete-rule-btn')) {
             e.target.closest('.conversion-rule-row').remove();
-            updateLiveFeedback();
-        }
-    });
-    appElements.inventoryItemModal.addEventListener('input', e => {
-        if(e.target.closest('#inventory-item-form')) {
-            updateLiveFeedback();
         }
     });
     
@@ -84,6 +99,13 @@ export function initInventory(state, elements) {
             openEditModal(null, itemName);
         } else if (button.classList.contains('update-item-from-unprocessed-btn')) {
             openEditModal(item);
+        }
+    });
+
+    document.getElementById('add-batch-btn').addEventListener('click', () => addBatchRow());
+    document.getElementById('item-batches-container').addEventListener('click', (e) => {
+        if (e.target.closest('.delete-batch-btn')) {
+            e.target.closest('.batch-row').remove();
         }
     });
 }
@@ -118,18 +140,47 @@ function renderUnprocessedItems() {
 
 export function renderInventory() {
     renderUnprocessedItems();
-    let items = appState.inventory;
+    renderAdvancedFilterOptions();
+
+    let items = [...appState.inventory];
+    
+    // Filtering
     if (inventoryState.searchTerm) {
-        items = items.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm) || (item.aliases || []).some(a => a.toLowerCase().includes(inventoryState.searchTerm)));
+        const term = inventoryState.searchTerm;
+        items = items.filter(item => item.name.toLowerCase().includes(term) || (item.aliases || []).some(a => a.toLowerCase().includes(term)));
     }
     if (inventoryState.activeFilter === 'low') {
         items = items.filter(item => item.max_stock > 0 && (item.current_stock || 0) < item.max_stock);
     }
-    if (inventoryState.activeFilter === 'critical') {
-        items = items.filter(item => item.is_critical);
+    if (inventoryState.activeFilter === 'expiring') {
+        const sevenDaysFromNow = new Date();
+        sevenDaysFromNow.setDate(new Date().getDate() + 7);
+        items = items.filter(item => item.batches && item.batches.some(b => b.expiry_date && new Date(b.expiry_date) <= sevenDaysFromNow));
+    }
+    if (inventoryState.activeCategories.size > 0) {
+        items = items.filter(item => inventoryState.activeCategories.has(item.category));
     }
 
-    renderLocationTabs();
+    // Sorting
+    items.sort((a, b) => {
+        switch (inventoryState.sortBy) {
+            case 'name_desc':
+                return b.name.localeCompare(a.name);
+            case 'stock_asc':
+                const stockA = a.max_stock > 0 ? (a.current_stock / a.max_stock) : 1;
+                const stockB = b.max_stock > 0 ? (b.current_stock / b.max_stock) : 1;
+                return stockA - stockB;
+            case 'expiry_asc':
+                const expiryA = a.batches?.[0]?.expiry_date || '9999-12-31';
+                const expiryB = b.batches?.[0]?.expiry_date || '9999-12-31';
+                return new Date(expiryA) - new Date(expiryB);
+            case 'name_asc':
+            default:
+                return a.name.localeCompare(b.name);
+        }
+    });
+
+    renderLocationTabs(items);
     const container = appElements.inventoryListContainer;
     container.innerHTML = '';
     
@@ -148,9 +199,21 @@ export function renderInventory() {
     }
 }
 
-function renderLocationTabs() {
+function renderAdvancedFilterOptions() {
+    const container = document.getElementById('filter-category-container');
+    container.innerHTML = '';
+    const categories = [...new Set(appState.inventory.map(i => i.category).filter(Boolean))].sort();
+    categories.forEach(cat => {
+        const isChecked = inventoryState.activeCategories.has(cat);
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${cat}" ${isChecked ? 'checked' : ''}> ${cat}`;
+        container.appendChild(label);
+    });
+}
+
+function renderLocationTabs(filteredItems) {
     const tabsContainer = appElements.inventoryLocationTabs;
-    const locations = [...new Set(appState.inventory.map(item => item.home_location || 'Ukendt'))].sort();
+    const locations = [...new Set(filteredItems.map(item => item.home_location || 'Ukendt'))].sort();
     
     tabsContainer.innerHTML = `<button class="location-tab ${inventoryState.activeLocation === 'all' ? 'active' : ''}" data-location="all">Alle</button>`;
     
@@ -172,7 +235,7 @@ function renderItemGroup(container, location, items) {
     header.textContent = location;
     groupDiv.appendChild(header);
 
-    items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+    items.forEach(item => {
         const itemRow = document.createElement('div');
         itemRow.className = 'inventory-item-row';
         
@@ -221,30 +284,6 @@ function groupBy(array, key) {
     }, {});
 }
 
-export function renderInventorySummary() {
-    let totalValue = 0;
-    let totalGrams = 0;
-    appState.inventory.forEach(item => {
-        if (item.grams_in_stock) {
-            totalGrams += item.grams_in_stock;
-            if (item.kg_price) {
-                totalValue += (item.grams_in_stock / 1000) * item.kg_price;
-            }
-        }
-    });
-    appElements.inventorySummaryCard.innerHTML = `
-        <h3>Lagerstatus</h3>
-        <div class="summary-item">
-            <span>Samlet lagerværdi</span>
-            <span class="summary-value">${totalValue.toFixed(2)} kr.</span>
-        </div>
-        <div class="summary-item">
-            <span>Samlet vægt på lager</span>
-            <span class="summary-value">${(totalGrams / 1000).toFixed(2)} kg</span>
-        </div>
-    `;
-}
-
 async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
@@ -258,20 +297,26 @@ async function handleSaveItem(e) {
         }
     });
 
+    const batches = [];
+    let totalGrams = 0;
+    let totalStock = 0;
+    document.querySelectorAll('#item-batches-container .batch-row').forEach(row => {
+        const quantity = parseFloat(row.querySelector('.batch-quantity-input').value) || 0;
+        const expiryDate = row.querySelector('.batch-expiry-input').value;
+        if (quantity > 0) {
+            batches.push({
+                id: row.dataset.id || crypto.randomUUID(),
+                quantity: quantity,
+                expiry_date: expiryDate
+            });
+            totalStock += quantity;
+        }
+    });
+
     const displayUnitRadio = document.querySelector('input[name="display-unit-radio"]:checked');
     const displayUnit = displayUnitRadio ? displayUnitRadio.value : 'g';
-
-    const currentStock = parseFloat(document.getElementById('item-current-stock').value) || 0;
-    
-    let gramsInStock = 0;
-    if (displayUnit === 'g') {
-        gramsInStock = currentStock;
-    } else if (conversionRules[displayUnit]) {
-        gramsInStock = currentStock * conversionRules[displayUnit];
-    } else if (Object.keys(conversionRules).length > 0 && currentStock > 0) {
-        showNotification({title: "Fejl i Standardenhed", message: `Vælg venligst en gyldig standardenhed for lageropgørelse.`});
-        return;
-    }
+    const gramsPerDisplayUnit = conversionRules[displayUnit] || (displayUnit === 'g' ? 1 : 0);
+    totalGrams = totalStock * gramsPerDisplayUnit;
     
     const itemName = document.getElementById('item-name').value.trim();
     if (!itemName) {
@@ -284,10 +329,11 @@ async function handleSaveItem(e) {
         description: document.getElementById('item-description').value.trim(),
         category: document.getElementById('item-category').value,
         home_location: document.getElementById('item-home-location').value,
-        current_stock: currentStock,
+        batches: batches.sort((a,b) => new Date(a.expiry_date) - new Date(b.expiry_date)),
+        current_stock: totalStock,
+        grams_in_stock: totalGrams,
         display_unit: displayUnit,
         conversion_rules: conversionRules,
-        grams_in_stock: gramsInStock,
         max_stock: Number(document.getElementById('item-max-stock').value) || null,
         kg_price: Number(document.getElementById('item-kg-price').value) || null,
         is_critical: document.getElementById('item-is-critical').checked,
@@ -325,13 +371,15 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
 }
 
 function addConversionRuleRow(rule = { unit: '', grams: '' }) {
+    if (rule.unit === 'g') return;
     const container = document.getElementById('conversion-rules-container');
     const row = document.createElement('div');
     row.className = 'conversion-rule-row';
 
     const unitSelect = document.createElement('select');
     unitSelect.className = 'rule-unit-select';
-    populateReferenceDropdown(unitSelect, appState.references.standardUnits, 'Vælg enhed', rule.unit);
+    const units = appState.references.standardUnits.filter(u => u !== 'g');
+    populateReferenceDropdown(unitSelect, units, 'Vælg enhed', rule.unit);
 
     row.innerHTML = `
         <div class="input-group">
@@ -354,45 +402,31 @@ function addConversionRuleRow(rule = { unit: '', grams: '' }) {
     container.appendChild(row);
 }
 
-function updateLiveFeedback() {
-    const stockAmount = parseFloat(document.getElementById('item-current-stock').value) || 0;
-    const displayUnitRadio = document.querySelector('input[name="display-unit-radio"]:checked');
-    const displayUnit = displayUnitRadio ? displayUnitRadio.value : 'g';
-    
-    document.getElementById('item-stock-label').textContent = `Lagerbeholdning (${displayUnit})`;
+function addBatchRow(batch = { quantity: '', expiry_date: ''}) {
+    const container = document.getElementById('item-batches-container');
+    const row = document.createElement('div');
+    row.className = 'batch-row';
+    row.dataset.id = batch.id || crypto.randomUUID();
 
-    const rules = {};
-    document.querySelectorAll('#conversion-rules-container .conversion-rule-row').forEach(row => {
-        const unit = row.querySelector('.rule-unit-select').value;
-        const grams = parseFloat(row.querySelector('.rule-grams-input').value);
-        if (unit && grams > 0) {
-            rules[unit] = grams;
-        }
-    });
-
-    let totalGrams = 0;
-    if (displayUnit === 'g') {
-        totalGrams = stockAmount;
-    } else if (rules[displayUnit]) {
-        totalGrams = stockAmount * rules[displayUnit];
-    }
-
-    document.getElementById('total-grams-display').textContent = totalGrams.toFixed(1).replace(/\.0$/, '');
-
-    const equivalentsContainer = document.getElementById('equivalent-units-display');
-    equivalentsContainer.innerHTML = '';
-    for (const unit in rules) {
-        const equivalentAmount = totalGrams / rules[unit];
-        const p = document.createElement('p');
-        p.textContent = `≈ ${equivalentAmount.toFixed(1).replace(/\.0$/, '')} ${unit}`;
-        equivalentsContainer.appendChild(p);
-    }
+    row.innerHTML = `
+        <div class="input-group">
+            <label>Antal</label>
+            <input type="number" class="batch-quantity-input" value="${batch.quantity}">
+        </div>
+        <div class="input-group">
+            <label>Udløbsdato</label>
+            <input type="date" class="batch-expiry-input" value="${batch.expiry_date}">
+        </div>
+        <button type="button" class="btn-icon delete-batch-btn" title="Fjern batch"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(row);
 }
 
 
 function openEditModal(item, prefilledName = null) {
     appElements.inventoryItemForm.reset();
     document.getElementById('conversion-rules-container').innerHTML = '';
+    document.getElementById('item-batches-container').innerHTML = '';
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
 
     populateReferenceDropdown(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
@@ -402,7 +436,6 @@ function openEditModal(item, prefilledName = null) {
         document.getElementById('inventory-item-id').value = item.id;
         document.getElementById('item-name').value = item.name || '';
         document.getElementById('item-description').value = item.description || '';
-        document.getElementById('item-current-stock').value = item.current_stock || 0;
         document.getElementById('item-max-stock').value = item.max_stock || '';
         document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
@@ -421,13 +454,18 @@ function openEditModal(item, prefilledName = null) {
             radioToSelect.checked = true;
         }
 
+        if (item.batches && item.batches.length > 0) {
+            item.batches.forEach(batch => addBatchRow(batch));
+        } else {
+            addBatchRow({ quantity: item.current_stock || 0, expiry_date: '' });
+        }
+
     } else {
         document.getElementById('inventory-item-id').value = '';
         document.getElementById('item-name').value = prefilledName || '';
-        // Don't add a default rule, let the user define them.
+        addBatchRow();
     }
     
-    updateLiveFeedback();
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
