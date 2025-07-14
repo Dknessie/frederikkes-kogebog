@@ -11,7 +11,7 @@ let appElements;
 let inventoryState = {
     searchTerm: '',
     activeFilter: 'all', // 'all', 'low', 'critical'
-    activeLocation: 'all' // 'all' or a specific location
+    activeLocation: 'all'
 };
 
 export function initInventory(state, elements) {
@@ -26,7 +26,6 @@ export function initInventory(state, elements) {
     appElements.inventoryItemForm.addEventListener('submit', handleSaveItem);
     appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
 
-    // New listeners for filters and search
     appElements.inventorySearchInput.addEventListener('input', debounce(e => {
         inventoryState.searchTerm = e.target.value.toLowerCase();
         renderInventory();
@@ -50,9 +49,6 @@ export function initInventory(state, elements) {
         }
     });
 
-    // BUG FIX: Moved this event listener inside the init function.
-    // It was previously in the global scope, causing a crash on load
-    // because appElements was not yet defined when the module was imported.
     appElements.inventoryListContainer.addEventListener('click', e => {
         const button = e.target.closest('button');
         if (!button) return;
@@ -68,7 +64,6 @@ export function initInventory(state, elements) {
 }
 
 export function renderInventory() {
-    // 1. Filter the items
     let items = appState.inventory;
     if (inventoryState.searchTerm) {
         items = items.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm));
@@ -80,10 +75,7 @@ export function renderInventory() {
         items = items.filter(item => item.is_critical);
     }
 
-    // 2. Render location tabs
     renderLocationTabs();
-
-    // 3. Group and render items
     const container = appElements.inventoryListContainer;
     container.innerHTML = '';
     
@@ -215,7 +207,7 @@ async function handleSaveItem(e) {
 
     const itemData = {
         name: (document.getElementById('item-name').value || '').trim(),
-        description: (document.getElementById('item-description').value || '').trim(),
+        description: document.getElementById('item-description').value,
         category: document.getElementById('item-category').value,
         home_location: document.getElementById('item-home-location').value,
         current_stock: quantity,
@@ -259,17 +251,17 @@ async function handleDeleteItem(docId) {
     }
 }
 
-function populateReferenceDropdowns() {
-    const categorySelect = document.getElementById('item-category');
-    const locationSelect = document.getElementById('item-home-location');
-    categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
-    locationSelect.innerHTML = '<option value="">Vælg placering...</option>';
-    (appState.references.itemCategories || []).forEach(cat => categorySelect.add(new Option(cat, cat)));
-    (appState.references.itemLocations || []).forEach(loc => locationSelect.add(new Option(loc, loc)));
+function populateReferenceDropdowns(selectElement, options, placeholder) {
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).forEach(opt => selectElement.add(new Option(opt, opt)));
 }
 
 function openEditModal(item) {
-    populateReferenceDropdowns();
+    populateReferenceDropdowns(document.getElementById('item-description'), appState.references.itemDescriptions, 'Vælg beskrivelse...');
+    populateReferenceDropdowns(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...');
+    populateReferenceDropdowns(document.getElementById('item-home-location'), appState.references.itemLocations, 'Vælg placering...');
+    populateReferenceDropdowns(document.getElementById('item-unit'), appState.references.standardUnits, 'Vælg enhed...');
+    
     appElements.inventoryItemForm.reset();
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
     
