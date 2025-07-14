@@ -10,10 +10,10 @@ let appState;
 let appElements;
 let inventoryState = {
     searchTerm: '',
-    activeFilter: 'all',
+    activeFilter: 'all', // Default filter
     activeCategories: new Set(),
     sortBy: 'name_asc',
-    referencesLoaded: false // Safety guard for edit buttons
+    referencesLoaded: false 
 };
 
 export function initInventory(state, elements) {
@@ -31,12 +31,12 @@ export function initInventory(state, elements) {
         renderInventory();
     }, 300));
 
-    appElements.inventoryFilterButtons.addEventListener('click', e => {
-        const button = e.target.closest('button');
+    // Listener for the entire advanced filter panel
+    document.getElementById('advanced-filter-panel').addEventListener('click', e => {
+        const button = e.target.closest('button[data-filter]');
         if (button) {
             inventoryState.activeFilter = button.dataset.filter;
-            appElements.inventoryFilterButtons.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
+            updateFilterButtons();
             renderInventory();
         }
     });
@@ -111,10 +111,8 @@ export function initInventory(state, elements) {
     });
 }
 
-// Called from app.js when references are loaded
 export function setReferencesLoaded(isLoaded) {
     inventoryState.referencesLoaded = isLoaded;
-    // Re-render if the inventory page is visible to enable buttons
     if (document.querySelector('#inventory:not(.hidden)')) {
         renderInventory();
     }
@@ -148,9 +146,16 @@ function renderUnprocessedItems() {
     }
 }
 
+function updateFilterButtons() {
+    document.querySelectorAll('#inventory-filter-buttons button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === inventoryState.activeFilter);
+    });
+}
+
 export function renderInventory() {
     renderUnprocessedItems();
     renderAdvancedFilterOptions();
+    updateFilterButtons();
 
     let items = [...appState.inventory];
     
