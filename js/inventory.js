@@ -1,7 +1,7 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, normalizeUnit } from './utils.js';
 import { addToShoppingList } from './shoppingList.js';
@@ -10,7 +10,7 @@ let appState;
 let appElements;
 let inventoryState = {
     searchTerm: '',
-    activeFilter: 'all', // 'all', 'low', 'critical'
+    activeFilter: 'all',
     activeLocation: 'all'
 };
 
@@ -61,6 +61,14 @@ export function initInventory(state, elements) {
             handleDeleteItem(button.dataset.id);
         }
     });
+
+    // Event listener for custom text fields in the modal
+    appElements.inventoryItemModal.addEventListener('change', e => {
+        if (e.target.tagName === 'SELECT' && e.target.dataset.customInput) {
+            const customInput = document.getElementById(e.target.dataset.customInput);
+            customInput.classList.toggle('hidden', e.target.value !== 'other');
+        }
+    });
 }
 
 export function renderInventory() {
@@ -81,16 +89,13 @@ export function renderInventory() {
     
     const groupedItems = groupBy(items, 'home_location');
     
-    if (inventoryState.activeLocation !== 'all') {
-        const singleLocation = inventoryState.activeLocation;
-        if (groupedItems[singleLocation]) {
-            renderItemGroup(container, singleLocation, groupedItems[singleLocation]);
-        }
-    } else {
-        Object.keys(groupedItems).sort().forEach(location => {
-            renderItemGroup(container, location, groupedItems[location]);
-        });
-    }
+    const locationsToRender = inventoryState.activeLocation === 'all' 
+        ? Object.keys(groupedItems).sort()
+        : (groupedItems[inventoryState.activeLocation] ? [inventoryState.activeLocation] : []);
+
+    locationsToRender.forEach(location => {
+        renderItemGroup(container, location, groupedItems[location]);
+    });
 
     if (container.innerHTML === '') {
         container.innerHTML = `<p class="empty-state">Ingen varer matcher dine filtre.</p>`;
@@ -195,24 +200,38 @@ export function renderInventorySummary() {
 async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
+    
+    const getSelectOrCustomValue = (selectId, customInputId) => {
+        const select = document.getElementById(selectId);
+        if (select.value === 'other') {
+            return document.getElementById(customInputId).value.trim();
+        }
+        return select.value;
+    };
+
+    const itemName = getSelectOrCustomValue('item-name-select', 'item-name-custom');
+    const itemDescription = getSelectOrCustomValue('item-description', 'item-description-custom');
+    const itemCategory = getSelectOrCustomValue('item-category', 'item-category-custom');
+    const itemLocation = getSelectOrCustomValue('item-home-location', 'item-home-location-custom');
+    const itemUnit = getSelectOrCustomValue('item-unit-select', 'item-unit-custom');
+
     const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
-    const unit = (document.getElementById('item-unit').value || '').trim();
     const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
     let gramsInStock = 0;
-    if (normalizeUnit(unit) === 'g') {
+    if (normalizeUnit(itemUnit) === 'g') {
         gramsInStock = quantity;
     } else if (gramsPerUnit) {
         gramsInStock = quantity * gramsPerUnit;
     }
 
     const itemData = {
-        name: (document.getElementById('item-name').value || '').trim(),
-        description: document.getElementById('item-description').value,
-        category: document.getElementById('item-category').value,
-        home_location: document.getElementById('item-home-location').value,
+        name: itemName,
+        description: itemDescription,
+        category: itemCategory,
+        home_location: itemLocation,
         current_stock: quantity,
         max_stock: Number(document.getElementById('item-max-stock').value) || null,
-        unit: unit,
+        unit: itemUnit,
         kg_price: Number(document.getElementById('item-kg-price').value) || null,
         grams_per_unit: gramsPerUnit,
         grams_in_stock: gramsInStock,
@@ -236,6 +255,20 @@ async function handleSaveItem(e) {
         } else {
             await addDoc(collection(db, 'inventory_items'), itemData);
         }
+        
+        // Add new custom values to references
+        const ref = doc(db, 'references', appState.currentUser.uid);
+        const updates = {};
+        if (document.getElementById('item-name-select').value === 'other' && itemName) updates.itemDescriptions = arrayUnion(itemName);
+        if (document.getElementById('item-description').value === 'other' && itemDescription) updates.itemDescriptions = arrayUnion(itemDescription);
+        if (document.getElementById('item-category').value === 'other' && itemCategory) updates.itemCategories = arrayUnion(itemCategory);
+        if (document.getElementById('item-home-location').value === 'other' && itemLocation) updates.itemLocations = arrayUnion(itemLocation);
+        if (document.getElementById('item-unit-select').value === 'other' && itemUnit) updates.standardUnits = arrayUnion(itemUnit);
+
+        if (Object.keys(updates).length > 0) {
+            await setDoc(ref, updates, { merge: true });
+        }
+        
         appElements.inventoryItemModal.classList.add('hidden');
     } catch (error) {
         handleError(error, "Varen kunne ikke gemmes.", "saveInventoryItem");
@@ -251,34 +284,47 @@ async function handleDeleteItem(docId) {
     }
 }
 
-function populateReferenceDropdowns(selectElement, options, placeholder) {
+function populateReferenceDropdown(selectElement, customInputElement, options, placeholder, currentValue) {
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
     (options || []).forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.add(new Option('Andet (angiv selv)...', 'other'));
+    
+    selectElement.dataset.customInput = customInputElement.id;
+
+    // Check if the current value exists in the options
+    const valueExists = (options || []).includes(currentValue);
+    if (currentValue && valueExists) {
+        selectElement.value = currentValue;
+        customInputElement.classList.add('hidden');
+    } else if (currentValue) {
+        selectElement.value = 'other';
+        customInputElement.value = currentValue;
+        customInputElement.classList.remove('hidden');
+    } else {
+        customInputElement.classList.add('hidden');
+    }
 }
 
+
 function openEditModal(item) {
-    populateReferenceDropdowns(document.getElementById('item-description'), appState.references.itemDescriptions, 'Vælg beskrivelse...');
-    populateReferenceDropdowns(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...');
-    populateReferenceDropdowns(document.getElementById('item-home-location'), appState.references.itemLocations, 'Vælg placering...');
-    populateReferenceDropdowns(document.getElementById('item-unit'), appState.references.standardUnits, 'Vælg enhed...');
+    populateReferenceDropdown(document.getElementById('item-name-select'), document.getElementById('item-name-custom'), appState.references.itemDescriptions, 'Vælg vare...', item?.name);
+    populateReferenceDropdown(document.getElementById('item-description'), document.getElementById('item-description-custom'), appState.references.itemDescriptions, 'Vælg beskrivelse...', item?.description);
+    populateReferenceDropdown(document.getElementById('item-category'), document.getElementById('item-category-custom'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
+    populateReferenceDropdown(document.getElementById('item-home-location'), document.getElementById('item-home-location-custom'), appState.references.itemLocations, 'Vælg placering...', item?.home_location);
+    populateReferenceDropdown(document.getElementById('item-unit-select'), document.getElementById('item-unit-custom'), appState.references.standardUnits, 'Vælg enhed...', item?.unit);
     
     appElements.inventoryItemForm.reset();
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
     
     if (item) {
         document.getElementById('inventory-item-id').value = item.id;
-        document.getElementById('item-name').value = item.name || '';
-        document.getElementById('item-description').value = item.description || '';
-        document.getElementById('item-category').value = item.category || '';
-        document.getElementById('item-home-location').value = item.home_location || '';
         document.getElementById('item-current-stock').value = item.current_stock || 0;
         document.getElementById('item-max-stock').value = item.max_stock || '';
-        document.getElementById('item-unit').value = item.unit || '';
-        document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
+        document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
-        appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
         document.getElementById('item-is-critical').checked = item.is_critical || false;
+        appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
         if (item.purchase_unit) {
             document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
             document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
@@ -296,7 +342,7 @@ function guessItemDetails(itemName) {
         document.getElementById('item-description').value = existingItem.description || '';
         document.getElementById('item-category').value = existingItem.category || '';
         document.getElementById('item-home-location').value = existingItem.home_location || '';
-        document.getElementById('item-unit').value = existingItem.unit || '';
+        document.getElementById('item-unit-select').value = existingItem.unit || '';
         document.getElementById('item-grams-per-unit').value = existingItem.grams_per_unit || '';
         document.getElementById('item-aliases').value = (existingItem.aliases || []).join(', ');
         document.getElementById('item-is-critical').checked = existingItem.is_critical || false;
