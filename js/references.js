@@ -20,19 +20,28 @@ export function renderReferencesPage() {
     const referenceData = {
         itemDescriptions: {
             title: 'Varebeskrivelser',
-            items: appState.references.itemDescriptions || []
+            items: appState.references.itemDescriptions || [],
+            isSimpleList: true
         },
         itemCategories: {
             title: 'Varekategorier (Butik)',
-            items: appState.references.itemCategories || []
+            items: appState.references.itemCategories || [],
+            isSimpleList: true
         },
         itemLocations: {
             title: 'Placeringer i Hjemmet',
-            items: appState.references.itemLocations || []
+            items: appState.references.itemLocations || [],
+            isSimpleList: true
         },
         standardUnits: {
             title: 'Standardenheder',
-            items: appState.references.standardUnits || []
+            items: appState.references.standardUnits || [],
+            isSimpleList: true
+        },
+        vareTyper: {
+            title: 'Varetyper (Hierarki)',
+            items: appState.references.vareTyper || [],
+            isSimpleList: false // This is a complex list
         }
     };
 
@@ -42,16 +51,29 @@ export function renderReferencesPage() {
         card.className = 'reference-card';
         card.dataset.key = key;
 
-        const listItems = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
-            <li class="reference-item">
-                <span>${item}</span>
-                <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
-            </li>
-        `).join('');
+        let listItemsHTML = '';
+        if (data.isSimpleList) {
+            listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
+                <li class="reference-item">
+                    <span>${item}</span>
+                    <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
+                </li>
+            `).join('');
+        } else { // Handle complex list for vareTyper
+            listItemsHTML = (data.items || []).sort((a,b) => a.navn.localeCompare(b.navn)).map(item => `
+                <li class="reference-item">
+                    <div>
+                        <strong>${item.navn}</strong>
+                        <div style="font-size: 0.8em; color: #666;">Underkategorier: ${(item.underkategorier || []).join(', ')}</div>
+                    </div>
+                    <button class="btn-icon delete-reference-item" data-value="${item.navn}"><i class="fas fa-trash"></i></button>
+                </li>
+            `).join('');
+        }
 
         card.innerHTML = `
             <h4>${data.title}</h4>
-            <ul class="reference-list">${listItems}</ul>
+            <ul class="reference-list">${listItemsHTML}</ul>
             <form class="add-reference-form">
                 <div class="input-group">
                     <input type="text" placeholder="Tilføj ny..." required>
@@ -75,9 +97,20 @@ async function handleListClick(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            await updateDoc(ref, {
-                [key]: arrayRemove(value)
-            });
+            let updatePayload;
+            if (key === 'vareTyper') {
+                // For complex objects, we need to find the object to remove it
+                const itemToRemove = (appState.references.vareTyper || []).find(t => t.navn === value);
+                if (itemToRemove) {
+                    updatePayload = { [key]: arrayRemove(itemToRemove) };
+                }
+            } else {
+                updatePayload = { [key]: arrayRemove(value) };
+            }
+
+            if (updatePayload) {
+                await updateDoc(ref, updatePayload);
+            }
         } catch (error) {
             handleError(error, "Referencen kunne ikke slettes.", "deleteReference");
         }
@@ -95,9 +128,15 @@ async function handleFormSubmit(e) {
 
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            await setDoc(ref, {
-                [key]: arrayUnion(value)
-            }, { merge: true });
+            let updatePayload;
+            if (key === 'vareTyper') {
+                // For vareTyper, we create a new object
+                updatePayload = { [key]: arrayUnion({ navn: value, underkategorier: [] }) };
+            } else {
+                updatePayload = { [key]: arrayUnion(value) };
+            }
+            
+            await setDoc(ref, updatePayload, { merge: true });
             input.value = '';
         } catch (error) {
             handleError(error, "Referencen kunne ikke tilføjes.", "addReference");
