@@ -42,8 +42,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
         inventoryModalTitle: document.getElementById('inventory-modal-title'),
-        buyWholeCheckbox: document.getElementById('item-buy-whole'),
-        buyWholeOptions: document.getElementById('buy-whole-options'),
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
@@ -187,13 +185,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.references = doc.data();
             } else {
                 const defaultReferences = {
-                    itemDescriptions: ['Madvare', 'Rengøring', 'Personlig pleje'],
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab'],
-                    standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse']
+                    standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse', 'tsk', 'spsk', 'dl']
                 };
                 setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
             }
+            // Enable buttons that depend on references once they are loaded
+            elements.addInventoryItemBtn.disabled = false;
+            elements.reorderAssistantBtn.disabled = false;
+            elements.addRecipeBtn.disabled = false;
+
             if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
@@ -215,6 +217,11 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.appContainer.classList.add('hidden');
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
+        
+        // Disable buttons that depend on data
+        elements.addInventoryItemBtn.disabled = true;
+        elements.reorderAssistantBtn.disabled = true;
+        elements.addRecipeBtn.disabled = true;
     }
 
     function handleNavigation(hash) {
@@ -243,6 +250,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
+        // Disable buttons on initial load, they will be enabled when data is ready.
+        elements.addInventoryItemBtn.disabled = true;
+        elements.reorderAssistantBtn.disabled = true;
+        elements.addRecipeBtn.disabled = true;
+
         initAuth(onLogin, onLogout);
         setupAuthEventListeners(elements);
         initUI(elements);
