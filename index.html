@@ -292,7 +292,7 @@
             <h3 id="inventory-modal-title">Tilføj ny vare</h3>
             <form id="inventory-item-form">
                 <input type="hidden" id="inventory-item-id">
-                <div class="form-grid-3-col">
+                <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="item-name">Varenavn</label>
                         <input type="text" id="item-name" placeholder="Angiv varenavn..." required>
@@ -301,7 +301,7 @@
                         <label for="item-description">Beskrivelse</label>
                         <input type="text" id="item-description" placeholder="Angiv beskrivelse...">
                     </div>
-                     <div class="input-group">
+                    <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
                         <select id="item-home-location"></select>
                     </div>
@@ -309,32 +309,40 @@
                         <label for="item-category">Kategori (Butik)</label>
                         <select id="item-category"></select>
                     </div>
+                </div>
+                <hr>
+                <div class="form-grid-2-col">
                     <div class="input-group">
-                        <label for="item-current-stock">Antal på lager</label>
+                        <label id="item-stock-label" for="item-current-stock">Lagerbeholdning (g)</label>
                         <input type="number" id="item-current-stock" value="0" required>
                     </div>
                     <div class="input-group">
-                        <label for="item-unit">Standardenhed</label>
-                        <select id="item-unit"></select>
-                    </div>
-                    <div class="input-group">
-                        <label for="item-grams-per-unit">g / enhed</label>
-                        <input type="number" id="item-grams-per-unit" placeholder="F.eks. 400 (for en dåse)">
-                    </div>
-                     <div class="input-group">
-                        <label for="item-kg-price">Pris pr. kg</label>
-                        <input type="number" step="0.01" id="item-kg-price">
-                    </div>
-                    <div class="input-group">
                         <label for="item-max-stock">Normal beholdning</label>
-                        <input type="number" id="item-max-stock" placeholder="F.eks. 2 (for status)">
+                        <input type="number" id="item-max-stock" placeholder="F.eks. 2 (hvis i dåser)">
                     </div>
                 </div>
+                <div id="item-stock-feedback" class="stock-feedback">
+                    <p><strong>Samlet på lager:</strong> <span id="total-grams-display">0</span>g</p>
+                    <div id="equivalent-units-display"></div>
+                </div>
+                <hr>
+                <div class="conversion-rules-section">
+                    <h4>Konverteringsmål</h4>
+                    <p class="small-text">Definér hvordan forskellige enheder skal omregnes til gram. Vælg én som standard for lageropgørelse.</p>
+                    <div id="conversion-rules-container">
+                        <!-- Konverteringsregler indsættes her af JS -->
+                    </div>
+                    <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj mål</button>
+                </div>
+                <hr>
                  <div class="input-group">
                     <label for="item-aliases">Aliaser (separer med komma)</label>
                     <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
                 </div>
-                 <hr>
+                <div class="input-group">
+                    <label for="item-kg-price">Pris pr. kg</label>
+                    <input type="number" step="0.01" id="item-kg-price">
+                </div>
                  <div class="form-grid">
                     <div class="input-group switch-group">
                         <label for="item-buy-whole">Købes altid som hel enhed</label>
