@@ -220,7 +220,7 @@ header {
 }
 
 .header-title-link {
-    text-decoration: none; /* Fjern understregning */
+    text-decoration: none;
 }
 
 .header-title {
@@ -267,7 +267,7 @@ header {
 
 #app-main-content { 
     flex-grow: 1; 
-    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m)); /* Add padding for mobile tab bar */
+    padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
 /* ===== 5. Madplan Side ===== */
@@ -295,7 +295,6 @@ header {
     margin-bottom: var(--spacing-m);
 }
 
-/* NYT: Styling for ugepris */
 .calendar-title-container {
     text-align: center;
 }
@@ -329,7 +328,7 @@ header {
 }
 
 .calendar-day.is-today {
-    background-color: #e8f5e9; /* Light green */
+    background-color: #e8f5e9;
     border-color: var(--accent-color);
 }
 .calendar-day.is-today .calendar-day-header {
@@ -356,7 +355,7 @@ header {
     border-bottom: 1px dashed #eee;
     transition: background-color 0.2s ease;
     overflow-y: auto;
-    min-height: 40px; /* Giver plads til at droppe elementer */
+    min-height: 40px;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
@@ -442,7 +441,6 @@ header {
     padding-right: var(--spacing-s); 
 }
 
-/* Venstre Sidebar Specifik (Indkøbsliste & Køkkenbord) */
 .sidebar-actions {
     display: grid;
     gap: var(--spacing-s);
@@ -533,9 +531,13 @@ header {
 
 
 /* ===== 7. Opskrifter & Referencer Sider ===== */
-.actions-bar { margin-bottom: var(--spacing-l); }
-.recipe-actions-bar {
+.actions-bar { 
+    margin-bottom: var(--spacing-l); 
     display: flex;
+    gap: var(--spacing-m);
+    flex-wrap: wrap;
+}
+.recipe-actions-bar {
     justify-content: space-between;
     align-items: center;
 }
@@ -581,8 +583,8 @@ header {
 
 .recipe-card-image {
     width: 100%;
-    height: 180px; /* Fast højde for billedet */
-    object-fit: cover; /* Sikrer billedet dækker uden at blive forvrænget */
+    height: 180px;
+    object-fit: cover;
 }
 
 .recipe-card-content { padding: var(--spacing-m); flex-grow: 1; cursor: pointer; }
@@ -617,6 +619,14 @@ header {
     font-size: var(--small-font-size);
 }
 .inventory-table th, .inventory-table td { padding: var(--spacing-m); text-align: left; border-bottom: 1px solid #eee; }
+.inventory-table td:first-child .item-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.critical-item-icon {
+    color: var(--status-red);
+}
 .stock-display { display: flex; flex-direction: column; gap: var(--spacing-xs); }
 .stock-bar { width: 100%; height: 6px; background-color: #eee; border-radius: 3px; overflow: hidden; }
 .stock-level { height: 100%; border-radius: 3px; }
@@ -716,7 +726,6 @@ header {
     color: var(--primary-color);
 }
 
-/* NYT: Budget Kort Styling */
 .budget-summary {
     display: flex;
     flex-direction: column;
@@ -770,7 +779,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -786,8 +795,9 @@ header {
 }
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
-#edit-budget-modal .modal-content {
-    max-width: 450px;
+#edit-budget-modal .modal-content,
+#reorder-assistant-modal .modal-content {
+    max-width: 550px;
 }
 
 .close-modal-btn {
@@ -808,7 +818,6 @@ header {
 .modal-notification { max-width: 450px; text-align: center; }
 .form-actions { margin-top: var(--spacing-l); display: flex; justify-content: flex-end; gap: var(--spacing-m); }
 
-/* Formularer i Modaler */
 .input-group { margin-bottom: var(--spacing-m); }
 .input-group label { display: block; margin-bottom: var(--spacing-s); font-weight: 600; }
 .input-group input, .input-group textarea, .input-group select {
@@ -867,7 +876,7 @@ header {
 }
 
 .read-view-actions {
-    margin-top: var(--spacing-l); /* Added space */
+    margin-top: var(--spacing-l);
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-m);
@@ -952,7 +961,6 @@ header {
 .ingredient-row .remove-ingredient-btn { color: #adb5bd; flex-shrink: 0; }
 .ingredient-row .remove-ingredient-btn:hover { color: var(--status-red); }
 
-/* Switch Toggle & Whole Unit Options */
 .switch-group {
     display: flex;
     justify-content: space-between;
@@ -981,6 +989,45 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-radius: var(--border-radius);
     margin-top: calc(-1 * var(--spacing-m));
     border-top: 1px solid var(--border-color);
+}
+
+/* NYT: Styling for Genbestillings-assistent */
+#reorder-list-container {
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: var(--spacing-s);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.reorder-category h4 {
+    margin: var(--spacing-m) 0;
+    padding-bottom: var(--spacing-s);
+    border-bottom: 2px solid var(--secondary-color);
+}
+.reorder-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.reorder-item:last-child {
+    border-bottom: none;
+}
+.reorder-item label {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    font-weight: normal;
+}
+.reorder-item .item-name {
+    font-weight: 600;
+}
+.reorder-item .stock-info {
+    font-size: var(--small-font-size);
+    color: #666;
+    margin-left: auto;
 }
 
 /* ===== 9. Billedupload Styling ===== */
