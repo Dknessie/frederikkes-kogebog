@@ -69,6 +69,7 @@ export function getStartOfWeek(date) {
  * @returns {string} The formatted date string.
  */
 export function formatDate(date) {
+    if (!(date instanceof Date) || isNaN(date)) return '';
     return date.toISOString().split('T')[0];
 }
 
