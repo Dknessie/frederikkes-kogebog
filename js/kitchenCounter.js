@@ -1,11 +1,9 @@
 // js/kitchenCounter.js
 
-// Handles all logic for the kitchen counter feature.
-
 import { db } from './firebase.js';
-import { doc, setDoc, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { convertToPrimaryUnit, normalizeUnit } from './utils.js';
+import { convertToGrams } from './utils.js';
 import { calculateRecipeMatch } from './recipes.js';
 
 
@@ -89,7 +87,8 @@ async function addToKitchenCounter(ingredients) {
     
     ingredients.forEach(ing => {
         const key = ing.name.toLowerCase();
-        if (currentCounter[key] && normalizeUnit(currentCounter[key].unit) === normalizeUnit(ing.unit)) {
+        // Simple addition; assuming units are consistent from recipe.
+        if (currentCounter[key]) {
             currentCounter[key].quantity += ing.quantity;
         } else {
             currentCounter[key] = { ...ing };
@@ -174,38 +173,31 @@ async function handleConfirmCooking() {
                 }
                 const currentData = invDoc.data();
                 
-                const conversionResult = convertToPrimaryUnit(item.quantity, item.unit, currentData);
+                const conversion = convertToGrams(item.quantity, item.unit, currentData);
 
-                if (conversionResult.error) {
-                    validationErrors.push(`Kunne ikke omregne enhed for '${item.name}'.`);
+                if (conversion.error) {
+                    validationErrors.push(conversion.error);
                     continue;
                 }
                 
-                if (conversionResult.convertedQuantity !== null) {
-                    const neededInGrams = conversionResult.convertedQuantity;
-                    const inStockInGrams = currentData.grams_in_stock || 0;
-                    if (inStockInGrams < neededInGrams) {
-                        validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededInGrams - inStockInGrams}g.`);
-                    } else {
-                        const newGramsInStock = inStockInGrams - neededInGrams;
-                        let newStock = currentData.current_stock;
-                        if (currentData.grams_per_unit > 0) {
-                            newStock = newGramsInStock / currentData.grams_per_unit;
-                        } else if (normalizeUnit(currentData.unit) === 'g') {
-                            newStock = newGramsInStock;
-                        }
-                        updates.push({ ref: itemRef, data: { current_stock: newStock, grams_in_stock: newGramsInStock } });
-                    }
-                } else if (conversionResult.directMatch) {
-                    const neededQuantity = conversionResult.quantity;
-                    const inStock = currentData.current_stock || 0;
-                    if (inStock < neededQuantity) {
-                        validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${neededQuantity - inStock} ${item.unit}.`);
-                    } else {
-                        updates.push({ ref: itemRef, data: { current_stock: inStock - neededQuantity } });
-                    }
+                const gramsToConsume = conversion.grams;
+                const gramsInStock = currentData.grams_in_stock || 0;
+
+                if (gramsInStock < gramsToConsume) {
+                    validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${(gramsToConsume - gramsInStock).toFixed(0)}g.`);
                 } else {
-                    validationErrors.push(`Ukendt konverteringsproblem for '${item.name}'.`);
+                    const newGramsInStock = gramsInStock - gramsToConsume;
+                    let newStockInDisplayUnits = 0;
+                    if (currentData.grams_per_unit > 0) {
+                        newStockInDisplayUnits = newGramsInStock / currentData.grams_per_unit;
+                    }
+                    updates.push({ 
+                        ref: itemRef, 
+                        data: { 
+                            current_stock: newStockInDisplayUnits, 
+                            grams_in_stock: newGramsInStock 
+                        } 
+                    });
                 }
             }
 
