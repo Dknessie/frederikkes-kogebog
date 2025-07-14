@@ -125,26 +125,30 @@
             <!-- Varelager Side -->
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
-                 <div class="actions-bar">
+                <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
-                    <!-- NYT: Knap til genbestilling -->
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Vare</th>
-                            <th>Beholdning</th>
-                            <th>Status</th>
-                            <th>Kategori</th>
-                            <th>kr/kg</th>
-                            <th>g/enhed</th>
-                            <th>Placering</th>
-                            <th>Handlinger</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+                <!-- NYT: Varelager Dashboard -->
+                <div class="inventory-dashboard">
+                    <div class="inventory-controls">
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
+                        </div>
+                        <div id="inventory-filter-buttons" class="filter-buttons">
+                            <button class="btn btn-secondary active" data-filter="all">Alle</button>
+                            <button class="btn btn-secondary" data-filter="low">Lav Beholdning</button>
+                            <button class="btn btn-secondary" data-filter="critical">Kritiske</button>
+                        </div>
+                    </div>
+                    <div id="inventory-location-tabs" class="location-tabs">
+                        <!-- Faner genereres af JS -->
+                    </div>
+                    <div id="inventory-list-container">
+                        <!-- Grupperede lister genereres af JS -->
+                    </div>
+                </div>
             </section>
 
             <!-- Oversigt Side -->
@@ -224,12 +228,10 @@
                 <div id="kitchen-counter-container-mobile" class="sidebar-content"></div>
             </div>
         </div>
-
     </div>
     
     <!-- ===== Modaler ===== -->
 
-    <!-- NYT: Genbestillings-assistent Modal -->
     <div id="reorder-assistant-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -346,7 +348,6 @@
                             <span class="slider round"></span>
                         </label>
                     </div>
-                    <!-- NYT: Checkbox for kritisk vare -->
                     <div class="input-group switch-group">
                         <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
                         <label class="switch">
