@@ -102,6 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
         reorderListContainer: document.getElementById('reorder-list-container'),
         reorderForm: document.getElementById('reorder-form'),
+        inventorySearchInput: document.getElementById('inventory-search-input'),
+        inventoryFilterButtons: document.getElementById('inventory-filter-buttons'),
+        inventoryLocationTabs: document.getElementById('inventory-location-tabs'),
+        inventoryListContainer: document.getElementById('inventory-list-container'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
