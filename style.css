@@ -668,6 +668,11 @@ header {
     max-width: 400px;
 }
 
+.inventory-controls .filter-controls {
+    display: flex;
+    gap: var(--spacing-s);
+}
+
 .search-bar {
     position: relative;
 }
@@ -691,6 +696,25 @@ header {
 }
 .filter-buttons .btn {
     padding: var(--spacing-m);
+}
+
+.advanced-filter-panel {
+    background-color: var(--secondary-color);
+    padding: var(--spacing-l);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-l);
+    border: 1px solid var(--border-color);
+}
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-m);
+}
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+    font-weight: normal;
 }
 
 .location-tabs {
@@ -857,20 +881,24 @@ header {
 .card-header h3 {
     margin: 0;
 }
-#inventory-summary-card .summary-item {
+#inventory-summary-card .summary-item, #expiring-items-list .expiring-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-m) 0;
     font-size: 1.1rem;
 }
-#inventory-summary-card .summary-item:not(:last-child) {
+#inventory-summary-card .summary-item:not(:last-child), #expiring-items-list .expiring-item:not(:last-child) {
     border-bottom: 1px solid var(--border-color);
 }
-#inventory-summary-card .summary-value {
+#inventory-summary-card .summary-value, #expiring-items-list .expiring-date {
     font-weight: 700;
     color: var(--primary-color);
 }
+#expiring-items-list .expiring-date.is-expired {
+    color: var(--status-red);
+}
+
 
 .budget-summary {
     display: flex;
@@ -1188,6 +1216,19 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 /* ===== Varelager Modal Specifikke Styles ===== */
+.batch-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--spacing-m);
+    align-items: center;
+    background-color: var(--secondary-color);
+    padding: var(--spacing-s);
+    border-radius: var(--border-radius);
+}
+.batch-row .input-group {
+    margin: 0;
+}
+
 .conversion-rules-section {
     background: var(--light-bg-color);
     border: 1px solid var(--border-color);
