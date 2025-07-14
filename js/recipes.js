@@ -191,7 +191,9 @@ function renderReadView(recipe) {
                 ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>`
                 : `<span class="ingredient-stock-status out-of-stock"><i class="fas fa-times-circle"></i></span>`;
 
-            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name}</span> ${statusIcon}`;
+            const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
+
+            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span> ${statusIcon}`;
             ingredientsList.appendChild(li);
         });
     }
@@ -212,13 +214,14 @@ function renderReadView(recipe) {
 }
 
 
-function createIngredientRow(container, ingredient = { name: '', quantity: '', unit: '' }) {
+function createIngredientRow(container, ingredient = { name: '', quantity: '', unit: '', note: '' }) {
     const row = document.createElement('div');
     row.className = 'ingredient-row';
     row.innerHTML = `
-        <input type="text" class="ingredient-name" placeholder="Ingrediensnavn" value="${ingredient.name}" required>
-        <input type="number" step="any" class="ingredient-quantity" placeholder="Antal" value="${ingredient.quantity}">
-        <input type="text" class="ingredient-unit" placeholder="Enhed" value="${ingredient.unit}">
+        <input type="text" class="ingredient-name" placeholder="Ingrediensnavn" value="${ingredient.name || ''}" required>
+        <input type="number" step="any" class="ingredient-quantity" placeholder="Antal" value="${ingredient.quantity || ''}">
+        <input type="text" class="ingredient-unit" placeholder="Enhed" value="${ingredient.unit || ''}">
+        <input type="text" class="ingredient-note-input" placeholder="Note (f.eks. finthakket)" value="${ingredient.note || ''}">
         <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
@@ -320,8 +323,14 @@ async function handleSaveRecipe(e) {
         const name = row.querySelector('.ingredient-name').value.trim();
         const quantity = row.querySelector('.ingredient-quantity').value;
         const unit = row.querySelector('.ingredient-unit').value.trim();
+        const note = row.querySelector('.ingredient-note-input').value.trim();
         if (name) {
-            ingredients.push({ name, quantity: Number(quantity) || null, unit });
+            ingredients.push({ 
+                name, 
+                quantity: Number(quantity) || null, 
+                unit,
+                note: note || null 
+            });
         }
     });
 
