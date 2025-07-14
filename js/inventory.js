@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { debounce, normalizeUnit } from './utils.js';
+import { debounce } from './utils.js';
 import { addToShoppingList } from './shoppingList.js';
 
 let appState;
@@ -20,9 +20,7 @@ export function initInventory(state, elements) {
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openEditModal(null));
     appElements.reorderAssistantBtn.addEventListener('click', openReorderAssistant);
-    appElements.buyWholeCheckbox.addEventListener('change', () => {
-        appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
-    });
+    
     appElements.inventoryItemForm.addEventListener('submit', handleSaveItem);
     appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
 
@@ -61,12 +59,26 @@ export function initInventory(state, elements) {
             handleDeleteItem(button.dataset.id);
         }
     });
+    
+    // Listeners for the new conversion rules UI
+    document.getElementById('add-conversion-rule-btn').addEventListener('click', () => addConversionRuleRow());
+    document.getElementById('conversion-rules-container').addEventListener('click', e => {
+        if (e.target.closest('.delete-rule-btn')) {
+            e.target.closest('.conversion-rule-row').remove();
+            updateLiveFeedback();
+        }
+    });
+    appElements.inventoryItemModal.addEventListener('input', e => {
+        if(e.target.closest('#inventory-item-form')) {
+            updateLiveFeedback();
+        }
+    });
 }
 
 export function renderInventory() {
     let items = appState.inventory;
     if (inventoryState.searchTerm) {
-        items = items.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm));
+        items = items.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm) || (item.aliases || []).some(a => a.toLowerCase().includes(inventoryState.searchTerm)));
     }
     if (inventoryState.activeFilter === 'low') {
         items = items.filter(item => item.max_stock > 0 && (item.current_stock || 0) < item.max_stock / 2);
@@ -139,12 +151,14 @@ function renderItemGroup(container, location, items) {
         } else {
             stockStatus = { text: '-', className: 'status-unknown' };
         }
+        
+        const displayStock = `${item.current_stock || 0} ${item.display_unit || 'g'}`;
 
         itemRow.innerHTML = `
             <div class="item-name-cell">${criticalIcon}<span>${item.name || ''}</span></div>
             <div class="stock-display">
                 <div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div>
-                <span>${item.current_stock || 0} ${item.unit || ''}</span>
+                <span>${displayStock}</span>
             </div>
             <div><span class="status-badge ${stockStatus.className}">${stockStatus.text}</span></div>
             <div>${item.category || ''}</div>
@@ -193,50 +207,45 @@ async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
     
-    const itemName = document.getElementById('item-name').value.trim();
-    const itemDescription = document.getElementById('item-description').value.trim();
-    const itemCategory = document.getElementById('item-category').value;
-    const itemLocation = document.getElementById('item-home-location').value;
-    const itemUnit = document.getElementById('item-unit').value;
-    const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
-    let gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
+    // Read all conversion rules from the UI
+    const conversionRules = {};
+    document.querySelectorAll('#conversion-rules-container .conversion-rule-row').forEach(row => {
+        const unit = row.querySelector('.rule-unit-select').value;
+        const grams = parseFloat(row.querySelector('.rule-grams-input').value);
+        if (unit && grams > 0) {
+            conversionRules[unit] = grams;
+        }
+    });
 
-    // Auto-set grams_per_unit for g and kg
-    const normalizedDispUnit = normalizeUnit(itemUnit);
-    if (normalizedDispUnit === 'g') gramsPerUnit = 1;
-    if (normalizedDispUnit === 'kg') gramsPerUnit = 1000;
+    const displayUnitRadio = document.querySelector('input[name="display-unit-radio"]:checked');
+    const displayUnit = displayUnitRadio ? displayUnitRadio.value : 'g';
 
-    if (!gramsPerUnit && quantity > 0) {
-        showNotification({title: "Manglende Info", message: "Udfyld venligst 'Gram pr. enhed' for at kunne lagerstyre varen korrekt."});
+    const currentStock = parseFloat(document.getElementById('item-current-stock').value) || 0;
+    
+    let gramsInStock = 0;
+    if (displayUnit === 'g') {
+        gramsInStock = currentStock;
+    } else if (conversionRules[displayUnit]) {
+        gramsInStock = currentStock * conversionRules[displayUnit];
+    } else {
+        showNotification({title: "Fejl i Standardenhed", message: `Den valgte standardenhed '${displayUnit}' har ikke en gyldig gram-værdi.`});
         return;
     }
 
-    const gramsInStock = quantity * (gramsPerUnit || 0);
-
     const itemData = {
-        name: itemName,
-        description: itemDescription,
-        category: itemCategory,
-        home_location: itemLocation,
-        current_stock: quantity,
-        unit: itemUnit, // This is the display unit
-        grams_per_unit: gramsPerUnit,
+        name: document.getElementById('item-name').value.trim(),
+        description: document.getElementById('item-description').value.trim(),
+        category: document.getElementById('item-category').value,
+        home_location: document.getElementById('item-home-location').value,
+        current_stock: currentStock,
+        display_unit: displayUnit,
+        conversion_rules: conversionRules,
         grams_in_stock: gramsInStock,
         max_stock: Number(document.getElementById('item-max-stock').value) || null,
         kg_price: Number(document.getElementById('item-kg-price').value) || null,
         is_critical: document.getElementById('item-is-critical').checked,
-        buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
         aliases: (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a),
-        purchase_unit: null
     };
-
-    if (itemData.buy_as_whole_unit) {
-        const purchaseUnitName = (document.getElementById('item-buy-unit-name').value || '').trim();
-        const purchaseUnitQuantity = parseFloat(document.getElementById('item-buy-unit-quantity').value) || null;
-        if (purchaseUnitName && purchaseUnitQuantity) {
-            itemData.purchase_unit = { name: purchaseUnitName, quantity: purchaseUnitQuantity };
-        }
-    }
 
     try {
         if (itemId) {
@@ -266,15 +275,83 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.value = currentValue || "";
 }
 
+function addConversionRuleRow(rule = { unit: '', grams: '' }) {
+    const container = document.getElementById('conversion-rules-container');
+    const row = document.createElement('div');
+    row.className = 'conversion-rule-row';
+
+    const unitSelect = document.createElement('select');
+    unitSelect.className = 'rule-unit-select';
+    populateReferenceDropdown(unitSelect, appState.references.standardUnits, 'Vælg enhed', rule.unit);
+
+    row.innerHTML = `
+        <div class="input-group">
+            <input type="radio" name="display-unit-radio" value="${rule.unit || ''}" title="Vælg som standardenhed for lager">
+        </div>
+        <div class="input-group">
+            <!-- Unit select is inserted here -->
+        </div>
+        <div class="input-group">
+            <input type="number" class="rule-grams-input" placeholder="Gram" value="${rule.grams || ''}">
+        </div>
+        <button type="button" class="btn-icon delete-rule-btn" title="Fjern regel"><i class="fas fa-trash"></i></button>
+    `;
+    row.querySelector('.input-group:nth-child(2)').appendChild(unitSelect);
+    
+    // Update radio button value when select changes
+    unitSelect.addEventListener('change', () => {
+        row.querySelector('input[type="radio"]').value = unitSelect.value;
+    });
+
+    container.appendChild(row);
+}
+
+function updateLiveFeedback() {
+    const stockAmount = parseFloat(document.getElementById('item-current-stock').value) || 0;
+    const displayUnitRadio = document.querySelector('input[name="display-unit-radio"]:checked');
+    const displayUnit = displayUnitRadio ? displayUnitRadio.value : 'g';
+    
+    document.getElementById('item-stock-label').textContent = `Lagerbeholdning (${displayUnit})`;
+
+    const rules = {};
+    document.querySelectorAll('#conversion-rules-container .conversion-rule-row').forEach(row => {
+        const unit = row.querySelector('.rule-unit-select').value;
+        const grams = parseFloat(row.querySelector('.rule-grams-input').value);
+        if (unit && grams > 0) {
+            rules[unit] = grams;
+        }
+    });
+
+    let totalGrams = 0;
+    if (displayUnit === 'g') {
+        totalGrams = stockAmount;
+    } else if (rules[displayUnit]) {
+        totalGrams = stockAmount * rules[displayUnit];
+    }
+
+    document.getElementById('total-grams-display').textContent = totalGrams.toFixed(2);
+
+    const equivalentsContainer = document.getElementById('equivalent-units-display');
+    equivalentsContainer.innerHTML = '';
+    for (const unit in rules) {
+        if (unit !== displayUnit) {
+            const equivalentAmount = totalGrams / rules[unit];
+            const p = document.createElement('p');
+            p.textContent = `Svarer til ca. ${equivalentAmount.toFixed(1)} ${unit}`;
+            equivalentsContainer.appendChild(p);
+        }
+    }
+}
+
 
 function openEditModal(item) {
     appElements.inventoryItemForm.reset();
+    document.getElementById('conversion-rules-container').innerHTML = '';
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
 
-    // Populate dropdowns from references
+    // Populate static dropdowns
     populateReferenceDropdown(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
     populateReferenceDropdown(document.getElementById('item-home-location'), appState.references.itemLocations, 'Vælg placering...', item?.home_location);
-    populateReferenceDropdown(document.getElementById('item-unit'), appState.references.standardUnits, 'Vælg enhed...', item?.unit);
     
     if (item) {
         document.getElementById('inventory-item-id').value = item.id;
@@ -282,19 +359,31 @@ function openEditModal(item) {
         document.getElementById('item-description').value = item.description || '';
         document.getElementById('item-current-stock').value = item.current_stock || 0;
         document.getElementById('item-max-stock').value = item.max_stock || '';
-        document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
         document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
         document.getElementById('item-is-critical').checked = item.is_critical || false;
-        appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
-        if (item.purchase_unit) {
-            document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
-            document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
+        
+        // Populate conversion rules
+        const rules = item.conversion_rules || {};
+        for (const unit in rules) {
+            addConversionRuleRow({ unit: unit, grams: rules[unit] });
         }
+        
+        // Set the radio button for the display unit
+        const displayUnit = item.display_unit || 'g';
+        const radioToSelect = document.querySelector(`input[name="display-unit-radio"][value="${displayUnit}"]`);
+        if (radioToSelect) {
+            radioToSelect.checked = true;
+        }
+
     } else {
         document.getElementById('inventory-item-id').value = '';
+        // Add a default 'g' rule for new items
+        addConversionRuleRow({ unit: 'g', grams: 1 });
+        document.querySelector('input[name="display-unit-radio"]').checked = true;
     }
-    appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
+    
+    updateLiveFeedback();
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
@@ -302,7 +391,7 @@ function openReorderAssistant() {
     const itemsToReorder = appState.inventory.filter(item => {
         if (!item.max_stock || item.max_stock <= 0) return false;
         const stockLevel = item.current_stock || 0;
-        return stockLevel < item.max_stock / 2;
+        return stockLevel < item.max_stock;
     });
     const container = appElements.reorderListContainer;
     container.innerHTML = '';
@@ -316,13 +405,14 @@ function openReorderAssistant() {
         if (items.length === 0) return '';
         let itemsHTML = items.map(item => {
             const needed = (item.max_stock || 0) - (item.current_stock || 0);
+            if (needed <= 0) return '';
             return `
                 <div class="reorder-item">
                     <input type="checkbox" id="reorder-${item.id}" name="reorder-item" value="${item.id}" data-needed="${needed}" checked>
                     <label for="reorder-${item.id}">
                         <span class="item-name">${item.name}</span>
                         ${item.is_critical ? '<i class="fas fa-fire-alt critical-item-icon" title="Kritisk vare"></i>' : ''}
-                        <span class="stock-info">(${item.current_stock} / ${item.max_stock} ${item.unit})</span>
+                        <span class="stock-info">(${item.current_stock} / ${item.max_stock} ${item.display_unit || 'g'})</span>
                     </label>
                 </div>
             `;
@@ -344,8 +434,7 @@ async function handleReorderSubmit(e) {
                 selectedItems.push({
                     name: item.name,
                     quantity: needed,
-                    unit: item.unit, // The display unit
-                    store_section: item.category
+                    unit: item.display_unit || 'g',
                 });
             }
         }
