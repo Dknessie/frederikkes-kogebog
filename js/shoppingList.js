@@ -155,20 +155,33 @@ function handleGenerateShoppingList() {
 
 export async function addToShoppingList(ingredients, sourceText) {
     const updatedList = { ...appState.shoppingList };
-    let conversionErrors = [];
-    const totalGramsNeeded = {};
+    let unprocessedItems = [];
 
-    // 1. Calculate total grams needed for each unique ingredient
+    // Aggregate total gram needs for all ingredients first
+    const totalGramsNeeded = {};
     for (const ing of ingredients) {
         const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
+        
         if (!inventoryItem) {
-            conversionErrors.push(`Varen '${ing.name}' findes ikke på lager og kan ikke tilføjes automatisk.`);
+            unprocessedItems.push(`${ing.quantity} ${ing.unit} ${ing.name}`);
+            const key = ing.name.toLowerCase();
+            if (updatedList[key]) {
+                updatedList[key].quantity_to_buy += ing.quantity;
+            } else {
+                updatedList[key] = { name: ing.name, quantity_to_buy: ing.quantity, unit: ing.unit, is_unprocessed: true };
+            }
             continue;
         }
 
         const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
         if (conversion.error) {
-            conversionErrors.push(conversion.error);
+            unprocessedItems.push(`${ing.quantity} ${ing.unit} ${ing.name} (konverteringsfejl)`);
+            const key = ing.name.toLowerCase();
+             if (updatedList[key]) {
+                updatedList[key].quantity_to_buy += ing.quantity;
+            } else {
+                updatedList[key] = { name: ing.name, quantity_to_buy: ing.quantity, unit: ing.unit, is_unprocessed: true };
+            }
             continue;
         }
 
@@ -183,7 +196,7 @@ export async function addToShoppingList(ingredients, sourceText) {
         }
     }
 
-    // 2. Determine what to buy based on stock
+    // Now, calculate what to buy for processed items
     for (const key in totalGramsNeeded) {
         const { grams: neededGrams, inventoryItem } = totalGramsNeeded[key];
         const gramsInStock = inventoryItem.grams_in_stock || 0;
@@ -191,24 +204,29 @@ export async function addToShoppingList(ingredients, sourceText) {
 
         if (gramsToBuy > 0) {
             let quantityToBuy = 0;
-            const purchaseUnit = inventoryItem.display_unit || 'g';
-            const gramsPerPurchaseUnit = (inventoryItem.conversion_rules || {})[purchaseUnit] || (purchaseUnit === 'g' ? 1 : 0);
-            
-            if (gramsPerPurchaseUnit > 0) {
-                quantityToBuy = Math.ceil(gramsToBuy / gramsPerPurchaseUnit);
-            } else {
-                conversionErrors.push(`Kan ikke udregne antal for '${inventoryItem.name}', da dens standardenhed '${purchaseUnit}' mangler en gram-konvertering.`);
-                continue;
-            }
+            let unitToBuy = inventoryItem.display_unit || 'g';
 
+            if (inventoryItem.buy_as_whole_unit && inventoryItem.purchase_size_grams > 0) {
+                quantityToBuy = Math.ceil(gramsToBuy / inventoryItem.purchase_size_grams);
+                unitToBuy = `stk (${inventoryItem.purchase_size_grams}g)`;
+            } else {
+                const gramsPerDisplayUnit = (inventoryItem.conversion_rules || {})[unitToBuy] || (unitToBuy === 'g' ? 1 : 0);
+                if (gramsPerDisplayUnit > 0) {
+                    quantityToBuy = gramsToBuy / gramsPerDisplayUnit;
+                } else {
+                    unprocessedItems.push(`${inventoryItem.name} (manglende standardenhed)`);
+                    continue;
+                }
+            }
+            
             const existingItem = updatedList[key];
-            if (existingItem && existingItem.unit === purchaseUnit) {
+            if (existingItem) {
                 existingItem.quantity_to_buy += quantityToBuy;
             } else {
                 updatedList[key] = {
                     name: inventoryItem.name,
                     quantity_to_buy: quantityToBuy,
-                    unit: purchaseUnit,
+                    unit: unitToBuy,
                     store_section: inventoryItem.category || 'Andet',
                 };
             }
@@ -218,8 +236,8 @@ export async function addToShoppingList(ingredients, sourceText) {
     await updateShoppingListInFirestore(updatedList);
     if (sourceText) {
         let message = `Varer fra ${sourceText} er tilføjet til indkøbslisten.`;
-        if (conversionErrors.length > 0) {
-            message += `<br><br><strong>Bemærk:</strong><br>${[...new Set(conversionErrors)].join('<br>')}`;
+        if (unprocessedItems.length > 0) {
+            message += `<br><br><strong>Følgende varer kræver manuelt tjek:</strong><br>${[...new Set(unprocessedItems)].join('<br>')}`;
         }
         showNotification({ title: "Opdateret", message: message });
     }
@@ -250,7 +268,8 @@ function handleAddShoppingItem(itemName) {
             name: itemName,
             quantity_to_buy: 1,
             unit: inventoryItem ? inventoryItem.display_unit : 'stk',
-            store_section: inventoryItem ? inventoryItem.category : 'Andet'
+            store_section: inventoryItem ? inventoryItem.category : 'Andet',
+            is_unprocessed: !inventoryItem
         };
     }
     updateShoppingListInFirestore(updatedList);
@@ -280,7 +299,7 @@ async function handleConfirmPurchase() {
         
         if (inventoryItem) {
             const itemRef = doc(db, "inventory_items", inventoryItem.id);
-            const gramsPerUnit = (inventoryItem.conversion_rules || {})[itemOnList.unit] || 0;
+            const gramsPerUnit = (inventoryItem.conversion_rules || {})[itemOnList.unit] || (inventoryItem.buy_as_whole_unit ? inventoryItem.purchase_size_grams : 0) || 0;
 
             if (gramsPerUnit > 0) {
                 const newStock = (inventoryItem.current_stock || 0) + itemOnList.quantity_to_buy;
@@ -363,7 +382,7 @@ function calculateAndRenderShoppingListTotal() {
     Object.values(appState.shoppingList).forEach(item => {
         const inventoryItem = appState.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
         if (inventoryItem && inventoryItem.kg_price) {
-            const gramsPerUnit = (inventoryItem.conversion_rules || {})[item.unit] || 0;
+            const gramsPerUnit = (inventoryItem.conversion_rules || {})[item.unit] || (inventoryItem.buy_as_whole_unit ? inventoryItem.purchase_size_grams : 0) || 0;
             if (gramsPerUnit > 0) {
                 const quantityInGrams = item.quantity_to_buy * gramsPerUnit;
                 const quantityInKg = quantityInGrams / 1000;
