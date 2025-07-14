@@ -188,9 +188,12 @@ async function handleConfirmCooking() {
                 } else {
                     const newGramsInStock = gramsInStock - gramsToConsume;
                     let newStockInDisplayUnits = 0;
-                    if (currentData.grams_per_unit > 0) {
-                        newStockInDisplayUnits = newGramsInStock / currentData.grams_per_unit;
+                    const gramsPerDisplayUnit = (currentData.conversion_rules || {})[currentData.display_unit] || (currentData.display_unit === 'g' ? 1 : 0);
+                    
+                    if (gramsPerDisplayUnit > 0) {
+                        newStockInDisplayUnits = newGramsInStock / gramsPerDisplayUnit;
                     }
+
                     updates.push({ 
                         ref: itemRef, 
                         data: { 
