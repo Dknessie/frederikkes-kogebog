@@ -12,7 +12,8 @@ let inventoryState = {
     searchTerm: '',
     activeFilter: 'all',
     activeCategories: new Set(),
-    sortBy: 'name_asc'
+    sortBy: 'name_asc',
+    referencesLoaded: false // Safety guard for edit buttons
 };
 
 export function initInventory(state, elements) {
@@ -108,6 +109,15 @@ export function initInventory(state, elements) {
             e.target.closest('.batch-row').remove();
         }
     });
+}
+
+// Called from app.js when references are loaded
+export function setReferencesLoaded(isLoaded) {
+    inventoryState.referencesLoaded = isLoaded;
+    // Re-render if the inventory page is visible to enable buttons
+    if (document.querySelector('#inventory:not(.hidden)')) {
+        renderInventory();
+    }
 }
 
 function renderUnprocessedItems() {
@@ -258,6 +268,7 @@ function renderItemGroup(container, location, items) {
         }
         
         const displayStock = `${(item.current_stock || 0).toFixed(1).replace(/\.0$/, '')} ${item.display_unit || 'g'}`;
+        const editButtonDisabled = !inventoryState.referencesLoaded ? 'disabled' : '';
 
         itemRow.innerHTML = `
             <div class="item-name-cell">${criticalIcon}<span>${item.name || ''}</span></div>
@@ -268,7 +279,7 @@ function renderItemGroup(container, location, items) {
             <div><span class="status-badge ${stockStatus.className}">${stockStatus.text}</span></div>
             <div>${item.category || ''}</div>
             <div class="inventory-item-actions">
-                <button class="btn-icon edit-item" data-id="${item.id}"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon edit-item" data-id="${item.id}" ${editButtonDisabled}><i class="fas fa-edit"></i></button>
                 <button class="btn-icon delete-item" data-id="${item.id}"><i class="fas fa-trash"></i></button>
             </div>
         `;
