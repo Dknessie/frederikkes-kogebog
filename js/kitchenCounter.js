@@ -1,7 +1,7 @@
 // js/kitchenCounter.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { convertToGrams } from './utils.js';
 import { calculateRecipeMatch } from './recipes.js';
@@ -87,7 +87,6 @@ async function addToKitchenCounter(ingredients) {
     
     ingredients.forEach(ing => {
         const key = ing.name.toLowerCase();
-        // Simple addition; assuming units are consistent from recipe.
         if (currentCounter[key]) {
             currentCounter[key].quantity += ing.quantity;
         } else {
@@ -180,28 +179,47 @@ async function handleConfirmCooking() {
                     continue;
                 }
                 
-                const gramsToConsume = conversion.grams;
-                const gramsInStock = currentData.grams_in_stock || 0;
-
-                if (gramsInStock < gramsToConsume) {
-                    validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${(gramsToConsume - gramsInStock).toFixed(0)}g.`);
-                } else {
-                    const newGramsInStock = gramsInStock - gramsToConsume;
-                    let newStockInDisplayUnits = 0;
-                    const gramsPerDisplayUnit = (currentData.conversion_rules || {})[currentData.display_unit] || (currentData.display_unit === 'g' ? 1 : 0);
-                    
-                    if (gramsPerDisplayUnit > 0) {
-                        newStockInDisplayUnits = newGramsInStock / gramsPerDisplayUnit;
-                    }
-
-                    updates.push({ 
-                        ref: itemRef, 
-                        data: { 
-                            current_stock: newStockInDisplayUnits, 
-                            grams_in_stock: newGramsInStock 
-                        } 
-                    });
+                let gramsToConsume = conversion.grams;
+                
+                if ((currentData.grams_in_stock || 0) < gramsToConsume) {
+                    validationErrors.push(`Ikke nok '${item.name}' på lager. Mangler ${(gramsToConsume - (currentData.grams_in_stock || 0)).toFixed(0)}g.`);
+                    continue;
                 }
+
+                const updatedBatches = [];
+                let totalStock = 0;
+                let totalGrams = 0;
+                
+                (currentData.batches || []).forEach(batch => {
+                    const gramsPerUnit = (currentData.conversion_rules || {})[currentData.display_unit] || 1;
+                    const batchGrams = batch.quantity * gramsPerUnit;
+
+                    if (gramsToConsume > 0) {
+                        const consumedFromBatch = Math.min(batchGrams, gramsToConsume);
+                        const remainingGrams = batchGrams - consumedFromBatch;
+                        gramsToConsume -= consumedFromBatch;
+
+                        if (remainingGrams > 0.1) { // Use a small threshold to avoid floating point issues
+                            const remainingQty = remainingGrams / gramsPerUnit;
+                            updatedBatches.push({ ...batch, quantity: remainingQty });
+                            totalStock += remainingQty;
+                            totalGrams += remainingGrams;
+                        }
+                    } else {
+                        updatedBatches.push(batch);
+                        totalStock += batch.quantity;
+                        totalGrams += batchGrams;
+                    }
+                });
+
+                updates.push({ 
+                    ref: itemRef, 
+                    data: { 
+                        batches: updatedBatches,
+                        current_stock: totalStock,
+                        grams_in_stock: totalGrams 
+                    } 
+                });
             }
 
             if (validationErrors.length > 0) {
