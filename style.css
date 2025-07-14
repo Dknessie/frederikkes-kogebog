@@ -72,6 +72,13 @@ hr {
     margin: var(--spacing-l) 0;
 }
 
+.small-text {
+    font-size: var(--small-font-size);
+    color: #666;
+    margin-top: calc(-1 * var(--spacing-m) + 4px);
+    margin-bottom: var(--spacing-m);
+}
+
 /* ===== 2. Login Side ===== */
 #login-page {
     display: flex;
@@ -479,16 +486,16 @@ header {
 .shopping-list-item, .kitchen-counter-item {
     padding: var(--spacing-m) var(--spacing-xs);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--spacing-s);
     border-bottom: 1px solid #f0f0f0;
 }
 .shopping-list-item:last-child, .kitchen-counter-item:last-child { border-bottom: none; }
 
-.item-main-info {
+.shopping-list-item .item-main-info {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-m);
     flex-grow: 1;
     min-width: 0; 
@@ -648,11 +655,17 @@ header {
 }
 
 .inventory-controls {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex;
     gap: var(--spacing-l);
     margin-bottom: var(--spacing-m);
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.inventory-controls .search-bar {
+    flex-grow: 1;
+    min-width: 250px;
+    max-width: 400px;
 }
 
 .search-bar {
@@ -980,6 +993,7 @@ header {
 
 
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--spacing-m) var(--spacing-l); }
+.form-grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-m) var(--spacing-l); align-items: end; }
 .form-grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-m) var(--spacing-l); align-items: end; }
 
 .read-view-image, #recipe-edit-modal .image-upload-container img {
@@ -1163,6 +1177,45 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-weight: 600;
 }
 
+/* ===== Varelager Modal Specifikke Styles ===== */
+.conversion-rules-section {
+    background: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+}
+.conversion-rules-section h4 {
+    margin-top: 0;
+}
+#conversion-rules-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-m);
+}
+.conversion-rule-row {
+    display: grid;
+    grid-template-columns: 20px 1fr 1fr 20px;
+    gap: var(--spacing-m);
+    align-items: center;
+}
+.conversion-rule-row .input-group {
+    margin-bottom: 0;
+}
+
+.stock-feedback {
+    background-color: var(--secondary-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    margin-top: var(--spacing-m);
+}
+.stock-feedback p {
+    margin: 0 0 var(--spacing-s) 0;
+}
+#equivalent-units-display {
+    font-size: var(--small-font-size);
+    color: #666;
+}
 
 /* ===== 10. Mobil-specifikke Styles ===== */
 .mobile-tab-bar {
@@ -1293,7 +1346,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     .read-view-main-content {
         grid-template-columns: 1fr;
     }
-    .form-grid-3-col {
+    .form-grid-3-col, .form-grid-2-col {
         grid-template-columns: 1fr;
     }
     .recipe-actions-bar, .inventory-controls {
