@@ -191,13 +191,13 @@ export async function addToShoppingList(ingredients, sourceText) {
 
         if (gramsToBuy > 0) {
             let quantityToBuy = 0;
-            const purchaseUnit = inventoryItem.unit || 'stk';
+            const purchaseUnit = inventoryItem.display_unit || 'g';
+            const gramsPerPurchaseUnit = (inventoryItem.conversion_rules || {})[purchaseUnit] || (purchaseUnit === 'g' ? 1 : 0);
             
-            if (inventoryItem.grams_per_unit > 0) {
-                quantityToBuy = Math.ceil(gramsToBuy / inventoryItem.grams_per_unit);
+            if (gramsPerPurchaseUnit > 0) {
+                quantityToBuy = Math.ceil(gramsToBuy / gramsPerPurchaseUnit);
             } else {
-                // Cannot convert back from grams if grams_per_unit is missing
-                conversionErrors.push(`Kan ikke udregne antal for '${inventoryItem.name}', da 'gram pr. enhed' mangler.`);
+                conversionErrors.push(`Kan ikke udregne antal for '${inventoryItem.name}', da dens standardenhed '${purchaseUnit}' mangler en gram-konvertering.`);
                 continue;
             }
 
@@ -249,7 +249,7 @@ function handleAddShoppingItem(itemName) {
         updatedList[key] = {
             name: itemName,
             quantity_to_buy: 1,
-            unit: inventoryItem ? inventoryItem.unit : 'stk',
+            unit: inventoryItem ? inventoryItem.display_unit : 'stk',
             store_section: inventoryItem ? inventoryItem.category : 'Andet'
         };
     }
@@ -278,16 +278,19 @@ async function handleConfirmPurchase() {
         const itemOnList = updatedList[name.toLowerCase()];
         const inventoryItem = appState.inventory.find(inv => inv.name.toLowerCase() === itemOnList.name.toLowerCase());
         
-        if (inventoryItem && inventoryItem.grams_per_unit) {
+        if (inventoryItem) {
             const itemRef = doc(db, "inventory_items", inventoryItem.id);
-            
-            const newStock = (inventoryItem.current_stock || 0) + itemOnList.quantity_to_buy;
-            const newGramsInStock = (inventoryItem.grams_in_stock || 0) + (itemOnList.quantity_to_buy * inventoryItem.grams_per_unit);
+            const gramsPerUnit = (inventoryItem.conversion_rules || {})[itemOnList.unit] || 0;
 
-            batch.update(itemRef, { 
-                current_stock: newStock,
-                grams_in_stock: newGramsInStock
-            });
+            if (gramsPerUnit > 0) {
+                const newStock = (inventoryItem.current_stock || 0) + itemOnList.quantity_to_buy;
+                const newGramsInStock = (inventoryItem.grams_in_stock || 0) + (itemOnList.quantity_to_buy * gramsPerUnit);
+
+                batch.update(itemRef, { 
+                    current_stock: newStock,
+                    grams_in_stock: newGramsInStock
+                });
+            }
         }
         delete updatedList[itemOnList.name.toLowerCase()];
     });
@@ -359,10 +362,13 @@ function calculateAndRenderShoppingListTotal() {
     let totalPrice = 0;
     Object.values(appState.shoppingList).forEach(item => {
         const inventoryItem = appState.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
-        if (inventoryItem && inventoryItem.kg_price && inventoryItem.grams_per_unit) {
-            const quantityInGrams = item.quantity_to_buy * inventoryItem.grams_per_unit;
-            const quantityInKg = quantityInGrams / 1000;
-            totalPrice += quantityInKg * inventoryItem.kg_price;
+        if (inventoryItem && inventoryItem.kg_price) {
+            const gramsPerUnit = (inventoryItem.conversion_rules || {})[item.unit] || 0;
+            if (gramsPerUnit > 0) {
+                const quantityInGrams = item.quantity_to_buy * gramsPerUnit;
+                const quantityInKg = quantityInGrams / 1000;
+                totalPrice += quantityInKg * inventoryItem.kg_price;
+            }
         }
     });
     const totalHTML = `<span>Estimeret Pris: <strong>${totalPrice.toFixed(2)} kr.</strong></span>`;
