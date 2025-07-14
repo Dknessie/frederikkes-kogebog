@@ -73,31 +73,36 @@ export function formatDate(date) {
 }
 
 /**
- * Converts a quantity from a given unit to the primary unit 'g' if possible.
- * @param {number} quantity The quantity to convert.
- * @param {string} fromUnit The unit to convert from.
- * @param {object} inventoryItem The corresponding inventory item for conversion factors.
- * @returns {object} An object with the converted quantity or an error.
+ * Converts a quantity from a given recipe unit to grams, using the inventory item's conversion factor.
+ * @param {number} quantity The quantity to convert (from a recipe).
+ * @param {string} fromUnit The unit to convert from (from a recipe).
+ * @param {object} inventoryItem The corresponding inventory item which holds the grams_per_unit conversion factor.
+ * @returns {{grams: number|null, error: string|null}} An object with the converted quantity in grams or an error.
  */
-export function convertToPrimaryUnit(quantity, fromUnit, inventoryItem) {
-    const primaryUnit = 'g';
+export function convertToGrams(quantity, fromUnit, inventoryItem) {
     const normalizedFromUnit = normalizeUnit(fromUnit);
+    const itemDisplayUnit = normalizeUnit(inventoryItem.unit);
 
-    if (normalizedFromUnit === primaryUnit) {
-        return { convertedQuantity: quantity, error: null };
+    // Direct conversion for weight units
+    if (normalizedFromUnit === 'g') {
+        return { grams: quantity, error: null };
     }
-    
     if (normalizedFromUnit === 'kg') {
-        return { convertedQuantity: quantity * 1000, error: null };
-    }
-
-    if (inventoryItem && inventoryItem.grams_per_unit) {
-        return { convertedQuantity: quantity * inventoryItem.grams_per_unit, error: null };
+        return { grams: quantity * 1000, error: null };
     }
     
-    if (inventoryItem && normalizeUnit(inventoryItem.unit) === normalizedFromUnit) {
-        return { convertedQuantity: null, error: null, directMatch: true, quantity: quantity };
+    // Conversion if the recipe unit matches the item's display unit (e.g., recipe says "2 stk", item is stored in "stk")
+    if (normalizedFromUnit === itemDisplayUnit && inventoryItem.grams_per_unit) {
+        return { grams: quantity * inventoryItem.grams_per_unit, error: null };
     }
 
-    return { convertedQuantity: null, error: `Kan ikke omregne fra '${fromUnit}' til '${primaryUnit}'.` };
+    // If units don't match, we can't be sure. Example: recipe says "1 dl", item is stored in "stk".
+    // This requires a more complex conversion map in the future. For now, we return an error.
+    // A special case could be added for volume-to-weight if needed, but grams_per_unit is the primary method.
+    if (inventoryItem.grams_per_unit) {
+         console.warn(`Potential unit mismatch for '${inventoryItem.name}'. Recipe unit: '${fromUnit}', Item unit: '${inventoryItem.unit}'. Falling back to grams_per_unit.`)
+         return { grams: quantity * inventoryItem.grams_per_unit, error: null };
+    }
+
+    return { grams: null, error: `Kan ikke omregne '${fromUnit}' til gram for varen '${inventoryItem.name}'. Opdater varen med 'gram pr. enhed'.` };
 }
