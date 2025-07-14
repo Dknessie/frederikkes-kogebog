@@ -1,11 +1,11 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
-import { initInventory, renderInventory } from './inventory.js';
+import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingList } from './shoppingList.js';
@@ -195,6 +195,10 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addInventoryItemBtn.disabled = false;
             elements.reorderAssistantBtn.disabled = false;
             elements.addRecipeBtn.disabled = false;
+            
+            // **SAFETY GUARD TRIGGER**
+            // Inform inventory module that references are ready
+            setReferencesLoaded(true);
 
             if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
         }, (error) => commonErrorHandler(error, 'referencer'));
@@ -222,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
+        setReferencesLoaded(false); // Reset safety guard on logout
     }
 
     function handleNavigation(hash) {
