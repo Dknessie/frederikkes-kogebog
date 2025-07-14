@@ -61,14 +61,6 @@ export function initInventory(state, elements) {
             handleDeleteItem(button.dataset.id);
         }
     });
-
-    // Event listener for custom text fields in the modal
-    appElements.inventoryItemModal.addEventListener('change', e => {
-        if (e.target.tagName === 'SELECT' && e.target.dataset.customInput) {
-            const customInput = document.getElementById(e.target.dataset.customInput);
-            customInput.classList.toggle('hidden', e.target.value !== 'other');
-        }
-    });
 }
 
 export function renderInventory() {
@@ -201,19 +193,11 @@ async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
     
-    const getSelectOrCustomValue = (selectId, customInputId) => {
-        const select = document.getElementById(selectId);
-        if (select.value === 'other') {
-            return document.getElementById(customInputId).value.trim();
-        }
-        return select.value;
-    };
-
-    const itemName = getSelectOrCustomValue('item-name-select', 'item-name-custom');
-    const itemDescription = getSelectOrCustomValue('item-description', 'item-description-custom');
-    const itemCategory = getSelectOrCustomValue('item-category', 'item-category-custom');
-    const itemLocation = getSelectOrCustomValue('item-home-location', 'item-home-location-custom');
-    const itemUnit = getSelectOrCustomValue('item-unit-select', 'item-unit-custom');
+    const itemName = document.getElementById('item-name').value.trim();
+    const itemDescription = document.getElementById('item-description').value.trim();
+    const itemCategory = document.getElementById('item-category').value;
+    const itemLocation = document.getElementById('item-home-location').value;
+    const itemUnit = document.getElementById('item-unit').value;
 
     const quantity = parseFloat(document.getElementById('item-current-stock').value) || 0;
     const gramsPerUnit = parseFloat(document.getElementById('item-grams-per-unit').value) || null;
@@ -256,19 +240,6 @@ async function handleSaveItem(e) {
             await addDoc(collection(db, 'inventory_items'), itemData);
         }
         
-        // Add new custom values to references
-        const ref = doc(db, 'references', appState.currentUser.uid);
-        const updates = {};
-        if (document.getElementById('item-name-select').value === 'other' && itemName) updates.itemDescriptions = arrayUnion(itemName);
-        if (document.getElementById('item-description').value === 'other' && itemDescription) updates.itemDescriptions = arrayUnion(itemDescription);
-        if (document.getElementById('item-category').value === 'other' && itemCategory) updates.itemCategories = arrayUnion(itemCategory);
-        if (document.getElementById('item-home-location').value === 'other' && itemLocation) updates.itemLocations = arrayUnion(itemLocation);
-        if (document.getElementById('item-unit-select').value === 'other' && itemUnit) updates.standardUnits = arrayUnion(itemUnit);
-
-        if (Object.keys(updates).length > 0) {
-            await setDoc(ref, updates, { merge: true });
-        }
-        
         appElements.inventoryItemModal.classList.add('hidden');
     } catch (error) {
         handleError(error, "Varen kunne ikke gemmes.", "saveInventoryItem");
@@ -284,40 +255,26 @@ async function handleDeleteItem(docId) {
     }
 }
 
-function populateReferenceDropdown(selectElement, customInputElement, options, placeholder, currentValue) {
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.add(new Option('Andet (angiv selv)...', 'other'));
-    
-    selectElement.dataset.customInput = customInputElement.id;
-
-    // Check if the current value exists in the options
-    const valueExists = (options || []).includes(currentValue);
-    if (currentValue && valueExists) {
-        selectElement.value = currentValue;
-        customInputElement.classList.add('hidden');
-    } else if (currentValue) {
-        selectElement.value = 'other';
-        customInputElement.value = currentValue;
-        customInputElement.classList.remove('hidden');
-    } else {
-        customInputElement.classList.add('hidden');
-    }
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
 }
 
 
 function openEditModal(item) {
-    populateReferenceDropdown(document.getElementById('item-name-select'), document.getElementById('item-name-custom'), appState.references.itemDescriptions, 'Vælg vare...', item?.name);
-    populateReferenceDropdown(document.getElementById('item-description'), document.getElementById('item-description-custom'), appState.references.itemDescriptions, 'Vælg beskrivelse...', item?.description);
-    populateReferenceDropdown(document.getElementById('item-category'), document.getElementById('item-category-custom'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
-    populateReferenceDropdown(document.getElementById('item-home-location'), document.getElementById('item-home-location-custom'), appState.references.itemLocations, 'Vælg placering...', item?.home_location);
-    populateReferenceDropdown(document.getElementById('item-unit-select'), document.getElementById('item-unit-custom'), appState.references.standardUnits, 'Vælg enhed...', item?.unit);
-    
     appElements.inventoryItemForm.reset();
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
+
+    // Populate dropdowns from references
+    populateReferenceDropdown(document.getElementById('item-category'), appState.references.itemCategories, 'Vælg kategori...', item?.category);
+    populateReferenceDropdown(document.getElementById('item-home-location'), appState.references.itemLocations, 'Vælg placering...', item?.home_location);
+    populateReferenceDropdown(document.getElementById('item-unit'), appState.references.standardUnits, 'Vælg enhed...', item?.unit);
     
     if (item) {
         document.getElementById('inventory-item-id').value = item.id;
+        document.getElementById('item-name').value = item.name || '';
+        document.getElementById('item-description').value = item.description || '';
         document.getElementById('item-current-stock').value = item.current_stock || 0;
         document.getElementById('item-max-stock').value = item.max_stock || '';
         document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
@@ -334,19 +291,6 @@ function openEditModal(item) {
     }
     appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
     appElements.inventoryItemModal.classList.remove('hidden');
-}
-
-function guessItemDetails(itemName) {
-    const existingItem = appState.inventory.find(item => item.name.toLowerCase() === itemName.toLowerCase());
-    if (existingItem) {
-        document.getElementById('item-description').value = existingItem.description || '';
-        document.getElementById('item-category').value = existingItem.category || '';
-        document.getElementById('item-home-location').value = existingItem.home_location || '';
-        document.getElementById('item-unit-select').value = existingItem.unit || '';
-        document.getElementById('item-grams-per-unit').value = existingItem.grams_per_unit || '';
-        document.getElementById('item-aliases').value = (existingItem.aliases || []).join(', ');
-        document.getElementById('item-is-critical').checked = existingItem.is_critical || false;
-    }
 }
 
 function openReorderAssistant() {
