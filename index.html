@@ -92,7 +92,6 @@
                             <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
                             <div class="calendar-title-container">
                                 <h2 id="calendar-title"></h2>
-                                <!-- NYT: Ugepris display -->
                                 <div id="weekly-price-display" class="weekly-price-display"></div>
                             </div>
                             <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
@@ -159,7 +158,6 @@
             <section id="overview" class="page hidden">
                 <h2>Oversigt</h2>
                 <div class="overview-layout">
-                    <!-- NYT: Budget Kort -->
                     <div id="budget-card" class="card">
                         <div class="card-header">
                             <h3>Budget</h3>
@@ -204,7 +202,6 @@
 
         <!-- Mobil Slide-in Paneler Wrapper -->
         <div id="mobile-panel-overlay" class="mobile-panel-overlay hidden">
-            <!-- Mobil Indkøbsliste Panel -->
             <div id="mobile-shopping-list-panel" class="mobile-panel">
                 <div class="mobile-panel-header">
                     <h3>Indkøbsliste</h3>
@@ -224,7 +221,6 @@
                     </form>
                 </div>
             </div>
-            <!-- Mobil Køkkenbord Panel -->
             <div id="mobile-kitchen-counter-panel" class="mobile-panel">
                  <div class="mobile-panel-header">
                     <h3>Køkkenbord</h3>
@@ -242,7 +238,6 @@
     
     <!-- ===== Modaler ===== -->
 
-    <!-- NYT: Rediger Budget Modal -->
     <div id="edit-budget-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -259,8 +254,6 @@
         </div>
     </div>
 
-
-    <!-- Planlæg Måltid Modal -->
     <div id="plan-meal-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -306,13 +299,15 @@
                         <label for="item-description">Beskrivelse</label>
                         <input type="text" id="item-description" placeholder="F.eks. Madvare, Rengøring...">
                     </div>
+                     <!-- ÆNDRING: Fra input til select -->
                      <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
-                        <input type="text" id="item-home-location" placeholder="F.eks. Køleskab, Fryser...">
+                        <select id="item-home-location"></select>
                     </div>
+                    <!-- ÆNDRING: Fra input til select -->
                     <div class="input-group">
                         <label for="item-category">Kategori (Butik)</label>
-                        <input type="text" id="item-category" placeholder="F.eks. Frugt & Grønt...">
+                        <select id="item-category"></select>
                     </div>
                     <div class="input-group">
                         <label for="item-current-stock">Antal på lager</label>
@@ -452,7 +447,6 @@
         </div>
     </div>
     
-    <!-- Opskrift Læsevisning Modal -->
     <div id="recipe-read-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -488,7 +482,6 @@
         </div>
     </div>
 
-    <!-- Autogenerér Madplan Modal -->
     <div id="autogen-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -529,7 +522,6 @@
         </div>
     </div>
 
-    <!-- Notifikations Modal -->
     <div id="notification-modal" class="modal-overlay hidden">
         <div class="modal-content modal-notification">
              <h3 id="notification-title"></h3>
