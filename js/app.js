@@ -5,13 +5,13 @@ import { collection, onSnapshot, doc, setDoc } from "https://www.gstatic.com/fir
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
-import { initInventory, renderInventory, renderInventorySummary } from './inventory.js';
+import { initInventory, renderInventory } from './inventory.js';
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingList } from './shoppingList.js';
 import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
-import { initOverview, renderBudgetOverview } from './overview.js';
+import { initOverview, renderOverviewPage } from './overview.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const state = {
@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarTitle: document.getElementById('calendar-title'),
         prevWeekBtn: document.getElementById('prev-week-btn'),
         nextWeekBtn: document.getElementById('next-week-btn'),
-        autogenPlanBtn: document.getElementById('autogen-plan-btn'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
         desktopPanelTabs: document.querySelectorAll('#meal-planner-sidebar-left .panel-tab'),
         desktopSidebarPanels: document.querySelectorAll('#meal-planner-sidebar-left .sidebar-panel'),
@@ -81,9 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mobilePanelOverlay: document.getElementById('mobile-panel-overlay'),
         mobileShoppingListPanel: document.getElementById('mobile-shopping-list-panel'),
         mobileKitchenCounterPanel: document.getElementById('mobile-kitchen-counter-panel'),
-        autogenModal: document.getElementById('autogen-modal'),
-        autogenForm: document.getElementById('autogen-form'),
-        autogenDietTagsContainer: document.getElementById('autogen-diet-tags'),
         notificationModal: document.getElementById('notification-modal'),
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
@@ -156,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
             if (document.querySelector('#meal-planner:not(.hidden)')) renderMealPlanner();
-            if (document.querySelector('#overview:not(.hidden)')) renderBudgetOverview();
+            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
         }, (error) => commonErrorHandler(error, 'madplan'));
 
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
@@ -179,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 setDoc(settingsRef, state.budget).catch(e => handleError(e, "Kunne ikke oprette standardbudget."));
             }
-            if (document.querySelector('#overview:not(.hidden)')) renderBudgetOverview();
+            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
         }, (error) => commonErrorHandler(error, 'budget'));
 
         const referencesRef = doc(db, 'references', userId);
@@ -190,7 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const defaultReferences = {
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab'],
-                    standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse', 'tsk', 'spsk', 'dl']
+                    standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse', 'tsk', 'spsk', 'dl'],
+                    shelfLife: { 'Mejeri': 7, 'Kød & Fisk': 3 }
                 };
                 setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
             }
@@ -246,8 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderInventory();
                 break;
             case '#overview':
-                renderInventorySummary();
-                renderBudgetOverview();
+                renderOverviewPage();
                 break;
         }
     }
