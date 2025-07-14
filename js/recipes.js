@@ -250,7 +250,7 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
                 suggestionDiv.addEventListener('mousedown', (event) => {
                     event.preventDefault();
                     nameInput.value = item.name;
-                    row.querySelector('.ingredient-unit').value = item.unit || '';
+                    row.querySelector('.ingredient-unit').value = item.display_unit || 'g';
                     removeAutocomplete();
                 });
                 suggestionsContainer.appendChild(suggestionDiv);
@@ -530,7 +530,7 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
 
     recipe.ingredients.forEach(ing => {
         const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if(inventoryItem && inventoryItem.kg_price && inventoryItem.grams_per_unit) {
+        if(inventoryItem && inventoryItem.kg_price) {
             const scaledQuantity = (ing.quantity || 0) * scaleFactor;
             const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
             if (conversion.grams !== null) {
