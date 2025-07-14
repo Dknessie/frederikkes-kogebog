@@ -456,7 +456,7 @@ function openEditRecipeModal() {
         document.getElementById('recipe-source-url').value = recipe.source_url || '';
         
         const imageUrl = recipe.imageBase64 || recipe.imageUrl;
-        appElements.recipeImagePreview.src = imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+        appElements.recipeImagePreview.src = imageUrl || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';
         if(recipe.imageUrl) {
             appElements.recipeImageUrlInput.value = recipe.imageUrl;
             appState.recipeFormImage = { type: 'url', data: recipe.imageUrl };
