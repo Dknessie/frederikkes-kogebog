@@ -157,7 +157,6 @@ export async function addToShoppingList(ingredients, sourceText) {
     const updatedList = { ...appState.shoppingList };
     let unprocessedItems = [];
 
-    // Aggregate total gram needs for all ingredients first
     const totalGramsNeeded = {};
     for (const ing of ingredients) {
         const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
@@ -196,7 +195,6 @@ export async function addToShoppingList(ingredients, sourceText) {
         }
     }
 
-    // Now, calculate what to buy for processed items
     for (const key in totalGramsNeeded) {
         const { grams: neededGrams, inventoryItem } = totalGramsNeeded[key];
         const gramsInStock = inventoryItem.grams_in_stock || 0;
@@ -299,17 +297,32 @@ async function handleConfirmPurchase() {
         
         if (inventoryItem) {
             const itemRef = doc(db, "inventory_items", inventoryItem.id);
-            const gramsPerUnit = (inventoryItem.conversion_rules || {})[itemOnList.unit] || (inventoryItem.buy_as_whole_unit ? inventoryItem.purchase_size_grams : 0) || 0;
-
-            if (gramsPerUnit > 0) {
-                const newStock = (inventoryItem.current_stock || 0) + itemOnList.quantity_to_buy;
-                const newGramsInStock = (inventoryItem.grams_in_stock || 0) + (itemOnList.quantity_to_buy * gramsPerUnit);
-
-                batch.update(itemRef, { 
-                    current_stock: newStock,
-                    grams_in_stock: newGramsInStock
-                });
+            const shelfLifeDays = (appState.references.shelfLife || {})[inventoryItem.category] || null;
+            let expiryDate = '';
+            if (shelfLifeDays !== null) {
+                const date = new Date();
+                date.setDate(date.getDate() + shelfLifeDays);
+                expiryDate = formatDate(date);
             }
+            
+            const newBatch = {
+                id: crypto.randomUUID(),
+                quantity: itemOnList.quantity_to_buy,
+                expiry_date: expiryDate
+            };
+
+            const existingBatches = inventoryItem.batches || [];
+            const updatedBatches = [...existingBatches, newBatch].sort((a,b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+            
+            const totalStock = updatedBatches.reduce((sum, b) => sum + b.quantity, 0);
+            const gramsPerUnit = (inventoryItem.conversion_rules || {})[inventoryItem.display_unit] || 0;
+            const totalGrams = totalStock * gramsPerUnit;
+
+            batch.update(itemRef, { 
+                batches: updatedBatches,
+                current_stock: totalStock,
+                grams_in_stock: totalGrams
+            });
         }
         delete updatedList[itemOnList.name.toLowerCase()];
     });
@@ -350,8 +363,7 @@ function handleShoppingListClick(e) {
 
     if (button.classList.contains('new-item-indicator')) {
         window.location.hash = '#inventory';
-        appElements.addInventoryItemBtn.click();
-        document.getElementById('item-name').value = itemName;
+        openEditModal(null, itemName);
         return;
     }
 
