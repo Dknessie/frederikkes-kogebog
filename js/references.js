@@ -19,9 +19,9 @@ export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
     const referenceData = {
         itemDescriptions: {
-            title: 'Varebeskrivelser',
+            title: 'Varebeskrivelser & Typer',
             items: appState.references.itemDescriptions || [],
-            isSimpleList: true
+            isSimpleList: false // This is now a complex list
         },
         itemCategories: {
             title: 'Varekategorier (Butik)',
@@ -37,11 +37,6 @@ export function renderReferencesPage() {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
             isSimpleList: true
-        },
-        vareTyper: {
-            title: 'Varetyper (Hierarki)',
-            items: appState.references.vareTyper || [],
-            isSimpleList: false // This is a complex list
         }
     };
 
@@ -59,12 +54,12 @@ export function renderReferencesPage() {
                     <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
                 </li>
             `).join('');
-        } else { // Handle complex list for vareTyper
+        } else { // Handle complex list for itemDescriptions
             listItemsHTML = (data.items || []).sort((a,b) => a.navn.localeCompare(b.navn)).map(item => `
                 <li class="reference-item">
                     <div>
                         <strong>${item.navn}</strong>
-                        <div style="font-size: 0.8em; color: #666;">Underkategorier: ${(item.underkategorier || []).join(', ')}</div>
+                        <div style="font-size: 0.8em; color: #666;">Underkategorier: ${(item.underkategorier || []).join(', ') || 'Ingen'}</div>
                     </div>
                     <button class="btn-icon delete-reference-item" data-value="${item.navn}"><i class="fas fa-trash"></i></button>
                 </li>
@@ -98,13 +93,13 @@ async function handleListClick(e) {
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
             let updatePayload;
-            if (key === 'vareTyper') {
-                // For complex objects, we need to find the object to remove it
-                const itemToRemove = (appState.references.vareTyper || []).find(t => t.navn === value);
+            // Handle complex objects for itemDescriptions
+            if (key === 'itemDescriptions') {
+                const itemToRemove = (appState.references.itemDescriptions || []).find(t => t.navn === value);
                 if (itemToRemove) {
                     updatePayload = { [key]: arrayRemove(itemToRemove) };
                 }
-            } else {
+            } else { // Handle simple string arrays
                 updatePayload = { [key]: arrayRemove(value) };
             }
 
@@ -129,10 +124,10 @@ async function handleFormSubmit(e) {
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
             let updatePayload;
-            if (key === 'vareTyper') {
-                // For vareTyper, we create a new object
+            // For itemDescriptions, we create a new object
+            if (key === 'itemDescriptions') {
                 updatePayload = { [key]: arrayUnion({ navn: value, underkategorier: [] }) };
-            } else {
+            } else { // For other lists, we add a simple string
                 updatePayload = { [key]: arrayUnion(value) };
             }
             
