@@ -809,7 +809,7 @@ header {
 /* Referencer Side */
 .references-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     gap: var(--spacing-l);
 }
 .reference-card {
@@ -842,6 +842,14 @@ header {
 .reference-item:last-child {
     border-bottom: none;
 }
+.reference-item .shelf-life-input {
+    width: 80px;
+    text-align: right;
+    padding: var(--spacing-s);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+
 .add-reference-form {
     display: flex;
     gap: var(--spacing-s);
