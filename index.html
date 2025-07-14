@@ -139,19 +139,20 @@
                             <i class="fas fa-search"></i>
                             <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
                         </div>
-                        <div class="filter-controls">
-                            <div id="inventory-filter-buttons" class="filter-buttons">
-                                <button class="btn btn-secondary active" data-filter="all">Alle</button>
-                                <button class="btn btn-secondary" data-filter="low">Lav Beholdning</button>
-                                <button class="btn btn-secondary" data-filter="expiring">Udløber Snart</button>
-                            </div>
-                            <button id="advanced-filter-btn" class="btn btn-secondary"><i class="fas fa-filter"></i> Filtrér</button>
-                        </div>
+                        <button id="advanced-filter-btn" class="btn btn-secondary"><i class="fas fa-filter"></i> Filtre & Sortering</button>
                     </div>
                     <div id="advanced-filter-panel" class="advanced-filter-panel hidden">
-                        <div class="form-grid-2-col">
+                        <div class="form-grid-3-col">
+                             <div class="input-group">
+                                <label>Status</label>
+                                <div id="inventory-filter-buttons" class="filter-buttons">
+                                    <button class="btn btn-secondary" data-filter="all">Alle</button>
+                                    <button class="btn btn-secondary" data-filter="low">Lav Beholdning</button>
+                                    <button class="btn btn-secondary" data-filter="expiring">Udløber Snart</button>
+                                </div>
+                            </div>
                             <div class="input-group">
-                                <label>Filtrér på kategori</label>
+                                <label>Kategori</label>
                                 <div id="filter-category-container" class="checkbox-group"></div>
                             </div>
                             <div class="input-group">
@@ -322,32 +323,38 @@
             <h3 id="inventory-modal-title">Tilføj ny vare</h3>
             <form id="inventory-item-form">
                 <input type="hidden" id="inventory-item-id">
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="item-name">Varenavn</label>
-                        <input type="text" id="item-name" placeholder="Angiv varenavn..." required>
-                    </div>
-                    <div class="input-group">
-                        <label for="item-description">Beskrivelse</label>
-                        <input type="text" id="item-description" placeholder="Angiv beskrivelse...">
-                    </div>
-                    <div class="input-group">
-                        <label for="item-home-location">Placering i hjemmet</label>
-                        <select id="item-home-location"></select>
-                    </div>
-                    <div class="input-group">
-                        <label for="item-category">Kategori (Butik)</label>
-                        <select id="item-category"></select>
+                
+                <div class="form-section-box">
+                    <h4>Basisinformation</h4>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="item-name">Varenavn</label>
+                            <input type="text" id="item-name" placeholder="Angiv varenavn..." required>
+                        </div>
+                        <div class="input-group">
+                            <label for="item-description">Beskrivelse</label>
+                            <input type="text" id="item-description" placeholder="Angiv beskrivelse...">
+                        </div>
+                        <div class="input-group">
+                            <label for="item-home-location">Placering i hjemmet</label>
+                            <select id="item-home-location"></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="item-category">Kategori (Butik)</label>
+                            <select id="item-category"></select>
+                        </div>
                     </div>
                 </div>
-                <hr>
-                <h4>Lagerbeholdning</h4>
-                <div id="item-batches-container">
-                    <!-- Batches indsættes her af JS -->
+
+                <div class="form-section-box">
+                    <h4>Lagerbeholdning</h4>
+                    <div id="item-batches-container">
+                        <!-- Batches indsættes her af JS -->
+                    </div>
+                    <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ny batch</button>
                 </div>
-                <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ny batch</button>
-                <hr>
-                <div class="conversion-rules-section">
+
+                <div class="form-section-box">
                     <h4>Konverteringsmål</h4>
                     <p class="small-text">Definér hvordan forskellige enheder skal omregnes til gram. Vælg én som standard for lageropgørelse.</p>
                     <div id="conversion-rules-container">
@@ -355,34 +362,34 @@
                     </div>
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj mål</button>
                 </div>
-                <hr>
-                <!-- **FIXED SECTION** -->
-                <h4>Beholdning & Pris</h4>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="item-max-stock">Normal beholdning (valgfri)</label>
-                        <input type="number" id="item-max-stock" placeholder="F.eks. 500 (i standardenhed)">
-                        <p class="small-text">Bruges af genbestillings-assistenten.</p>
+                
+                <div class="form-section-box">
+                    <h4>Beholdning & Pris</h4>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="item-max-stock">Normal beholdning (valgfri)</label>
+                            <input type="number" id="item-max-stock" placeholder="F.eks. 500 (i standardenhed)">
+                        </div>
+                        <div class="input-group">
+                            <label for="item-kg-price">Pris pr. kg (valgfri)</label>
+                            <input type="number" step="0.01" id="item-kg-price" placeholder="F.eks. 89.95">
+                        </div>
                     </div>
+                </div>
+
+                <div class="form-section-box">
+                    <h4>Indkøbsindstillinger & Aliaser</h4>
                     <div class="input-group">
-                        <label for="item-kg-price">Pris pr. kg (valgfri)</label>
-                        <input type="number" step="0.01" id="item-kg-price" placeholder="F.eks. 89.95">
+                        <label for="item-aliases">Aliaser (separer med komma)</label>
+                        <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
                     </div>
-                </div>
-                <div class="input-group">
-                    <label for="item-aliases">Aliaser (separer med komma)</label>
-                    <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
-                </div>
-                 <div class="input-group switch-group">
-                    <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
-                    <label class="switch">
-                        <input type="checkbox" id="item-is-critical">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <hr>
-                <h4>Indkøbsindstillinger</h4>
-                <div class="form-grid-2-col">
+                     <div class="input-group switch-group">
+                        <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="item-is-critical">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                      <div class="input-group switch-group">
                         <label for="item-buy-whole">Købes altid som hel enhed</label>
                         <label class="switch">
@@ -395,6 +402,7 @@
                         <input type="number" id="item-purchase-size-grams" placeholder="F.eks. 35 (for et glas karry)">
                     </div>
                 </div>
+
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem vare</button>
                 </div>
