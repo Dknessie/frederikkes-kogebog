@@ -5,7 +5,7 @@ import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemov
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
 import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
-import { calculateRecipePrice, calculateRecipeMatch } from './recipes.js';
+import { calculateRecipePrice } from './recipes.js';
 
 let appState;
 let appElements;
@@ -25,8 +25,6 @@ export function initMealPlanner(state, elements) {
     });
     appElements.calendarGrid.addEventListener('click', handleCalendarClick);
     
-    appElements.autogenPlanBtn.addEventListener('click', openAutogenModal);
-    appElements.autogenForm.addEventListener('submit', handleAutogenSubmit);
     appElements.mealTypeSelector.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -172,82 +170,6 @@ async function handleCalendarClick(e) {
             });
         } catch (error) {
             handleError(error, "Måltidet kunne ikke fjernes.", "removeMeal");
-        }
-    }
-}
-
-function openAutogenModal() {
-    const allTags = new Set();
-    appState.recipes.forEach(r => {
-        if (r.tags) r.tags.forEach(tag => allTags.add(tag));
-    });
-
-    appElements.autogenDietTagsContainer.innerHTML = '';
-    [...allTags].sort().forEach(tag => {
-        const label = document.createElement('label');
-        label.innerHTML = `<input type="checkbox" value="${tag}"> ${tag}`;
-        appElements.autogenDietTagsContainer.appendChild(label);
-    });
-
-    appElements.autogenModal.classList.remove('hidden');
-}
-
-async function handleAutogenSubmit(e) {
-    e.preventDefault();
-    
-    const budget = parseFloat(document.getElementById('autogen-budget').value) || Infinity;
-    const maxTime = parseInt(document.getElementById('autogen-time').value, 10);
-    const useLeftovers = document.getElementById('autogen-use-leftovers').checked;
-    const selectedDietTags = [...appElements.autogenDietTagsContainer.querySelectorAll('input:checked')].map(el => el.value);
-
-    let eligibleRecipes = appState.recipes.filter(recipe => {
-        if (recipe.time > maxTime) return false;
-        if (selectedDietTags.length > 0 && !selectedDietTags.every(tag => recipe.tags?.includes(tag))) return false;
-        const recipePrice = calculateRecipePrice(recipe, appState.inventory);
-        return !(recipePrice > (budget / 7) && recipePrice > 0);
-    });
-
-    if(useLeftovers) {
-        eligibleRecipes = eligibleRecipes.map(r => calculateRecipeMatch(r, appState.inventory)).sort((a,b) => a.missingCount - b.missingCount);
-    }
-
-    if (eligibleRecipes.length < 1) {
-        showNotification({title: "Ingen Opskrifter", message: "Kunne ikke finde opskrifter, der matcher dine kriterier."});
-        return;
-    }
-
-    const weeklyPlan = {};
-    const start = getStartOfWeek(appState.currentDate);
-    let usedRecipeIds = new Set();
-
-    for (let i = 0; i < 7; i++) {
-        let chosenRecipe = eligibleRecipes.find(r => !usedRecipeIds.has(r.id));
-        if (!chosenRecipe) {
-            chosenRecipe = eligibleRecipes[Math.floor(Math.random() * eligibleRecipes.length)];
-        }
-        usedRecipeIds.add(chosenRecipe.id);
-        
-        const dateString = formatDate(new Date(start.getTime() + i * 86400000));
-        weeklyPlan[dateString] = {
-            dinner: [{
-                mealId: crypto.randomUUID(),
-                recipeId: chosenRecipe.id,
-                type: 'recipe',
-                portions: chosenRecipe.portions
-            }]
-        };
-    }
-    
-    const confirmed = await showNotification({title: "Forslag til Madplan", message: "En ny madplan er genereret. Vil du gemme den?", type: 'confirm'});
-    if (confirmed) {
-        const year = appState.currentDate.getFullYear();
-        const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
-        try {
-            await updateDoc(mealPlanRef, weeklyPlan);
-            appElements.autogenModal.classList.add('hidden');
-            showNotification({title: "Madplan Gemt", message: "Din nye madplan er blevet gemt."});
-        } catch (error) {
-            handleError(error, "Den autogenererede madplan kunne ikke gemmes.", "saveAutogenPlan");
         }
     }
 }
