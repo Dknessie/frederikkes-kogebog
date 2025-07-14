@@ -59,7 +59,7 @@ export function initInventory(state, elements) {
             handleDeleteItem(button.dataset.id);
         }
     });
-
+    
     document.getElementById('add-conversion-rule-btn').addEventListener('click', () => addConversionRuleRow());
     document.getElementById('conversion-rules-container').addEventListener('click', e => {
         if (e.target.closest('.delete-rule-btn')) {
@@ -74,10 +74,16 @@ export function initInventory(state, elements) {
     });
     
     document.getElementById('unprocessed-items-container').addEventListener('click', e => {
-        const createBtn = e.target.closest('.create-item-from-unprocessed-btn');
-        if(createBtn) {
-            const itemName = createBtn.dataset.itemName;
+        const button = e.target.closest('button');
+        if(!button) return;
+
+        const itemName = button.dataset.itemName;
+        const item = appState.inventory.find(inv => inv.name.toLowerCase() === itemName.toLowerCase());
+        
+        if (button.classList.contains('create-item-from-unprocessed-btn')) {
             openEditModal(null, itemName);
+        } else if (button.classList.contains('update-item-from-unprocessed-btn')) {
+            openEditModal(item);
         }
     });
 }
@@ -92,10 +98,16 @@ function renderUnprocessedItems() {
         unprocessedItems.forEach(item => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'unprocessed-item';
-            itemDiv.innerHTML = `
-                <span>${item.name}</span>
-                <button class="btn btn-secondary btn-sm create-item-from-unprocessed-btn" data-item-name="${item.name}">+ Opret i Varelager</button>
-            `;
+            
+            const existingItem = appState.inventory.find(inv => inv.name.toLowerCase() === item.name.toLowerCase());
+            let buttonHTML = '';
+            if (existingItem) {
+                buttonHTML = `<button class="btn btn-secondary btn-sm update-item-from-unprocessed-btn" data-item-name="${item.name}">Opdater Konvertering</button>`;
+            } else {
+                buttonHTML = `<button class="btn btn-primary btn-sm create-item-from-unprocessed-btn" data-item-name="${item.name}">+ Opret i Varelager</button>`;
+            }
+
+            itemDiv.innerHTML = `<span>${item.name}</span> ${buttonHTML}`;
             unprocessedItemsContainer.appendChild(itemDiv);
         });
         unprocessedItemsSection.classList.remove('hidden');
@@ -256,11 +268,9 @@ async function handleSaveItem(e) {
         gramsInStock = currentStock;
     } else if (conversionRules[displayUnit]) {
         gramsInStock = currentStock * conversionRules[displayUnit];
-    } else if (Object.keys(conversionRules).length > 0) {
+    } else if (Object.keys(conversionRules).length > 0 && currentStock > 0) {
         showNotification({title: "Fejl i Standardenhed", message: `Vælg venligst en gyldig standardenhed for lageropgørelse.`});
         return;
-    } else {
-        gramsInStock = 0; // No rules, no grams
     }
     
     const itemName = document.getElementById('item-name').value.trim();
@@ -372,12 +382,10 @@ function updateLiveFeedback() {
     const equivalentsContainer = document.getElementById('equivalent-units-display');
     equivalentsContainer.innerHTML = '';
     for (const unit in rules) {
-        if (unit !== 'g') {
-            const equivalentAmount = totalGrams / rules[unit];
-            const p = document.createElement('p');
-            p.textContent = `≈ ${equivalentAmount.toFixed(1).replace(/\.0$/, '')} ${unit}`;
-            equivalentsContainer.appendChild(p);
-        }
+        const equivalentAmount = totalGrams / rules[unit];
+        const p = document.createElement('p');
+        p.textContent = `≈ ${equivalentAmount.toFixed(1).replace(/\.0$/, '')} ${unit}`;
+        equivalentsContainer.appendChild(p);
     }
 }
 
@@ -403,12 +411,8 @@ function openEditModal(item, prefilledName = null) {
         document.getElementById('item-purchase-size-grams').value = item.purchase_size_grams || '';
         
         const rules = item.conversion_rules || {};
-        if (Object.keys(rules).length > 0) {
-            for (const unit in rules) {
-                addConversionRuleRow({ unit: unit, grams: rules[unit] });
-            }
-        } else {
-            addConversionRuleRow({ unit: 'g', grams: 1 });
+        for (const unit in rules) {
+            addConversionRuleRow({ unit: unit, grams: rules[unit] });
         }
         
         const displayUnit = item.display_unit || 'g';
@@ -420,9 +424,7 @@ function openEditModal(item, prefilledName = null) {
     } else {
         document.getElementById('inventory-item-id').value = '';
         document.getElementById('item-name').value = prefilledName || '';
-        addConversionRuleRow({ unit: 'g', grams: 1 });
-        const radio = document.querySelector('input[name="display-unit-radio"]');
-        if(radio) radio.checked = true;
+        // Don't add a default rule, let the user define them.
     }
     
     updateLiveFeedback();
