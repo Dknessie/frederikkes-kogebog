@@ -150,6 +150,12 @@ hr {
     background-color: var(--light-bg-color);
     border-color: #bbb;
 }
+.btn-secondary.active {
+    background-color: var(--accent-color);
+    color: var(--white-color);
+    border-color: var(--accent-color);
+}
+
 
 .btn-danger {
     background-color: var(--status-red);
@@ -609,20 +615,92 @@ header {
 .status-indicator.status-yellow { background-color: var(--status-yellow); }
 .status-indicator.status-red { background-color: var(--status-red); }
 
-.inventory-table {
-    width: 100%;
-    border-collapse: collapse;
+/* NYT: Varelager Dashboard Styling */
+.inventory-dashboard {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
     box-shadow: var(--strong-shadow);
-    overflow: hidden;
-    font-size: var(--small-font-size);
+    padding: var(--spacing-l);
 }
-.inventory-table th, .inventory-table td { padding: var(--spacing-m); text-align: left; border-bottom: 1px solid #eee; }
-.inventory-table td:first-child .item-name-cell {
+
+.inventory-controls {
+    display: flex;
+    gap: var(--spacing-l);
+    margin-bottom: var(--spacing-m);
+    flex-wrap: wrap;
+}
+
+.search-bar {
+    flex-grow: 1;
+    position: relative;
+}
+.search-bar i {
+    position: absolute;
+    left: var(--spacing-m);
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+.search-bar input {
+    width: 100%;
+    padding: var(--spacing-m);
+    padding-left: calc(var(--spacing-m) * 2 + 1em);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.filter-buttons {
+    display: flex;
+    gap: var(--spacing-s);
+}
+.filter-buttons .btn {
+    padding: var(--spacing-m);
+}
+
+.location-tabs {
+    display: flex;
+    gap: var(--spacing-m);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-l);
+}
+.location-tab {
+    padding: var(--spacing-m);
+    cursor: pointer;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.location-tab.active, .location-tab:hover {
+    color: var(--primary-color);
+}
+.location-tab.active {
+    border-bottom-color: var(--primary-color);
+}
+
+.inventory-group {
+    margin-bottom: var(--spacing-xl);
+}
+.inventory-group-header {
+    font-family: var(--heading-font);
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-m);
+    padding-bottom: var(--spacing-s);
+    border-bottom: 2px solid var(--secondary-color);
+}
+.inventory-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 80px;
+    align-items: center;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.inventory-item-row .item-name-cell {
     display: flex;
     align-items: center;
     gap: var(--spacing-s);
+    font-weight: 600;
 }
 .critical-item-icon {
     color: var(--status-red);
@@ -635,6 +713,10 @@ header {
 .status-badge.status-low { background-color: var(--status-yellow); color: var(--text-color); }
 .status-badge.status-critical { background-color: var(--status-red); }
 .status-badge.status-unknown { background-color: #ccc; color: var(--text-color); }
+
+.inventory-item-actions {
+    text-align: right;
+}
 
 /* Referencer Side */
 .references-layout {
@@ -991,7 +1073,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-top: 1px solid var(--border-color);
 }
 
-/* NYT: Styling for Genbestillings-assistent */
 #reorder-list-container {
     max-height: 50vh;
     overflow-y: auto;
@@ -1163,6 +1244,14 @@ input:checked + .slider:before { transform: translateX(22px); }
     .calendar-day-header .date-number {
         display: block;
     }
+    .inventory-item-row {
+        grid-template-columns: 2fr 1.5fr 1fr;
+        gap: var(--spacing-l);
+    }
+    .inventory-item-row > *:nth-child(4),
+    .inventory-item-row > *:nth-child(5) {
+        display: none;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1172,7 +1261,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     .form-grid-3-col {
         grid-template-columns: 1fr;
     }
-    .recipe-actions-bar {
+    .recipe-actions-bar, .inventory-controls {
         flex-direction: column;
         align-items: stretch;
         gap: var(--spacing-m);
