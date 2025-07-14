@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, normalizeUnit } from './utils.js';
+import { addToShoppingList } from './shoppingList.js'; // Importer funktionen
 
 let appState;
 let appElements;
@@ -12,17 +13,16 @@ export function initInventory(state, elements) {
     appState = state;
     appElements = elements;
 
-    appElements.addInventoryItemBtn.addEventListener('click', () => {
-        openEditModal(null); // Pass null to indicate a new item
-    });
+    appElements.addInventoryItemBtn.addEventListener('click', () => openEditModal(null));
+    appElements.reorderAssistantBtn.addEventListener('click', openReorderAssistant);
 
     appElements.buyWholeCheckbox.addEventListener('change', () => {
         appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
     });
 
     appElements.inventoryItemForm.addEventListener('submit', handleSaveItem);
-
     appElements.inventoryTableBody.addEventListener('click', handleTableClick);
+    appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
     
     const debouncedGuess = debounce(guessItemDetails, 400);
     document.getElementById('item-name').addEventListener('input', (e) => {
@@ -46,6 +46,7 @@ export function renderInventory() {
         const tr = document.createElement('tr');
         tr.dataset.id = item.id;
         
+        const criticalIcon = item.is_critical ? `<i class="fas fa-fire-alt critical-item-icon" title="Kritisk vare"></i>` : '';
         const stockPercentage = (item.current_stock && item.max_stock) ? (item.current_stock / item.max_stock) * 100 : 100;
         let stockColor = '#4CAF50';
         if (stockPercentage < 50) stockColor = '#FFC107';
@@ -64,7 +65,7 @@ export function renderInventory() {
         }
 
         tr.innerHTML = `
-            <td>${item.name || ''}</td>
+            <td><div class="item-name-cell">${criticalIcon}<span>${item.name || ''}</span></div></td>
             <td>
                 <div class="stock-display">
                     <div class="stock-bar"><div class="stock-level" style="width: ${stockPercentage}%; background-color: ${stockColor};"></div></div>
@@ -108,7 +109,6 @@ export function renderInventorySummary() {
     `;
 }
 
-
 async function handleSaveItem(e) {
     e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
@@ -124,9 +124,6 @@ async function handleSaveItem(e) {
         gramsInStock = quantity * gramsPerUnit;
     }
 
-    const aliases = (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a);
-    const buyAsWhole = document.getElementById('item-buy-whole').checked;
-
     const itemData = {
         name: (document.getElementById('item-name').value || '').trim(),
         description: (document.getElementById('item-description').value || '').trim(),
@@ -138,19 +135,17 @@ async function handleSaveItem(e) {
         kg_price: Number(document.getElementById('item-kg-price').value) || null,
         grams_per_unit: gramsPerUnit,
         grams_in_stock: gramsInStock,
-        buy_as_whole_unit: buyAsWhole,
-        aliases: aliases,
+        is_critical: document.getElementById('item-is-critical').checked, // Gem kritisk status
+        buy_as_whole_unit: document.getElementById('item-buy-whole').checked,
+        aliases: (document.getElementById('item-aliases').value || '').split(',').map(a => a.trim()).filter(a => a),
         purchase_unit: null
     };
 
-    if (buyAsWhole) {
+    if (itemData.buy_as_whole_unit) {
         const purchaseUnitName = (document.getElementById('item-buy-unit-name').value || '').trim();
         const purchaseUnitQuantity = parseFloat(document.getElementById('item-buy-unit-quantity').value) || null;
         if (purchaseUnitName && purchaseUnitQuantity) {
-            itemData.purchase_unit = {
-                name: purchaseUnitName,
-                quantity: purchaseUnitQuantity
-            };
+            itemData.purchase_unit = { name: purchaseUnitName, quantity: purchaseUnitQuantity };
         }
     }
 
@@ -172,7 +167,7 @@ async function handleTableClick(e) {
     const docId = target.closest('tr').dataset.id;
     
     if (target.classList.contains('delete-item')) {
-        const confirmed = await showNotification({ title: "Slet Vare", message: `Er du sikker på, at du vil slette denne vare? Handlingen kan ikke fortrydes.`, type: 'confirm' });
+        const confirmed = await showNotification({ title: "Slet Vare", message: `Er du sikker på, at du vil slette denne vare?`, type: 'confirm' });
         if (confirmed) {
             try {
                 await deleteDoc(doc(db, 'inventory_items', docId));
@@ -192,35 +187,18 @@ function populateReferenceDropdowns() {
     const categorySelect = document.getElementById('item-category');
     const locationSelect = document.getElementById('item-home-location');
 
-    // Clear existing options
     categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
     locationSelect.innerHTML = '<option value="">Vælg placering...</option>';
 
-    // Populate categories
-    const categories = appState.references.itemCategories || [];
-    categories.forEach(cat => {
-        const option = new Option(cat, cat);
-        categorySelect.add(option);
-    });
-
-    // Populate locations
-    const locations = appState.references.itemLocations || [];
-    locations.forEach(loc => {
-        const option = new Option(loc, loc);
-        locationSelect.add(option);
-    });
+    (appState.references.itemCategories || []).forEach(cat => categorySelect.add(new Option(cat, cat)));
+    (appState.references.itemLocations || []).forEach(loc => locationSelect.add(new Option(loc, loc)));
 }
 
-
 function openEditModal(item) {
-    // Først, fyld dropdowns med de nyeste referencer
     populateReferenceDropdowns();
-    
-    // Nulstil formularen og sæt titel
     appElements.inventoryItemForm.reset();
     appElements.inventoryModalTitle.textContent = item ? 'Rediger vare' : 'Tilføj ny vare';
     
-    // Udfyld formularen, hvis vi redigerer en eksisterende vare
     if (item) {
         document.getElementById('inventory-item-id').value = item.id;
         document.getElementById('item-name').value = item.name || '';
@@ -233,22 +211,18 @@ function openEditModal(item) {
         document.getElementById('item-kg-price').value = item.kg_price || '';
         document.getElementById('item-grams-per-unit').value = item.grams_per_unit || '';
         document.getElementById('item-aliases').value = (item.aliases || []).join(', ');
-        
         appElements.buyWholeCheckbox.checked = item.buy_as_whole_unit || false;
+        document.getElementById('item-is-critical').checked = item.is_critical || false;
 
         if (item.purchase_unit) {
             document.getElementById('item-buy-unit-name').value = item.purchase_unit.name || '';
             document.getElementById('item-buy-unit-quantity').value = item.purchase_unit.quantity || '';
         }
     } else {
-        // Sikrer at ID-feltet er tomt for nye varer
         document.getElementById('inventory-item-id').value = '';
     }
 
-    // Håndter synlighed af "køb hel"-sektionen
     appElements.buyWholeOptions.classList.toggle('hidden', !appElements.buyWholeCheckbox.checked);
-
-    // Til sidst, vis modalen
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
@@ -261,5 +235,74 @@ function guessItemDetails(itemName) {
         document.getElementById('item-unit').value = existingItem.unit || '';
         document.getElementById('item-grams-per-unit').value = existingItem.grams_per_unit || '';
         document.getElementById('item-aliases').value = (existingItem.aliases || []).join(', ');
+        document.getElementById('item-is-critical').checked = existingItem.is_critical || false;
+    }
+}
+
+// --- Genbestillings-assistent ---
+
+function openReorderAssistant() {
+    const itemsToReorder = appState.inventory.filter(item => {
+        if (!item.max_stock || item.max_stock <= 0) return false;
+        const stockLevel = item.current_stock || 0;
+        return stockLevel < item.max_stock / 2;
+    });
+
+    const container = appElements.reorderListContainer;
+    container.innerHTML = '';
+
+    if (itemsToReorder.length === 0) {
+        container.innerHTML = '<p>Godt gået! Der er ingen varer med lav beholdning.</p>';
+        return;
+    }
+
+    const criticalItems = itemsToReorder.filter(item => item.is_critical);
+    const otherItems = itemsToReorder.filter(item => !item.is_critical);
+
+    const createSection = (title, items) => {
+        if (items.length === 0) return '';
+        let itemsHTML = items.map(item => {
+            const needed = (item.max_stock || 0) - (item.current_stock || 0);
+            return `
+                <div class="reorder-item">
+                    <input type="checkbox" id="reorder-${item.id}" name="reorder-item" value="${item.id}" data-needed="${needed}" checked>
+                    <label for="reorder-${item.id}">
+                        <span class="item-name">${item.name}</span>
+                        ${item.is_critical ? '<i class="fas fa-fire-alt critical-item-icon" title="Kritisk vare"></i>' : ''}
+                        <span class="stock-info">(${item.current_stock} / ${item.max_stock} ${item.unit})</span>
+                    </label>
+                </div>
+            `;
+        }).join('');
+        return `<div class="reorder-category"><h4>${title}</h4>${itemsHTML}</div>`;
+    };
+    
+    container.innerHTML = createSection('Kritiske Varer', criticalItems) + createSection('Andre Varer', otherItems);
+    appElements.reorderAssistantModal.classList.remove('hidden');
+}
+
+async function handleReorderSubmit(e) {
+    e.preventDefault();
+    const selectedItems = [];
+    appElements.reorderForm.querySelectorAll('input[name="reorder-item"]:checked').forEach(checkbox => {
+        const item = appState.inventory.find(i => i.id === checkbox.value);
+        if (item) {
+            const needed = parseFloat(checkbox.dataset.needed) || 0;
+            if (needed > 0) {
+                selectedItems.push({
+                    name: item.name,
+                    quantity: needed,
+                    unit: item.unit,
+                    store_section: item.category
+                });
+            }
+        }
+    });
+
+    if (selectedItems.length > 0) {
+        await addToShoppingList(selectedItems, 'Genbestillings-assistenten');
+        appElements.reorderAssistantModal.classList.add('hidden');
+    } else {
+        showNotification({title: "Intet valgt", message: "Vælg venligst mindst én vare at tilføje."});
     }
 }
