@@ -118,18 +118,17 @@
             <!-- Referencer Side -->
             <section id="references" class="page hidden">
                 <h2>Referencer</h2>
-                <p>Administrér lister, der kan genbruges i applikationen, f.eks. til dropdown-menuer.</p>
+                <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
                 <div id="references-container" class="references-layout"></div>
             </section>
 
             <!-- Varelager Side -->
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
-                <div class="actions-bar">
+                 <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
-                <!-- NYT: Varelager Dashboard -->
                 <div class="inventory-dashboard">
                     <div class="inventory-controls">
                         <div class="search-bar">
@@ -142,12 +141,8 @@
                             <button class="btn btn-secondary" data-filter="critical">Kritiske</button>
                         </div>
                     </div>
-                    <div id="inventory-location-tabs" class="location-tabs">
-                        <!-- Faner genereres af JS -->
-                    </div>
-                    <div id="inventory-list-container">
-                        <!-- Grupperede lister genereres af JS -->
-                    </div>
+                    <div id="inventory-location-tabs" class="location-tabs"></div>
+                    <div id="inventory-list-container"></div>
                 </div>
             </section>
 
@@ -302,9 +297,10 @@
                         <label for="item-name">Varenavn</label>
                         <input type="text" id="item-name" required>
                     </div>
+                    <!-- ÆNDRING: Fra input til select for Beskrivelse -->
                     <div class="input-group">
                         <label for="item-description">Beskrivelse</label>
-                        <input type="text" id="item-description" placeholder="F.eks. Madvare, Rengøring...">
+                        <select id="item-description"></select>
                     </div>
                      <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
@@ -318,9 +314,10 @@
                         <label for="item-current-stock">Antal på lager</label>
                         <input type="number" id="item-current-stock" value="0" required>
                     </div>
+                    <!-- ÆNDRING: Fra input til select for Enhed -->
                     <div class="input-group">
-                        <label for="item-unit">Standard enhed (g, ml, stk)</label>
-                        <input type="text" id="item-unit" placeholder="f.eks. g" required>
+                        <label for="item-unit">Standardenhed</label>
+                        <select id="item-unit"></select>
                     </div>
                     <div class="input-group">
                         <label for="item-grams-per-unit">Gram pr. 'stk'</label>
