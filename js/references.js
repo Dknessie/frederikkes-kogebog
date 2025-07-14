@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -45,9 +45,12 @@ export function renderReferencesPage() {
         let listItemsHTML = '';
         if (data.isSimpleList) {
             listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
-                <li class="reference-item">
-                    <span>${item}</span>
-                    <button class="btn-icon delete-reference-item" data-value="${item}"><i class="fas fa-trash"></i></button>
+                <li class="reference-item" data-value="${item}">
+                    <span class="reference-name">${item}</span>
+                    <div class="reference-actions">
+                        <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                    </div>
                 </li>
             `).join('');
             card.innerHTML = `
@@ -63,11 +66,14 @@ export function renderReferencesPage() {
         } else if (data.isCombinedList) {
             const shelfLifeRules = appState.references.shelfLife || {};
             listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(category => `
-                <li class="reference-item combined-item">
-                    <span>${category}</span>
+                <li class="reference-item combined-item" data-value="${category}">
+                    <span class="reference-name">${category}</span>
                     <div class="shelf-life-group">
                         <input type="number" id="shelf-life-${category}" class="shelf-life-input" data-category="${category}" value="${shelfLifeRules[category] || ''}" placeholder="dage">
-                        <button class="btn-icon delete-reference-item" data-value="${category}"><i class="fas fa-trash"></i></button>
+                        <div class="reference-actions">
+                            <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                        </div>
                     </div>
                 </li>
             `).join('');
@@ -96,7 +102,6 @@ async function handleShelfLifeChange(e) {
         
         const ref = doc(db, 'references', appState.currentUser.uid);
         try {
-            // Using dot notation to update a field within a map
             await updateDoc(ref, {
                 [`shelfLife.${category}`]: days
             });
@@ -107,28 +112,168 @@ async function handleShelfLifeChange(e) {
 }
 
 async function handleListClick(e) {
-    const deleteBtn = e.target.closest('.delete-reference-item');
-    if (deleteBtn) {
-        const value = deleteBtn.dataset.value;
-        const key = deleteBtn.closest('.reference-card').dataset.key;
-        if (!appState.currentUser || !key || !value) return;
+    const target = e.target;
 
-        const confirmed = await showNotification({title: "Slet Reference", message: `Er du sikker på du vil slette "${value}"? Dette vil også fjerne den tilknyttede holdbarhed.`, type: 'confirm'});
-        if (!confirmed) return;
+    if (target.closest('.delete-reference-item')) {
+        const itemElement = target.closest('.reference-item');
+        const value = itemElement.dataset.value;
+        const key = itemElement.closest('.reference-card').dataset.key;
+        await deleteReferenceItem(key, value);
+    }
 
-        const ref = doc(db, 'references', appState.currentUser.uid);
-        try {
-            const updatePayload = { [key]: arrayRemove(value) };
-            // Also remove from shelfLife if it's a category
-            if (key === 'itemCategories') {
-                updatePayload[`shelfLife.${value}`] = deleteField();
-            }
-            await updateDoc(ref, updatePayload);
-        } catch (error) {
-            handleError(error, "Referencen kunne ikke slettes.", "deleteReference");
+    if (target.closest('.edit-reference-item')) {
+        const itemElement = target.closest('.reference-item');
+        toggleEditMode(itemElement, true);
+    }
+
+    if (target.closest('.cancel-edit-reference')) {
+        const itemElement = target.closest('.reference-item');
+        toggleEditMode(itemElement, false);
+    }
+
+    if (target.closest('.save-reference-item')) {
+        const itemElement = target.closest('.reference-item');
+        const key = itemElement.closest('.reference-card').dataset.key;
+        const oldValue = itemElement.dataset.value;
+        const newValue = itemElement.querySelector('.edit-reference-input').value.trim();
+        await saveReferenceUpdate(key, oldValue, newValue);
+    }
+}
+
+async function deleteReferenceItem(key, value) {
+    if (!appState.currentUser || !key || !value) return;
+
+    const confirmed = await showNotification({title: "Slet Reference", message: `Er du sikker på du vil slette "${value}"? Dette kan ikke fortrydes.`, type: 'confirm'});
+    if (!confirmed) return;
+
+    const ref = doc(db, 'references', appState.currentUser.uid);
+    try {
+        const updatePayload = { [key]: arrayRemove(value) };
+        if (key === 'itemCategories') {
+            updatePayload[`shelfLife.${value}`] = deleteField();
+        }
+        await updateDoc(ref, updatePayload);
+        showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
+    } catch (error) {
+        handleError(error, "Referencen kunne ikke slettes.", "deleteReference");
+    }
+}
+
+function toggleEditMode(itemElement, isEditing) {
+    const nameSpan = itemElement.querySelector('.reference-name');
+    const actionsDiv = itemElement.querySelector('.reference-actions');
+    const shelfLifeGroup = itemElement.querySelector('.shelf-life-group'); // For combined view
+
+    if (isEditing) {
+        const originalValue = itemElement.dataset.value;
+        const inputHTML = `<input type="text" class="edit-reference-input" value="${originalValue}">`;
+        
+        nameSpan.style.display = 'none';
+        if (shelfLifeGroup) {
+            shelfLifeGroup.style.display = 'none';
+        }
+
+        const editContainer = document.createElement('div');
+        editContainer.className = 'edit-container';
+        editContainer.innerHTML = `
+            ${inputHTML}
+            <div class="edit-actions">
+                <button class="btn-icon save-reference-item" title="Gem"><i class="fas fa-check"></i></button>
+                <button class="btn-icon cancel-edit-reference" title="Annuller"><i class="fas fa-times"></i></button>
+            </div>
+        `;
+        
+        actionsDiv.style.display = 'none';
+        itemElement.prepend(editContainer);
+        editContainer.querySelector('input').focus();
+
+    } else { // Cancel editing
+        const editContainer = itemElement.querySelector('.edit-container');
+        if (editContainer) {
+            editContainer.remove();
+        }
+        nameSpan.style.display = 'inline';
+        actionsDiv.style.display = 'flex';
+        if (shelfLifeGroup) {
+            shelfLifeGroup.style.display = 'flex';
         }
     }
 }
+
+async function saveReferenceUpdate(key, oldValue, newValue) {
+    if (!newValue) {
+        showNotification({title: "Fejl", message: "Navnet kan ikke være tomt."});
+        return;
+    }
+    if (newValue === oldValue) {
+        // If no change, just exit edit mode
+        const itemElement = document.querySelector(`.reference-item[data-value="${oldValue}"]`);
+        toggleEditMode(itemElement, false);
+        return;
+    }
+    if (appState.references[key] && appState.references[key].includes(newValue)) {
+        showNotification({title: "Eksisterer allerede", message: `Referencen "${newValue}" findes allerede.`});
+        return;
+    }
+
+    const confirmed = await showNotification({
+        title: "Opdater Referencer",
+        message: `Vil du omdøbe "${oldValue}" til "${newValue}"? <br><br><strong>Vigtigt:</strong> Dette vil opdatere alle varer, der bruger denne reference.`,
+        type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    const batch = writeBatch(db);
+    const userRef = doc(db, 'references', appState.currentUser.uid);
+
+    // 1. Update the references document
+    const updatePayload = {
+        [key]: arrayRemove(oldValue),
+    };
+    batch.update(userRef, updatePayload);
+    
+    const secondUpdatePayload = {
+        [key]: arrayUnion(newValue)
+    };
+
+    if (key === 'itemCategories') {
+        const oldShelfLife = appState.references.shelfLife?.[oldValue];
+        if (oldShelfLife !== undefined) {
+            secondUpdatePayload[`shelfLife.${oldValue}`] = deleteField();
+            secondUpdatePayload[`shelfLife.${newValue}`] = oldShelfLife;
+        }
+    }
+    batch.set(userRef, secondUpdatePayload, { merge: true });
+
+
+    // 2. Update all related documents in other collections
+    let fieldToUpdate = '';
+    if (key === 'itemCategories') fieldToUpdate = 'category';
+    if (key === 'itemLocations') fieldToUpdate = 'home_location';
+    
+    if (fieldToUpdate) {
+        const q = query(collection(db, "inventory_items"), where(fieldToUpdate, "==", oldValue));
+        try {
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((doc) => {
+                batch.update(doc.ref, { [fieldToUpdate]: newValue });
+            });
+        } catch (error) {
+            handleError(error, "Kunne ikke finde relaterede varer at opdatere.", "queryInventoryForUpdate");
+            return; // Stop if we can't query
+        }
+    }
+
+    // 3. Commit the batch
+    try {
+        await batch.commit();
+        showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt, og alle relaterede varer er opdateret.`});
+    } catch (error) {
+        handleError(error, "En fejl opstod under opdateringen.", "saveReferenceUpdate");
+    }
+}
+
 
 async function handleFormSubmit(e) {
     e.preventDefault();
@@ -139,7 +284,6 @@ async function handleFormSubmit(e) {
 
         if (!appState.currentUser || !key || !value) return;
 
-        // Prevent adding duplicates
         if (appState.references[key] && appState.references[key].includes(value)) {
             showNotification({title: "Eksisterer allerede", message: `Referencen "${value}" findes allerede i listen.`});
             return;
