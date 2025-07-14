@@ -46,7 +46,23 @@ export function initInventory(state, elements) {
         const tab = e.target.closest('.location-tab');
         if (tab) {
             inventoryState.activeLocation = tab.dataset.location;
-            renderInventory(); // Re-render everything to apply the new location filter
+            renderInventory();
+        }
+    });
+
+    // BUG FIX: Moved this event listener inside the init function.
+    // It was previously in the global scope, causing a crash on load
+    // because appElements was not yet defined when the module was imported.
+    appElements.inventoryListContainer.addEventListener('click', e => {
+        const button = e.target.closest('button');
+        if (!button) return;
+    
+        if (button.classList.contains('edit-item')) {
+            const item = appState.inventory.find(i => i.id === button.dataset.id);
+            if (item) openEditModal(item);
+        }
+        if (button.classList.contains('delete-item')) {
+            handleDeleteItem(button.dataset.id);
         }
     });
 }
@@ -233,19 +249,6 @@ async function handleSaveItem(e) {
         handleError(error, "Varen kunne ikke gemmes.", "saveInventoryItem");
     }
 }
-
-appElements.inventoryListContainer.addEventListener('click', e => {
-    const button = e.target.closest('button');
-    if (!button) return;
-
-    if (button.classList.contains('edit-item')) {
-        const item = appState.inventory.find(i => i.id === button.dataset.id);
-        if (item) openEditModal(item);
-    }
-    if (button.classList.contains('delete-item')) {
-        handleDeleteItem(button.dataset.id);
-    }
-});
 
 async function handleDeleteItem(docId) {
     const confirmed = await showNotification({ title: "Slet Vare", message: `Er du sikker på, at du vil slette denne vare?`, type: 'confirm' });
