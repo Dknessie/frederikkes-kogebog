@@ -1,34 +1,29 @@
 // js/overview.js
 
-// Handles all logic for the overview page, including the new budget card.
-
 import { db } from './firebase.js';
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { calculateRecipePrice } from './recipes.js';
+import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
 
-/**
- * Initializes the overview module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initOverview(state, elements) {
     appState = state;
     appElements = elements;
 
-    const editBudgetBtn = document.getElementById('edit-budget-btn');
-    editBudgetBtn.addEventListener('click', openEditBudgetModal);
-
+    document.getElementById('edit-budget-btn').addEventListener('click', openEditBudgetModal);
     appElements.editBudgetForm.addEventListener('submit', handleSaveBudget);
 }
 
-/**
- * Renders the budget overview card with current spending and progress bar.
- */
-export function renderBudgetOverview() {
+export function renderOverviewPage() {
+    renderBudgetOverview();
+    renderInventorySummary();
+    renderExpiringItems();
+}
+
+function renderBudgetOverview() {
     if (!appState.currentUser) return;
 
     const monthlyBudget = appState.budget.monthlyAmount || 0;
@@ -40,9 +35,8 @@ export function renderBudgetOverview() {
     const percentage = monthlyBudget > 0 ? (monthlySpent / monthlyBudget) * 100 : 0;
     const progressBar = appElements.budgetProgressBar;
     
-    progressBar.style.width = `${Math.min(percentage, 100)}%`; // Cap width at 100%
+    progressBar.style.width = `${Math.min(percentage, 100)}%`;
 
-    // Update progress bar color based on user's preference
     progressBar.classList.remove('green', 'yellow', 'red');
     if (percentage > 100) {
         progressBar.classList.add('red');
@@ -53,10 +47,48 @@ export function renderBudgetOverview() {
     }
 }
 
-/**
- * Calculates the total estimated cost of all planned meals for the current month.
- * @returns {number} The total cost for the month.
- */
+function renderExpiringItems() {
+    const listEl = document.getElementById('expiring-items-list');
+    const today = new Date();
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(today.getDate() + 7);
+
+    const expiringItems = [];
+    appState.inventory.forEach(item => {
+        if (item.batches && Array.isArray(item.batches)) {
+            item.batches.forEach(batch => {
+                if (batch.expiry_date) {
+                    const expiryDate = new Date(batch.expiry_date);
+                    if (expiryDate <= sevenDaysFromNow) {
+                        expiringItems.push({
+                            name: item.name,
+                            expiryDate: expiryDate,
+                            isExpired: expiryDate < today
+                        });
+                    }
+                }
+            });
+        }
+    });
+
+    expiringItems.sort((a, b) => a.expiryDate - b.expiryDate);
+    
+    if (expiringItems.length === 0) {
+        listEl.innerHTML = '<p class="empty-state">Alt ser godt ud! Ingen varer udløber inden for 7 dage.</p>';
+        return;
+    }
+
+    listEl.innerHTML = expiringItems.slice(0, 5).map(item => `
+        <div class="expiring-item">
+            <span>${item.name}</span>
+            <span class="expiring-date ${item.isExpired ? 'is-expired' : ''}">
+                ${item.isExpired ? 'Udløbet' : ''} ${formatDate(item.expiryDate)}
+            </span>
+        </div>
+    `).join('');
+}
+
+
 function calculateMonthlySpending() {
     let totalCost = 0;
     const currentMonth = new Date().getMonth();
@@ -82,18 +114,11 @@ function calculateMonthlySpending() {
     return totalCost;
 }
 
-/**
- * Opens the modal to edit the monthly budget.
- */
 function openEditBudgetModal() {
     appElements.monthlyBudgetInput.value = appState.budget.monthlyAmount;
     appElements.editBudgetModal.classList.remove('hidden');
 }
 
-/**
- * Handles the form submission for saving the new budget.
- * @param {Event} e - The form submission event.
- */
 async function handleSaveBudget(e) {
     e.preventDefault();
     const newAmount = parseFloat(appElements.monthlyBudgetInput.value);
