@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, convertToPrimaryUnit } from './utils.js';
+import { normalizeUnit, convertToGrams } from './utils.js';
 import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
 import { openPlanMealModal } from './mealPlanner.js';
 
@@ -493,7 +493,7 @@ async function handleDeleteRecipeFromReadView() {
 export function calculateRecipeMatch(recipe, inventory) {
     let missingCount = 0;
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
-        return { ...recipe, missingCount: 99, canBeMade: false };
+        return { ...recipe, missingCount: 0, canBeMade: true }; // No ingredients means it can be made
     }
 
     let canBeMade = true;
@@ -505,27 +505,16 @@ export function calculateRecipeMatch(recipe, inventory) {
             return;
         }
         
-        const conversionResult = convertToPrimaryUnit(ing.quantity, ing.unit, inventoryItem);
-        if(conversionResult.error) {
+        const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
+        if(conversion.error || conversion.grams === null) {
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        if (conversionResult.convertedQuantity !== null) {
-            const neededInGrams = conversionResult.convertedQuantity;
-            const inStockInGrams = inventoryItem.grams_in_stock || 0;
-            if (neededInGrams > inStockInGrams) {
-                missingCount++;
-                canBeMade = false;
-            }
-        } else if (conversionResult.directMatch) {
-            const inStock = inventoryItem.current_stock || 0;
-            if (conversionResult.quantity > inStock) {
-                missingCount++;
-                canBeMade = false;
-            }
-        } else {
+        const neededGrams = conversion.grams;
+        const inStockGrams = inventoryItem.grams_in_stock || 0;
+        if (neededGrams > inStockGrams) {
             missingCount++;
             canBeMade = false;
         }
@@ -541,24 +530,14 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
 
     recipe.ingredients.forEach(ing => {
         const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if(inventoryItem && inventoryItem.kg_price) {
+        if(inventoryItem && inventoryItem.kg_price && inventoryItem.grams_per_unit) {
             const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-            const quantityInKg = getQuantityInKg(scaledQuantity, ing.unit, inventoryItem);
-            if (quantityInKg !== null) {
+            const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
+            if (conversion.grams !== null) {
+                const quantityInKg = conversion.grams / 1000;
                 totalPrice += quantityInKg * inventoryItem.kg_price;
             }
         }
     });
     return totalPrice;
-}
-
-function getQuantityInKg(quantity, unit, inventoryItem) {
-    if (inventoryItem && inventoryItem.buy_as_whole_unit && inventoryItem.purchase_unit) {
-        return (inventoryItem.purchase_unit.quantity * quantity) / 1000;
-    }
-    const conversion = convertToPrimaryUnit(quantity, unit, inventoryItem);
-    if(conversion.convertedQuantity !== null) {
-        return conversion.convertedQuantity / 1000;
-    }
-    return null; 
 }
