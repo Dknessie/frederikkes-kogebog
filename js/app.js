@@ -182,7 +182,20 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
+                
+                // **FIX:** Logic is now inside the block where data is guaranteed to exist.
+                // This prevents race conditions.
+                elements.addInventoryItemBtn.disabled = false;
+                elements.reorderAssistantBtn.disabled = false;
+                elements.addRecipeBtn.disabled = false;
+                setReferencesLoaded(true);
+
+                // Re-render relevant pages if they are active
+                if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
+                if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
+
             } else {
+                // If the doc doesn't exist, create it. The listener will fire again and run the block above.
                 const defaultReferences = {
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab'],
@@ -191,16 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
             }
-            // Enable buttons that depend on references once they are loaded
-            elements.addInventoryItemBtn.disabled = false;
-            elements.reorderAssistantBtn.disabled = false;
-            elements.addRecipeBtn.disabled = false;
-            
-            // **SAFETY GUARD TRIGGER**
-            // Inform inventory module that references are ready
-            setReferencesLoaded(true);
-
-            if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
 
