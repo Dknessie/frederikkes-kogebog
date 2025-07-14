@@ -3,9 +3,10 @@
 // Handles all logic for the shopping list.
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { showNotification, handleError, navigateTo } from './ui.js';
+import { doc, setDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToPrimaryUnit, normalizeUnit } from './utils.js';
+import { calculateRecipePrice } from './recipes.js';
 
 let appState;
 let appElements;
@@ -126,21 +127,26 @@ function handleGenerateShoppingList() {
     const start = getStartOfWeek(appState.currentDate); 
 
     for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(start);
-        dayDate.setDate(start.getDate() + i);
+        // BUG FIX: Using a more robust timestamp-based calculation for dates.
+        const dayTimestamp = start.getTime() + (i * 24 * 60 * 60 * 1000);
+        const dayDate = new Date(dayTimestamp);
         const dateString = formatDate(dayDate);
         const dayPlan = appState.mealPlan[dateString];
 
         if (dayPlan) {
-            Object.values(dayPlan).forEach(meal => {
-                if (meal && meal.recipeId && meal.type === 'recipe') {
-                    const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                    if (recipe && recipe.ingredients) {
-                        const scaleFactor = (meal.portions || recipe.portions) / (recipe.portions || 1);
-                        recipe.ingredients.forEach(ing => {
-                            allIngredientsNeeded.push({ ...ing, quantity: (ing.quantity || 0) * scaleFactor });
-                        });
-                    }
+            Object.values(dayPlan).forEach(mealArray => {
+                if (Array.isArray(mealArray)) {
+                    mealArray.forEach(meal => {
+                        if (meal && meal.recipeId && meal.type === 'recipe') {
+                            const recipe = appState.recipes.find(r => r.id === meal.recipeId);
+                            if (recipe && recipe.ingredients) {
+                                const scaleFactor = (meal.portions || recipe.portions || 1) / (recipe.portions || 1);
+                                recipe.ingredients.forEach(ing => {
+                                    allIngredientsNeeded.push({ ...ing, quantity: (ing.quantity || 0) * scaleFactor });
+                                });
+                            }
+                        }
+                    });
                 }
             });
         }
@@ -182,25 +188,24 @@ async function addToShoppingList(ingredients, sourceText) {
         let storeSection = inventoryItem ? inventoryItem.category : 'Andet';
         
         if (inventoryItem) {
-            // Complex logic for calculating what to buy, simplified here for brevity
-            // The original logic is maintained.
             const conversionResult = convertToPrimaryUnit(neededIng.quantity, neededIng.unit, inventoryItem);
             let neededFromStore = 0;
 
             if (conversionResult.error) {
-                neededFromStore = neededIng.quantity; // Add as is if conversion fails
+                neededFromStore = neededIng.quantity;
             } else if (conversionResult.directMatch) {
                 neededFromStore = Math.max(0, conversionResult.quantity - (inventoryItem.current_stock || 0));
+                quantityToBuy = neededFromStore;
             } else if (conversionResult.convertedQuantity !== null) {
                 const neededInGrams = conversionResult.convertedQuantity;
                 const inStockInGrams = inventoryItem.grams_in_stock || 0;
-                neededFromStore = Math.max(0, neededInGrams - inStockInGrams);
-                // Convert back to a buyable unit
+                const neededFromStoreInGrams = Math.max(0, neededInGrams - inStockInGrams);
+                
                 if (inventoryItem.grams_per_unit > 0) {
-                    quantityToBuy = Math.ceil(neededFromStore / inventoryItem.grams_per_unit);
+                    quantityToBuy = Math.ceil(neededFromStoreInGrams / inventoryItem.grams_per_unit);
                     unitToBuy = inventoryItem.unit;
                 } else {
-                    quantityToBuy = neededFromStore;
+                    quantityToBuy = neededFromStoreInGrams;
                     unitToBuy = 'g';
                 }
             }
@@ -351,7 +356,7 @@ function handleShoppingListClick(e) {
     const newItemBtn = e.target.closest('.new-item-indicator');
     if (newItemBtn) {
         const itemName = newItemBtn.dataset.itemName;
-        navigateTo('#inventory');
+        window.location.hash = '#inventory';
         appElements.addInventoryItemBtn.click();
         document.getElementById('item-name').value = itemName;
         return;
