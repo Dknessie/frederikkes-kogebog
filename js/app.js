@@ -162,6 +162,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
             state.shoppingList = doc.exists() ? doc.data().items || {} : {};
             renderShoppingList();
+            if (window.location.hash === '#inventory') {
+                renderInventory(); // Re-render to show/hide unprocessed items
+            }
         }, (error) => commonErrorHandler(error, 'indkøbsliste'));
 
         state.listeners.kitchenCounter = onSnapshot(doc(db, 'kitchen_counters', userId), (doc) => {
