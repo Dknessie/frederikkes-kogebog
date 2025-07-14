@@ -52,14 +52,11 @@
             <!-- Madplan Side -->
             <section id="meal-planner" class="page">
                 <div class="meal-planner-layout">
-                    <!-- Venstre Sidebar (Desktop) -->
                     <aside id="meal-planner-sidebar-left" class="meal-planner-sidebar-left">
                         <div class="sidebar-panel-tabs">
                             <button class="panel-tab active" data-panel="shopping-list-panel-desktop"><i class="fas fa-cart-shopping"></i> Indkøbsliste</button>
                             <button class="panel-tab" data-panel="kitchen-counter-panel-desktop"><i class="fas fa-concierge-bell"></i> Køkkenbord</button>
                         </div>
-
-                        <!-- Indkøbsliste Panel (Desktop) -->
                         <div id="shopping-list-panel-desktop" class="sidebar-panel active">
                             <div class="sidebar-actions">
                                  <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld</button>
@@ -75,8 +72,6 @@
                                 </form>
                             </div>
                         </div>
-
-                        <!-- Køkkenbord Panel (Desktop) -->
                         <div id="kitchen-counter-panel-desktop" class="sidebar-panel">
                              <div class="sidebar-actions">
                                  <button id="clear-kitchen-counter-btn" class="btn btn-secondary" title="Ryd hele køkkenbordet" disabled><i class="fas fa-trash"></i> Ryd</button>
@@ -85,8 +80,6 @@
                             <div id="kitchen-counter-container" class="sidebar-content"></div>
                         </div>
                     </aside>
-
-                    <!-- Kalender-del (Center) -->
                     <div class="meal-planner-main">
                         <div class="calendar-header">
                             <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
@@ -126,9 +119,7 @@
             <section id="references" class="page hidden">
                 <h2>Referencer</h2>
                 <p>Administrér lister, der kan genbruges i applikationen, f.eks. til dropdown-menuer.</p>
-                <div id="references-container" class="references-layout">
-                    <!-- Indhold genereres af JavaScript -->
-                </div>
+                <div id="references-container" class="references-layout"></div>
             </section>
 
             <!-- Varelager Side -->
@@ -136,6 +127,8 @@
                 <h2>Varelager</h2>
                  <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
+                    <!-- NYT: Knap til genbestilling -->
+                    <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
                 <table class="inventory-table">
                     <thead>
@@ -177,9 +170,7 @@
                             <div id="budget-progress-bar" class="progress-bar"></div>
                         </div>
                     </div>
-                    <div id="inventory-summary-card" class="card">
-                        <!-- Indhold genereres af JavaScript -->
-                    </div>
+                    <div id="inventory-summary-card" class="card"></div>
                     <div id="profile-card" class="card">
                         <h3>Profil</h3>
                         <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
@@ -238,6 +229,21 @@
     
     <!-- ===== Modaler ===== -->
 
+    <!-- NYT: Genbestillings-assistent Modal -->
+    <div id="reorder-assistant-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Genbestillings-assistent</h3>
+            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
+            <form id="reorder-form">
+                <div id="reorder-list-container"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="edit-budget-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -283,7 +289,6 @@
         </div>
     </div>
 
-    <!-- Vare Modal (Tilføj/Rediger) -->
     <div id="inventory-item-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -299,12 +304,10 @@
                         <label for="item-description">Beskrivelse</label>
                         <input type="text" id="item-description" placeholder="F.eks. Madvare, Rengøring...">
                     </div>
-                     <!-- ÆNDRING: Fra input til select -->
                      <div class="input-group">
                         <label for="item-home-location">Placering i hjemmet</label>
                         <select id="item-home-location"></select>
                     </div>
-                    <!-- ÆNDRING: Fra input til select -->
                     <div class="input-group">
                         <label for="item-category">Kategori (Butik)</label>
                         <select id="item-category"></select>
@@ -343,6 +346,14 @@
                             <span class="slider round"></span>
                         </label>
                     </div>
+                    <!-- NYT: Checkbox for kritisk vare -->
+                    <div class="input-group switch-group">
+                        <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="item-is-critical">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                  </div>
                  <div id="buy-whole-options" class="hidden">
                     <div class="input-group">
@@ -361,7 +372,6 @@
         </div>
     </div>
 
-    <!-- Opskrift Redigerings-Modal -->
     <div id="recipe-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -371,7 +381,6 @@
                 <div class="image-upload-container">
                     <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                 </div>
-                
                 <div class="image-options">
                     <label for="recipe-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
                     <input type="file" id="recipe-image-upload" accept="image/*" class="hidden">
@@ -381,7 +390,6 @@
                         <input type="url" id="recipe-imageUrl" placeholder="https://...">
                     </div>
                 </div>
-
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="recipe-title">Titel</label>
@@ -426,7 +434,6 @@
                     <input type="url" id="recipe-source-url" placeholder="https://...">
                 </div>
                 <hr>
-                
                 <div id="import-section">
                     <h4>Importer ingredienser</h4>
                     <div class="input-group">
@@ -435,7 +442,6 @@
                     </div>
                     <button type="button" id="import-ingredients-btn" class="btn btn-secondary">Importér</button>
                 </div>
-                
                 <hr>
                 <h4>Ingredienser</h4>
                 <div id="ingredients-container"></div>
