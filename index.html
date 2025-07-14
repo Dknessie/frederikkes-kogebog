@@ -130,6 +130,11 @@
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
                 <div class="inventory-dashboard">
+                    <div id="unprocessed-items-section" class="unprocessed-items-section hidden">
+                        <h4>Ubehandlede Varer</h4>
+                        <p class="small-text">Følgende varer fra din indkøbsliste findes ikke på lageret. Opret dem for at få fuld lagerstyring.</p>
+                        <div id="unprocessed-items-container"></div>
+                    </div>
                     <div class="inventory-controls">
                         <div class="search-bar">
                             <i class="fas fa-search"></i>
@@ -335,38 +340,36 @@
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj mål</button>
                 </div>
                 <hr>
-                 <div class="input-group">
-                    <label for="item-aliases">Aliaser (separer med komma)</label>
-                    <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="item-aliases">Aliaser (separer med komma)</label>
+                        <input type="text" id="item-aliases" placeholder="f.eks. dåse tomat, flåede tomater">
+                    </div>
+                    <div class="input-group">
+                        <label for="item-kg-price">Pris pr. kg</label>
+                        <input type="number" step="0.01" id="item-kg-price">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="item-kg-price">Pris pr. kg</label>
-                    <input type="number" step="0.01" id="item-kg-price">
+                 <div class="input-group switch-group">
+                    <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="item-is-critical">
+                        <span class="slider round"></span>
+                    </label>
                 </div>
-                 <div class="form-grid">
-                    <div class="input-group switch-group">
+                <hr>
+                <h4>Indkøbsindstillinger</h4>
+                <div class="form-grid-2-col">
+                     <div class="input-group switch-group">
                         <label for="item-buy-whole">Købes altid som hel enhed</label>
                         <label class="switch">
                             <input type="checkbox" id="item-buy-whole">
                             <span class="slider round"></span>
                         </label>
                     </div>
-                    <div class="input-group switch-group">
-                        <label for="item-is-critical">Kritisk vare (må ikke løbe tør)</label>
-                        <label class="switch">
-                            <input type="checkbox" id="item-is-critical">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                 </div>
-                 <div id="buy-whole-options" class="hidden">
                     <div class="input-group">
-                        <label for="item-buy-unit-name">Navn på købsenhed</label>
-                        <input type="text" id="item-buy-unit-name" placeholder="F.eks. Dåse, Bakke, Pose">
-                    </div>
-                    <div class="input-group">
-                        <label for="item-buy-unit-quantity">Indhold pr. købsenhed (g)</label>
-                        <input type="number" step="any" id="item-buy-unit-quantity" placeholder="F.eks. 400 (svarer til 400g)">
+                        <label for="item-purchase-size-grams">Standard Indkøbsstørrelse (g)</label>
+                        <input type="number" id="item-purchase-size-grams" placeholder="F.eks. 35 (for et glas karry)">
                     </div>
                 </div>
                 <div class="form-actions">
