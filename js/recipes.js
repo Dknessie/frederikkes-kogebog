@@ -23,12 +23,15 @@ const lazyImageObserver = new IntersectionObserver((entries, observer) => {
 
 export function initRecipes(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        importRecipeBtn: document.getElementById('import-recipe-btn')
+    };
 
     appElements.sortByStockToggle.addEventListener('change', renderRecipes);
     appElements.addRecipeBtn.addEventListener('click', openAddRecipeModal);
     appElements.addIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
-    appElements.importIngredientsBtn.addEventListener('click', handleImportIngredients);
+    appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
     appElements.recipeGrid.addEventListener('click', handleGridClick);
     
@@ -178,7 +181,7 @@ function renderReadView(recipe) {
         });
     }
     
-    document.getElementById('read-view-notes').textContent = recipe.notes || '';
+    document.getElementById('read-view-introduction').textContent = recipe.introduction || '';
     
     const ingredientsList = document.getElementById('read-view-ingredients-list');
     ingredientsList.innerHTML = '';
@@ -327,27 +330,77 @@ function parseIngredientLine(line) {
     return { name, quantity, unit, note };
 }
 
-function handleImportIngredients() {
+function parseFullRecipeText(text) {
+    const recipe = {};
+    const sections = ['Titel', 'Kategori', 'Antal portioner', 'Tilberedelsestid', 'Tags', 'Introduktion', 'Ingrediensliste', 'Fremgangsmåde'];
+    
+    function getSectionContent(startTag, endTag) {
+        const startIndex = text.toLowerCase().indexOf(startTag.toLowerCase());
+        if (startIndex === -1) return null;
+        
+        let endIndex;
+        if (endTag) {
+            endIndex = text.toLowerCase().indexOf(endTag.toLowerCase(), startIndex);
+        }
+        
+        const contentStartIndex = text.indexOf(':', startIndex) + 1;
+        return (endIndex !== -1 ? text.substring(contentStartIndex, endIndex) : text.substring(contentStartIndex)).trim();
+    }
+
+    recipe.title = getSectionContent('Titel:', 'Kategori:');
+    recipe.category = getSectionContent('Kategori:', 'Antal portioner:');
+    recipe.portions = getSectionContent('Antal portioner:', 'Tilberedelsestid')?.match(/\d+/)?.[0];
+    recipe.time = getSectionContent('Tilberedelsestid:', 'Tags:')?.match(/\d+/g)?.reduce((a, b) => parseInt(a) + parseInt(b), 0).toString();
+    recipe.tags = getSectionContent('Tags:', 'Introduktion:')?.split(',').map(t => t.trim());
+    recipe.introduction = getSectionContent('Introduktion:', 'Ingrediensliste:');
+    recipe.ingredientsText = getSectionContent('Ingrediensliste:', 'Fremgangsmåde:');
+    recipe.instructions = getSectionContent('Fremgangsmåde:');
+
+    // Basic validation to see if it's a full recipe
+    if (recipe.title && recipe.ingredientsText && recipe.instructions) {
+        return recipe;
+    }
+    return null;
+}
+
+function handleRecipeImport() {
     const text = appElements.recipeImportTextarea.value;
     if (!text) return;
 
-    appElements.ingredientsContainer.innerHTML = '';
+    const fullRecipeData = parseFullRecipeText(text);
 
-    const lines = text.split('\n').reduce((acc, line) => {
-        if (line.toLowerCase().includes(' og ') && !/^\d/.test(line.trim())) {
-            line.split(/ og /i).forEach(part => acc.push(part.trim()));
-        } else {
-            acc.push(line);
+    if (fullRecipeData) {
+        // Populate the entire form
+        document.getElementById('recipe-title').value = fullRecipeData.title || '';
+        document.getElementById('recipe-category').value = fullRecipeData.category || '';
+        document.getElementById('recipe-portions').value = fullRecipeData.portions || '';
+        document.getElementById('recipe-time').value = fullRecipeData.time || '';
+        document.getElementById('recipe-tags').value = fullRecipeData.tags?.join(', ') || '';
+        document.getElementById('recipe-introduction').value = fullRecipeData.introduction || '';
+        document.getElementById('recipe-instructions').value = fullRecipeData.instructions || '';
+        
+        // Populate ingredients
+        appElements.ingredientsContainer.innerHTML = '';
+        if (fullRecipeData.ingredientsText) {
+            fullRecipeData.ingredientsText.split('\n').forEach(line => {
+                const ingredientData = parseIngredientLine(line);
+                if (ingredientData && ingredientData.name) {
+                    createIngredientRow(appElements.ingredientsContainer, ingredientData);
+                }
+            });
         }
-        return acc;
-    }, []);
-
-    lines.forEach(line => {
-        const ingredientData = parseIngredientLine(line);
-        if (ingredientData && ingredientData.name) {
-            createIngredientRow(appElements.ingredientsContainer, ingredientData);
-        }
-    });
+        showNotification({ title: "Importeret!", message: "Hele opskriften er blevet indlæst." });
+    } else {
+        // Fallback to only importing ingredients
+        appElements.ingredientsContainer.innerHTML = '';
+        text.split('\n').forEach(line => {
+            const ingredientData = parseIngredientLine(line);
+            if (ingredientData && ingredientData.name) {
+                createIngredientRow(appElements.ingredientsContainer, ingredientData);
+            }
+        });
+        showNotification({ title: "Importeret!", message: "Ingredienslisten er blevet opdateret." });
+    }
 
     appElements.recipeImportTextarea.value = '';
 }
@@ -380,6 +433,7 @@ async function handleSaveRecipe(e) {
         tags: tags,
         portions: Number(document.getElementById('recipe-portions').value) || null,
         time: Number(document.getElementById('recipe-time').value) || null,
+        introduction: document.getElementById('recipe-introduction').value,
         notes: document.getElementById('recipe-notes').value,
         instructions: document.getElementById('recipe-instructions').value,
         source_url: document.getElementById('recipe-source-url').value,
@@ -499,6 +553,7 @@ function openEditRecipeModal() {
         document.getElementById('recipe-tags').value = (recipe.tags && recipe.tags.join(', ')) || '';
         document.getElementById('recipe-portions').value = recipe.portions || '';
         document.getElementById('recipe-time').value = recipe.time || '';
+        document.getElementById('recipe-introduction').value = recipe.introduction || '';
         document.getElementById('recipe-notes').value = recipe.notes || '';
         document.getElementById('recipe-instructions').value = recipe.instructions || '';
         document.getElementById('recipe-source-url').value = recipe.source_url || '';
