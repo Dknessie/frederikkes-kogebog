@@ -237,9 +237,9 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
         removeAutocomplete();
         if (value.length < 1) return;
 
-        const suggestions = appState.inventory.filter(item => 
-            item.name.toLowerCase().startsWith(value) || 
-            (item.aliases && item.aliases.some(alias => alias.toLowerCase().startsWith(value)))
+        // Søg nu i master-produkter
+        const suggestions = appState.masterProducts.filter(item => 
+            item.name.toLowerCase().startsWith(value)
         );
 
         if (suggestions.length > 0) {
@@ -253,7 +253,7 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
                 suggestionDiv.addEventListener('mousedown', (event) => {
                     event.preventDefault();
                     nameInput.value = item.name;
-                    row.querySelector('.ingredient-unit').value = item.display_unit || 'g';
+                    row.querySelector('.ingredient-unit').value = item.defaultUnit || 'g';
                     removeAutocomplete();
                 });
                 suggestionsContainer.appendChild(suggestionDiv);
@@ -264,12 +264,6 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
 }
 
-/**
- * Parser en enkelt linje af en ingredienstekst til et struktureret objekt.
- * Implementerer specifik logik for "hakket kød" og noter i parentes.
- * @param {string} line - Den linje, der skal parses.
- * @returns {object|null} Et ingrediensobjekt eller null, hvis linjen er tom.
- */
 function parseIngredientLine(line) {
     line = line.trim();
     if (!line) return null;
@@ -277,18 +271,15 @@ function parseIngredientLine(line) {
     let quantity = null, unit = '', name = '', note = '';
     const notes = [];
 
-    // Regel: Håndter parenteser først og tilføj altid deres indhold som en note.
     const parenMatch = line.match(/\(([^)]+)\)/);
     if (parenMatch) {
         notes.push(parenMatch[1].trim());
         line = line.replace(parenMatch[0], '').trim();
     }
 
-    // Kendte enheder for at hjælpe med at adskille mængde/enhed fra navn
     const knownUnits = ['g', 'gram', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse', 'dåser', 'knivspids', 'bundt'];
     const unitRegex = new RegExp(`^(${knownUnits.join('|')})[e|s|\\.]*\\b`, 'i');
 
-    // Udtræk mængde
     const quantityMatch = line.match(/^((\d+-\d+)|(\d+[\.,]\d+)|(\d+)|(en|et))\s*/i);
     if (quantityMatch) {
         let qStr = quantityMatch[1].toLowerCase();
@@ -302,26 +293,21 @@ function parseIngredientLine(line) {
         }
         line = line.substring(quantityMatch[0].length).trim();
         
-        // Tjek for enhed lige efter mængden
         const unitMatchAfterQuantity = line.match(unitRegex);
         if (unitMatchAfterQuantity) {
             unit = unitMatchAfterQuantity[0];
             line = line.substring(unitMatchAfterQuantity[0].length).trim();
         } else {
-            unit = 'stk'; // Standard til 'stk' hvis der er mængde, men ingen enhed
+            unit = 'stk';
         }
     }
-     // Specielt tilfælde for "en knivspids" etc.
     if (line.toLowerCase().startsWith('knivspids')) {
         quantity = quantity || 1;
         unit = 'knivspids';
         line = line.substring('knivspids'.length).trim();
     }
 
-    // Regel: Kontekstafhængig håndtering af "hakket"
-    const isSpecialMeatCase = /\bhakket\b/i.test(line) && /\b(oksekød|kylling)\b/i.test(line);
-
-    // Udtræk beskrivende ord som noter
+    const isSpecialMeatCase = /\bhakket\b/i.test(line) && /\b(oksekød|kylling|svin|lam)\b/i.test(line);
     let descriptors = ['tørret', 'tørrede', 'frisk', 'friske', 'friskkværnet', 'friskrevet', 'i tern', 'i strimler', 'finthakket', 'grofthakket', 'revet', 'flager'];
     if (!isSpecialMeatCase) {
         descriptors.push('hakket', 'hakkede');
@@ -335,11 +321,8 @@ function parseIngredientLine(line) {
         }
     });
 
-    // Resten er navnet
     name = line.replace(/^af\s+/, '').replace(/,$/, '').trim();
     name = name.charAt(0).toUpperCase() + name.slice(1);
-
-    // Saml noter til en enkelt streng
     note = [...new Set(notes)].join(', ');
 
     return { name, quantity, unit, note };
@@ -351,9 +334,7 @@ function handleImportIngredients() {
 
     appElements.ingredientsContainer.innerHTML = '';
 
-    // Split teksten i linjer og håndter "og" for at opdele ingredienser
     const lines = text.split('\n').reduce((acc, line) => {
-        // Split kun hvis linjen IKKE starter med et tal, for at undgå at splitte f.eks. "50 g smør og 50 g mel"
         if (line.toLowerCase().includes(' og ') && !/^\d/.test(line.trim())) {
             line.split(/ og /i).forEach(part => acc.push(part.trim()));
         } else {
@@ -407,6 +388,7 @@ async function handleSaveRecipe(e) {
         is_favorite: appState.recipes.find(r => r.id === recipeId)?.is_favorite || false,
         imageUrl: null,
         imageBase64: null,
+        userId: appState.currentUser.uid // Sørg for at gemme userId
     };
 
     if (appState.recipeFormImage.type === 'url') {
@@ -560,28 +542,31 @@ async function handleDeleteRecipeFromReadView() {
 export function calculateRecipeMatch(recipe, inventory) {
     let missingCount = 0;
     if (!recipe.ingredients || recipe.ingredients.length === 0) {
-        return { ...recipe, missingCount: 0, canBeMade: true }; // No ingredients means it can be made
+        return { ...recipe, missingCount: 0, canBeMade: true };
     }
 
     let canBeMade = true;
     recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase() || (item.aliases || []).includes(ing.name.toLowerCase()));
-        if (!inventoryItem) {
-            missingCount++;
-            canBeMade = false;
-            return;
-        }
+        // Find master-produktet baseret på ingrediensens navn
+        const masterProduct = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
         
-        const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
-        if(conversion.error || conversion.grams === null) {
+        if (!masterProduct) {
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        const neededGrams = conversion.grams;
-        const inStockGrams = inventoryItem.grams_in_stock || 0;
-        if (neededGrams > inStockGrams) {
+        // Konverter den nødvendige mængde til gram
+        const neededGrams = convertToGrams(ing.quantity, ing.unit, { defaultUnit: masterProduct.defaultUnit }).grams;
+
+        if (neededGrams === null) {
+            missingCount++;
+            canBeMade = false;
+            return;
+        }
+
+        // Sammenlign med den samlede lagerbeholdning for master-produktet
+        if (neededGrams > (masterProduct.totalStockGrams || 0)) {
             missingCount++;
             canBeMade = false;
         }
@@ -596,13 +581,18 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
 
     recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if(inventoryItem && inventoryItem.kg_price) {
-            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-            const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
-            if (conversion.grams !== null) {
-                const quantityInKg = conversion.grams / 1000;
-                totalPrice += quantityInKg * inventoryItem.kg_price;
+        const masterProduct = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+        if (masterProduct && masterProduct.variants && masterProduct.variants.length > 0) {
+            // Find den billigste variant eller favoritvarianten
+            const preferredVariant = masterProduct.variants.find(v => v.isFavoritePurchase) || masterProduct.variants.sort((a,b) => a.kgPrice - b.kgPrice)[0];
+            
+            if (preferredVariant && preferredVariant.kgPrice) {
+                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
+                const conversion = convertToGrams(scaledQuantity, ing.unit, { defaultUnit: masterProduct.defaultUnit });
+                if (conversion.grams !== null) {
+                    const quantityInKg = conversion.grams / 1000;
+                    totalPrice += quantityInKg * preferredVariant.kgPrice;
+                }
             }
         }
     });
