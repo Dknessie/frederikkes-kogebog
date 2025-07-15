@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, convertToBaseUnit } from './utils.js';
+import { normalizeUnit, convertToGrams } from './utils.js';
 import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
 import { openPlanMealModal } from './mealPlanner.js';
 
@@ -554,25 +554,14 @@ export function calculateRecipeMatch(recipe, inventory) {
             return;
         }
 
-        const conversion = convertToBaseUnit(ing.quantity, ing.unit);
-
+        const conversion = convertToGrams(ing.quantity, ing.unit, masterProduct);
         if (conversion.error) {
-            console.warn(conversion.error);
             missingCount++;
             canBeMade = false;
             return;
         }
-        
-        if (conversion.nonConvertible) {
-            if (masterProduct.totalStockGrams <= 0) {
-                missingCount++;
-                canBeMade = false;
-            }
-            return; 
-        }
 
-        const neededAmount = conversion.amount;
-        if (neededAmount > (masterProduct.totalStockGrams || 0)) {
+        if (conversion.grams > (masterProduct.totalStockGrams || 0)) {
             missingCount++;
             canBeMade = false;
         }
@@ -594,10 +583,10 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
             
             if (preferredVariant && preferredVariant.kgPrice) {
                 const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToBaseUnit(scaledQuantity, ing.unit);
+                const conversion = convertToGrams(scaledQuantity, ing.unit, masterProduct);
                 
-                if (conversion.amount !== null && !conversion.nonConvertible) {
-                    const quantityInKgOrL = conversion.amount / 1000;
+                if (conversion.grams !== null) {
+                    const quantityInKgOrL = conversion.grams / 1000;
                     totalPrice += quantityInKgOrL * preferredVariant.kgPrice;
                 }
             }
