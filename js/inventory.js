@@ -165,6 +165,26 @@ export function renderInventory() {
     masterProducts.forEach(mp => {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
+
+        // --- NY LOGIK TIL DATAKVALITETSINDIKATOR ---
+        const missingFields = [];
+        if (!mp.category) missingFields.push('Kategori');
+        if (!mp.location) missingFields.push('Placering');
+        if (!mp.defaultUnit) missingFields.push('Standardenhed');
+        
+        let indicatorHTML = '';
+        if (missingFields.length > 0) {
+            indicatorHTML = `
+                <span class="completeness-indicator status-yellow" title="Mangler: ${missingFields.join(', ')}">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </span>`;
+        } else {
+            indicatorHTML = `
+                <span class="completeness-indicator status-green" title="Alle data er udfyldt">
+                    <i class="fas fa-check-circle"></i>
+                </span>`;
+        }
+        // --- SLUT PÅ NY LOGIK ---
         
         const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
@@ -192,7 +212,10 @@ export function renderInventory() {
         masterDiv.innerHTML = `
             <div class="master-product-header" data-id="${mp.id}">
                 <div class="master-product-info">
-                    <h4>${mp.name}</h4>
+                    <div class="master-product-title-group">
+                        ${indicatorHTML}
+                        <h4>${mp.name}</h4>
+                    </div>
                 </div>
                 <div class="master-product-stock-info">
                     <span>Total lager:</span>
@@ -331,7 +354,6 @@ async function handleSaveMasterProduct(e) {
     const userId = appState.currentUser.uid;
     const masterName = document.getElementById('master-product-name').value.trim();
 
-    // NYT: Validering for duplikatnavne
     const existingProduct = appState.inventory.find(
         p => p.name.toLowerCase() === masterName.toLowerCase()
     );
@@ -341,7 +363,7 @@ async function handleSaveMasterProduct(e) {
             title: "Vare eksisterer allerede",
             message: `En vare med navnet "${masterName}" findes allerede. Vælg venligst et unikt navn.`,
         });
-        return; // Stop funktionen
+        return;
     }
 
     const conversionRules = {};
@@ -682,7 +704,6 @@ async function handleBulkImport() {
     for (const productData of parsedProducts) {
         const masterName = productData.master.name.trim();
 
-        // NYT: Validering for duplikatnavne i masse-import
         const existingProduct = appState.inventory.find(
             p => p.name.toLowerCase() === masterName.toLowerCase()
         );
@@ -690,7 +711,7 @@ async function handleBulkImport() {
         if (existingProduct) {
             summary.skipped++;
             summary.errors.push(`Varen '${masterName}' eksisterer allerede og blev sprunget over.`);
-            continue; // Spring til næste produkt
+            continue;
         }
         
         const masterData = {
