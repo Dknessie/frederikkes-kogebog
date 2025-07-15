@@ -264,56 +264,114 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
 }
 
+/**
+ * Parser en enkelt linje af en ingredienstekst til et struktureret objekt.
+ * Implementerer specifik logik for "hakket kød" og noter i parentes.
+ * @param {string} line - Den linje, der skal parses.
+ * @returns {object|null} Et ingrediensobjekt eller null, hvis linjen er tom.
+ */
+function parseIngredientLine(line) {
+    line = line.trim();
+    if (!line) return null;
+
+    let quantity = null, unit = '', name = '', note = '';
+    const notes = [];
+
+    // Regel: Håndter parenteser først og tilføj altid deres indhold som en note.
+    const parenMatch = line.match(/\(([^)]+)\)/);
+    if (parenMatch) {
+        notes.push(parenMatch[1].trim());
+        line = line.replace(parenMatch[0], '').trim();
+    }
+
+    // Kendte enheder for at hjælpe med at adskille mængde/enhed fra navn
+    const knownUnits = ['g', 'gram', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse', 'dåser', 'knivspids', 'bundt'];
+    const unitRegex = new RegExp(`^(${knownUnits.join('|')})[e|s|\\.]*\\b`, 'i');
+
+    // Udtræk mængde
+    const quantityMatch = line.match(/^((\d+-\d+)|(\d+[\.,]\d+)|(\d+)|(en|et))\s*/i);
+    if (quantityMatch) {
+        let qStr = quantityMatch[1].toLowerCase();
+        if (qStr.includes('-')) {
+            const [start, end] = qStr.split('-').map(Number);
+            quantity = (start + end) / 2;
+        } else if (qStr === 'en' || qStr === 'et') {
+            quantity = 1;
+        } else {
+            quantity = parseFloat(qStr.replace(',', '.'));
+        }
+        line = line.substring(quantityMatch[0].length).trim();
+        
+        // Tjek for enhed lige efter mængden
+        const unitMatchAfterQuantity = line.match(unitRegex);
+        if (unitMatchAfterQuantity) {
+            unit = unitMatchAfterQuantity[0];
+            line = line.substring(unitMatchAfterQuantity[0].length).trim();
+        } else {
+            unit = 'stk'; // Standard til 'stk' hvis der er mængde, men ingen enhed
+        }
+    }
+     // Specielt tilfælde for "en knivspids" etc.
+    if (line.toLowerCase().startsWith('knivspids')) {
+        quantity = quantity || 1;
+        unit = 'knivspids';
+        line = line.substring('knivspids'.length).trim();
+    }
+
+    // Regel: Kontekstafhængig håndtering af "hakket"
+    const isSpecialMeatCase = /\bhakket\b/i.test(line) && /\b(oksekød|kylling)\b/i.test(line);
+
+    // Udtræk beskrivende ord som noter
+    let descriptors = ['tørret', 'tørrede', 'frisk', 'friske', 'friskkværnet', 'friskrevet', 'i tern', 'i strimler', 'finthakket', 'grofthakket', 'revet', 'flager'];
+    if (!isSpecialMeatCase) {
+        descriptors.push('hakket', 'hakkede');
+    }
+    
+    descriptors.forEach(desc => {
+        const regex = new RegExp(`\\b${desc}\\b`, 'i');
+        if (regex.test(line)) {
+            notes.push(desc.replace(/e$/, ''));
+            line = line.replace(regex, '').trim();
+        }
+    });
+
+    // Resten er navnet
+    name = line.replace(/^af\s+/, '').replace(/,$/, '').trim();
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+
+    // Saml noter til en enkelt streng
+    note = [...new Set(notes)].join(', ');
+
+    return { name, quantity, unit, note };
+}
+
 function handleImportIngredients() {
     const text = appElements.recipeImportTextarea.value;
     if (!text) return;
 
-    const lines = text.split('\n');
-    appElements.ingredientsContainer.innerHTML = ''; 
-    
-    const knownUnits = ['g', 'gram', 'grams', 'kg', 'ml', 'l', 'stk', 'tsk', 'spsk', 'dl', 'fed', 'dåse'];
-    const unitRegex = new RegExp(`^(${knownUnits.join('|')})s?(\\.|s)?`, 'i');
+    appElements.ingredientsContainer.innerHTML = '';
+
+    // Split teksten i linjer og håndter "og" for at opdele ingredienser
+    const lines = text.split('\n').reduce((acc, line) => {
+        // Split kun hvis linjen IKKE starter med et tal, for at undgå at splitte f.eks. "50 g smør og 50 g mel"
+        if (line.toLowerCase().includes(' og ') && !/^\d/.test(line.trim())) {
+            line.split(/ og /i).forEach(part => acc.push(part.trim()));
+        } else {
+            acc.push(line);
+        }
+        return acc;
+    }, []);
 
     lines.forEach(line => {
-        line = line.trim();
-        if (line === '') return;
-
-        let quantity = '';
-        let unit = '';
-        let name = '';
-
-        line = line.replace(/^[-*]\s*/, '');
-        const quantityMatch = line.match(/^[\d.,]+/);
-        if (quantityMatch) {
-            quantity = quantityMatch[0].replace(',', '.');
-            line = line.substring(quantityMatch[0].length).trim();
+        const ingredientData = parseIngredientLine(line);
+        if (ingredientData && ingredientData.name) {
+            createIngredientRow(appElements.ingredientsContainer, ingredientData);
         }
-
-        const unitMatch = line.match(unitRegex);
-        if (unitMatch) {
-            unit = unitMatch[0];
-            line = line.substring(unitMatch[0].length).trim();
-        }
-
-        if (quantity && !unit) {
-            unit = 'stk';
-        }
-        
-        name = line.replace(/^af\s+/, '').trim();
-        if (name) {
-            name = name.charAt(0).toUpperCase() + name.slice(1);
-        }
-        
-        const ingredientData = {
-            name: name,
-            quantity: quantity ? parseFloat(quantity) : '',
-            unit: normalizeUnit(unit)
-        };
-
-        createIngredientRow(appElements.ingredientsContainer, ingredientData);
     });
+
     appElements.recipeImportTextarea.value = '';
 }
+
 
 async function handleSaveRecipe(e) {
     e.preventDefault();
@@ -328,7 +386,7 @@ async function handleSaveRecipe(e) {
             ingredients.push({ 
                 name, 
                 quantity: Number(quantity) || null, 
-                unit,
+                unit: normalizeUnit(unit),
                 note: note || null 
             });
         }
