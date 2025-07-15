@@ -188,7 +188,7 @@ function addVariantRow(variant = {}) {
         </div>
         <div class="input-group">
             <label>Butik</label>
-            <select class="variant-store-select">${storeOptions}</select>
+            <select class="variant-store-select"><option value="">Vælg butik...</option>${storeOptions}</select>
         </div>
         <div class="input-group">
             <label>Lager (stk)</label>
@@ -410,12 +410,29 @@ function parseGemBotText(text) {
 }
 
 /**
+ * Finds a matching value in a reference list, ignoring case and extra whitespace.
+ * @param {string} valueToFind - The value from the import.
+ * @param {string[]} referenceList - The list of available options (e.g., from appState.references).
+ * @returns {string|null} The original value from the reference list if a match is found, otherwise null.
+ */
+function findReferenceMatch(valueToFind, referenceList) {
+    if (!valueToFind || !Array.isArray(referenceList)) return null;
+    const normalizedValue = valueToFind.trim().toLowerCase();
+    return referenceList.find(ref => ref.trim().toLowerCase() === normalizedValue) || null;
+}
+
+
+/**
  * Populates the master product form with data from a parsed object.
  * @param {object} data - The structured data object from parseGemBotText.
  */
 function populateFormWithImportedData(data) {
     document.getElementById('master-product-name').value = data.master.name || '';
-    document.getElementById('master-product-category').value = data.master.category || '';
+    
+    // Use the robust matching function for the category dropdown
+    const matchedCategory = findReferenceMatch(data.master.category, appState.references.itemCategories);
+    document.getElementById('master-product-category').value = matchedCategory || '';
+    
     document.getElementById('master-product-default-unit').value = data.master.defaultUnit || 'g';
 
     appElements.variantFormContainer.innerHTML = '';
@@ -423,12 +440,15 @@ function populateFormWithImportedData(data) {
 
     if (data.variants && data.variants.length > 0) {
         data.variants.forEach(variant => {
-            addVariantRow(variant);
+            // Use the robust matching function for the store dropdown in each variant
+            const matchedStore = findReferenceMatch(variant.storeId, appState.references.stores);
+            addVariantRow({ ...variant, storeId: matchedStore });
         });
     } else {
         addVariantRow();
     }
 }
+
 
 /**
  * Main handler for the Gem-bot import button.
