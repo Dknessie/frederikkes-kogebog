@@ -41,7 +41,7 @@ export function initInventory(state, elements) {
         bulkImportTextarea: document.getElementById('bulk-import-textarea'),
         startBulkImportBtn: document.getElementById('start-bulk-import-btn'),
         bulkImportSummary: document.getElementById('bulk-import-summary'),
-        bulkImportSummaryContent: document.getElementById('bulk-import-summary-content'),
+        bulkImportSummaryContent: document.getElementById('bulk-import-summary-content')
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -166,7 +166,6 @@ export function renderInventory() {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
 
-        // --- NY LOGIK TIL DATAKVALITETSINDIKATOR ---
         const missingFields = [];
         if (!mp.category) missingFields.push('Kategori');
         if (!mp.location) missingFields.push('Placering');
@@ -184,7 +183,6 @@ export function renderInventory() {
                     <i class="fas fa-check-circle"></i>
                 </span>`;
         }
-        // --- SLUT PÅ NY LOGIK ---
         
         const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
