@@ -1,7 +1,7 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, setDoc, deleteField, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
@@ -141,11 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         state.inventory = state.masterProducts.map(master => {
             const variants = state.inventoryVariants.filter(variant => variant.masterProductId === master.id);
-            // Beregner total lager i gram for et master-produkt
             const totalStockGrams = variants.reduce((sum, v) => {
                 const stock = v.currentStock || 0;
                 const size = v.purchaseSize || 0;
-                // Antager at purchaseUnit er 'g' for nu. Dette skal udvides med konverteringsregler.
                 return sum + (stock * size);
             }, 0);
 
@@ -164,21 +162,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
 
-        // NYE LISTENERS FOR VARELAGER
-        state.listeners.masterProducts = onSnapshot(collection(db, 'master_products'), (snapshot) => {
+        // Opdaterede listeners med 'where' clause for at overholde sikkerhedsregler
+        const qMasterProducts = query(collection(db, 'master_products'), where("userId", "==", userId));
+        state.listeners.masterProducts = onSnapshot(qMasterProducts, (snapshot) => {
             state.masterProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'master produkter'));
 
-        state.listeners.inventoryVariants = onSnapshot(collection(db, 'inventory_variants'), (snapshot) => {
+        const qVariants = query(collection(db, 'inventory_variants'), where("userId", "==", userId));
+        state.listeners.inventoryVariants = onSnapshot(qVariants, (snapshot) => {
             state.inventoryVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'vare varianter'));
 
-
-        state.listeners.recipes = onSnapshot(collection(db, 'recipes'), (snapshot) => {
+        const qRecipes = query(collection(db, 'recipes'), where("userId", "==", userId));
+        state.listeners.recipes = onSnapshot(qRecipes, (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             document.getElementById('profile-recipe-count').textContent = state.recipes.length;
             document.getElementById('profile-favorite-count').textContent = state.recipes.filter(r => r.is_favorite).length;
