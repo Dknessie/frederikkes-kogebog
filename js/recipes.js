@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, convertToGrams } from './utils.js';
+import { normalizeUnit, convertToBaseUnit } from './utils.js';
 import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
 import { openPlanMealModal } from './mealPlanner.js';
 
@@ -237,7 +237,6 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
         removeAutocomplete();
         if (value.length < 1) return;
 
-        // Søg nu i master-produkter
         const suggestions = appState.masterProducts.filter(item => 
             item.name.toLowerCase().startsWith(value)
         );
@@ -388,7 +387,7 @@ async function handleSaveRecipe(e) {
         is_favorite: appState.recipes.find(r => r.id === recipeId)?.is_favorite || false,
         imageUrl: null,
         imageBase64: null,
-        userId: appState.currentUser.uid // Sørg for at gemme userId
+        userId: appState.currentUser.uid
     };
 
     if (appState.recipeFormImage.type === 'url') {
@@ -547,7 +546,6 @@ export function calculateRecipeMatch(recipe, inventory) {
 
     let canBeMade = true;
     recipe.ingredients.forEach(ing => {
-        // Find master-produktet baseret på ingrediensens navn
         const masterProduct = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
         
         if (!masterProduct) {
@@ -556,17 +554,25 @@ export function calculateRecipeMatch(recipe, inventory) {
             return;
         }
 
-        // Konverter den nødvendige mængde til gram
-        const neededGrams = convertToGrams(ing.quantity, ing.unit, { defaultUnit: masterProduct.defaultUnit }).grams;
+        const conversion = convertToBaseUnit(ing.quantity, ing.unit);
 
-        if (neededGrams === null) {
+        if (conversion.error) {
+            console.warn(conversion.error);
             missingCount++;
             canBeMade = false;
             return;
         }
+        
+        if (conversion.nonConvertible) {
+            if (masterProduct.totalStockGrams <= 0) {
+                missingCount++;
+                canBeMade = false;
+            }
+            return; 
+        }
 
-        // Sammenlign med den samlede lagerbeholdning for master-produktet
-        if (neededGrams > (masterProduct.totalStockGrams || 0)) {
+        const neededAmount = conversion.amount;
+        if (neededAmount > (masterProduct.totalStockGrams || 0)) {
             missingCount++;
             canBeMade = false;
         }
@@ -583,15 +589,16 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     recipe.ingredients.forEach(ing => {
         const masterProduct = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
         if (masterProduct && masterProduct.variants && masterProduct.variants.length > 0) {
-            // Find den billigste variant eller favoritvarianten
-            const preferredVariant = masterProduct.variants.find(v => v.isFavoritePurchase) || masterProduct.variants.sort((a,b) => a.kgPrice - b.kgPrice)[0];
+            const preferredVariant = masterProduct.variants.find(v => v.isFavoritePurchase) || 
+                                   masterProduct.variants.filter(v => v.kgPrice).sort((a,b) => a.kgPrice - b.kgPrice)[0];
             
             if (preferredVariant && preferredVariant.kgPrice) {
                 const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToGrams(scaledQuantity, ing.unit, { defaultUnit: masterProduct.defaultUnit });
-                if (conversion.grams !== null) {
-                    const quantityInKg = conversion.grams / 1000;
-                    totalPrice += quantityInKg * preferredVariant.kgPrice;
+                const conversion = convertToBaseUnit(scaledQuantity, ing.unit);
+                
+                if (conversion.amount !== null && !conversion.nonConvertible) {
+                    const quantityInKgOrL = conversion.amount / 1000;
+                    totalPrice += quantityInKgOrL * preferredVariant.kgPrice;
                 }
             }
         }
