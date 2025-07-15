@@ -687,20 +687,19 @@ header {
     border-radius: var(--border-radius);
 }
 
-/* Opdateret: Styling for Inventory Filters */
 .inventory-filters {
-    display: flex; /* Brug flexbox for bedre kontrol på én række */
-    flex-wrap: wrap; /* Tillad wrap på mindre skærme */
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-l);
     padding-top: var(--spacing-m);
     border-top: 1px solid var(--border-color);
-    align-items: flex-end; /* Juster elementer til bunden af rækken */
+    align-items: flex-end;
 }
 .inventory-filters .input-group {
     margin-bottom: 0;
-    flex: 1 1 150px; /* Fleksibel bredde, minimum 150px */
-    min-width: 120px; /* Mindre minimumsbredde for at passe flere på række */
+    flex: 1 1 150px;
+    min-width: 120px;
 }
 .inventory-filters select {
     width: 100%;
@@ -708,19 +707,18 @@ header {
     border: 1px solid #ccc;
     border-radius: var(--border-radius);
     box-sizing: border-box;
-    font-size: 0.8rem; /* ÆNDRET for at gøre teksten lidt mindre */
+    font-size: 0.8rem;
     height: 38px;
-    text-overflow: ellipsis; /* NY for at afkorte lang tekst */
+    text-overflow: ellipsis;
 }
 .inventory-filters .btn {
-    height: 38px; /* Fast højde for at matche select */
-    padding: var(--spacing-s) var(--spacing-m); /* Juster padding */
-    font-size: var(--small-font-size); /* Mindre skriftstørrelse */
-    white-space: nowrap; /* Forhindrer knaptekst i at wrappe */
+    height: 38px;
+    padding: var(--spacing-s) var(--spacing-m);
+    font-size: var(--small-font-size);
+    white-space: nowrap;
 }
 
 
-/* Opdateret: Styling for Master/Variant View */
 #inventory-list-container {
     display: flex;
     flex-direction: column;
@@ -741,7 +739,6 @@ header {
     transform: rotate(180deg);
 }
 
-/* --- START ÆNDRING FOR VARELAGER JUSTERING --- */
 .master-product-header {
     display: flex;
     align-items: center;
@@ -751,7 +748,7 @@ header {
 
 .master-product-info {
     flex-grow: 1;
-    min-width: 0; /* Vigtigt for at ellipsis fungerer korrekt i flexbox */
+    min-width: 0;
 }
 
 .master-product-header h4 {
@@ -765,16 +762,15 @@ header {
 }
 
 .master-product-stock-info {
-    flex-shrink: 0; /* Forhindrer feltet i at blive mindre */
-    width: 140px; /* Giver en fast bredde for at justere indhold */
-    text-align: right; /* Justerer teksten (og tallet) til højre */
-    padding: 0 var(--spacing-m); /* Lidt luft omkring */
+    flex-shrink: 0;
+    width: 140px;
+    text-align: right;
+    padding: 0 var(--spacing-m);
 }
 
 .master-product-actions {
-    flex-shrink: 0; /* Forhindrer feltet i at blive mindre */
+    flex-shrink: 0;
 }
-/* --- SLUT ÆNDRING FOR VARELAGER JUSTERING --- */
 
 .expand-icon {
     transition: transform 0.3s ease;
@@ -1039,7 +1035,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #variant-edit-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #variant-edit-modal, #bulk-import-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1482,6 +1478,31 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #999;
     line-height: 1;
 }
+
+/* NY STYLING FOR MASSE-IMPORT */
+#bulk-import-summary {
+    margin-top: var(--spacing-l);
+    padding: var(--spacing-m);
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+#bulk-import-summary h4 {
+    margin-top: 0;
+}
+#bulk-import-summary .error-log {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+#bulk-import-summary .error-log li {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: var(--spacing-s);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-s);
+}
+/* SLUT PÅ NY STYLING */
 
 /* ===== 11. Responsive Design ===== */
 @media (max-width: 992px) {
