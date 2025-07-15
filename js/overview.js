@@ -15,12 +15,14 @@ export function initOverview(state, elements) {
 
     document.getElementById('edit-budget-btn').addEventListener('click', openEditBudgetModal);
     appElements.editBudgetForm.addEventListener('submit', handleSaveBudget);
+    appElements.favoriteStoreSelect.addEventListener('change', handleSaveFavoriteStore);
 }
 
 export function renderOverviewPage() {
     renderBudgetOverview();
     renderInventorySummary();
     renderExpiringItems();
+    renderFavoriteStoreSelector();
 }
 
 function renderBudgetOverview() {
@@ -29,8 +31,8 @@ function renderBudgetOverview() {
     const monthlyBudget = appState.budget.monthlyAmount || 0;
     const monthlySpent = calculateMonthlySpending();
 
-    appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2)} kr.`;
     appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2)} kr.`;
+    appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2)} kr.`;
 
     const percentage = monthlyBudget > 0 ? (monthlySpent / monthlyBudget) * 100 : 0;
     const progressBar = appElements.budgetProgressBar;
@@ -86,6 +88,47 @@ function renderExpiringItems() {
             </span>
         </div>
     `).join('');
+}
+
+function renderInventorySummary() {
+    // This function will need a major overhaul once the data model changes.
+    // For now, it will likely show incorrect data or break.
+    const summaryCard = appElements.inventorySummaryCard;
+    summaryCard.innerHTML = '<h3>Lagerstatus</h3><p><em>Opdateres efter ombygning...</em></p>';
+}
+
+function renderFavoriteStoreSelector() {
+    const select = appElements.favoriteStoreSelect;
+    const stores = appState.references.stores || [];
+    const favoriteStore = appState.preferences?.favoriteStoreId || '';
+
+    const focused = document.activeElement === select;
+
+    select.innerHTML = '<option value="">Vælg favoritbutik...</option>';
+    stores.sort((a, b) => a.localeCompare(b)).forEach(store => {
+        const option = document.createElement('option');
+        option.value = store;
+        option.textContent = store;
+        select.appendChild(option);
+    });
+    select.value = favoriteStore;
+
+    if (focused) {
+        select.focus();
+    }
+}
+
+async function handleSaveFavoriteStore(e) {
+    const newFavoriteStore = e.target.value;
+    if (!appState.currentUser) return;
+
+    const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'preferences');
+    try {
+        await setDoc(settingsRef, { favoriteStoreId: newFavoriteStore }, { merge: true });
+        showNotification({ title: "Gemt", message: "Din favoritbutik er opdateret." });
+    } catch (error) {
+        handleError(error, "Favoritbutik kunne ikke gemmes.", "saveFavoriteStore");
+    }
 }
 
 
