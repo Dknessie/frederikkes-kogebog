@@ -76,36 +76,43 @@ export function formatDate(date) {
 }
 
 /**
- * Converts a quantity from a recipe unit to a base unit (grams or ml).
- * This is a simplified conversion utility.
+ * Converts a quantity from a given recipe unit to the master product's base unit (g or ml).
+ * It prioritizes user-defined conversion rules on the master product.
  * @param {number} quantity The quantity to convert.
- * @param {string} fromUnit The unit to convert from.
- * @returns {{amount: number|null, unit: string|null, nonConvertible: boolean, error: string|null}} An object with the converted amount or an error.
+ * @param {string} fromUnit The unit to convert from (e.g., 'stk', 'dl').
+ * @param {object} masterProduct The master product, which contains conversion_rules and defaultUnit.
+ * @returns {{grams: number|null, error: string|null}} Result object.
  */
-export function convertToBaseUnit(quantity, fromUnit) {
-    if (!quantity) return { amount: 0, error: null };
+export function convertToGrams(quantity, fromUnit, masterProduct) {
+    if (!quantity) return { grams: 0, error: null };
     
-    const normalizedUnit = normalizeUnit(fromUnit);
+    const normalizedFromUnit = normalizeUnit(fromUnit);
+    const rules = masterProduct.conversion_rules || {};
+    const baseUnit = masterProduct.defaultUnit || 'g'; // 'g' or 'ml'
 
-    const conversionMap = {
-        'g': 1,
-        'kg': 1000,
-        'ml': 1,
-        'l': 1000,
-        'dl': 100,
-        'spsk': 15, // Approx. 15ml
-        'tsk': 5,   // Approx. 5ml
+    // 1. Direct match with base unit
+    if (normalizedFromUnit === baseUnit) {
+        return { grams: quantity, error: null };
+    }
+
+    // 2. Check user-defined conversion rules on the master product
+    if (rules[normalizedFromUnit]) {
+        return { grams: quantity * rules[normalizedFromUnit], error: null };
+    }
+
+    // 3. Fallback to standard conversions if no user rule exists
+    const standardConversions = {
+        'g': { 'kg': 1000 },
+        'ml': { 'l': 1000, 'dl': 100, 'spsk': 15, 'tsk': 5 }
     };
-
-    if (conversionMap[normalizedUnit] !== undefined) {
-        return { amount: quantity * conversionMap[normalizedUnit], error: null, nonConvertible: false };
-    }
     
-    // For units like 'stk', 'fed', 'dåse', we cannot convert to g/ml without more context.
-    // We return the original quantity and unit, and let the calling function decide what to do.
-    if (['stk', 'fed', 'dåse', 'bundt', 'knivspids'].includes(normalizedUnit)) {
-        return { amount: quantity, unit: normalizedUnit, error: null, nonConvertible: true };
+    if (standardConversions[baseUnit] && standardConversions[baseUnit][normalizedFromUnit]) {
+        return { grams: quantity * standardConversions[baseUnit][normalizedFromUnit], error: null };
     }
 
-    return { amount: null, error: `Ukendt enhed for konvertering: '${fromUnit}'` };
+    // 4. If no conversion is possible
+    return { 
+        grams: null, 
+        error: `Kan ikke omregne '${fromUnit}' til '${baseUnit}' for varen '${masterProduct.name}'. Tilføj venligst en konverteringsregel på varekortet.` 
+    };
 }
