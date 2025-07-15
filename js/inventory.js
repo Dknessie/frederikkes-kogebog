@@ -152,6 +152,7 @@ function openMasterProductModal(masterProductId) {
         document.getElementById('master-product-default-unit').value = masterProduct.defaultUnit;
         appElements.deleteMasterProductBtn.style.display = 'inline-flex';
 
+        // Load existing variants
         (masterProduct.variants || []).forEach(variant => addVariantRow(variant));
         if (masterProduct.conversion_rules) {
             for (const unit in masterProduct.conversion_rules) {
@@ -162,7 +163,7 @@ function openMasterProductModal(masterProductId) {
         appElements.masterProductModalTitle.textContent = 'Opret Ny Vare';
         document.getElementById('master-product-id').value = '';
         appElements.deleteMasterProductBtn.style.display = 'none';
-        addVariantRow();
+        addVariantRow(); // Add an empty row for new master product
     }
     
     populateReferenceDropdown(document.getElementById('master-product-category'), appState.references.itemCategories, 'Vælg kategori...');
@@ -180,7 +181,7 @@ function addVariantRow(variant = {}) {
     const container = appElements.variantFormContainer;
     const row = document.createElement('div');
     row.className = 'variant-form-row';
-    row.dataset.id = variant.id || '';
+    row.dataset.id = variant.id || ''; // Bevar eksisterende ID for opdatering
 
     const storeOptions = (appState.references.stores || []).map(s => `<option value="${s}">${s}</option>`).join('');
 
@@ -232,7 +233,8 @@ function addConversionRuleRow(rule = { unit: '', grams: '' }) {
 
     row.innerHTML = `
         <div class="input-group">
-            </div>
+            <!-- Unit select is inserted here -->
+        </div>
         <span>=</span>
         <div class="input-group">
             <input type="number" class="rule-grams-input" placeholder="Gram" value="${rule.grams || ''}">
@@ -445,6 +447,28 @@ function findReferenceMatch(valueToFind, referenceList) {
     return referenceList.find(ref => ref.trim().toLowerCase() === normalizedValue) || null;
 }
 
+/**
+ * Sammenligner to variantobjekter for at se, om de er identiske.
+ * Ignorerer 'id' og 'masterProductId' da disse er interne.
+ * @param {object} variant1 - Første variantobjekt.
+ * @param {object} variant2 - Andet variantobjekt.
+ * @returns {boolean} True hvis varianterne er identiske, ellers false.
+ */
+function areVariantsIdentical(variant1, variant2) {
+    const keys1 = Object.keys(variant1).filter(key => key !== 'id' && key !== 'masterProductId' && key !== 'userId');
+    const keys2 = Object.keys(variant2).filter(key => key !== 'id' && key !== 'masterProductId' && key !== 'userId');
+
+    if (keys1.length !== keys2.length) {
+        return false;
+    }
+
+    for (let key of keys1) {
+        if (variant1[key] !== variant2[key]) {
+            return false;
+        }
+    }
+    return true;
+}
 
 /**
  * Populates the master product form with data from a parsed object.
@@ -461,15 +485,44 @@ function populateFormWithImportedData(data) {
 
     document.getElementById('master-product-default-unit').value = data.master.defaultUnit || 'g';
 
-    appElements.variantFormContainer.innerHTML = '';
+    // Konverteringsregler overskrives altid, da de er direkte knyttet til masterproduktet
     appElements.conversionRulesContainer.innerHTML = '';
+    if (data.master.conversion_rules) {
+        for (const unit in data.master.conversion_rules) {
+            addConversionRuleRow({ unit, grams: data.master.conversion_rules[unit] });
+        }
+    }
+
+
+    // Håndter varianter: Tilføj kun nye, spring over identiske
+    const currentVariantElements = appElements.variantFormContainer.querySelectorAll('.variant-form-row');
+    const existingVariantsInForm = Array.from(currentVariantElements).map(row => ({
+        id: row.dataset.id,
+        variantName: row.querySelector('.variant-name-input').value,
+        storeId: row.querySelector('.variant-store-select').value,
+        currentStock: Number(row.querySelector('.variant-stock-input').value) || 0,
+        purchaseSize: Number(row.querySelector('.variant-size-input').value) || 0,
+        kgPrice: Number(row.querySelector('.variant-price-input').value) || null,
+        isFavoritePurchase: row.querySelector('.variant-favorite-checkbox').checked,
+    }));
 
     if (data.variants && data.variants.length > 0) {
-        data.variants.forEach(variant => {
-            const matchedStore = findReferenceMatch(variant.storeId, appState.references.stores);
-            addVariantRow({ ...variant, storeId: matchedStore });
+        data.variants.forEach(importedVariant => {
+            const matchedStore = findReferenceMatch(importedVariant.storeId, appState.references.stores);
+            const variantToCompare = { ...importedVariant, storeId: matchedStore }; // Brug matchet butik til sammenligning
+
+            // Tjek om den importerede variant allerede eksisterer i formularen
+            const exists = existingVariantsInForm.some(existingVariant => 
+                areVariantsIdentical(existingVariant, variantToCompare)
+            );
+
+            if (!exists) {
+                // Tilføj kun hvis den ikke allerede eksisterer
+                addVariantRow({ ...importedVariant, storeId: matchedStore });
+            }
         });
-    } else {
+    } else if (existingVariantsInForm.length === 0) {
+        // Hvis der hverken er importerede varianter eller eksisterende i formularen, tilføj en tom række
         addVariantRow();
     }
 }
