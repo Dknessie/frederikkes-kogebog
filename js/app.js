@@ -16,7 +16,9 @@ import { initOverview, renderOverviewPage } from './overview.js';
 document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentUser: null,
-        inventory: [],
+        masterProducts: [],
+        inventoryVariants: [],
+        inventory: [], // Vil indeholde den kombinerede/nestede data
         recipes: [],
         references: {},
         preferences: {},
@@ -131,6 +133,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    /**
+     * Kombinerer master-produkter og varianter til én samlet datastruktur.
+     */
+    function combineInventoryData() {
+        if (!state.masterProducts || !state.inventoryVariants) return;
+
+        state.inventory = state.masterProducts.map(master => {
+            const variants = state.inventoryVariants.filter(variant => variant.masterProductId === master.id);
+            // Beregner total lager i gram for et master-produkt
+            const totalStockGrams = variants.reduce((sum, v) => {
+                const stock = v.currentStock || 0;
+                const size = v.purchaseSize || 0;
+                // Antager at purchaseUnit er 'g' for nu. Dette skal udvides med konverteringsregler.
+                return sum + (stock * size);
+            }, 0);
+
+            return {
+                ...master,
+                variants: variants,
+                totalStockGrams: totalStockGrams
+            };
+        });
+    }
+
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
@@ -138,10 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
 
-        state.listeners.inventory = onSnapshot(collection(db, 'inventory_items'), (snapshot) => {
-            state.inventory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // NYE LISTENERS FOR VARELAGER
+        state.listeners.masterProducts = onSnapshot(collection(db, 'master_products'), (snapshot) => {
+            state.masterProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            combineInventoryData();
             handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'varelager'));
+        }, (error) => commonErrorHandler(error, 'master produkter'));
+
+        state.listeners.inventoryVariants = onSnapshot(collection(db, 'inventory_variants'), (snapshot) => {
+            state.inventoryVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            combineInventoryData();
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'vare varianter'));
+
 
         state.listeners.recipes = onSnapshot(collection(db, 'recipes'), (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -161,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.shoppingList = doc.exists() ? doc.data().items || {} : {};
             renderShoppingList();
             if (window.location.hash === '#inventory') {
-                renderInventory(); // Re-render to show/hide unprocessed items
+                renderInventory();
             }
         }, (error) => commonErrorHandler(error, 'indkøbsliste'));
 
