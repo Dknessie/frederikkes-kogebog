@@ -151,7 +151,6 @@ function openMasterProductModal(masterProductId) {
         appElements.masterProductModalTitle.textContent = 'Rediger Vare';
         document.getElementById('master-product-id').value = masterProduct.id;
         document.getElementById('master-product-name').value = masterProduct.name;
-        document.getElementById('master-product-category').value = masterProduct.category;
         document.getElementById('master-product-default-unit').value = masterProduct.defaultUnit;
         appElements.deleteMasterProductBtn.style.display = 'inline-flex';
 
@@ -357,6 +356,83 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.value = currentValue || "";
 }
 
+/**
+ * Parses the text from Gem-bot and returns a structured data object.
+ * @param {string} text - The text to parse.
+ * @returns {object} A structured object with master and variant data.
+ */
+function parseGemBotText(text) {
+    const data = {
+        master: {},
+        variants: []
+    };
+
+    const masterMatch = text.match(/--- Master Produkt ---\s*([\s\S]*?)\s*--- Varianter ---/);
+    if (!masterMatch) throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
+
+    const masterLines = masterMatch[1].trim().split('\n');
+    masterLines.forEach(line => {
+        const parts = line.split(':');
+        if (parts.length < 2) return;
+        const key = parts[0].trim().toLowerCase();
+        const value = parts.slice(1).join(':').trim();
+        if (key === 'navn') data.master.name = value;
+        if (key === 'kategori') data.master.category = value;
+        if (key === 'standard enhed') data.master.defaultUnit = value;
+    });
+
+    const variantsMatch = text.match(/--- Varianter ---\s*([\s\S]*)/);
+    if (!variantsMatch) return data;
+
+    const variantBlocks = variantsMatch[1].trim().split(/Variant:/).filter(b => b.trim());
+    variantBlocks.forEach(block => {
+        const variantData = {};
+        const blockLines = block.trim().split('\n');
+        blockLines.forEach(line => {
+            const parts = line.split(':');
+            if (parts.length < 2) return;
+            const key = parts[0].trim().toLowerCase();
+            const value = parts.slice(1).join(':').trim();
+
+            if (key === 'navn') variantData.variantName = value;
+            if (key === 'butik') variantData.storeId = value;
+            if (key === 'lager') variantData.currentStock = parseInt(value, 10) || 0;
+            if (key === 'størrelse') variantData.purchaseSize = parseFloat(value);
+            if (key === 'pris pr kg') variantData.kgPrice = parseFloat(value);
+            if (key === 'favorit') variantData.isFavoritePurchase = value.toLowerCase() === 'ja';
+        });
+        if(Object.keys(variantData).length > 0) {
+            data.variants.push(variantData);
+        }
+    });
+
+    return data;
+}
+
+/**
+ * Populates the master product form with data from a parsed object.
+ * @param {object} data - The structured data object from parseGemBotText.
+ */
+function populateFormWithImportedData(data) {
+    document.getElementById('master-product-name').value = data.master.name || '';
+    document.getElementById('master-product-category').value = data.master.category || '';
+    document.getElementById('master-product-default-unit').value = data.master.defaultUnit || 'g';
+
+    appElements.variantFormContainer.innerHTML = '';
+    appElements.conversionRulesContainer.innerHTML = '';
+
+    if (data.variants && data.variants.length > 0) {
+        data.variants.forEach(variant => {
+            addVariantRow(variant);
+        });
+    } else {
+        addVariantRow();
+    }
+}
+
+/**
+ * Main handler for the Gem-bot import button.
+ */
 function handleGemBotImport() {
     const text = appElements.gemBotImportTextarea.value;
     if (!text.trim()) {
@@ -365,48 +441,8 @@ function handleGemBotImport() {
     }
 
     try {
-        // --- Parse Master Product ---
-        const masterMatch = text.match(/--- Master Produkt ---\s*([\s\S]*?)\s*--- Varianter ---/);
-        if (!masterMatch) throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
-        
-        const masterLines = masterMatch[1].trim().split('\n');
-        const masterData = {};
-        masterLines.forEach(line => {
-            const parts = line.split(':');
-            if (parts.length < 2) return;
-            const key = parts[0].trim();
-            const value = parts.slice(1).join(':').trim();
-            if (key === 'Navn') document.getElementById('master-product-name').value = value;
-            if (key === 'Kategori') document.getElementById('master-product-category').value = value;
-            if (key === 'Standard Enhed') document.getElementById('master-product-default-unit').value = value;
-        });
-
-        // --- Parse Varianter ---
-        const variantsMatch = text.match(/--- Varianter ---\s*([\s\S]*)/);
-        if (!variantsMatch) throw new Error("Kunne ikke finde 'Varianter' sektion.");
-        
-        const variantBlocks = variantsMatch[1].trim().split(/Variant:/).filter(b => b.trim());
-        
-        appElements.variantFormContainer.innerHTML = ''; // Ryd eksisterende varianter
-
-        variantBlocks.forEach(block => {
-            const variantData = {};
-            const blockLines = block.trim().split('\n');
-            blockLines.forEach(line => {
-                const parts = line.split(':');
-                if (parts.length < 2) return;
-                const key = parts[0].trim();
-                const value = parts.slice(1).join(':').trim();
-
-                if (key === 'Navn') variantData.variantName = value;
-                if (key === 'Butik') variantData.storeId = value;
-                if (key === 'Lager') variantData.currentStock = parseInt(value, 10) || 0;
-                if (key === 'Størrelse') variantData.purchaseSize = parseFloat(value);
-                if (key === 'Pris pr kg') variantData.kgPrice = parseFloat(value);
-                if (key === 'Favorit') variantData.isFavoritePurchase = value.toLowerCase() === 'ja';
-            });
-            addVariantRow(variantData);
-        });
+        const importedData = parseGemBotText(text);
+        populateFormWithImportedData(importedData);
         
         showNotification({ title: "Importeret!", message: "Data er blevet udfyldt. Gennemse og gem." });
         appElements.gemBotImportTextarea.value = '';
