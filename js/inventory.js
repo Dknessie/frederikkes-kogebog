@@ -109,18 +109,16 @@ export function renderInventory() {
             `;
         }).join('');
 
-        const totalStockDisplay = mp.totalStockGrams >= 1000 
-            ? `${(mp.totalStockGrams / 1000).toFixed(2)} kg`
-            : `${mp.totalStockGrams.toFixed(0)} g`;
+        const totalStockDisplay = `${mp.totalStockItems} stk`;
 
         masterDiv.innerHTML = `
             <div class="master-product-header" data-id="${mp.id}">
                 <div class="master-product-info">
                     <h4>${mp.name}</h4>
-                    <span class="master-product-category">${mp.category || 'Ukategoriseret'}</span>
+                    <span class="master-product-category">${mp.location || 'Ukendt placering'}</span>
                 </div>
                 <div class="master-product-stock-info">
-                    <span>Total lager (ca.):</span>
+                    <span>Total lager:</span>
                     <span class="master-product-stock-amount">${totalStockDisplay}</span>
                 </div>
                 <div class="master-product-actions">
@@ -168,7 +166,12 @@ function openMasterProductModal(masterProductId) {
     }
     
     populateReferenceDropdown(document.getElementById('master-product-category'), appState.references.itemCategories, 'Vælg kategori...');
-    if(masterProduct) document.getElementById('master-product-category').value = masterProduct.category;
+    populateReferenceDropdown(document.getElementById('master-product-location'), appState.references.itemLocations, 'Vælg placering...');
+    
+    if(masterProduct) {
+        document.getElementById('master-product-category').value = masterProduct.category;
+        document.getElementById('master-product-location').value = masterProduct.location;
+    }
 
     appElements.masterProductModal.classList.remove('hidden');
 }
@@ -259,12 +262,13 @@ async function handleSaveMasterProduct(e) {
     const masterData = {
         name: document.getElementById('master-product-name').value,
         category: document.getElementById('master-product-category').value,
+        location: document.getElementById('master-product-location').value,
         defaultUnit: document.getElementById('master-product-default-unit').value,
         conversion_rules: conversionRules,
         userId: userId
     };
 
-    if (!masterData.name || !masterData.category) {
+    if (!masterData.name || !masterData.category || !masterData.location) {
         handleError(new Error("Udfyld venligst alle felter for master-produktet."), "Ufuldstændige data");
         return;
     }
@@ -429,10 +433,13 @@ function findReferenceMatch(valueToFind, referenceList) {
 function populateFormWithImportedData(data) {
     document.getElementById('master-product-name').value = data.master.name || '';
     
-    // Use the robust matching function for the category dropdown
     const matchedCategory = findReferenceMatch(data.master.category, appState.references.itemCategories);
     document.getElementById('master-product-category').value = matchedCategory || '';
     
+    // Also try to match location if it exists in the import
+    const matchedLocation = findReferenceMatch(data.master.location, appState.references.itemLocations);
+    document.getElementById('master-product-location').value = matchedLocation || '';
+
     document.getElementById('master-product-default-unit').value = data.master.defaultUnit || 'g';
 
     appElements.variantFormContainer.innerHTML = '';
@@ -440,7 +447,6 @@ function populateFormWithImportedData(data) {
 
     if (data.variants && data.variants.length > 0) {
         data.variants.forEach(variant => {
-            // Use the robust matching function for the store dropdown in each variant
             const matchedStore = findReferenceMatch(variant.storeId, appState.references.stores);
             addVariantRow({ ...variant, storeId: matchedStore });
         });
