@@ -410,8 +410,8 @@
                     <input type="text" id="recipe-tags" placeholder="f.eks. nemt, hurtigt, vegetar">
                 </div>
                 <div class="input-group">
-                    <label for="recipe-notes">Noter</label>
-                    <textarea id="recipe-notes" rows="3"></textarea>
+                    <label for="recipe-introduction">Introduktion</label>
+                    <textarea id="recipe-introduction" rows="4"></textarea>
                 </div>
                 <div class="input-group">
                     <label for="recipe-instructions">Fremgangsmåde</label>
@@ -423,12 +423,12 @@
                 </div>
                 <hr>
                 <div id="import-section">
-                    <h4>Importer ingredienser</h4>
+                    <h4>Importer Fuld Opskrift eller Ingredienser</h4>
                     <div class="input-group">
-                        <label for="recipe-import-textarea">Indsæt ingrediensliste her</label>
-                        <textarea id="recipe-import-textarea" rows="5" placeholder="F.eks.: 2 stk løg, 600 gram gulerødder, 1 dåse hakkede tomater"></textarea>
+                        <label for="recipe-import-textarea">Indsæt tekst her</label>
+                        <textarea id="recipe-import-textarea" rows="8" placeholder="Indsæt fuld opskriftstekst eller kun en ingrediensliste..."></textarea>
                     </div>
-                    <button type="button" id="import-ingredients-btn" class="btn btn-secondary">Importér</button>
+                    <button type="button" id="import-recipe-btn" class="btn btn-secondary">Importér</button>
                 </div>
                 <hr>
                 <h4>Ingredienser</h4>
@@ -461,7 +461,7 @@
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
                 </div>
                 <hr>
-                <p id="read-view-notes"></p>
+                <p id="read-view-introduction" class="read-view-introduction"></p>
                 <div class="read-view-main-content">
                     <div class="read-view-ingredients">
                         <h4>Ingredienser</h4>
