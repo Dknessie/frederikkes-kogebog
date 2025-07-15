@@ -232,8 +232,7 @@ function addConversionRuleRow(rule = { unit: '', grams: '' }) {
 
     row.innerHTML = `
         <div class="input-group">
-            <!-- Unit select is inserted here -->
-        </div>
+            </div>
         <span>=</span>
         <div class="input-group">
             <input type="number" class="rule-grams-input" placeholder="Gram" value="${rule.grams || ''}">
@@ -371,8 +370,27 @@ function parseGemBotText(text) {
         variants: []
     };
 
-    const masterMatch = text.match(/--- Master Produkt ---\s*([\s\S]*?)\s*--- Varianter ---/);
-    if (!masterMatch) throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
+    // Regex for Master Product section, made more robust to handle whitespace and case-insensitivity
+    const masterMatch = text.match(/---\s*Master Produkt\s*---\s*([\s\S]*?)\s*---\s*Varianter\s*---/i); 
+    if (!masterMatch) {
+        // Fallback: If "--- Varianter ---" is not found after master, assume master goes to end
+        const masterOnlyMatch = text.match(/---\s*Master Produkt\s*---\s*([\s\S]*)/i);
+        if (masterOnlyMatch) {
+             const masterLines = masterOnlyMatch[1].trim().split('\n');
+             masterLines.forEach(line => {
+                const parts = line.split(':');
+                if (parts.length < 2) return;
+                const key = parts[0].trim().toLowerCase();
+                const value = parts.slice(1).join(':').trim();
+                if (key === 'navn') data.master.name = value;
+                if (key === 'kategori') data.master.category = value;
+                if (key === 'placering') data.master.location = value;
+                if (key === 'standard enhed') data.master.defaultUnit = value;
+             });
+            return data; // Return with master data, variants will be empty
+        }
+        throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
+    }
 
     const masterLines = masterMatch[1].trim().split('\n');
     masterLines.forEach(line => {
@@ -386,10 +404,11 @@ function parseGemBotText(text) {
         if (key === 'standard enhed') data.master.defaultUnit = value;
     });
 
-    const variantsMatch = text.match(/--- Varianter ---\s*([\s\S]*)/);
-    if (!variantsMatch) return data;
+    // Regex for Variants section, made more robust to handle whitespace and case-insensitivity
+    const variantsMatch = text.match(/---\s*Varianter\s*---\s*([\s\S]*)/i);
+    if (!variantsMatch) return data; // It's okay if no variants section is found
 
-    const variantBlocks = variantsMatch[1].trim().split(/Variant:/).filter(b => b.trim());
+    const variantBlocks = variantsMatch[1].trim().split(/Variant:\s*/i).filter(b => b.trim()); // More robust split
     variantBlocks.forEach(block => {
         const variantData = {};
         const blockLines = block.trim().split('\n');
