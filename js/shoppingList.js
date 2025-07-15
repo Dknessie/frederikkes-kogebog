@@ -1,7 +1,7 @@
 // js/shoppingList.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, writeBatch, updateDoc, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
 import { calculateRecipePrice } from './recipes.js';
@@ -168,8 +168,8 @@ async function handleGenerateShoppingList() {
 
         if (gramsToBuy > 0) {
             let bestVariant = 
-                masterProduct.variants.find(v => v.storeId === appState.preferences.favoriteStoreId) ||
-                masterProduct.variants.find(v => v.isFavoritePurchase) ||
+                masterProduct.variants.find(v => v.storeId === appState.preferences.favoriteStoreId && v.purchaseSize > 0) ||
+                masterProduct.variants.find(v => v.isFavoritePurchase && v.purchaseSize > 0) ||
                 masterProduct.variants.filter(v => v.purchaseSize > 0).sort((a, b) => (a.kgPrice || Infinity) - (b.kgPrice || Infinity))[0];
 
             if (bestVariant) {
@@ -184,7 +184,6 @@ async function handleGenerateShoppingList() {
                     masterProductId: bestVariant.masterProductId
                 };
             } else {
-                // Fallback if no suitable variant is found
                 shoppingList[ingName.toLowerCase()] = { name: ingName, quantity_to_buy: gramsToBuy, unit: 'g', storeId: 'Ukendt (ingen variant)' };
             }
         }
@@ -238,27 +237,30 @@ async function handleConfirmPurchase() {
     const confirmedPurchase = await showNotification({ title: "Bekræft Indkøb", message: "Vil du tilføje de valgte varer til dit varelager?", type: 'confirm' });
     if (!confirmedPurchase) return;
 
-    const batch = writeBatch(db);
     const updatedList = { ...appState.shoppingList };
     
-    checkedItems.forEach(item => {
-        if (item.variantId) {
-            const variantRef = doc(db, "inventory_variants", item.variantId);
-            // This requires fetching the document to increment, which is complex in a batch without a transaction.
-            // For simplicity, we'll just show a notification. A full implementation would use a transaction.
-            console.log(`Ville opdatere lager for variant ${item.variantId} med ${item.quantity_to_buy} stk.`);
-        }
-        
-        const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === item.name);
-        if(keyToDelete) {
-            delete updatedList[keyToDelete];
-        }
-    });
-
     try {
-        // await batch.commit(); // Deactivated for now
+        await runTransaction(db, async (transaction) => {
+            for (const item of checkedItems) {
+                if (item.variantId) {
+                    const variantRef = doc(db, "inventory_variants", item.variantId);
+                    const variantDoc = await transaction.get(variantRef);
+                    if (variantDoc.exists()) {
+                        const currentStock = variantDoc.data().currentStock || 0;
+                        const newStock = currentStock + item.quantity_to_buy;
+                        transaction.update(variantRef, { currentStock: newStock });
+                    }
+                }
+                
+                const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === item.name);
+                if(keyToDelete) {
+                    delete updatedList[keyToDelete];
+                }
+            }
+        });
+
         await updateShoppingListInFirestore(updatedList); 
-        await showNotification({ title: "Succes", message: "Dit varelager ville være blevet opdateret! (Funktion under udvikling)" });
+        await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
     } catch (error) {
         handleError(error, "Lageret kunne ikke opdateres.", "confirmPurchase");
     }
