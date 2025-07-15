@@ -120,6 +120,8 @@
                 <h2>Varelager</h2>
                  <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
+                    <!-- NY KNAP TIL MASSE-IMPORT -->
+                    <button id="bulk-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Masse-import</button>
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
                 <div class="inventory-dashboard">
@@ -234,6 +236,28 @@
         </div>
     </div>
     
+    <!-- NY MODAL TIL MASSE-IMPORT -->
+    <div id="bulk-import-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Masse-import af varer</h3>
+            <p class="small-text">
+                Indsæt en liste af varer i tekstfeltet nedenfor. Hver vare skal følge det kendte format.
+                Adskil hver ny vare med <strong>--- NY VARE ---</strong> på en ny linje.
+            </p>
+            <div class="input-group">
+                <textarea id="bulk-import-textarea" rows="15" placeholder="--- MASTER PRODUKT ---&#10;Navn: Hakket Oksekød 4-7%&#10;Kategori: Kød & Fisk&#10;...osv...&#10;&#10;--- NY VARE ---&#10;&#10;--- MASTER PRODUKT ---&#10;Navn: Gulerødder&#10;...osv..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" id="start-bulk-import-btn">Start Import</button>
+            </div>
+            <div id="bulk-import-summary" class="hidden">
+                <h4>Import Rapport</h4>
+                <div id="bulk-import-summary-content"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="master-product-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -330,6 +354,7 @@
                     <label for="variant-edit-price">Pris pr. kg/l</label>
                     <input type="number" id="variant-edit-price" min="0" step="0.01">
                 </div>
+                <!-- Nyt felt for Kalorieindhold (kcal) -->
                 <div class="input-group">
                     <label for="variant-edit-kcal">Kalorier (kcal)</label>
                     <input type="number" id="variant-edit-kcal" min="0" step="1">
