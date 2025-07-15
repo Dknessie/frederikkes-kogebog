@@ -165,6 +165,7 @@ async function handleCalendarClick(e) {
         const fieldPath = `${date}.${mealType}`;
         
         try {
+            // This will remove the specific meal object from the array.
             await updateDoc(mealPlanRef, {
                 [fieldPath]: arrayRemove(mealData)
             });
@@ -200,24 +201,17 @@ async function handlePlanMealSubmit(e) {
     const fieldPath = `${date}.${mealType}`;
     
     try {
-        await updateDoc(mealPlanRef, {
-            [fieldPath]: arrayUnion(mealData)
-        });
+        // Using setDoc with merge ensures the document and nested fields are created if they don't exist.
+        await setDoc(mealPlanRef, {
+            [date]: {
+                [mealType]: arrayUnion(mealData)
+            }
+        }, { merge: true });
+
         appElements.planMealModal.classList.add('hidden');
         showNotification({title: "Planlagt!", message: "Retten er føjet til din madplan."});
     } catch (error) {
-        // If the document or field doesn't exist, set it instead of updating
-        if (error.code === 'not-found' || error.message.includes('No document to update')) {
-            try {
-                await setDoc(mealPlanRef, { [date]: { [mealType]: [mealData] } }, { merge: true });
-                appElements.planMealModal.classList.add('hidden');
-                showNotification({title: "Planlagt!", message: "Retten er føjet til din madplan."});
-            } catch (set_error) {
-                handleError(set_error, "Kunne ikke tilføje måltidet.", "planMealSubmit-set");
-            }
-        } else {
-            handleError(error, "Kunne ikke tilføje måltidet.", "planMealSubmit-update");
-        }
+        handleError(error, "Kunne ikke tilføje måltidet.", "planMealSubmit");
     }
 }
 
