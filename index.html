@@ -135,6 +135,22 @@
                             <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
                         </div>
                     </div>
+                    <!-- Nyt: Filter sektion for varelager -->
+                    <div class="inventory-filters">
+                        <div class="input-group">
+                            <label for="inventory-filter-category">Kategori</label>
+                            <select id="inventory-filter-category"></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-filter-location">Placering</label>
+                            <select id="inventory-filter-location"></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-filter-store">Butik</label>
+                            <select id="inventory-filter-store"></select>
+                        </div>
+                        <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
+                    </div>
                     <div id="inventory-list-container"></div>
                 </div>
             </section>
