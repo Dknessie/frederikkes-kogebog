@@ -797,8 +797,8 @@ header {
 
 .variant-item {
     display: grid;
-    /* Faste kolonner for Navn, Butik, Lager, Størrelse, Pris */
-    grid-template-columns: 180px 100px 70px 80px 100px; 
+    /* Faste kolonner for Navn, Butik, Lager, Størrelse, Pris, Rediger-knap */
+    grid-template-columns: 180px 100px 70px 80px 100px auto; /* Tilføjet auto for knap */
     align-items: center;
     gap: var(--spacing-s); 
     padding: var(--spacing-s) 0;
@@ -813,6 +813,13 @@ header {
     white-space: nowrap; /* Forhindrer tekstombrydning */
     overflow: hidden; /* Skjul overløbende tekst */
     text-overflow: ellipsis; /* Vis ellipser for overløbende tekst */
+    display: flex; /* For at justere favorit-ikon */
+    align-items: center;
+    gap: var(--spacing-xs); /* Mellemrum mellem ikon og tekst */
+}
+.favorite-variant-icon { /* Nyt: Styling for favorit-stjerne */
+    color: #FFD700; /* Guld farve for stjerne */
+    font-size: 0.9em; /* Lidt mindre end tekst */
 }
 .variant-store {
     color: #666;
@@ -1024,7 +1031,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #variant-edit-modal { z-index: 2010; } /* Nyt: variant-edit-modal */
 #notification-modal { z-index: 2020; }
 
 
@@ -1041,7 +1048,8 @@ header {
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
-#reorder-assistant-modal .modal-content {
+#reorder-assistant-modal .modal-content,
+#variant-edit-modal .modal-content { /* Nyt: variant-edit-modal */
     max-width: 550px;
 }
 
