@@ -656,6 +656,7 @@ header {
 
 .inventory-controls {
     display: flex;
+    justify-content: space-between;
     gap: var(--spacing-l);
     margin-bottom: var(--spacing-l);
     align-items: center;
