@@ -35,6 +35,8 @@ export function initInventory(state, elements) {
         clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
         variantEditModal: document.getElementById('variant-edit-modal'),
         variantEditForm: document.getElementById('variant-edit-form'),
+        // Tilføjet reference til det nye kcal inputfelt i variant redigeringsmodalen
+        variantEditKcalInput: document.getElementById('variant-edit-kcal'),
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -160,14 +162,18 @@ export function renderInventory() {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
             const sizeDisplay = v.purchaseSize ? `${v.purchaseSize}${mp.defaultUnit}` : '';
             const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : '';
+            const kcalDisplay = v.kcal ? `${v.kcal} kcal` : ''; // Nyt: Vis kcal
             const favoriteIcon = v.isFavoritePurchase ? '<i class="fas fa-star favorite-variant-icon" title="Favoritkøb"></i>' : '';
             return `
                 <div class="variant-item">
                     <span class="variant-name">${favoriteIcon} ${v.variantName}</span>
-                    <span class="variant-store">${storeName}</span>
-                    <span class="variant-stock">${v.currentStock || 0} stk.</span>
-                    <span class="variant-size">${sizeDisplay}</span>
-                    <span class="variant-price">${priceDisplay}</span>
+                    <div class="variant-info-group"> <!-- Ny container for info til højre -->
+                        <span class="variant-store">${storeName}</span>
+                        <span class="variant-stock">${v.currentStock || 0} stk.</span>
+                        <span class="variant-size">${sizeDisplay}</span>
+                        <span class="variant-price">${priceDisplay}</span>
+                        <span class="variant-kcal">${kcalDisplay}</span> <!-- Nyt: Vis kcal -->
+                    </div>
                     <button class="btn-icon edit-variant-btn" data-master-id="${mp.id}" data-variant-id="${v.id}" title="Rediger variant"><i class="fas fa-edit"></i></button>
                 </div>
             `;
@@ -179,7 +185,7 @@ export function renderInventory() {
             <div class="master-product-header" data-id="${mp.id}">
                 <div class="master-product-info">
                     <h4>${mp.name}</h4>
-                    <span class="master-product-category">${mp.category || 'Ukategoriseret'}</span>
+                    <!-- Fjernet kategori herfra: <span class="master-product-category">${mp.category || 'Ukategoriseret'}</span> -->
                 </div>
                 <div class="master-product-stock-info">
                     <span>Total lager:</span>
@@ -268,6 +274,10 @@ function addVariantRow(variant = {}) {
         <div class="input-group">
             <label>Pris pr. kg/l</label>
             <input type="number" step="0.01" class="variant-price-input" value="${variant.kgPrice || ''}">
+        </div>
+        <div class="input-group">
+            <label>Kalorier (kcal)</label> <!-- Nyt: Inputfelt for kcal -->
+            <input type="number" class="variant-kcal-input" min="0" step="1" value="${variant.kcal || ''}">
         </div>
         <div class="input-group switch-group">
             <label>Favoritkøb?</label>
@@ -370,6 +380,7 @@ async function handleSaveMasterProduct(e) {
                 purchaseSize: Number(row.querySelector('.variant-size-input').value) || 0,
                 purchaseUnit: masterData.defaultUnit,
                 kgPrice: Number(row.querySelector('.variant-price-input').value) || null,
+                kcal: Number(row.querySelector('.variant-kcal-input').value) || null, // Nyt: Læs kcal
                 isFavoritePurchase: row.querySelector('.variant-favorite-checkbox').checked,
                 userId: userId
             };
@@ -469,6 +480,7 @@ function parseGemBotText(text) {
             if (key === 'lager') currentVariant.currentStock = parseInt(value, 10) || 0;
             if (key === 'størrelse') currentVariant.purchaseSize = parseFloat(value);
             if (key === 'pris pr kg') currentVariant.kgPrice = parseFloat(value);
+            if (key === 'kcal') currentVariant.kcal = parseInt(value, 10) || null; // Nyt: Parse kcal
             if (key === 'favorit') currentVariant.isFavoritePurchase = value.toLowerCase() === 'ja';
         }
     }
@@ -552,6 +564,7 @@ function openVariantEditModal(masterId, variantId) {
     document.getElementById('variant-edit-stock').value = variant.currentStock || 0;
     document.getElementById('variant-edit-size').value = variant.purchaseSize || '';
     document.getElementById('variant-edit-price').value = variant.kgPrice || '';
+    appElements.variantEditKcalInput.value = variant.kcal || ''; // Nyt: Indlæs kcal
     document.getElementById('variant-edit-favorite').checked = variant.isFavoritePurchase || false;
 
     appElements.variantEditModal.classList.remove('hidden');
@@ -570,6 +583,7 @@ async function handleSaveVariant(e) {
         currentStock: Number(document.getElementById('variant-edit-stock').value) || 0,
         purchaseSize: Number(document.getElementById('variant-edit-size').value) || 0,
         kgPrice: Number(document.getElementById('variant-edit-price').value) || null,
+        kcal: Number(appElements.variantEditKcalInput.value) || null, // Nyt: Gem kcal
         isFavoritePurchase: document.getElementById('variant-edit-favorite').checked,
         masterProductId: masterId,
         userId: userId
