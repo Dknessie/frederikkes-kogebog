@@ -658,7 +658,7 @@ header {
     display: flex;
     justify-content: space-between;
     gap: var(--spacing-l);
-    margin-bottom: var(--spacing-m); /* Justeret margin-bottom */
+    margin-bottom: var(--spacing-m); 
     align-items: center;
     flex-wrap: wrap;
 }
@@ -687,32 +687,39 @@ header {
     border-radius: var(--border-radius);
 }
 
-/* NYT: Styling for Inventory Filters */
+/* Opdateret: Styling for Inventory Filters */
 .inventory-filters {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Fleksible kolonner */
+    display: flex; /* Brug flexbox for bedre kontrol på én række */
+    flex-wrap: wrap; /* Tillad wrap på mindre skærme */
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-l);
-    padding-top: var(--spacing-m); /* Lidt padding for at adskille fra søgefelt */
+    padding-top: var(--spacing-m);
     border-top: 1px solid var(--border-color);
+    align-items: flex-end; /* Juster elementer til bunden af rækken */
 }
 .inventory-filters .input-group {
-    margin-bottom: 0; /* Fjern standard margin-bottom fra input-group */
+    margin-bottom: 0;
+    flex: 1 1 150px; /* Fleksibel bredde, minimum 150px */
+    min-width: 120px; /* Mindre minimumsbredde for at passe flere på række */
 }
 .inventory-filters select {
     width: 100%;
-    padding: var(--spacing-m);
+    padding: var(--spacing-s); /* Mindre padding for at gøre dem mindre */
     border: 1px solid #ccc;
     border-radius: var(--border-radius);
     box-sizing: border-box;
+    font-size: var(--small-font-size); /* Mindre skriftstørrelse */
+    height: 38px; /* Fast højde for at matche knap */
 }
 .inventory-filters .btn {
-    align-self: end; /* Juster knappen til bunden af rækken */
-    width: auto; /* Tilpas bredde til indhold */
+    height: 38px; /* Fast højde for at matche select */
+    padding: var(--spacing-s) var(--spacing-m); /* Juster padding */
+    font-size: var(--small-font-size); /* Mindre skriftstørrelse */
+    white-space: nowrap; /* Forhindrer knaptekst i at wrappe */
 }
 
 
-/* NYT: Styling for Master/Variant View */
+/* Opdateret: Styling for Master/Variant View */
 #inventory-list-container {
     display: flex;
     flex-direction: column;
@@ -787,27 +794,35 @@ header {
 
 .variant-item {
     display: grid;
-    /* Nyt grid layout for varianter: Navn, Butik, Lager, Størrelse, Pris */
-    grid-template-columns: 2fr 1fr 0.8fr 0.8fr 1.2fr; 
+    /* Faste kolonner for Navn, Butik, Lager, Størrelse, Pris */
+    grid-template-columns: 180px 100px 70px 80px 100px; 
     align-items: center;
-    gap: var(--spacing-s); /* Reduceret gap for at passe mere ind */
+    gap: var(--spacing-s); 
     padding: var(--spacing-s) 0;
     border-bottom: 1px solid #f0f0f0;
-    font-size: var(--small-font-size); /* Gør teksten lidt mindre for at passe bedre */
+    font-size: var(--small-font-size); 
 }
 .variant-item:last-child {
     border-bottom: none;
 }
 .variant-name {
     font-weight: 600;
+    white-space: nowrap; /* Forhindrer tekstombrydning */
+    overflow: hidden; /* Skjul overløbende tekst */
+    text-overflow: ellipsis; /* Vis ellipser for overløbende tekst */
 }
 .variant-store {
     color: #666;
     font-weight: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .variant-stock, .variant-price, .variant-size {
     color: #333;
-    white-space: nowrap; /* Forhindrer wrap på tal */
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .empty-state-small {
     font-style: italic;
