@@ -327,40 +327,42 @@ function parseIngredientLine(line) {
     name = name.charAt(0).toUpperCase() + name.slice(1);
     note = [...new Set(notes)].join(', ');
 
-    return { name, quantity, unit, note };
+    return { name, quantity, unit: normalizeUnit(unit), note };
 }
 
 function parseFullRecipeText(text) {
     const recipe = {};
-    const sections = ['Titel', 'Kategori', 'Antal portioner', 'Tilberedelsestid', 'Tags', 'Introduktion', 'Ingrediensliste', 'Fremgangsmåde'];
-    
-    function getSectionContent(startTag, endTag) {
-        const startIndex = text.toLowerCase().indexOf(startTag.toLowerCase());
-        if (startIndex === -1) return null;
-        
-        let endIndex;
-        if (endTag) {
-            endIndex = text.toLowerCase().indexOf(endTag.toLowerCase(), startIndex);
+    const lines = text.split('\n');
+    let currentSection = '';
+
+    for(const line of lines) {
+        const lowerLine = line.toLowerCase().trim();
+        if(lowerLine.startsWith('titel:')) {
+            recipe.title = line.substring(6).trim();
+        } else if (lowerLine.startsWith('kategori:')) {
+            recipe.category = line.substring(9).trim();
+        } else if (lowerLine.startsWith('antal portioner:')) {
+            recipe.portions = line.match(/\d+/)?.[0];
+        } else if (lowerLine.startsWith('tilberedelsestid:')) {
+            recipe.time = line.match(/\d+/)?.[0];
+        } else if (lowerLine.startsWith('tags:')) {
+            recipe.tags = line.substring(5).split(',').map(t => t.trim());
+        } else if (lowerLine.startsWith('introduktion:')) {
+            currentSection = 'introduction';
+            recipe.introduction = line.substring(13).trim();
+        } else if (lowerLine.startsWith('ingrediensliste:')) {
+            currentSection = 'ingredients';
+            recipe.ingredientsText = '';
+        } else if (lowerLine.startsWith('fremgangsmåde:')) {
+            currentSection = 'instructions';
+            recipe.instructions = line.substring(14).trim();
+        } else {
+            if (currentSection === 'introduction') recipe.introduction += '\n' + line;
+            if (currentSection === 'ingredients') recipe.ingredientsText += line + '\n';
+            if (currentSection === 'instructions') recipe.instructions += '\n' + line;
         }
-        
-        const contentStartIndex = text.indexOf(':', startIndex) + 1;
-        return (endIndex !== -1 ? text.substring(contentStartIndex, endIndex) : text.substring(contentStartIndex)).trim();
     }
-
-    recipe.title = getSectionContent('Titel:', 'Kategori:');
-    recipe.category = getSectionContent('Kategori:', 'Antal portioner:');
-    recipe.portions = getSectionContent('Antal portioner:', 'Tilberedelsestid')?.match(/\d+/)?.[0];
-    recipe.time = getSectionContent('Tilberedelsestid:', 'Tags:')?.match(/\d+/g)?.reduce((a, b) => parseInt(a) + parseInt(b), 0).toString();
-    recipe.tags = getSectionContent('Tags:', 'Introduktion:')?.split(',').map(t => t.trim());
-    recipe.introduction = getSectionContent('Introduktion:', 'Ingrediensliste:');
-    recipe.ingredientsText = getSectionContent('Ingrediensliste:', 'Fremgangsmåde:');
-    recipe.instructions = getSectionContent('Fremgangsmåde:');
-
-    // Basic validation to see if it's a full recipe
-    if (recipe.title && recipe.ingredientsText && recipe.instructions) {
-        return recipe;
-    }
-    return null;
+    return recipe;
 }
 
 function handleRecipeImport() {
@@ -369,8 +371,7 @@ function handleRecipeImport() {
 
     const fullRecipeData = parseFullRecipeText(text);
 
-    if (fullRecipeData) {
-        // Populate the entire form
+    if (fullRecipeData && fullRecipeData.title && fullRecipeData.ingredientsText && fullRecipeData.instructions) {
         document.getElementById('recipe-title').value = fullRecipeData.title || '';
         document.getElementById('recipe-category').value = fullRecipeData.category || '';
         document.getElementById('recipe-portions').value = fullRecipeData.portions || '';
@@ -379,7 +380,6 @@ function handleRecipeImport() {
         document.getElementById('recipe-introduction').value = fullRecipeData.introduction || '';
         document.getElementById('recipe-instructions').value = fullRecipeData.instructions || '';
         
-        // Populate ingredients
         appElements.ingredientsContainer.innerHTML = '';
         if (fullRecipeData.ingredientsText) {
             fullRecipeData.ingredientsText.split('\n').forEach(line => {
@@ -391,7 +391,6 @@ function handleRecipeImport() {
         }
         showNotification({ title: "Importeret!", message: "Hele opskriften er blevet indlæst." });
     } else {
-        // Fallback to only importing ingredients
         appElements.ingredientsContainer.innerHTML = '';
         text.split('\n').forEach(line => {
             const ingredientData = parseIngredientLine(line);
