@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         references: {},
+        preferences: {},
         mealPlan: {},
         shoppingList: {},
         kitchenCounter: {},
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryFilterButtons: document.getElementById('inventory-filter-buttons'),
         inventoryLocationTabs: document.getElementById('inventory-location-tabs'),
         inventoryListContainer: document.getElementById('inventory-list-container'),
+        favoriteStoreSelect: document.getElementById('profile-favorite-store'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
@@ -178,28 +180,37 @@ document.addEventListener('DOMContentLoaded', () => {
             if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
         }, (error) => commonErrorHandler(error, 'budget'));
 
+        const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
+        state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
+            if (doc.exists()) {
+                state.preferences = doc.data();
+            } else {
+                setDoc(preferencesRef, { favoriteStoreId: '' }).catch(e => handleError(e, "Kunne ikke oprette standard præferencer."));
+            }
+            if (document.querySelector('#overview:not(.hidden)')) {
+                renderOverviewPage();
+            }
+        }, (error) => commonErrorHandler(error, 'præferencer'));
+
         const referencesRef = doc(db, 'references', userId);
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
                 
-                // **FIX:** Logic is now inside the block where data is guaranteed to exist.
-                // This prevents race conditions.
                 elements.addInventoryItemBtn.disabled = false;
                 elements.reorderAssistantBtn.disabled = false;
                 elements.addRecipeBtn.disabled = false;
                 setReferencesLoaded(true);
 
-                // Re-render relevant pages if they are active
                 if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
                 if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
 
             } else {
-                // If the doc doesn't exist, create it. The listener will fire again and run the block above.
                 const defaultReferences = {
                     itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
                     itemLocations: ['Køleskab', 'Fryser', 'Skab'],
                     standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse', 'tsk', 'spsk', 'dl'],
+                    stores: ['REMA 1000', 'Netto', 'Føtex'],
                     shelfLife: { 'Mejeri': 7, 'Kød & Fisk': 3 }
                 };
                 setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
@@ -225,11 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        // Disable buttons that depend on data
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
-        setReferencesLoaded(false); // Reset safety guard on logout
+        setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
@@ -257,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
-        // Disable buttons on initial load, they will be enabled when data is ready.
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
