@@ -739,50 +739,88 @@ header {
     border-bottom-color: var(--primary-color);
 }
 
-.inventory-group {
-    margin-bottom: var(--spacing-xl);
-}
-.inventory-group-header {
-    font-family: var(--heading-font);
-    font-size: 1.5rem;
-    color: var(--primary-color);
-    margin-bottom: var(--spacing-m);
-    padding-bottom: var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-}
-.inventory-item-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 80px;
-    align-items: center;
-    gap: var(--spacing-m);
-    padding: var(--spacing-m) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.inventory-item-row .item-name-cell {
+/* NYT: Styling for Master/Variant View */
+#inventory-list-container {
     display: flex;
-    align-items: center;
-    gap: var(--spacing-s);
-    font-weight: 600;
+    flex-direction: column;
+    gap: var(--spacing-l);
 }
-.critical-item-icon {
-    color: var(--status-red);
-}
-.stock-display { display: flex; flex-direction: column; gap: var(--spacing-xs); }
-.stock-bar { width: 100%; height: 6px; background-color: #eee; border-radius: 3px; overflow: hidden; }
-.stock-level { height: 100%; border-radius: 3px; }
-.status-badge { padding: 0.2rem 0.6rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: white; }
-.status-badge.status-ok { background-color: var(--status-green); }
-.status-badge.status-low { background-color: var(--status-yellow); color: var(--text-color); }
-.status-badge.status-critical { background-color: var(--status-red); }
-.status-badge.status-unknown { background-color: #ccc; color: var(--text-color); }
 
-.inventory-item-actions {
+.master-product-item {
+    background-color: var(--white-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border-color);
+}
+
+.master-product-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m) var(--spacing-l);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+}
+.master-product-header h4 {
+    margin: 0;
+    color: var(--text-color);
+    font-family: var(--body-font);
+    font-size: 1.1rem;
+}
+.master-product-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+.master-product-category {
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.master-product-stock-info {
     text-align: right;
 }
-.inventory-item-actions .btn-icon:disabled {
-    color: #e0e0e0;
-    cursor: not-allowed;
-    background-color: transparent;
+.master-product-stock-amount {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+.master-product-actions {
+    display: flex;
+    gap: var(--spacing-s);
+}
+
+.variant-list {
+    padding: var(--spacing-m) var(--spacing-l);
+    background-color: var(--light-bg-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+}
+
+.variant-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    align-items: center;
+    gap: var(--spacing-l);
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.variant-item:last-child {
+    border-bottom: none;
+}
+.variant-name {
+    font-weight: 600;
+}
+.variant-store {
+    color: #666;
+    font-weight: normal;
+}
+.variant-stock, .variant-price {
+    color: #333;
+}
+.empty-state-small {
+    font-style: italic;
+    color: #888;
+    padding: var(--spacing-m) 0;
 }
 
 
@@ -1473,5 +1511,13 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     #recipe-edit-modal .image-upload-container img {
         height: 150px;
+    }
+    .variant-item {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-s);
+        padding-bottom: var(--spacing-m);
+    }
+    .variant-item .variant-actions {
+        justify-self: end;
     }
 }
