@@ -12,7 +12,6 @@
 </head>
 <body>
 
-    <!-- ===== Login Skærm ===== -->
     <main id="login-page" class="page">
         <div class="login-container">
             <h1 class="app-title">Frederikkes Kogebog</h1>
@@ -32,7 +31,6 @@
         </div>
     </main>
 
-    <!-- ===== App Container ===== -->
     <div id="app-container" class="hidden">
         <header>
             <div class="header-content">
@@ -49,7 +47,6 @@
         </header>
 
         <main id="app-main-content">
-            <!-- Madplan Side -->
             <section id="meal-planner" class="page">
                 <div class="meal-planner-layout">
                     <aside id="meal-planner-sidebar-left" class="meal-planner-sidebar-left">
@@ -97,7 +94,6 @@
                 </div>
             </section>
 
-            <!-- Opskrifter Side -->
             <section id="recipes" class="page hidden">
                 <h2>Opskrifter</h2>
                 <div class="actions-bar recipe-actions-bar">
@@ -114,14 +110,12 @@
                 <div id="recipe-grid" class="recipe-grid"></div>
             </section>
             
-            <!-- Referencer Side -->
             <section id="references" class="page hidden">
                 <h2>Referencer</h2>
                 <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
                 <div id="references-container" class="references-layout"></div>
             </section>
 
-            <!-- Varelager Side -->
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
                  <div class="actions-bar">
@@ -135,7 +129,6 @@
                             <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
                         </div>
                     </div>
-                    <!-- Nyt: Filter sektion for varelager -->
                     <div class="inventory-filters">
                         <div class="input-group">
                             <label for="inventory-filter-category">Kategori</label>
@@ -155,7 +148,6 @@
                 </div>
             </section>
 
-            <!-- Oversigt Side -->
             <section id="overview" class="page hidden">
                 <h2>Oversigt</h2>
                 <div class="overview-layout">
@@ -200,7 +192,6 @@
             </section>
         </main>
 
-        <!-- Mobil Tab Bar -->
         <nav id="mobile-tab-bar" class="mobile-tab-bar">
             <a href="#meal-planner" class="mobile-tab-link active" data-page="meal-planner"><i class="fas fa-calendar-alt"></i><span>Madplan</span></a>
             <a href="#recipes" class="mobile-tab-link" data-page="recipes"><i class="fas fa-book-open"></i><span>Opskrifter</span></a>
@@ -209,7 +200,6 @@
             <a href="#overview" class="mobile-tab-link" data-page="overview"><i class="fas fa-chart-pie"></i><span>Oversigt</span></a>
         </nav>
 
-        <!-- Mobil Slide-in Paneler Wrapper -->
         <div id="mobile-panel-overlay" class="mobile-panel-overlay hidden">
             <div id="mobile-shopping-list-panel" class="mobile-panel">
                 <div class="mobile-panel-header">
@@ -243,8 +233,6 @@
             </div>
         </div>
     </div>
-    
-    <!-- ===== Modaler ===== -->
     
     <div id="master-product-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -294,8 +282,7 @@
                     <h4>Konverteringsregler</h4>
                     <p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
                     <div id="conversion-rules-container">
-                        <!-- Konverteringsregler indsættes her af JS -->
-                    </div>
+                        </div>
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
                 </div>
 
@@ -303,8 +290,7 @@
                     <h4>Varevarianter</h4>
                     <p class="small-text">Dette er de specifikke produkter, du køber i butikkerne. Tilføj en eller flere varianter.</p>
                     <div id="variant-form-container">
-                        <!-- Variant-rækker indsættes dynamisk her -->
-                    </div>
+                        </div>
                     <button type="button" id="add-variant-form-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ny variant</button>
                 </div>
 
@@ -316,7 +302,6 @@
         </div>
     </div>
 
-    <!-- Nyt: Modal til redigering af enkelt variant -->
     <div id="variant-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
