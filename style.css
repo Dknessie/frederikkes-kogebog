@@ -988,9 +988,9 @@ header {
     border-radius: var(--card-border-radius);
     width: 100%;
     max-width: 800px;
-    position: relative;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
 }
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
@@ -1425,14 +1425,14 @@ input:checked + .slider:before { transform: translateX(22px); }
         gap: var(--spacing-m);
     }
 
-    #recipe-edit-modal .modal-content, #master-product-modal .modal-content {
+    .modal-content {
         padding: var(--spacing-m);
         max-height: 95vh;
     }
-    #recipe-edit-modal .form-grid {
+    .form-grid {
         grid-template-columns: 1fr;
     }
-    #recipe-edit-modal .image-upload-container img {
+    .image-upload-container img {
         height: 150px;
     }
     .variant-item {
