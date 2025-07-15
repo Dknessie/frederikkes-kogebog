@@ -166,7 +166,9 @@ export function renderInventory() {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
 
+        // --- RETTET LOGIK TIL DATAKVALITETSINDIKATOR ---
         const missingFields = [];
+        if (!mp.name) missingFields.push('Navn');
         if (!mp.category) missingFields.push('Kategori');
         if (!mp.location) missingFields.push('Placering');
         if (!mp.defaultUnit) missingFields.push('Standardenhed');
@@ -183,6 +185,7 @@ export function renderInventory() {
                     <i class="fas fa-check-circle"></i>
                 </span>`;
         }
+        // --- SLUT PÅ RETTET LOGIK ---
         
         const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
