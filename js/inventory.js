@@ -82,7 +82,7 @@ export function renderInventory() {
         const term = inventoryState.searchTerm.toLowerCase();
         masterProducts = masterProducts.filter(mp => 
             mp.name.toLowerCase().includes(term) || 
-            mp.variants.some(v => v.variantName.toLowerCase().includes(term))
+            (mp.variants && mp.variants.some(v => v.variantName.toLowerCase().includes(term)))
         );
     }
 
@@ -98,7 +98,7 @@ export function renderInventory() {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
         
-        const variantsHTML = mp.variants.map(v => {
+        const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
             return `
                 <div class="variant-item">
@@ -109,7 +109,7 @@ export function renderInventory() {
             `;
         }).join('');
 
-        const totalStockDisplay = `${mp.totalStockItems} stk`;
+        const totalStockDisplay = `${mp.totalStockItems || 0} stk`;
 
         masterDiv.innerHTML = `
             <div class="master-product-header" data-id="${mp.id}">
@@ -152,7 +152,7 @@ function openMasterProductModal(masterProductId) {
         document.getElementById('master-product-default-unit').value = masterProduct.defaultUnit;
         appElements.deleteMasterProductBtn.style.display = 'inline-flex';
 
-        masterProduct.variants.forEach(variant => addVariantRow(variant));
+        (masterProduct.variants || []).forEach(variant => addVariantRow(variant));
         if (masterProduct.conversion_rules) {
             for (const unit in masterProduct.conversion_rules) {
                 addConversionRuleRow({ unit, grams: masterProduct.conversion_rules[unit] });
@@ -290,7 +290,7 @@ async function handleSaveMasterProduct(e) {
         
         const originalMaster = appState.inventory.find(mp => mp.id === masterId);
         if (originalMaster) {
-            originalMaster.variants.forEach(v => {
+            (originalMaster.variants || []).forEach(v => {
                 if (!existingVariantIds.includes(v.id)) {
                     batch.delete(doc(db, 'inventory_variants', v.id));
                 }
@@ -382,7 +382,7 @@ function parseGemBotText(text) {
         const value = parts.slice(1).join(':').trim();
         if (key === 'navn') data.master.name = value;
         if (key === 'kategori') data.master.category = value;
-        if (key === 'placering') data.master.location = value; // Added for location
+        if (key === 'placering') data.master.location = value;
         if (key === 'standard enhed') data.master.defaultUnit = value;
     });
 
