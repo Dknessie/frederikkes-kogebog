@@ -143,14 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
         state.inventory = state.masterProducts.map(master => {
             const variants = state.inventoryVariants.filter(variant => variant.masterProductId === master.id);
             
-            // Calculate total stock in grams for recipe matching
             const totalStockGrams = variants.reduce((sum, v) => {
                 const stock = v.currentStock || 0;
                 const size = v.purchaseSize || 0;
                 return sum + (stock * size);
             }, 0);
 
-            // Calculate total stock in number of items for overview display
             const totalStockItems = variants.reduce((sum, v) => {
                 return sum + (v.currentStock || 0);
             }, 0);
@@ -171,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
 
-        // Updated listeners with 'where' clause to comply with security rules
         const qMasterProducts = query(collection(db, 'master_products'), where("userId", "==", userId));
         state.listeners.masterProducts = onSnapshot(qMasterProducts, (snapshot) => {
             state.masterProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
