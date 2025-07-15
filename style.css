@@ -1088,6 +1088,14 @@ header {
     gap: var(--spacing-m);
 }
 
+.read-view-introduction {
+    font-style: italic;
+    background-color: var(--secondary-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-l);
+}
+
 .read-view-main-content {
     display: grid;
     grid-template-columns: minmax(200px, 1fr) 2fr;
