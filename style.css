@@ -723,7 +723,7 @@ header {
 #inventory-list-container {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-l);
+    gap: var(--spacing-s); /* Reduceret gap for at gøre boksene mindre */
 }
 
 .master-product-item {
@@ -744,23 +744,26 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-m) var(--spacing-l);
+    padding: var(--spacing-s) var(--spacing-l); /* Reduceret padding */
     cursor: pointer;
 }
 .master-product-header h4 {
     margin: 0;
     color: var(--text-color);
     font-family: var(--body-font);
-    font-size: 1.1rem;
+    font-size: 1.1rem; /* Bevar font-size */
 }
 .master-product-info {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
+    display: flex; /* Brug flex for at få navn og kategori på samme linje */
+    align-items: baseline; /* Juster til baseline for pænere tekstjustering */
+    gap: var(--spacing-s); /* Mindre mellemrum mellem navn og kategori */
 }
 .master-product-category {
-    font-size: var(--small-font-size);
+    font-size: var(--small-font-size); /* Bevar font-size */
     color: #666;
+    white-space: nowrap; /* Forhindrer ombrydning */
+    overflow: hidden; /* Skjul overløbende tekst */
+    text-overflow: ellipsis; /* Vis ellipser */
 }
 .master-product-stock-info {
     text-align: right;
