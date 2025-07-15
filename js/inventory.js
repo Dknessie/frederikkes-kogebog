@@ -35,8 +35,14 @@ export function initInventory(state, elements) {
         clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
         variantEditModal: document.getElementById('variant-edit-modal'),
         variantEditForm: document.getElementById('variant-edit-form'),
-        // Tilføjet reference til det nye kcal inputfelt i variant redigeringsmodalen
         variantEditKcalInput: document.getElementById('variant-edit-kcal'),
+        // NYE ELEMENTER TIL MASSE-IMPORT
+        bulkImportBtn: document.getElementById('bulk-import-btn'),
+        bulkImportModal: document.getElementById('bulk-import-modal'),
+        bulkImportTextarea: document.getElementById('bulk-import-textarea'),
+        startBulkImportBtn: document.getElementById('start-bulk-import-btn'),
+        bulkImportSummary: document.getElementById('bulk-import-summary'),
+        bulkImportSummaryContent: document.getElementById('bulk-import-summary-content'),
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -44,6 +50,10 @@ export function initInventory(state, elements) {
     appElements.addVariantFormBtn.addEventListener('click', () => addVariantRow());
     appElements.gemBotImportBtn.addEventListener('click', handleGemBotImport);
     
+    // NYE EVENT LISTENERS
+    appElements.bulkImportBtn.addEventListener('click', openBulkImportModal);
+    appElements.startBulkImportBtn.addEventListener('click', handleBulkImport);
+
     appElements.variantFormContainer.addEventListener('click', (e) => {
         if (e.target.closest('.delete-variant-row-btn')) {
             e.target.closest('.variant-form-row').remove();
@@ -162,17 +172,17 @@ export function renderInventory() {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
             const sizeDisplay = v.purchaseSize ? `${v.purchaseSize}${mp.defaultUnit}` : '';
             const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : '';
-            const kcalDisplay = v.kcal ? `${v.kcal} kcal` : ''; // Nyt: Vis kcal
+            const kcalDisplay = v.kcal ? `${v.kcal} kcal` : '';
             const favoriteIcon = v.isFavoritePurchase ? '<i class="fas fa-star favorite-variant-icon" title="Favoritkøb"></i>' : '';
             return `
                 <div class="variant-item">
                     <span class="variant-name">${favoriteIcon} ${v.variantName}</span>
-                    <div class="variant-info-group"> <!-- Ny container for info til højre -->
+                    <div class="variant-info-group">
                         <span class="variant-store">${storeName}</span>
                         <span class="variant-stock">${v.currentStock || 0} stk.</span>
                         <span class="variant-size">${sizeDisplay}</span>
                         <span class="variant-price">${priceDisplay}</span>
-                        <span class="variant-kcal">${kcalDisplay}</span> <!-- Nyt: Vis kcal -->
+                        <span class="variant-kcal">${kcalDisplay}</span>
                     </div>
                     <button class="btn-icon edit-variant-btn" data-master-id="${mp.id}" data-variant-id="${v.id}" title="Rediger variant"><i class="fas fa-edit"></i></button>
                 </div>
@@ -185,7 +195,6 @@ export function renderInventory() {
             <div class="master-product-header" data-id="${mp.id}">
                 <div class="master-product-info">
                     <h4>${mp.name}</h4>
-                    <!-- Fjernet kategori herfra: <span class="master-product-category">${mp.category || 'Ukategoriseret'}</span> -->
                 </div>
                 <div class="master-product-stock-info">
                     <span>Total lager:</span>
@@ -276,7 +285,7 @@ function addVariantRow(variant = {}) {
             <input type="number" step="0.01" class="variant-price-input" value="${variant.kgPrice || ''}">
         </div>
         <div class="input-group">
-            <label>Kalorier (kcal)</label> <!-- Nyt: Inputfelt for kcal -->
+            <label>Kalorier (kcal)</label>
             <input type="number" class="variant-kcal-input" min="0" step="1" value="${variant.kcal || ''}">
         </div>
         <div class="input-group switch-group">
@@ -380,7 +389,7 @@ async function handleSaveMasterProduct(e) {
                 purchaseSize: Number(row.querySelector('.variant-size-input').value) || 0,
                 purchaseUnit: masterData.defaultUnit,
                 kgPrice: Number(row.querySelector('.variant-price-input').value) || null,
-                kcal: Number(row.querySelector('.variant-kcal-input').value) || null, // Nyt: Læs kcal
+                kcal: Number(row.querySelector('.variant-kcal-input').value) || null,
                 isFavoritePurchase: row.querySelector('.variant-favorite-checkbox').checked,
                 userId: userId
             };
@@ -480,7 +489,7 @@ function parseGemBotText(text) {
             if (key === 'lager') currentVariant.currentStock = parseInt(value, 10) || 0;
             if (key === 'størrelse') currentVariant.purchaseSize = parseFloat(value);
             if (key === 'pris pr kg') currentVariant.kgPrice = parseFloat(value);
-            if (key === 'kcal') currentVariant.kcal = parseInt(value, 10) || null; // Nyt: Parse kcal
+            if (key === 'kcal') currentVariant.kcal = parseInt(value, 10) || null;
             if (key === 'favorit') currentVariant.isFavoritePurchase = value.toLowerCase() === 'ja';
         }
     }
@@ -513,7 +522,6 @@ function populateFormWithImportedData(data) {
         }
     }
 
-    // Replace variants instead of merging
     appElements.variantFormContainer.innerHTML = '';
     
     if (data.variants && data.variants.length > 0) {
@@ -522,7 +530,6 @@ function populateFormWithImportedData(data) {
              addVariantRow({ ...importedVariant, storeId: matchedStore });
         });
     } else {
-        // If no variants are imported, add one empty row for the user to fill
         addVariantRow();
     }
 }
@@ -564,7 +571,7 @@ function openVariantEditModal(masterId, variantId) {
     document.getElementById('variant-edit-stock').value = variant.currentStock || 0;
     document.getElementById('variant-edit-size').value = variant.purchaseSize || '';
     document.getElementById('variant-edit-price').value = variant.kgPrice || '';
-    appElements.variantEditKcalInput.value = variant.kcal || ''; // Nyt: Indlæs kcal
+    appElements.variantEditKcalInput.value = variant.kcal || '';
     document.getElementById('variant-edit-favorite').checked = variant.isFavoritePurchase || false;
 
     appElements.variantEditModal.classList.remove('hidden');
@@ -583,7 +590,7 @@ async function handleSaveVariant(e) {
         currentStock: Number(document.getElementById('variant-edit-stock').value) || 0,
         purchaseSize: Number(document.getElementById('variant-edit-size').value) || 0,
         kgPrice: Number(document.getElementById('variant-edit-price').value) || null,
-        kcal: Number(appElements.variantEditKcalInput.value) || null, // Nyt: Gem kcal
+        kcal: Number(appElements.variantEditKcalInput.value) || null,
         isFavoritePurchase: document.getElementById('variant-edit-favorite').checked,
         masterProductId: masterId,
         userId: userId
@@ -601,4 +608,131 @@ async function handleSaveVariant(e) {
     } catch (error) {
         handleError(error, "Kunne ikke gemme variant.", "handleSaveVariant");
     }
+}
+
+// --- NYE FUNKTIONER TIL MASSE-IMPORT ---
+
+function openBulkImportModal() {
+    appElements.bulkImportTextarea.value = '';
+    appElements.bulkImportSummary.classList.add('hidden');
+    appElements.bulkImportSummaryContent.innerHTML = '';
+    appElements.bulkImportModal.classList.remove('hidden');
+}
+
+function parseBulkImportText(text) {
+    const productChunks = text.split(/--- NY VARE ---/i);
+    const parsedProducts = [];
+    const errors = [];
+
+    productChunks.forEach((chunk, index) => {
+        const trimmedChunk = chunk.trim();
+        if (trimmedChunk) {
+            try {
+                const productData = parseGemBotText(trimmedChunk);
+                if (!productData.master.name) {
+                    throw new Error("Master-produkt mangler et navn.");
+                }
+                parsedProducts.push(productData);
+            } catch (error) {
+                errors.push(`Fejl i vare #${index + 1}: ${error.message}`);
+            }
+        }
+    });
+
+    return { parsedProducts, errors };
+}
+
+async function handleBulkImport() {
+    const text = appElements.bulkImportTextarea.value;
+    const userId = appState.currentUser.uid;
+    if (!text.trim()) {
+        showNotification({ title: "Tomt felt", message: "Indsæt venligst data til import." });
+        return;
+    }
+
+    appElements.startBulkImportBtn.disabled = true;
+    appElements.startBulkImportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importerer...';
+
+    const { parsedProducts, errors: parseErrors } = parseBulkImportText(text);
+    const summary = {
+        success: 0,
+        variants: 0,
+        errors: [...parseErrors]
+    };
+
+    if (parsedProducts.length === 0) {
+        summary.errors.push("Ingen gyldige varer fundet i teksten.");
+        displayImportSummary(summary);
+        return;
+    }
+
+    const batch = writeBatch(db);
+
+    for (const productData of parsedProducts) {
+        const masterData = {
+            name: productData.master.name,
+            category: findReferenceMatch(productData.master.category, appState.references.itemCategories) || 'Ukategoriseret',
+            location: findReferenceMatch(productData.master.location, appState.references.itemLocations) || 'Ukendt',
+            defaultUnit: productData.master.defaultUnit || 'g',
+            conversion_rules: {}, // Konverteringsregler understøttes ikke i bulk-import for nu
+            userId: userId
+        };
+
+        // Validering
+        if (!masterData.name) {
+            summary.errors.push(`En vare mangler et navn.`);
+            continue;
+        }
+
+        const newMasterRef = doc(collection(db, 'master_products'));
+        batch.set(newMasterRef, masterData);
+        summary.success++;
+
+        (productData.variants || []).forEach(variant => {
+            const variantData = {
+                masterProductId: newMasterRef.id,
+                variantName: variant.variantName || 'Standard',
+                storeId: findReferenceMatch(variant.storeId, appState.references.stores) || 'Ukendt',
+                currentStock: Number(variant.currentStock) || 0,
+                purchaseSize: Number(variant.purchaseSize) || 0,
+                purchaseUnit: masterData.defaultUnit,
+                kgPrice: Number(variant.kgPrice) || null,
+                kcal: Number(variant.kcal) || null,
+                isFavoritePurchase: variant.isFavoritePurchase || false,
+                userId: userId
+            };
+            batch.set(doc(collection(db, 'inventory_variants')), variantData);
+            summary.variants++;
+        });
+    }
+
+    try {
+        await batch.commit();
+    } catch (error) {
+        handleError(error, "Der skete en kritisk fejl under importen. Nogle varer blev muligvis ikke gemt.", "bulkImportCommit");
+        summary.errors.push(`Firestore fejl: ${error.message}`);
+    } finally {
+        displayImportSummary(summary);
+    }
+}
+
+function displayImportSummary(summary) {
+    const contentEl = appElements.bulkImportSummaryContent;
+    
+    let html = `<p><strong>Importeret med succes:</strong> ${summary.success} master-produkter</p>`;
+    html += `<p><strong>Varianter tilføjet:</strong> ${summary.variants}</p>`;
+
+    if (summary.errors.length > 0) {
+        html += `<h4>Fejllog:</h4>`;
+        html += `<ul class="error-log">`;
+        summary.errors.forEach(err => {
+            html += `<li>${err}</li>`;
+        });
+        html += `</ul>`;
+    }
+
+    contentEl.innerHTML = html;
+    appElements.bulkImportSummary.classList.remove('hidden');
+    appElements.startBulkImportBtn.disabled = false;
+    appElements.startBulkImportBtn.innerHTML = 'Start Import';
 }
