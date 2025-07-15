@@ -33,6 +33,11 @@ export function renderReferencesPage() {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
             isSimpleList: true
+        },
+        stores: {
+            title: 'Butikker',
+            items: appState.references.stores || [],
+            isSimpleList: true
         }
     };
 
