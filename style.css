@@ -704,12 +704,13 @@ header {
 }
 .inventory-filters select {
     width: 100%;
-    padding: var(--spacing-s); /* Mindre padding for at gøre dem mindre */
+    padding: var(--spacing-s);
     border: 1px solid #ccc;
     border-radius: var(--border-radius);
     box-sizing: border-box;
-    font-size: var(--small-font-size); /* Mindre skriftstørrelse */
-    height: 38px; /* Fast højde for at matche knap */
+    font-size: 0.8rem; /* ÆNDRET for at gøre teksten lidt mindre */
+    height: 38px;
+    text-overflow: ellipsis; /* NY for at afkorte lang tekst */
 }
 .inventory-filters .btn {
     height: 38px; /* Fast højde for at matche select */
@@ -723,7 +724,7 @@ header {
 #inventory-list-container {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-s); /* Reduceret gap for at gøre boksene mindre */
+    gap: var(--spacing-s);
 }
 
 .master-product-item {
@@ -740,31 +741,41 @@ header {
     transform: rotate(180deg);
 }
 
+/* --- START ÆNDRING FOR VARELAGER JUSTERING --- */
 .master-product-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: var(--spacing-s) var(--spacing-l); /* Reduceret padding */
+    padding: var(--spacing-s) var(--spacing-l);
     cursor: pointer;
 }
+
+.master-product-info {
+    flex-grow: 1;
+    min-width: 0; /* Vigtigt for at ellipsis fungerer korrekt i flexbox */
+}
+
 .master-product-header h4 {
     margin: 0;
     color: var(--text-color);
     font-family: var(--body-font);
-    font-size: 1.1rem; /* Bevar font-size */
-}
-.master-product-stock-info {
-    text-align: right;
-}
-.master-product-stock-amount {
-    font-weight: 700;
     font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+
+.master-product-stock-info {
+    flex-shrink: 0; /* Forhindrer feltet i at blive mindre */
+    width: 140px; /* Giver en fast bredde for at justere indhold */
+    text-align: right; /* Justerer teksten (og tallet) til højre */
+    padding: 0 var(--spacing-m); /* Lidt luft omkring */
+}
+
 .master-product-actions {
-    display: flex;
-    gap: var(--spacing-s);
-    align-items: center;
+    flex-shrink: 0; /* Forhindrer feltet i at blive mindre */
 }
+/* --- SLUT ÆNDRING FOR VARELAGER JUSTERING --- */
+
 .expand-icon {
     transition: transform 0.3s ease;
     color: #aaa;
@@ -778,16 +789,16 @@ header {
     transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
 }
 .master-product-item.is-open .variant-list {
-    max-height: 500px; /* Sæt en passende max-højde */
+    max-height: 500px;
     padding: var(--spacing-m) var(--spacing-l);
     border-top: 1px solid var(--border-color);
 }
 
 .variant-item {
-    display: flex; /* Brug flexbox for fleksibelt layout */
-    justify-content: space-between; /* Fordel elementer langs hovedaksen */
-    align-items: center; /* Centrer elementer på tværs af aksen */
-    gap: var(--spacing-s); /* Mellemrum mellem elementer */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-s);
     padding: var(--spacing-s) 0;
     border-bottom: 1px solid #f0f0f0;
     font-size: var(--small-font-size); 
@@ -797,39 +808,39 @@ header {
 }
 .variant-name {
     font-weight: 600;
-    white-space: nowrap; /* Forhindrer tekstombrydning */
-    overflow: hidden; /* Skjul overløbende tekst */
-    text-overflow: ellipsis; /* Vis ellipser for overløbende tekst */
-    flex-shrink: 0; /* Forhindrer navnet i at skrumpe */
-    max-width: 40%; /* Giver navnet en god startbredde, kan justeres */
-    display: flex; /* For at justere favorit-ikon */
-    align-items: center;
-    gap: var(--spacing-xs); /* Mellemrum mellem ikon og tekst */
-}
-.variant-info-group { /* Ny container til højre-justerede info */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    max-width: 40%;
     display: flex;
     align-items: center;
-    gap: var(--spacing-m); /* Større mellemrum mellem info-bokse */
-    flex-grow: 1; /* Tillad at gruppen fylder resterende plads */
-    justify-content: flex-end; /* Juster indhold til højre */
-    min-width: 0; /* Tillad indhold at skrumpe */
+    gap: var(--spacing-xs);
 }
-.variant-store, .variant-stock, .variant-size, .variant-price, .variant-kcal { /* Tilføjet .variant-kcal */
+.variant-info-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    flex-grow: 1;
+    justify-content: flex-end;
+    min-width: 0;
+}
+.variant-store, .variant-stock, .variant-size, .variant-price, .variant-kcal {
     color: #333;
     white-space: nowrap; 
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-shrink: 0; /* Forhindrer disse i at skrumpe for meget */
-    min-width: 60px; /* Minimum bredde for hver info-boks */
-    text-align: right; /* Højre-juster tekst */
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: right;
 }
 .variant-store {
     color: #666;
     font-weight: normal;
 }
-.favorite-variant-icon { /* Nyt: Styling for favorit-stjerne */
-    color: #FFD700; /* Guld farve for stjerne */
-    font-size: 0.9em; /* Lidt mindre end tekst */
+.favorite-variant-icon {
+    color: #FFD700;
+    font-size: 0.9em;
 }
 .empty-state-small {
     font-style: italic;
@@ -1028,7 +1039,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #variant-edit-modal { z-index: 2010; } /* Nyt: variant-edit-modal */
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #variant-edit-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1046,7 +1057,7 @@ header {
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
 #reorder-assistant-modal .modal-content,
-#variant-edit-modal .modal-content { /* Nyt: variant-edit-modal */
+#variant-edit-modal .modal-content {
     max-width: 550px;
 }
 
@@ -1203,7 +1214,7 @@ header {
     margin: var(--spacing-m) 0;
 }
 .ingredient-row {
-    position: relative; /* Nødvendig for positionering af autocomplete */
+    position: relative;
     display: grid;
     grid-template-columns: 1fr auto auto auto auto;
     gap: var(--spacing-s);
@@ -1215,10 +1226,9 @@ header {
     border-radius: var(--border-radius);
 }
 
-/* NYT: Styling for Autocomplete */
 .autocomplete-suggestions {
     position: absolute;
-    top: 100%; /* Placeres lige under inputfeltet */
+    top: 100%;
     left: 0;
     right: 0;
     background-color: var(--white-color);
@@ -1226,7 +1236,7 @@ header {
     border-top: none;
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     box-shadow: var(--shadow);
-    z-index: 10; /* Sikrer at den ligger over andet indhold */
+    z-index: 10;
     max-height: 200px;
     overflow-y: auto;
 }
@@ -1244,8 +1254,6 @@ header {
 .autocomplete-suggestion strong {
     color: var(--primary-color);
 }
-/* SLUT på ny styling */
-
 
 .ingredient-row .ingredient-name {
     flex-grow: 1;
@@ -1353,8 +1361,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .variant-form-row {
     display: grid;
-    /* Tilføjet en kolonne til kcal */
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto auto; /* Navn, Butik, Lager, Størrelse, Pris, Kcal, Favorit, Slet */
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr auto auto;
     gap: var(--spacing-m);
     align-items: center;
     background-color: var(--secondary-color);
@@ -1503,35 +1510,33 @@ input:checked + .slider:before { transform: translateX(22px); }
     .variant-form-row {
         grid-template-columns: 1fr 1fr;
     }
-    /* Juster grid for varianter på mindre skærme */
     .variant-item {
-        flex-wrap: wrap; /* Tillad ombrydning af elementer */
-        justify-content: flex-start; /* Juster til venstre i stedet for space-between */
-        align-items: flex-start; /* Juster til toppen */
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        align-items: flex-start;
     }
     .variant-item .variant-name {
-        width: 100%; /* Navnet fylder hele bredden */
+        width: 100%;
         max-width: 100%;
-        margin-bottom: var(--spacing-xs); /* Lidt plads under navnet */
+        margin-bottom: var(--spacing-xs);
     }
     .variant-item .variant-info-group {
-        width: 100%; /* Info-gruppen fylder hele bredden */
-        justify-content: flex-start; /* Juster info-elementer til venstre */
-        gap: var(--spacing-s); /* Mindre mellemrum for at spare plads */
+        width: 100%;
+        justify-content: flex-start;
+        gap: var(--spacing-s);
     }
     .variant-item .variant-store, 
     .variant-item .variant-stock, 
     .variant-item .variant-size, 
     .variant-item .variant-price,
-    .variant-item .variant-kcal { /* Tilføjet .variant-kcal */
-        min-width: unset; /* Fjern minimumsbredde for mere fleksibilitet */
-        text-align: left; /* Venstre-juster tekst på mobil */
-        flex-shrink: 1; /* Tillad at skrumpe mere */
+    .variant-item .variant-kcal {
+        min-width: unset;
+        text-align: left;
+        flex-shrink: 1;
     }
     .variant-item .btn-icon.edit-variant-btn {
-        margin-left: auto; /* Skub rediger-knappen helt til højre */
+        margin-left: auto;
     }
-    /* Juster filter layout på mindre skærme */
     .inventory-filters {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
@@ -1560,9 +1565,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     .image-upload-container img {
         height: 150px;
     }
-    /* Yderligere justering for filtre på meget små skærme */
     .inventory-filters {
-        grid-template-columns: 1fr; /* En kolonne på meget små skærme */
+        grid-template-columns: 1fr;
     }
     .variant-form-row {
         grid-template-columns: 1fr;
