@@ -431,15 +431,20 @@ function parseGemBotText(text) {
     let currentVariant = null;
 
     for (const line of lines) {
-        if (line.toLowerCase().includes('master produkt')) {
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.includes('--- master produkt ---')) {
             currentSection = 'master';
             continue;
         }
-        if (line.toLowerCase().includes('varianter')) {
+        if (lowerLine.includes('--- varianter ---')) {
             currentSection = 'variants';
+            if (currentVariant) {
+                data.variants.push(currentVariant);
+                currentVariant = null;
+            }
             continue;
         }
-        if (line.toLowerCase().startsWith('variant:')) {
+        if (lowerLine.startsWith('variant:')) {
             if (currentVariant) data.variants.push(currentVariant);
             currentVariant = {};
             const variantName = line.substring(line.indexOf(':') + 1).trim();
@@ -457,13 +462,14 @@ function parseGemBotText(text) {
             if (key === 'kategori') data.master.category = value;
             if (key === 'placering') data.master.location = value;
             if (key === 'standard enhed') data.master.defaultUnit = value;
-        } else if (currentSection === 'variants' && currentVariant) {
+        } else if (currentSection === 'variants') {
+            if (!currentVariant) currentVariant = {};
+            if (key === 'navn') currentVariant.variantName = value;
             if (key === 'butik') currentVariant.storeId = value;
             if (key === 'lager') currentVariant.currentStock = parseInt(value, 10) || 0;
             if (key === 'størrelse') currentVariant.purchaseSize = parseFloat(value);
             if (key === 'pris pr kg') currentVariant.kgPrice = parseFloat(value);
             if (key === 'favorit') currentVariant.isFavoritePurchase = value.toLowerCase() === 'ja';
-            if (key === 'navn') currentVariant.variantName = value; // Also handle name if not on "Variant:" line
         }
     }
     if (currentVariant) data.variants.push(currentVariant);
@@ -475,18 +481,6 @@ function findReferenceMatch(valueToFind, referenceList) {
     if (!valueToFind || !Array.isArray(referenceList)) return null;
     const normalizedValue = valueToFind.trim().toLowerCase();
     return referenceList.find(ref => ref.trim().toLowerCase() === normalizedValue) || null;
-}
-
-function areVariantsIdentical(variant1, variant2) {
-    const fieldsToCompare = ['variantName', 'storeId', 'currentStock', 'purchaseSize', 'kgPrice', 'isFavoritePurchase'];
-    for (let key of fieldsToCompare) {
-        const val1 = variant1[key] === undefined ? null : variant1[key];
-        const val2 = variant2[key] === undefined ? null : variant2[key];
-        if (val1 !== val2) {
-            return false;
-        }
-    }
-    return true;
 }
 
 function populateFormWithImportedData(data) {
@@ -507,6 +501,7 @@ function populateFormWithImportedData(data) {
         }
     }
 
+    // Replace variants instead of merging
     appElements.variantFormContainer.innerHTML = '';
     
     if (data.variants && data.variants.length > 0) {
@@ -515,6 +510,7 @@ function populateFormWithImportedData(data) {
              addVariantRow({ ...importedVariant, storeId: matchedStore });
         });
     } else {
+        // If no variants are imported, add one empty row for the user to fill
         addVariantRow();
     }
 }
