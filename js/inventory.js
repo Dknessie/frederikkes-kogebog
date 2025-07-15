@@ -36,7 +36,6 @@ export function initInventory(state, elements) {
         variantEditModal: document.getElementById('variant-edit-modal'),
         variantEditForm: document.getElementById('variant-edit-form'),
         variantEditKcalInput: document.getElementById('variant-edit-kcal'),
-        // NYE ELEMENTER TIL MASSE-IMPORT
         bulkImportBtn: document.getElementById('bulk-import-btn'),
         bulkImportModal: document.getElementById('bulk-import-modal'),
         bulkImportTextarea: document.getElementById('bulk-import-textarea'),
@@ -50,7 +49,6 @@ export function initInventory(state, elements) {
     appElements.addVariantFormBtn.addEventListener('click', () => addVariantRow());
     appElements.gemBotImportBtn.addEventListener('click', handleGemBotImport);
     
-    // NYE EVENT LISTENERS
     appElements.bulkImportBtn.addEventListener('click', openBulkImportModal);
     appElements.startBulkImportBtn.addEventListener('click', handleBulkImport);
 
@@ -331,6 +329,20 @@ async function handleSaveMasterProduct(e) {
     e.preventDefault();
     const masterId = document.getElementById('master-product-id').value;
     const userId = appState.currentUser.uid;
+    const masterName = document.getElementById('master-product-name').value.trim();
+
+    // NYT: Validering for duplikatnavne
+    const existingProduct = appState.inventory.find(
+        p => p.name.toLowerCase() === masterName.toLowerCase()
+    );
+
+    if (existingProduct && existingProduct.id !== masterId) {
+        showNotification({
+            title: "Vare eksisterer allerede",
+            message: `En vare med navnet "${masterName}" findes allerede. Vælg venligst et unikt navn.`,
+        });
+        return; // Stop funktionen
+    }
 
     const conversionRules = {};
     appElements.conversionRulesContainer.querySelectorAll('.conversion-rule-row').forEach(row => {
@@ -342,7 +354,7 @@ async function handleSaveMasterProduct(e) {
     });
 
     const masterData = {
-        name: document.getElementById('master-product-name').value,
+        name: masterName,
         category: document.getElementById('master-product-category').value,
         location: document.getElementById('master-product-location').value,
         defaultUnit: document.getElementById('master-product-default-unit').value,
@@ -610,8 +622,6 @@ async function handleSaveVariant(e) {
     }
 }
 
-// --- NYE FUNKTIONER TIL MASSE-IMPORT ---
-
 function openBulkImportModal() {
     appElements.bulkImportTextarea.value = '';
     appElements.bulkImportSummary.classList.add('hidden');
@@ -656,6 +666,7 @@ async function handleBulkImport() {
     const { parsedProducts, errors: parseErrors } = parseBulkImportText(text);
     const summary = {
         success: 0,
+        skipped: 0,
         variants: 0,
         errors: [...parseErrors]
     };
@@ -669,16 +680,28 @@ async function handleBulkImport() {
     const batch = writeBatch(db);
 
     for (const productData of parsedProducts) {
+        const masterName = productData.master.name.trim();
+
+        // NYT: Validering for duplikatnavne i masse-import
+        const existingProduct = appState.inventory.find(
+            p => p.name.toLowerCase() === masterName.toLowerCase()
+        );
+
+        if (existingProduct) {
+            summary.skipped++;
+            summary.errors.push(`Varen '${masterName}' eksisterer allerede og blev sprunget over.`);
+            continue; // Spring til næste produkt
+        }
+        
         const masterData = {
-            name: productData.master.name,
+            name: masterName,
             category: findReferenceMatch(productData.master.category, appState.references.itemCategories) || 'Ukategoriseret',
             location: findReferenceMatch(productData.master.location, appState.references.itemLocations) || 'Ukendt',
             defaultUnit: productData.master.defaultUnit || 'g',
-            conversion_rules: {}, // Konverteringsregler understøttes ikke i bulk-import for nu
+            conversion_rules: {},
             userId: userId
         };
 
-        // Validering
         if (!masterData.name) {
             summary.errors.push(`En vare mangler et navn.`);
             continue;
@@ -721,6 +744,9 @@ function displayImportSummary(summary) {
     
     let html = `<p><strong>Importeret med succes:</strong> ${summary.success} master-produkter</p>`;
     html += `<p><strong>Varianter tilføjet:</strong> ${summary.variants}</p>`;
+    if (summary.skipped > 0) {
+        html += `<p><strong>Springet over (eksisterede allerede):</strong> ${summary.skipped}</p>`;
+    }
 
     if (summary.errors.length > 0) {
         html += `<h4>Fejllog:</h4>`;
