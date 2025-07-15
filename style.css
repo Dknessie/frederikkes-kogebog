@@ -753,19 +753,6 @@ header {
     font-family: var(--body-font);
     font-size: 1.1rem; /* Bevar font-size */
 }
-/* Fjernet .master-product-info og .master-product-category fra master-product-header */
-/* .master-product-info {
-    display: flex; 
-    align-items: baseline; 
-    gap: var(--spacing-s); 
-}
-.master-product-category {
-    font-size: var(--small-font-size); 
-    color: #666;
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-} */
 .master-product-stock-info {
     text-align: right;
 }
@@ -1216,6 +1203,7 @@ header {
     margin: var(--spacing-m) 0;
 }
 .ingredient-row {
+    position: relative; /* Nødvendig for positionering af autocomplete */
     display: grid;
     grid-template-columns: 1fr auto auto auto auto;
     gap: var(--spacing-s);
@@ -1226,6 +1214,38 @@ header {
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
 }
+
+/* NYT: Styling for Autocomplete */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%; /* Placeres lige under inputfeltet */
+    left: 0;
+    right: 0;
+    background-color: var(--white-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: var(--shadow);
+    z-index: 10; /* Sikrer at den ligger over andet indhold */
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.autocomplete-suggestion {
+    padding: var(--spacing-m);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-suggestion:hover {
+    background-color: var(--secondary-color);
+}
+
+.autocomplete-suggestion strong {
+    color: var(--primary-color);
+}
+/* SLUT på ny styling */
+
 
 .ingredient-row .ingredient-name {
     flex-grow: 1;
@@ -1548,4 +1568,3 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
 }
-
