@@ -9,7 +9,10 @@ let appState;
 let appElements;
 let inventoryState = {
     searchTerm: '',
-    referencesLoaded: false 
+    referencesLoaded: false,
+    selectedCategory: '', // Nyt: valgt kategori filter
+    selectedLocation: '', // Nyt: valgt placering filter
+    selectedStore: ''     // Nyt: valgt butik filter
 };
 
 export function initInventory(state, elements) {
@@ -26,6 +29,10 @@ export function initInventory(state, elements) {
         addConversionRuleBtn: document.getElementById('add-conversion-rule-btn'),
         gemBotImportBtn: document.getElementById('gem-bot-import-btn'),
         gemBotImportTextarea: document.getElementById('gem-bot-import-textarea'),
+        inventoryFilterCategory: document.getElementById('inventory-filter-category'), // Nyt element
+        inventoryFilterLocation: document.getElementById('inventory-filter-location'), // Nyt element
+        inventoryFilterStore: document.getElementById('inventory-filter-store'),       // Nyt element
+        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn') // Nyt element
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -47,10 +54,36 @@ export function initInventory(state, elements) {
         }
     });
 
+    // Event listeners for filters
     appElements.inventorySearchInput.addEventListener('input', debounce(e => {
         inventoryState.searchTerm = e.target.value.toLowerCase();
         renderInventory();
     }, 300));
+
+    appElements.inventoryFilterCategory.addEventListener('change', (e) => {
+        inventoryState.selectedCategory = e.target.value;
+        renderInventory();
+    });
+    appElements.inventoryFilterLocation.addEventListener('change', (e) => {
+        inventoryState.selectedLocation = e.target.value;
+        renderInventory();
+    });
+    appElements.inventoryFilterStore.addEventListener('change', (e) => {
+        inventoryState.selectedStore = e.target.value;
+        renderInventory();
+    });
+    appElements.clearInventoryFiltersBtn.addEventListener('click', () => {
+        inventoryState.selectedCategory = '';
+        inventoryState.selectedLocation = '';
+        inventoryState.selectedStore = '';
+        inventoryState.searchTerm = ''; // Ryd også søgefeltet
+        appElements.inventoryFilterCategory.value = '';
+        appElements.inventoryFilterLocation.value = '';
+        appElements.inventoryFilterStore.value = '';
+        appElements.inventorySearchInput.value = '';
+        renderInventory();
+    });
+
 
     appElements.inventoryListContainer.addEventListener('click', e => {
         const button = e.target.closest('button');
@@ -76,8 +109,28 @@ export function renderInventory() {
     const container = appElements.inventoryListContainer;
     container.innerHTML = '';
 
+    // Populate filter dropdowns
+    populateReferenceDropdown(appElements.inventoryFilterCategory, appState.references.itemCategories, 'Alle kategorier', inventoryState.selectedCategory);
+    populateReferenceDropdown(appElements.inventoryFilterLocation, appState.references.itemLocations, 'Alle placeringer', inventoryState.selectedLocation);
+    populateReferenceDropdown(appElements.inventoryFilterStore, appState.references.stores, 'Alle butikker', inventoryState.selectedStore);
+
+
     let masterProducts = [...appState.inventory];
 
+    // Apply filters
+    if (inventoryState.selectedCategory) {
+        masterProducts = masterProducts.filter(mp => mp.category === inventoryState.selectedCategory);
+    }
+    if (inventoryState.selectedLocation) {
+        masterProducts = masterProducts.filter(mp => mp.location === inventoryState.selectedLocation);
+    }
+    if (inventoryState.selectedStore) {
+        masterProducts = masterProducts.filter(mp => 
+            mp.variants && mp.variants.some(v => v.storeId === inventoryState.selectedStore)
+        );
+    }
+
+    // Apply search term
     if (inventoryState.searchTerm) {
         const term = inventoryState.searchTerm.toLowerCase();
         masterProducts = masterProducts.filter(mp => 
@@ -87,7 +140,7 @@ export function renderInventory() {
     }
 
     if (masterProducts.length === 0) {
-        container.innerHTML = `<p class="empty-state">Ingen varer fundet. Klik på "Tilføj ny vare" for at oprette dit første master-produkt.</p>`;
+        container.innerHTML = `<p class="empty-state">Ingen varer fundet, der matcher dine filtre.</p>`;
         return;
     }
 
@@ -98,13 +151,18 @@ export function renderInventory() {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
         
+        // Opdateret variantsHTML for at vise Butik, Størrelse og Pris separat
         const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
+            const sizeDisplay = v.purchaseSize ? `${v.purchaseSize}${mp.defaultUnit}` : '';
+            const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : ''; // Bruger defaultUnit for kr/kg eller kr/l
             return `
                 <div class="variant-item">
-                    <span class="variant-name">${v.variantName} <span class="variant-store">(${storeName})</span></span>
-                    <span class="variant-stock">Lager: ${v.currentStock || 0} stk.</span>
-                    <span class="variant-price">${v.kgPrice ? v.kgPrice.toFixed(2) + ' kr/kg' : ''}</span>
+                    <span class="variant-name">${v.variantName}</span>
+                    <span class="variant-store">${storeName}</span>
+                    <span class="variant-stock">${v.currentStock || 0} stk.</span>
+                    <span class="variant-size">${sizeDisplay}</span>
+                    <span class="variant-price">${priceDisplay}</span>
                 </div>
             `;
         }).join('');
@@ -462,7 +520,10 @@ function areVariantsIdentical(variant1, variant2) {
         return false;
     }
 
-    for (let key of keys1) {
+    // Sammenlign de relevante felter
+    const fieldsToCompare = ['variantName', 'storeId', 'currentStock', 'purchaseSize', 'kgPrice', 'isFavoritePurchase'];
+    for (let key of fieldsToCompare) {
+        // Håndter null/undefined og sammenlign værdier
         if (variant1[key] !== variant2[key]) {
             return false;
         }
@@ -509,7 +570,15 @@ function populateFormWithImportedData(data) {
     if (data.variants && data.variants.length > 0) {
         data.variants.forEach(importedVariant => {
             const matchedStore = findReferenceMatch(importedVariant.storeId, appState.references.stores);
-            const variantToCompare = { ...importedVariant, storeId: matchedStore }; // Brug matchet butik til sammenligning
+            // Opret en midlertidig variant til sammenligning, der matcher den struktur, der læses fra formularen
+            const variantToCompare = {
+                variantName: importedVariant.variantName || '',
+                storeId: matchedStore || '',
+                currentStock: importedVariant.currentStock || 0,
+                purchaseSize: importedVariant.purchaseSize || 0,
+                kgPrice: importedVariant.kgPrice || null,
+                isFavoritePurchase: importedVariant.isFavoritePurchase || false,
+            };
 
             // Tjek om den importerede variant allerede eksisterer i formularen
             const exists = existingVariantsInForm.some(existingVariant => 
