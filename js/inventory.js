@@ -10,9 +10,9 @@ let appElements;
 let inventoryState = {
     searchTerm: '',
     referencesLoaded: false,
-    selectedCategory: '', // Nyt: valgt kategori filter
-    selectedLocation: '', // Nyt: valgt placering filter
-    selectedStore: ''     // Nyt: valgt butik filter
+    selectedCategory: '',
+    selectedLocation: '',
+    selectedStore: ''
 };
 
 export function initInventory(state, elements) {
@@ -29,12 +29,12 @@ export function initInventory(state, elements) {
         addConversionRuleBtn: document.getElementById('add-conversion-rule-btn'),
         gemBotImportBtn: document.getElementById('gem-bot-import-btn'),
         gemBotImportTextarea: document.getElementById('gem-bot-import-textarea'),
-        inventoryFilterCategory: document.getElementById('inventory-filter-category'), // Nyt element
-        inventoryFilterLocation: document.getElementById('inventory-filter-location'), // Nyt element
-        inventoryFilterStore: document.getElementById('inventory-filter-store'),       // Nyt element
-        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'), // Nyt element
-        variantEditModal: document.getElementById('variant-edit-modal'), // Nyt: Modal til variantredigering
-        variantEditForm: document.getElementById('variant-edit-form'),   // Nyt: Form til variantredigering
+        inventoryFilterCategory: document.getElementById('inventory-filter-category'),
+        inventoryFilterLocation: document.getElementById('inventory-filter-location'),
+        inventoryFilterStore: document.getElementById('inventory-filter-store'),
+        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
+        variantEditModal: document.getElementById('variant-edit-modal'),
+        variantEditForm: document.getElementById('variant-edit-form'),
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -56,7 +56,6 @@ export function initInventory(state, elements) {
         }
     });
 
-    // Event listeners for filters
     appElements.inventorySearchInput.addEventListener('input', debounce(e => {
         inventoryState.searchTerm = e.target.value.toLowerCase();
         renderInventory();
@@ -78,7 +77,7 @@ export function initInventory(state, elements) {
         inventoryState.selectedCategory = '';
         inventoryState.selectedLocation = '';
         inventoryState.selectedStore = '';
-        inventoryState.searchTerm = ''; // Ryd også søgefeltet
+        inventoryState.searchTerm = '';
         appElements.inventoryFilterCategory.value = '';
         appElements.inventoryFilterLocation.value = '';
         appElements.inventoryFilterStore.value = '';
@@ -96,7 +95,7 @@ export function initInventory(state, elements) {
             openMasterProductModal(button.dataset.id);
         } else if (header) {
             header.parentElement.classList.toggle('is-open');
-        } else if (button && button.classList.contains('edit-variant-btn')) { // Nyt: Håndter klik på rediger variant knap
+        } else if (button && button.classList.contains('edit-variant-btn')) {
             e.stopPropagation();
             const masterId = button.dataset.masterId;
             const variantId = button.dataset.variantId;
@@ -104,7 +103,6 @@ export function initInventory(state, elements) {
         }
     });
 
-    // Event listener for at gemme redigeret variant
     appElements.variantEditForm.addEventListener('submit', handleSaveVariant);
 }
 
@@ -119,7 +117,6 @@ export function renderInventory() {
     const container = appElements.inventoryListContainer;
     container.innerHTML = '';
 
-    // Populate filter dropdowns
     populateReferenceDropdown(appElements.inventoryFilterCategory, appState.references.itemCategories, 'Alle kategorier', inventoryState.selectedCategory);
     populateReferenceDropdown(appElements.inventoryFilterLocation, appState.references.itemLocations, 'Alle placeringer', inventoryState.selectedLocation);
     populateReferenceDropdown(appElements.inventoryFilterStore, appState.references.stores, 'Alle butikker', inventoryState.selectedStore);
@@ -127,7 +124,6 @@ export function renderInventory() {
 
     let masterProducts = [...appState.inventory];
 
-    // Apply filters
     if (inventoryState.selectedCategory) {
         masterProducts = masterProducts.filter(mp => mp.category === inventoryState.selectedCategory);
     }
@@ -140,7 +136,6 @@ export function renderInventory() {
         );
     }
 
-    // Apply search term
     if (inventoryState.searchTerm) {
         const term = inventoryState.searchTerm.toLowerCase();
         masterProducts = masterProducts.filter(mp => 
@@ -161,12 +156,11 @@ export function renderInventory() {
         const masterDiv = document.createElement('div');
         masterDiv.className = 'master-product-item';
         
-        // Opdateret variantsHTML for at vise Butik, Størrelse og Pris separat
         const variantsHTML = (mp.variants || []).map(v => {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
             const sizeDisplay = v.purchaseSize ? `${v.purchaseSize}${mp.defaultUnit}` : '';
-            const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : ''; // Bruger defaultUnit for kr/kg eller kr/l
-            const favoriteIcon = v.isFavoritePurchase ? '<i class="fas fa-star favorite-variant-icon" title="Favoritkøb"></i>' : ''; // Nyt: Favoritindikator
+            const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : '';
+            const favoriteIcon = v.isFavoritePurchase ? '<i class="fas fa-star favorite-variant-icon" title="Favoritkøb"></i>' : '';
             return `
                 <div class="variant-item">
                     <span class="variant-name">${favoriteIcon} ${v.variantName}</span>
@@ -222,7 +216,6 @@ function openMasterProductModal(masterProductId) {
         document.getElementById('master-product-default-unit').value = masterProduct.defaultUnit;
         appElements.deleteMasterProductBtn.style.display = 'inline-flex';
 
-        // Load existing variants
         (masterProduct.variants || []).forEach(variant => addVariantRow(variant));
         if (masterProduct.conversion_rules) {
             for (const unit in masterProduct.conversion_rules) {
@@ -233,7 +226,7 @@ function openMasterProductModal(masterProductId) {
         appElements.masterProductModalTitle.textContent = 'Opret Ny Vare';
         document.getElementById('master-product-id').value = '';
         appElements.deleteMasterProductBtn.style.display = 'none';
-        addVariantRow(); // Add an empty row for new master product
+        addVariantRow();
     }
     
     populateReferenceDropdown(document.getElementById('master-product-category'), appState.references.itemCategories, 'Vælg kategori...');
@@ -251,7 +244,7 @@ function addVariantRow(variant = {}) {
     const container = appElements.variantFormContainer;
     const row = document.createElement('div');
     row.className = 'variant-form-row';
-    row.dataset.id = variant.id || ''; // Bevar eksisterende ID for opdatering
+    row.dataset.id = variant.id || '';
 
     const storeOptions = (appState.references.stores || []).map(s => `<option value="${s}">${s}</option>`).join('');
 
@@ -303,7 +296,6 @@ function addConversionRuleRow(rule = { unit: '', grams: '' }) {
 
     row.innerHTML = `
         <div class="input-group">
-            <!-- Unit select is inserted here -->
         </div>
         <span>=</span>
         <div class="input-group">
@@ -431,115 +423,72 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.value = currentValue || "";
 }
 
-/**
- * Parses the text from Gem-bot and returns a structured data object.
- * @param {string} text - The text to parse.
- * @returns {object} A structured object with master and variant data.
- */
 function parseGemBotText(text) {
-    const data = {
-        master: {},
-        variants: []
-    };
+    const data = { master: {}, variants: [] };
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line);
 
-    // Regex for Master Product section, made more robust to handle whitespace and case-insensitivity
-    const masterMatch = text.match(/---\s*Master Produkt\s*---\s*([\s\S]*?)\s*---\s*Varianter\s*---/i); 
-    if (!masterMatch) {
-        // Fallback: If "--- Varianter ---" is not found after master, assume master goes to end
-        const masterOnlyMatch = text.match(/---\s*Master Produkt\s*---\s*([\s\S]*)/i);
-        if (masterOnlyMatch) {
-             const masterLines = masterOnlyMatch[1].trim().split('\n');
-             masterLines.forEach(line => {
-                const parts = line.split(':');
-                if (parts.length < 2) return;
-                const key = parts[0].trim().toLowerCase();
-                const value = parts.slice(1).join(':').trim();
-                if (key === 'navn') data.master.name = value;
-                if (key === 'kategori') data.master.category = value;
-                if (key === 'placering') data.master.location = value;
-                if (key === 'standard enhed') data.master.defaultUnit = value;
-             });
-            return data; // Return with master data, variants will be empty
+    let currentSection = '';
+    let currentVariant = null;
+
+    for (const line of lines) {
+        if (line.toLowerCase().includes('master produkt')) {
+            currentSection = 'master';
+            continue;
         }
-        throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
-    }
+        if (line.toLowerCase().includes('varianter')) {
+            currentSection = 'variants';
+            continue;
+        }
+        if (line.toLowerCase().startsWith('variant:')) {
+            if (currentVariant) data.variants.push(currentVariant);
+            currentVariant = {};
+            const variantName = line.substring(line.indexOf(':') + 1).trim();
+            if (variantName) currentVariant.variantName = variantName;
+            continue;
+        }
 
-    const masterLines = masterMatch[1].trim().split('\n');
-    masterLines.forEach(line => {
         const parts = line.split(':');
-        if (parts.length < 2) return;
+        if (parts.length < 2) continue;
         const key = parts[0].trim().toLowerCase();
         const value = parts.slice(1).join(':').trim();
-        if (key === 'navn') data.master.name = value;
-        if (key === 'kategori') data.master.category = value;
-        if (key === 'placering') data.master.location = value;
-        if (key === 'standard enhed') data.master.defaultUnit = value;
-    });
 
-    // Regex for Variants section, made more robust to handle whitespace and case-insensitivity
-    const variantsMatch = text.match(/---\s*Varianter\s*---\s*([\s\S]*)/i);
-    if (!variantsMatch) return data; // It's okay if no variants section is found
-
-    const variantBlocks = variantsMatch[1].trim().split(/Variant:\s*/i).filter(b => b.trim()); // More robust split
-    variantBlocks.forEach(block => {
-        const variantData = {};
-        const blockLines = block.trim().split('\n');
-        blockLines.forEach(line => {
-            const parts = line.split(':');
-            if (parts.length < 2) return;
-            const key = parts[0].trim().toLowerCase();
-            const value = parts.slice(1).join(':').trim();
-
-            if (key === 'navn') variantData.variantName = value;
-            if (key === 'butik') variantData.storeId = value;
-            if (key === 'lager') variantData.currentStock = parseInt(value, 10) || 0;
-            if (key === 'størrelse') variantData.purchaseSize = parseFloat(value);
-            if (key === 'pris pr kg') variantData.kgPrice = parseFloat(value);
-            if (key === 'favorit') variantData.isFavoritePurchase = value.toLowerCase() === 'ja';
-        });
-        if(Object.keys(variantData).length > 0) {
-            data.variants.push(variantData);
+        if (currentSection === 'master') {
+            if (key === 'navn') data.master.name = value;
+            if (key === 'kategori') data.master.category = value;
+            if (key === 'placering') data.master.location = value;
+            if (key === 'standard enhed') data.master.defaultUnit = value;
+        } else if (currentSection === 'variants' && currentVariant) {
+            if (key === 'butik') currentVariant.storeId = value;
+            if (key === 'lager') currentVariant.currentStock = parseInt(value, 10) || 0;
+            if (key === 'størrelse') currentVariant.purchaseSize = parseFloat(value);
+            if (key === 'pris pr kg') currentVariant.kgPrice = parseFloat(value);
+            if (key === 'favorit') currentVariant.isFavoritePurchase = value.toLowerCase() === 'ja';
+            if (key === 'navn') currentVariant.variantName = value; // Also handle name if not on "Variant:" line
         }
-    });
+    }
+    if (currentVariant) data.variants.push(currentVariant);
 
     return data;
 }
 
-/**
- * Finds a matching value in a reference list, ignoring case and extra whitespace.
- * @param {string} valueToFind - The value from the import.
- * @param {string[]} referenceList - The list of available options (e.g., from appState.references).
- * @returns {string|null} The original value from the reference list if a match is found, otherwise null.
- */
 function findReferenceMatch(valueToFind, referenceList) {
     if (!valueToFind || !Array.isArray(referenceList)) return null;
     const normalizedValue = valueToFind.trim().toLowerCase();
     return referenceList.find(ref => ref.trim().toLowerCase() === normalizedValue) || null;
 }
 
-/**
- * Sammenligner to variantobjekter for at se, om de er identiske.
- * Ignorerer 'id' og 'masterProductId' da disse er interne.
- * @param {object} variant1 - Første variantobjekt.
- * @param {object} variant2 - Andet variantobjekt.
- * @returns {boolean} True hvis varianterne er identiske, ellers false.
- */
 function areVariantsIdentical(variant1, variant2) {
-    // Sammenlign de relevante felter
     const fieldsToCompare = ['variantName', 'storeId', 'currentStock', 'purchaseSize', 'kgPrice', 'isFavoritePurchase'];
     for (let key of fieldsToCompare) {
-        // Håndter null/undefined og sammenlign værdier
-        if (variant1[key] !== variant2[key]) {
+        const val1 = variant1[key] === undefined ? null : variant1[key];
+        const val2 = variant2[key] === undefined ? null : variant2[key];
+        if (val1 !== val2) {
             return false;
         }
     }
     return true;
 }
 
-/**
- * Populates the master product form with data from a parsed object.
- * @param {object} data - The structured data object from parseGemBotText.
- */
 function populateFormWithImportedData(data) {
     document.getElementById('master-product-name').value = data.master.name || '';
     
@@ -551,7 +500,6 @@ function populateFormWithImportedData(data) {
 
     document.getElementById('master-product-default-unit').value = data.master.defaultUnit || 'g';
 
-    // Konverteringsregler overskrives altid, da de er direkte knyttet til masterproduktet
     appElements.conversionRulesContainer.innerHTML = '';
     if (data.master.conversion_rules) {
         for (const unit in data.master.conversion_rules) {
@@ -559,52 +507,18 @@ function populateFormWithImportedData(data) {
         }
     }
 
-
-    // Håndter varianter: Tilføj kun nye, spring over identiske
-    const currentVariantElements = appElements.variantFormContainer.querySelectorAll('.variant-form-row');
-    const existingVariantsInForm = Array.from(currentVariantElements).map(row => ({
-        id: row.dataset.id,
-        variantName: row.querySelector('.variant-name-input').value,
-        storeId: row.querySelector('.variant-store-select').value,
-        currentStock: Number(row.querySelector('.variant-stock-input').value) || 0,
-        purchaseSize: Number(row.querySelector('.variant-size-input').value) || 0,
-        kgPrice: Number(row.querySelector('.variant-price-input').value) || null,
-        isFavoritePurchase: row.querySelector('.variant-favorite-checkbox').checked,
-    }));
-
+    appElements.variantFormContainer.innerHTML = '';
+    
     if (data.variants && data.variants.length > 0) {
         data.variants.forEach(importedVariant => {
-            const matchedStore = findReferenceMatch(importedVariant.storeId, appState.references.stores);
-            // Opret en midlertidig variant til sammenligning, der matcher den struktur, der læses fra formularen
-            const variantToCompare = {
-                variantName: importedVariant.variantName || '',
-                storeId: matchedStore || '',
-                currentStock: importedVariant.currentStock || 0,
-                purchaseSize: importedVariant.purchaseSize || 0,
-                kgPrice: importedVariant.kgPrice || null,
-                isFavoritePurchase: importedVariant.isFavoritePurchase || false,
-            };
-
-            // Tjek om den importerede variant allerede eksisterer i formularen
-            const exists = existingVariantsInForm.some(existingVariant => 
-                areVariantsIdentical(existingVariant, variantToCompare)
-            );
-
-            if (!exists) {
-                // Tilføj kun hvis den ikke allerede eksisterer
-                addVariantRow({ ...importedVariant, storeId: matchedStore });
-            }
+             const matchedStore = findReferenceMatch(importedVariant.storeId, appState.references.stores);
+             addVariantRow({ ...importedVariant, storeId: matchedStore });
         });
-    } else if (existingVariantsInForm.length === 0) {
-        // Hvis der hverken er importerede varianter eller eksisterende i formularen, tilføj en tom række
+    } else {
         addVariantRow();
     }
 }
 
-
-/**
- * Main handler for the Gem-bot import button.
- */
 function handleGemBotImport() {
     const text = appElements.gemBotImportTextarea.value;
     if (!text.trim()) {
@@ -624,11 +538,6 @@ function handleGemBotImport() {
     }
 }
 
-/**
- * Åbner modalen til redigering af en enkelt variant.
- * @param {string} masterId - ID'et på masterproduktet.
- * @param {string} variantId - ID'et på varianten, der skal redigeres.
- */
 function openVariantEditModal(masterId, variantId) {
     const masterProduct = appState.inventory.find(mp => mp.id === masterId);
     const variant = masterProduct?.variants.find(v => v.id === variantId);
@@ -638,12 +547,10 @@ function openVariantEditModal(masterId, variantId) {
         return;
     }
 
-    // Sæt master produkt ID og variant ID i skjulte felter i formularen
     document.getElementById('variant-edit-master-id').value = masterId;
     document.getElementById('variant-edit-variant-id').value = variantId;
     document.getElementById('variant-edit-modal-title').textContent = `Rediger variant: ${variant.variantName} (${masterProduct.name})`;
 
-    // Udfyld felter i variantredigeringsformularen
     document.getElementById('variant-edit-name').value = variant.variantName || '';
     populateReferenceDropdown(document.getElementById('variant-edit-store'), appState.references.stores, 'Vælg butik...', variant.storeId);
     document.getElementById('variant-edit-stock').value = variant.currentStock || 0;
@@ -654,10 +561,6 @@ function openVariantEditModal(masterId, variantId) {
     appElements.variantEditModal.classList.remove('hidden');
 }
 
-/**
- * Håndterer gem af en enkelt variant.
- * @param {Event} e - Submit event fra formularen.
- */
 async function handleSaveVariant(e) {
     e.preventDefault();
 
@@ -672,7 +575,7 @@ async function handleSaveVariant(e) {
         purchaseSize: Number(document.getElementById('variant-edit-size').value) || 0,
         kgPrice: Number(document.getElementById('variant-edit-price').value) || null,
         isFavoritePurchase: document.getElementById('variant-edit-favorite').checked,
-        masterProductId: masterId, // Sørg for at masterProductId er med
+        masterProductId: masterId,
         userId: userId
     };
 
