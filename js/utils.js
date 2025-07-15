@@ -24,17 +24,19 @@ export function debounce(func, delay = 300) {
  * @returns {string} The normalized unit.
  */
 export function normalizeUnit(unit) {
-    const u = (unit || '').toLowerCase().trim();
+    const u = (unit || '').toLowerCase().trim().replace(/\.$/, '');
     if (['g', 'gram', 'grams'].includes(u)) return 'g';
     if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg';
     if (['ml', 'milliliter', 'milliliters'].includes(u)) return 'ml';
     if (['l', 'liter', 'liters'].includes(u)) return 'l';
-    if (['stk', 'stk.', 'styk', 'styks'].includes(u)) return 'stk';
-    if (['tsk', 'tsk.'].includes(u)) return 'tsk';
-    if (['spsk', 'spsk.'].includes(u)) return 'spsk';
-    if (['dl', 'dl.'].includes(u)) return 'dl';
+    if (['stk', 'styk', 'styks'].includes(u)) return 'stk';
+    if (['tsk', 'teske', 'teskefuld'].includes(u)) return 'tsk';
+    if (['spsk', 'spiseske', 'spiseskefuld'].includes(u)) return 'spsk';
+    if (['dl'].includes(u)) return 'dl';
     if (['fed'].includes(u)) return 'fed';
     if (['dåse', 'dåser'].includes(u)) return 'dåse';
+    if (['bundt'].includes(u)) return 'bundt';
+    if (['knivspids'].includes(u)) return 'knivspids';
     return u;
 }
 
@@ -74,34 +76,36 @@ export function formatDate(date) {
 }
 
 /**
- * Converts a quantity from a given recipe unit to grams, using the inventory item's flexible conversion rules.
- * @param {number} quantity The quantity to convert (from a recipe).
- * @param {string} fromUnit The unit to convert from (from a recipe).
- * @param {object} inventoryItem The corresponding inventory item which holds the conversion_rules object.
- * @returns {{grams: number|null, error: string|null}} An object with the converted quantity in grams or an error.
+ * Converts a quantity from a recipe unit to a base unit (grams or ml).
+ * This is a simplified conversion utility.
+ * @param {number} quantity The quantity to convert.
+ * @param {string} fromUnit The unit to convert from.
+ * @returns {{amount: number|null, unit: string|null, nonConvertible: boolean, error: string|null}} An object with the converted amount or an error.
  */
-export function convertToGrams(quantity, fromUnit, inventoryItem) {
-    if (!quantity) return { grams: 0, error: null };
+export function convertToBaseUnit(quantity, fromUnit) {
+    if (!quantity) return { amount: 0, error: null };
     
-    const normalizedFromUnit = normalizeUnit(fromUnit);
-    const rules = inventoryItem.conversion_rules || {};
+    const normalizedUnit = normalizeUnit(fromUnit);
 
-    // Direct conversion for g and kg
-    if (normalizedFromUnit === 'g') {
-        return { grams: quantity, error: null };
-    }
-    if (normalizedFromUnit === 'kg') {
-        return { grams: quantity * 1000, error: null };
-    }
-    
-    // Look for a matching rule in the item's conversion rules
-    if (rules[normalizedFromUnit]) {
-        return { grams: quantity * rules[normalizedFromUnit], error: null };
-    }
-
-    // If no specific rule is found, return an error.
-    return { 
-        grams: null, 
-        error: `Kan ikke omregne '${fromUnit}' til gram for varen '${inventoryItem.name}'. Tilføj venligst en konverteringsregel for '${fromUnit}' på varekortet.` 
+    const conversionMap = {
+        'g': 1,
+        'kg': 1000,
+        'ml': 1,
+        'l': 1000,
+        'dl': 100,
+        'spsk': 15, // Approx. 15ml
+        'tsk': 5,   // Approx. 5ml
     };
+
+    if (conversionMap[normalizedUnit] !== undefined) {
+        return { amount: quantity * conversionMap[normalizedUnit], error: null, nonConvertible: false };
+    }
+    
+    // For units like 'stk', 'fed', 'dåse', we cannot convert to g/ml without more context.
+    // We return the original quantity and unit, and let the calling function decide what to do.
+    if (['stk', 'fed', 'dåse', 'bundt', 'knivspids'].includes(normalizedUnit)) {
+        return { amount: quantity, unit: normalizedUnit, error: null, nonConvertible: true };
+    }
+
+    return { amount: null, error: `Ukendt enhed for konvertering: '${fromUnit}'` };
 }
