@@ -382,6 +382,7 @@ function parseGemBotText(text) {
         const value = parts.slice(1).join(':').trim();
         if (key === 'navn') data.master.name = value;
         if (key === 'kategori') data.master.category = value;
+        if (key === 'placering') data.master.location = value; // Added for location
         if (key === 'standard enhed') data.master.defaultUnit = value;
     });
 
@@ -436,7 +437,6 @@ function populateFormWithImportedData(data) {
     const matchedCategory = findReferenceMatch(data.master.category, appState.references.itemCategories);
     document.getElementById('master-product-category').value = matchedCategory || '';
     
-    // Also try to match location if it exists in the import
     const matchedLocation = findReferenceMatch(data.master.location, appState.references.itemLocations);
     document.getElementById('master-product-location').value = matchedLocation || '';
 
