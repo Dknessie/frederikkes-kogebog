@@ -32,7 +32,9 @@ export function initInventory(state, elements) {
         inventoryFilterCategory: document.getElementById('inventory-filter-category'), // Nyt element
         inventoryFilterLocation: document.getElementById('inventory-filter-location'), // Nyt element
         inventoryFilterStore: document.getElementById('inventory-filter-store'),       // Nyt element
-        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn') // Nyt element
+        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'), // Nyt element
+        variantEditModal: document.getElementById('variant-edit-modal'), // Nyt: Modal til variantredigering
+        variantEditForm: document.getElementById('variant-edit-form'),   // Nyt: Form til variantredigering
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -94,8 +96,16 @@ export function initInventory(state, elements) {
             openMasterProductModal(button.dataset.id);
         } else if (header) {
             header.parentElement.classList.toggle('is-open');
+        } else if (button && button.classList.contains('edit-variant-btn')) { // Nyt: Håndter klik på rediger variant knap
+            e.stopPropagation();
+            const masterId = button.dataset.masterId;
+            const variantId = button.dataset.variantId;
+            openVariantEditModal(masterId, variantId);
         }
     });
+
+    // Event listener for at gemme redigeret variant
+    appElements.variantEditForm.addEventListener('submit', handleSaveVariant);
 }
 
 export function setReferencesLoaded(isLoaded) {
@@ -156,13 +166,15 @@ export function renderInventory() {
             const storeName = appState.references.stores?.find(s => s === v.storeId) || v.storeId || 'Ukendt butik';
             const sizeDisplay = v.purchaseSize ? `${v.purchaseSize}${mp.defaultUnit}` : '';
             const priceDisplay = v.kgPrice ? `${v.kgPrice.toFixed(2)} kr/${mp.defaultUnit === 'g' ? 'kg' : 'l'}` : ''; // Bruger defaultUnit for kr/kg eller kr/l
+            const favoriteIcon = v.isFavoritePurchase ? '<i class="fas fa-star favorite-variant-icon" title="Favoritkøb"></i>' : ''; // Nyt: Favoritindikator
             return `
                 <div class="variant-item">
-                    <span class="variant-name">${v.variantName}</span>
+                    <span class="variant-name">${favoriteIcon} ${v.variantName}</span>
                     <span class="variant-store">${storeName}</span>
                     <span class="variant-stock">${v.currentStock || 0} stk.</span>
                     <span class="variant-size">${sizeDisplay}</span>
                     <span class="variant-price">${priceDisplay}</span>
+                    <button class="btn-icon edit-variant-btn" data-master-id="${mp.id}" data-variant-id="${v.id}" title="Rediger variant"><i class="fas fa-edit"></i></button>
                 </div>
             `;
         }).join('');
@@ -173,7 +185,7 @@ export function renderInventory() {
             <div class="master-product-header" data-id="${mp.id}">
                 <div class="master-product-info">
                     <h4>${mp.name}</h4>
-                    <span class="master-product-category">${mp.location || 'Ukendt placering'}</span>
+                    <span class="master-product-category">${mp.category || 'Ukategoriseret'}</span>
                 </div>
                 <div class="master-product-stock-info">
                     <span>Total lager:</span>
@@ -513,13 +525,6 @@ function findReferenceMatch(valueToFind, referenceList) {
  * @returns {boolean} True hvis varianterne er identiske, ellers false.
  */
 function areVariantsIdentical(variant1, variant2) {
-    const keys1 = Object.keys(variant1).filter(key => key !== 'id' && key !== 'masterProductId' && key !== 'userId');
-    const keys2 = Object.keys(variant2).filter(key => key !== 'id' && key !== 'masterProductId' && key !== 'userId');
-
-    if (keys1.length !== keys2.length) {
-        return false;
-    }
-
     // Sammenlign de relevante felter
     const fieldsToCompare = ['variantName', 'storeId', 'currentStock', 'purchaseSize', 'kgPrice', 'isFavoritePurchase'];
     for (let key of fieldsToCompare) {
@@ -616,5 +621,71 @@ function handleGemBotImport() {
 
     } catch (error) {
         handleError(error, "Fejl ved import. Tjek at formatet er korrekt.", "gemBotImport");
+    }
+}
+
+/**
+ * Åbner modalen til redigering af en enkelt variant.
+ * @param {string} masterId - ID'et på masterproduktet.
+ * @param {string} variantId - ID'et på varianten, der skal redigeres.
+ */
+function openVariantEditModal(masterId, variantId) {
+    const masterProduct = appState.inventory.find(mp => mp.id === masterId);
+    const variant = masterProduct?.variants.find(v => v.id === variantId);
+
+    if (!masterProduct || !variant) {
+        handleError(new Error("Variant ikke fundet."), "Kunne ikke finde varianten til redigering.", "openVariantEditModal");
+        return;
+    }
+
+    // Sæt master produkt ID og variant ID i skjulte felter i formularen
+    document.getElementById('variant-edit-master-id').value = masterId;
+    document.getElementById('variant-edit-variant-id').value = variantId;
+    document.getElementById('variant-edit-modal-title').textContent = `Rediger variant: ${variant.variantName} (${masterProduct.name})`;
+
+    // Udfyld felter i variantredigeringsformularen
+    document.getElementById('variant-edit-name').value = variant.variantName || '';
+    populateReferenceDropdown(document.getElementById('variant-edit-store'), appState.references.stores, 'Vælg butik...', variant.storeId);
+    document.getElementById('variant-edit-stock').value = variant.currentStock || 0;
+    document.getElementById('variant-edit-size').value = variant.purchaseSize || '';
+    document.getElementById('variant-edit-price').value = variant.kgPrice || '';
+    document.getElementById('variant-edit-favorite').checked = variant.isFavoritePurchase || false;
+
+    appElements.variantEditModal.classList.remove('hidden');
+}
+
+/**
+ * Håndterer gem af en enkelt variant.
+ * @param {Event} e - Submit event fra formularen.
+ */
+async function handleSaveVariant(e) {
+    e.preventDefault();
+
+    const masterId = document.getElementById('variant-edit-master-id').value;
+    const variantId = document.getElementById('variant-edit-variant-id').value;
+    const userId = appState.currentUser.uid;
+
+    const variantData = {
+        variantName: document.getElementById('variant-edit-name').value,
+        storeId: document.getElementById('variant-edit-store').value,
+        currentStock: Number(document.getElementById('variant-edit-stock').value) || 0,
+        purchaseSize: Number(document.getElementById('variant-edit-size').value) || 0,
+        kgPrice: Number(document.getElementById('variant-edit-price').value) || null,
+        isFavoritePurchase: document.getElementById('variant-edit-favorite').checked,
+        masterProductId: masterId, // Sørg for at masterProductId er med
+        userId: userId
+    };
+
+    if (!variantData.variantName || !variantData.storeId) {
+        handleError(new Error("Variantnavn og butik skal udfyldes."), "Ufuldstændige data for variant.", "handleSaveVariant");
+        return;
+    }
+
+    try {
+        await updateDoc(doc(db, 'inventory_variants', variantId), variantData);
+        appElements.variantEditModal.classList.add('hidden');
+        showNotification({ title: 'Gemt!', message: 'Variant er blevet opdateret.' });
+    } catch (error) {
+        handleError(error, "Kunne ikke gemme variant.", "handleSaveVariant");
     }
 }
