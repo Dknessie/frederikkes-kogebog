@@ -1,10 +1,9 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { debounce, formatDate } from './utils.js';
-import { addToShoppingList } from './shoppingList.js';
+import { debounce } from './utils.js';
 
 let appState;
 let appElements;
@@ -18,13 +17,27 @@ let inventoryState = {
 
 export function initInventory(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        masterProductModal: document.getElementById('master-product-modal'),
+        masterProductForm: document.getElementById('master-product-form'),
+        masterProductModalTitle: document.getElementById('master-product-modal-title'),
+        addVariantFormBtn: document.getElementById('add-variant-form-btn'),
+        variantFormContainer: document.getElementById('variant-form-container'),
+        deleteMasterProductBtn: document.getElementById('delete-master-product-btn'),
+    };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
-    // appElements.reorderAssistantBtn.addEventListener('click', openReorderAssistant);
+    appElements.masterProductForm.addEventListener('submit', handleSaveMasterProduct);
+    appElements.addVariantFormBtn.addEventListener('click', () => addVariantRow());
     
-    // appElements.inventoryItemForm.addEventListener('submit', handleSaveItem);
-    // appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
+    appElements.variantFormContainer.addEventListener('click', (e) => {
+        if (e.target.closest('.delete-variant-row-btn')) {
+            e.target.closest('.variant-form-row').remove();
+        }
+    });
+
+    appElements.deleteMasterProductBtn.addEventListener('click', handleDeleteMasterProduct);
 
     appElements.inventorySearchInput.addEventListener('input', debounce(e => {
         inventoryState.searchTerm = e.target.value.toLowerCase();
@@ -37,9 +50,6 @@ export function initInventory(state, elements) {
     
         if (button.classList.contains('edit-master-btn')) {
             openMasterProductModal(button.dataset.id);
-        }
-        if (button.classList.contains('add-variant-btn')) {
-            openMasterProductModal(button.dataset.masterId, true); // Open modal with focus on adding a variant
         }
     });
 }
@@ -57,7 +67,6 @@ export function renderInventory() {
 
     let masterProducts = [...appState.inventory];
 
-    // Midlertidig simplificeret filtrering
     if (inventoryState.searchTerm) {
         const term = inventoryState.searchTerm.toLowerCase();
         masterProducts = masterProducts.filter(mp => 
@@ -85,9 +94,6 @@ export function renderInventory() {
                     <span class="variant-name">${v.variantName} <span class="variant-store">(${storeName})</span></span>
                     <span class="variant-stock">Lager: ${v.currentStock || 0} stk.</span>
                     <span class="variant-price">${v.kgPrice ? v.kgPrice.toFixed(2) + ' kr/kg' : ''}</span>
-                    <div class="variant-actions">
-                        <button class="btn-icon edit-variant-btn" data-id="${v.id}" title="Rediger variant"><i class="fas fa-edit"></i></button>
-                    </div>
                 </div>
             `;
         }).join('');
@@ -107,8 +113,7 @@ export function renderInventory() {
                     <span class="master-product-stock-amount">${totalStockDisplay}</span>
                 </div>
                 <div class="master-product-actions">
-                    <button class="btn-icon edit-master-btn" data-id="${mp.id}" title="Rediger master-produkt"><i class="fas fa-cog"></i></button>
-                    <button class="btn-icon add-variant-btn" data-master-id="${mp.id}" title="Tilføj ny variant"><i class="fas fa-plus"></i></button>
+                    <button class="btn-icon edit-master-btn" data-id="${mp.id}" title="Rediger master-produkt og varianter"><i class="fas fa-edit"></i></button>
                 </div>
             </div>
             <div class="variant-list">
@@ -121,9 +126,186 @@ export function renderInventory() {
     container.appendChild(fragment);
 }
 
-function openMasterProductModal(masterProductId, focusOnVariant = false) {
-    showNotification({ 
-        title: "Under Ombygning", 
-        message: "Funktionen til at tilføje og redigere varer er ved at blive genopbygget for at understøtte varevarianter. Dette er næste skridt." 
+function openMasterProductModal(masterProductId) {
+    const form = appElements.masterProductForm;
+    form.reset();
+    appElements.variantFormContainer.innerHTML = '';
+    
+    const masterProduct = masterProductId ? appState.inventory.find(p => p.id === masterProductId) : null;
+
+    if (masterProduct) {
+        appElements.masterProductModalTitle.textContent = 'Rediger Vare';
+        document.getElementById('master-product-id').value = masterProduct.id;
+        document.getElementById('master-product-name').value = masterProduct.name;
+        document.getElementById('master-product-category').value = masterProduct.category;
+        document.getElementById('master-product-default-unit').value = masterProduct.defaultUnit;
+        appElements.deleteMasterProductBtn.style.display = 'inline-flex';
+
+        masterProduct.variants.forEach(variant => addVariantRow(variant));
+    } else {
+        appElements.masterProductModalTitle.textContent = 'Opret Ny Vare';
+        document.getElementById('master-product-id').value = '';
+        appElements.deleteMasterProductBtn.style.display = 'none';
+        addVariantRow(); // Tilføj en tom række til at starte med
+    }
+    
+    populateReferenceDropdown(document.getElementById('master-product-category'), appState.references.itemCategories, 'Vælg kategori...');
+    if(masterProduct) document.getElementById('master-product-category').value = masterProduct.category;
+
+    appElements.masterProductModal.classList.remove('hidden');
+}
+
+function addVariantRow(variant = {}) {
+    const container = appElements.variantFormContainer;
+    const row = document.createElement('div');
+    row.className = 'variant-form-row';
+    row.dataset.id = variant.id || '';
+
+    const storeOptions = (appState.references.stores || []).map(s => `<option value="${s}">${s}</option>`).join('');
+
+    row.innerHTML = `
+        <div class="input-group">
+            <label>Variant Navn</label>
+            <input type="text" class="variant-name-input" placeholder="F.eks. 400g bakke" value="${variant.variantName || ''}" required>
+        </div>
+        <div class="input-group">
+            <label>Butik</label>
+            <select class="variant-store-select">${storeOptions}</select>
+        </div>
+        <div class="input-group">
+            <label>Lager (stk)</label>
+            <input type="number" class="variant-stock-input" value="${variant.currentStock || 0}">
+        </div>
+        <div class="input-group">
+            <label>Indkøbsstørrelse (g/ml)</label>
+            <input type="number" class="variant-size-input" placeholder="F.eks. 400" value="${variant.purchaseSize || ''}">
+        </div>
+        <div class="input-group">
+            <label>Pris pr. kg/l</label>
+            <input type="number" step="0.01" class="variant-price-input" value="${variant.kgPrice || ''}">
+        </div>
+        <div class="input-group switch-group">
+            <label>Favoritkøb?</label>
+            <label class="switch">
+                <input type="checkbox" class="variant-favorite-checkbox" ${variant.isFavoritePurchase ? 'checked' : ''}>
+                <span class="slider round"></span>
+            </label>
+        </div>
+        <button type="button" class="btn-icon delete-variant-row-btn" title="Slet variant"><i class="fas fa-trash"></i></button>
+    `;
+
+    if (variant.storeId) {
+        row.querySelector('.variant-store-select').value = variant.storeId;
+    }
+    container.appendChild(row);
+}
+
+async function handleSaveMasterProduct(e) {
+    e.preventDefault();
+    const masterId = document.getElementById('master-product-id').value;
+    const userId = appState.currentUser.uid;
+
+    const masterData = {
+        name: document.getElementById('master-product-name').value,
+        category: document.getElementById('master-product-category').value,
+        defaultUnit: document.getElementById('master-product-default-unit').value,
+        userId: userId
+    };
+
+    if (!masterData.name || !masterData.category) {
+        handleError(new Error("Udfyld venligst alle felter for master-produktet."), "Ufuldstændige data");
+        return;
+    }
+
+    try {
+        const batch = writeBatch(db);
+        let currentMasterId = masterId;
+
+        // Opret eller opdater master-produkt
+        if (currentMasterId) {
+            batch.update(doc(db, 'master_products', currentMasterId), masterData);
+        } else {
+            const newMasterRef = doc(collection(db, 'master_products'));
+            batch.set(newMasterRef, masterData);
+            currentMasterId = newMasterRef.id;
+        }
+
+        const variantRows = appElements.variantFormContainer.querySelectorAll('.variant-form-row');
+        const existingVariantIds = Array.from(variantRows).map(row => row.dataset.id).filter(id => id);
+        
+        // Slet varianter, der er fjernet fra UI
+        const originalMaster = appState.inventory.find(mp => mp.id === masterId);
+        if (originalMaster) {
+            originalMaster.variants.forEach(v => {
+                if (!existingVariantIds.includes(v.id)) {
+                    batch.delete(doc(db, 'inventory_variants', v.id));
+                }
+            });
+        }
+
+        // Opret/opdater varianter
+        variantRows.forEach(row => {
+            const variantId = row.dataset.id;
+            const variantData = {
+                masterProductId: currentMasterId,
+                variantName: row.querySelector('.variant-name-input').value,
+                storeId: row.querySelector('.variant-store-select').value,
+                currentStock: Number(row.querySelector('.variant-stock-input').value) || 0,
+                purchaseSize: Number(row.querySelector('.variant-size-input').value) || 0,
+                purchaseUnit: masterData.defaultUnit,
+                kgPrice: Number(row.querySelector('.variant-price-input').value) || null,
+                isFavoritePurchase: row.querySelector('.variant-favorite-checkbox').checked,
+                userId: userId
+            };
+
+            if (variantId) {
+                batch.update(doc(db, 'inventory_variants', variantId), variantData);
+            } else {
+                batch.set(doc(collection(db, 'inventory_variants')), variantData);
+            }
+        });
+
+        await batch.commit();
+        appElements.masterProductModal.classList.add('hidden');
+        showNotification({ title: 'Gemt!', message: 'Varen og dens varianter er blevet gemt.' });
+
+    } catch (error) {
+        handleError(error, "Der opstod en fejl under lagring.", "handleSaveMasterProduct");
+    }
+}
+
+async function handleDeleteMasterProduct() {
+    const masterId = document.getElementById('master-product-id').value;
+    if (!masterId) return;
+
+    const confirmed = await showNotification({
+        title: "Slet Vare",
+        message: "Er du sikker på du vil slette denne vare og ALLE dens varianter? Denne handling kan ikke fortrydes.",
+        type: 'confirm'
     });
+
+    if (!confirmed) return;
+
+    try {
+        const batch = writeBatch(db);
+        // Slet master-produktet
+        batch.delete(doc(db, 'master_products', masterId));
+
+        // Find og slet alle tilknyttede varianter
+        const q = query(collection(db, 'inventory_variants'), where("masterProductId", "==", masterId));
+        const variantSnapshot = await getDocs(q);
+        variantSnapshot.forEach(doc => batch.delete(doc.ref));
+
+        await batch.commit();
+        appElements.masterProductModal.classList.add('hidden');
+        showNotification({ title: 'Slettet', message: 'Varen og alle dens varianter er blevet slettet.' });
+    } catch (error) {
+        handleError(error, "Varen kunne ikke slettes.", "handleDeleteMasterProduct");
+    }
+}
+
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
 }
