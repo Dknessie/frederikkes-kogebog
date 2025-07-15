@@ -9,9 +9,6 @@ let appState;
 let appElements;
 let inventoryState = {
     searchTerm: '',
-    activeFilter: 'all',
-    activeCategories: new Set(),
-    sortBy: 'name_asc',
     referencesLoaded: false 
 };
 
@@ -25,6 +22,8 @@ export function initInventory(state, elements) {
         addVariantFormBtn: document.getElementById('add-variant-form-btn'),
         variantFormContainer: document.getElementById('variant-form-container'),
         deleteMasterProductBtn: document.getElementById('delete-master-product-btn'),
+        conversionRulesContainer: document.getElementById('conversion-rules-container'),
+        addConversionRuleBtn: document.getElementById('add-conversion-rule-btn'),
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
@@ -38,6 +37,12 @@ export function initInventory(state, elements) {
     });
 
     appElements.deleteMasterProductBtn.addEventListener('click', handleDeleteMasterProduct);
+    appElements.addConversionRuleBtn.addEventListener('click', () => addConversionRuleRow());
+    appElements.conversionRulesContainer.addEventListener('click', e => {
+        if (e.target.closest('.delete-rule-btn')) {
+            e.target.closest('.conversion-rule-row').remove();
+        }
+    });
 
     appElements.inventorySearchInput.addEventListener('input', debounce(e => {
         inventoryState.searchTerm = e.target.value.toLowerCase();
@@ -46,10 +51,13 @@ export function initInventory(state, elements) {
 
     appElements.inventoryListContainer.addEventListener('click', e => {
         const button = e.target.closest('button');
-        if (!button) return;
-    
-        if (button.classList.contains('edit-master-btn')) {
+        const header = e.target.closest('.master-product-header');
+
+        if (button && button.classList.contains('edit-master-btn')) {
+            e.stopPropagation(); // Forhindrer at headerens klik-event også fyrer
             openMasterProductModal(button.dataset.id);
+        } else if (header) {
+            header.parentElement.classList.toggle('is-open');
         }
     });
 }
@@ -114,6 +122,7 @@ export function renderInventory() {
                 </div>
                 <div class="master-product-actions">
                     <button class="btn-icon edit-master-btn" data-id="${mp.id}" title="Rediger master-produkt og varianter"><i class="fas fa-edit"></i></button>
+                    <i class="fas fa-chevron-down expand-icon"></i>
                 </div>
             </div>
             <div class="variant-list">
@@ -130,6 +139,7 @@ function openMasterProductModal(masterProductId) {
     const form = appElements.masterProductForm;
     form.reset();
     appElements.variantFormContainer.innerHTML = '';
+    appElements.conversionRulesContainer.innerHTML = '';
     
     const masterProduct = masterProductId ? appState.inventory.find(p => p.id === masterProductId) : null;
 
@@ -142,11 +152,16 @@ function openMasterProductModal(masterProductId) {
         appElements.deleteMasterProductBtn.style.display = 'inline-flex';
 
         masterProduct.variants.forEach(variant => addVariantRow(variant));
+        if (masterProduct.conversion_rules) {
+            for (const unit in masterProduct.conversion_rules) {
+                addConversionRuleRow({ unit, grams: masterProduct.conversion_rules[unit] });
+            }
+        }
     } else {
         appElements.masterProductModalTitle.textContent = 'Opret Ny Vare';
         document.getElementById('master-product-id').value = '';
         appElements.deleteMasterProductBtn.style.display = 'none';
-        addVariantRow(); // Tilføj en tom række til at starte med
+        addVariantRow();
     }
     
     populateReferenceDropdown(document.getElementById('master-product-category'), appState.references.itemCategories, 'Vælg kategori...');
@@ -200,15 +215,49 @@ function addVariantRow(variant = {}) {
     container.appendChild(row);
 }
 
+function addConversionRuleRow(rule = { unit: '', grams: '' }) {
+    const container = appElements.conversionRulesContainer;
+    const row = document.createElement('div');
+    row.className = 'conversion-rule-row';
+
+    const unitSelect = document.createElement('select');
+    unitSelect.className = 'rule-unit-select';
+    populateReferenceDropdown(unitSelect, appState.references.standardUnits, 'Vælg enhed', rule.unit);
+
+    row.innerHTML = `
+        <div class="input-group">
+            <!-- Unit select is inserted here -->
+        </div>
+        <span>=</span>
+        <div class="input-group">
+            <input type="number" class="rule-grams-input" placeholder="Gram" value="${rule.grams || ''}">
+        </div>
+        <span>g</span>
+        <button type="button" class="btn-icon delete-rule-btn" title="Fjern regel"><i class="fas fa-trash"></i></button>
+    `;
+    row.querySelector('.input-group:first-child').appendChild(unitSelect);
+    container.appendChild(row);
+}
+
 async function handleSaveMasterProduct(e) {
     e.preventDefault();
     const masterId = document.getElementById('master-product-id').value;
     const userId = appState.currentUser.uid;
 
+    const conversionRules = {};
+    appElements.conversionRulesContainer.querySelectorAll('.conversion-rule-row').forEach(row => {
+        const unit = row.querySelector('.rule-unit-select').value;
+        const grams = parseFloat(row.querySelector('.rule-grams-input').value);
+        if (unit && grams > 0) {
+            conversionRules[unit] = grams;
+        }
+    });
+
     const masterData = {
         name: document.getElementById('master-product-name').value,
         category: document.getElementById('master-product-category').value,
         defaultUnit: document.getElementById('master-product-default-unit').value,
+        conversion_rules: conversionRules,
         userId: userId
     };
 
@@ -221,7 +270,6 @@ async function handleSaveMasterProduct(e) {
         const batch = writeBatch(db);
         let currentMasterId = masterId;
 
-        // Opret eller opdater master-produkt
         if (currentMasterId) {
             batch.update(doc(db, 'master_products', currentMasterId), masterData);
         } else {
@@ -233,7 +281,6 @@ async function handleSaveMasterProduct(e) {
         const variantRows = appElements.variantFormContainer.querySelectorAll('.variant-form-row');
         const existingVariantIds = Array.from(variantRows).map(row => row.dataset.id).filter(id => id);
         
-        // Slet varianter, der er fjernet fra UI
         const originalMaster = appState.inventory.find(mp => mp.id === masterId);
         if (originalMaster) {
             originalMaster.variants.forEach(v => {
@@ -243,7 +290,6 @@ async function handleSaveMasterProduct(e) {
             });
         }
 
-        // Opret/opdater varianter
         variantRows.forEach(row => {
             const variantId = row.dataset.id;
             const variantData = {
@@ -288,10 +334,7 @@ async function handleDeleteMasterProduct() {
 
     try {
         const batch = writeBatch(db);
-        // Slet master-produktet
         batch.delete(doc(db, 'master_products', masterId));
-
-        // Find og slet alle tilknyttede varianter
         const q = query(collection(db, 'inventory_variants'), where("masterProductId", "==", masterId));
         const variantSnapshot = await getDocs(q);
         variantSnapshot.forEach(doc => batch.delete(doc.ref));
