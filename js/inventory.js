@@ -24,11 +24,14 @@ export function initInventory(state, elements) {
         deleteMasterProductBtn: document.getElementById('delete-master-product-btn'),
         conversionRulesContainer: document.getElementById('conversion-rules-container'),
         addConversionRuleBtn: document.getElementById('add-conversion-rule-btn'),
+        gemBotImportBtn: document.getElementById('gem-bot-import-btn'),
+        gemBotImportTextarea: document.getElementById('gem-bot-import-textarea'),
     };
 
     appElements.addInventoryItemBtn.addEventListener('click', () => openMasterProductModal(null));
     appElements.masterProductForm.addEventListener('submit', handleSaveMasterProduct);
     appElements.addVariantFormBtn.addEventListener('click', () => addVariantRow());
+    appElements.gemBotImportBtn.addEventListener('click', handleGemBotImport);
     
     appElements.variantFormContainer.addEventListener('click', (e) => {
         if (e.target.closest('.delete-variant-row-btn')) {
@@ -54,7 +57,7 @@ export function initInventory(state, elements) {
         const header = e.target.closest('.master-product-header');
 
         if (button && button.classList.contains('edit-master-btn')) {
-            e.stopPropagation(); // Forhindrer at headerens klik-event også fyrer
+            e.stopPropagation();
             openMasterProductModal(button.dataset.id);
         } else if (header) {
             header.parentElement.classList.toggle('is-open');
@@ -140,6 +143,7 @@ function openMasterProductModal(masterProductId) {
     form.reset();
     appElements.variantFormContainer.innerHTML = '';
     appElements.conversionRulesContainer.innerHTML = '';
+    appElements.gemBotImportTextarea.value = '';
     
     const masterProduct = masterProductId ? appState.inventory.find(p => p.id === masterProductId) : null;
 
@@ -192,7 +196,7 @@ function addVariantRow(variant = {}) {
             <input type="number" class="variant-stock-input" value="${variant.currentStock || 0}">
         </div>
         <div class="input-group">
-            <label>Indkøbsstørrelse (g/ml)</label>
+            <label>Størrelse (g/ml)</label>
             <input type="number" class="variant-size-input" placeholder="F.eks. 400" value="${variant.purchaseSize || ''}">
         </div>
         <div class="input-group">
@@ -351,4 +355,63 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
     (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
     selectElement.value = currentValue || "";
+}
+
+function handleGemBotImport() {
+    const text = appElements.gemBotImportTextarea.value;
+    if (!text.trim()) {
+        showNotification({ title: "Tomt felt", message: "Indsæt venligst tekst fra din Gem-bot." });
+        return;
+    }
+
+    try {
+        // --- Parse Master Product ---
+        const masterMatch = text.match(/--- Master Produkt ---\s*([\s\S]*?)\s*--- Varianter ---/);
+        if (!masterMatch) throw new Error("Kunne ikke finde 'Master Produkt' sektion.");
+        
+        const masterLines = masterMatch[1].trim().split('\n');
+        const masterData = {};
+        masterLines.forEach(line => {
+            const parts = line.split(':');
+            if (parts.length < 2) return;
+            const key = parts[0].trim();
+            const value = parts.slice(1).join(':').trim();
+            if (key === 'Navn') document.getElementById('master-product-name').value = value;
+            if (key === 'Kategori') document.getElementById('master-product-category').value = value;
+            if (key === 'Standard Enhed') document.getElementById('master-product-default-unit').value = value;
+        });
+
+        // --- Parse Varianter ---
+        const variantsMatch = text.match(/--- Varianter ---\s*([\s\S]*)/);
+        if (!variantsMatch) throw new Error("Kunne ikke finde 'Varianter' sektion.");
+        
+        const variantBlocks = variantsMatch[1].trim().split(/Variant:/).filter(b => b.trim());
+        
+        appElements.variantFormContainer.innerHTML = ''; // Ryd eksisterende varianter
+
+        variantBlocks.forEach(block => {
+            const variantData = {};
+            const blockLines = block.trim().split('\n');
+            blockLines.forEach(line => {
+                const parts = line.split(':');
+                if (parts.length < 2) return;
+                const key = parts[0].trim();
+                const value = parts.slice(1).join(':').trim();
+
+                if (key === 'Navn') variantData.variantName = value;
+                if (key === 'Butik') variantData.storeId = value;
+                if (key === 'Lager') variantData.currentStock = parseInt(value, 10) || 0;
+                if (key === 'Størrelse') variantData.purchaseSize = parseFloat(value);
+                if (key === 'Pris pr kg') variantData.kgPrice = parseFloat(value);
+                if (key === 'Favorit') variantData.isFavoritePurchase = value.toLowerCase() === 'ja';
+            });
+            addVariantRow(variantData);
+        });
+        
+        showNotification({ title: "Importeret!", message: "Data er blevet udfyldt. Gennemse og gem." });
+        appElements.gemBotImportTextarea.value = '';
+
+    } catch (error) {
+        handleError(error, "Fejl ved import. Tjek at formatet er korrekt.", "gemBotImport");
+    }
 }
