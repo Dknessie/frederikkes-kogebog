@@ -240,7 +240,7 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
         removeAutocomplete();
         if (value.length < 1) return;
 
-        const suggestions = appState.masterProducts.filter(item => 
+        const suggestions = appState.inventoryItems.filter(item => 
             item.name.toLowerCase().startsWith(value)
         );
 
@@ -600,22 +600,24 @@ export function calculateRecipeMatch(recipe, inventory) {
 
     let canBeMade = true;
     recipe.ingredients.forEach(ing => {
-        const masterProduct = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
+        const inventoryItem = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
         
-        if (!masterProduct) {
+        if (!inventoryItem) {
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        const conversion = convertToGrams(ing.quantity, ing.unit, masterProduct);
+        const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
         if (conversion.error) {
+            // If conversion fails, we assume we don't have it.
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        if (conversion.grams > (masterProduct.totalStockGrams || 0)) {
+        // Check if total stock in base unit is sufficient
+        if (conversion.grams > (inventoryItem.totalStock || 0)) {
             missingCount++;
             canBeMade = false;
         }
@@ -630,18 +632,20 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
 
     recipe.ingredients.forEach(ing => {
-        const masterProduct = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if (masterProduct && masterProduct.variants && masterProduct.variants.length > 0) {
-            const preferredVariant = masterProduct.variants.find(v => v.isFavoritePurchase) || 
-                                   masterProduct.variants.filter(v => v.kgPrice).sort((a,b) => a.kgPrice - b.kgPrice)[0];
+        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
+            // Find the cheapest batch based on price per base unit (g/ml/stk)
+            const cheapestBatch = inventoryItem.batches
+                .filter(b => b.price && b.size > 0 && b.quantity > 0)
+                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
             
-            if (preferredVariant && preferredVariant.kgPrice) {
+            if (cheapestBatch) {
                 const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToGrams(scaledQuantity, ing.unit, masterProduct);
+                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
                 
                 if (conversion.grams !== null) {
-                    const quantityInKgOrL = conversion.grams / 1000;
-                    totalPrice += quantityInKgOrL * preferredVariant.kgPrice;
+                    const pricePerGram = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
+                    totalPrice += conversion.grams * pricePerGram;
                 }
             }
         }
