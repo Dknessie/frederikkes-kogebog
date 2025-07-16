@@ -1,10 +1,10 @@
 // js/shoppingList.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch, updateDoc, runTransaction, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, writeBatch, updateDoc, runTransaction, getDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
-import { calculateRecipePrice } from './recipes.js';
+import { openBatchModal } from './inventory.js';
 
 let appState;
 let appElements;
@@ -35,11 +35,13 @@ export function initShoppingList(state, elements) {
 export function renderShoppingList() {
     const containers = [appElements.shoppingList.container, appElements.shoppingListMobile.container];
     const groupedByStore = {};
+    let totalEstimatedPrice = 0;
 
     Object.values(appState.shoppingList).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
         const store = item.storeId || 'Andet';
         if (!groupedByStore[store]) groupedByStore[store] = [];
         groupedByStore[store].push(item);
+        totalEstimatedPrice += item.estimatedPrice || 0;
     });
 
     const hasItems = Object.keys(groupedByStore).length > 0;
@@ -70,7 +72,7 @@ export function renderShoppingList() {
                                     <div class="item-details">
                                         <div class="quantity-adjuster">
                                             <button class="btn-icon quantity-btn decrease-quantity" data-item-name="${item.name}"><i class="fas fa-minus-circle"></i></button>
-                                            <input type="number" class="item-quantity-input" value="${item.quantity_to_buy.toFixed(2).replace(/\.00$/, '')}" step="any">
+                                            <input type="number" class="item-quantity-input" value="${item.quantity_to_buy}" step="1">
                                             <button class="btn-icon quantity-btn increase-quantity" data-item-name="${item.name}"><i class="fas fa-plus-circle"></i></button>
                                         </div>
                                         <span class="item-unit-display">${item.unit}</span>
@@ -97,7 +99,10 @@ export function renderShoppingList() {
     });
     
     [appElements.shoppingList, appElements.shoppingListMobile].forEach(ui => {
-        if(ui.totalContainer) ui.totalContainer.classList.toggle('hidden', !hasItems);
+        if(ui.totalContainer) {
+            ui.totalContainer.textContent = `Est. Pris: ${totalEstimatedPrice.toFixed(2)} kr.`;
+            ui.totalContainer.classList.toggle('hidden', !hasItems);
+        }
         if(ui.confirmBtn) ui.confirmBtn.style.display = hasItems ? 'inline-flex' : 'none';
     });
 }
@@ -130,10 +135,11 @@ async function handleGenerateShoppingList() {
                         if (recipe && recipe.ingredients) {
                             const scaleFactor = (meal.portions || recipe.portions || 1) / (recipe.portions || 1);
                             for (const ing of recipe.ingredients) {
-                                if (!allIngredientsNeeded[ing.name]) {
-                                    allIngredientsNeeded[ing.name] = { total: 0, unit: ing.unit, name: ing.name };
+                                const key = ing.name.toLowerCase();
+                                if (!allIngredientsNeeded[key]) {
+                                    allIngredientsNeeded[key] = { total: 0, unit: ing.unit, name: ing.name };
                                 }
-                                allIngredientsNeeded[ing.name].total += (ing.quantity || 0) * scaleFactor;
+                                allIngredientsNeeded[key].total += (ing.quantity || 0) * scaleFactor;
                             }
                         }
                     }
@@ -148,44 +154,49 @@ async function handleGenerateShoppingList() {
     }
     
     const shoppingList = {};
-    for (const ingName in allIngredientsNeeded) {
-        const needed = allIngredientsNeeded[ingName];
-        const masterProduct = appState.inventory.find(mp => mp.name.toLowerCase() === ingName.toLowerCase());
+    for (const ingKey in allIngredientsNeeded) {
+        const needed = allIngredientsNeeded[ingKey];
+        const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ingKey);
 
-        if (!masterProduct || masterProduct.variants.length === 0) {
-            shoppingList[ingName.toLowerCase()] = { name: ingName, quantity_to_buy: needed.total, unit: needed.unit, storeId: 'Ukendt' };
+        if (!inventoryItem) {
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Ukendt Vare', itemId: null };
             continue;
         }
 
-        const conversion = convertToGrams(needed.total, needed.unit, masterProduct);
+        const conversion = convertToGrams(needed.total, needed.unit, inventoryItem);
         if (conversion.error) {
-            shoppingList[ingName.toLowerCase()] = { name: ingName, quantity_to_buy: needed.total, unit: needed.unit, storeId: 'Ukendt (konv. fejl)' };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Konv. Fejl', itemId: inventoryItem.id };
             continue;
         }
 
-        const neededGrams = conversion.grams;
-        const gramsToBuy = Math.max(0, neededGrams - (masterProduct.totalStockGrams || 0));
+        const neededInBaseUnit = conversion.grams;
+        const toBuyInBaseUnit = Math.max(0, neededInBaseUnit - (inventoryItem.totalStock || 0));
 
-        if (gramsToBuy > 0) {
-            let bestVariant = 
-                masterProduct.variants.find(v => v.storeId === appState.preferences.favoriteStoreId && v.purchaseSize > 0) ||
-                masterProduct.variants.find(v => v.isFavoritePurchase && v.purchaseSize > 0) ||
-                masterProduct.variants.filter(v => v.purchaseSize > 0).sort((a, b) => (a.kgPrice || Infinity) - (b.kgPrice || Infinity))[0];
-
-            if (bestVariant) {
-                const quantityToBuy = Math.ceil(gramsToBuy / bestVariant.purchaseSize);
-                const key = `${bestVariant.masterProductId}-${bestVariant.id}`;
-                shoppingList[key] = {
-                    name: `${masterProduct.name} (${bestVariant.variantName})`,
-                    quantity_to_buy: quantityToBuy,
-                    unit: 'stk',
-                    storeId: bestVariant.storeId,
-                    variantId: bestVariant.id,
-                    masterProductId: bestVariant.masterProductId
-                };
-            } else {
-                shoppingList[ingName.toLowerCase()] = { name: ingName, quantity_to_buy: gramsToBuy, unit: 'g', storeId: 'Ukendt (ingen variant)' };
+        if (toBuyInBaseUnit > 0) {
+            // Find a representative batch to determine size and price
+            const representativeBatch = inventoryItem.batches
+                .filter(b => b.size > 0)
+                .sort((a,b) => (a.price/a.size) - (b.price/b.size))[0]; // cheapest per unit size
+            
+            const purchaseSize = representativeBatch?.size || 1;
+            const purchaseUnit = representativeBatch?.unit || inventoryItem.defaultUnit;
+            const storeId = representativeBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt';
+            const pricePerUnit = representativeBatch?.price ? (representativeBatch.price / representativeBatch.quantity) : 0;
+            
+            let quantityToBuy = 1;
+            if (inventoryItem.defaultUnit !== 'stk') {
+                 quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
             }
+
+            const key = inventoryItem.id;
+            shoppingList[key] = {
+                name: inventoryItem.name,
+                quantity_to_buy: quantityToBuy,
+                unit: `stk á ${purchaseSize}${purchaseUnit}`,
+                storeId: storeId,
+                itemId: inventoryItem.id,
+                estimatedPrice: quantityToBuy * pricePerUnit
+            };
         }
     }
     
@@ -210,11 +221,14 @@ function handleAddShoppingItem(itemName) {
     const updatedList = { ...appState.shoppingList };
     const key = itemName.toLowerCase();
     
+    const existingItem = appState.inventory.find(i => i.name.toLowerCase() === key);
+    
     updatedList[key] = {
-        name: itemName,
+        name: existingItem ? existingItem.name : itemName,
         quantity_to_buy: 1,
         unit: 'stk',
         storeId: 'Manuelt tilføjet',
+        itemId: existingItem ? existingItem.id : null
     };
     updateShoppingListInFirestore(updatedList);
 }
@@ -233,38 +247,36 @@ async function handleConfirmPurchase() {
         await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt." });
         return;
     }
-
-    const confirmedPurchase = await showNotification({ title: "Bekræft Indkøb", message: "Vil du tilføje de valgte varer til dit varelager?", type: 'confirm' });
-    if (!confirmedPurchase) return;
-
-    const updatedList = { ...appState.shoppingList };
     
-    try {
-        await runTransaction(db, async (transaction) => {
-            for (const item of checkedItems) {
-                if (item.variantId) {
-                    const variantRef = doc(db, "inventory_variants", item.variantId);
-                    const variantDoc = await transaction.get(variantRef);
-                    if (variantDoc.exists()) {
-                        const currentStock = variantDoc.data().currentStock || 0;
-                        const newStock = currentStock + item.quantity_to_buy;
-                        transaction.update(variantRef, { currentStock: newStock });
-                    }
-                }
-                
-                const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === item.name);
-                if(keyToDelete) {
-                    delete updatedList[keyToDelete];
-                }
-            }
-        });
+    const updatedList = { ...appState.shoppingList };
 
-        await updateShoppingListInFirestore(updatedList); 
-        await showNotification({ title: "Succes", message: "Dit varelager er blevet opdateret!" });
-    } catch (error) {
-        handleError(error, "Lageret kunne ikke opdateres.", "confirmPurchase");
+    for (const item of checkedItems) {
+        if (item.itemId) {
+            openBatchModal(item.itemId, null); // Open modal to add new batch details
+        } else {
+            // Handle manually added items that are not in the inventory yet
+            const createNew = await showNotification({
+                title: "Ny Vare",
+                message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den?`,
+                type: 'confirm'
+            });
+            if (createNew) {
+                // Future enhancement: could open the 'add item' modal pre-filled
+                showNotification({title: "Handling påkrævet", message: `Gå til varelager og opret "${item.name}" manuelt.`});
+            }
+        }
+        
+        // Remove item from shopping list after handling it
+        const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === item.name);
+        if(keyToDelete) {
+            delete updatedList[keyToDelete];
+        }
     }
+    
+    // Update the shopping list in Firestore to remove the handled items
+    await updateShoppingListInFirestore(updatedList);
 }
+
 
 function handleShoppingListInput(e) {
     const target = e.target;
