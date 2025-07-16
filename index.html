@@ -120,8 +120,6 @@
                 <h2>Varelager</h2>
                  <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
-                    <!-- NY KNAP TIL MASSE-IMPORT -->
-                    <button id="bulk-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Masse-import</button>
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
                 </div>
                 <div class="inventory-dashboard">
@@ -140,9 +138,14 @@
                             <label for="inventory-filter-location">Placering</label>
                             <select id="inventory-filter-location"></select>
                         </div>
-                        <div class="input-group">
-                            <label for="inventory-filter-store">Butik</label>
-                            <select id="inventory-filter-store"></select>
+                         <div class="input-group">
+                            <label for="inventory-filter-stock-status">Status</label>
+                            <select id="inventory-filter-stock-status">
+                                <option value="">Alle</option>
+                                <option value="in_stock">På lager</option>
+                                <option value="low_stock">Lav beholdning</option>
+                                <option value="out_of_stock">Ikke på lager</option>
+                            </select>
                         </div>
                         <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
                     </div>
@@ -236,143 +239,126 @@
         </div>
     </div>
     
-    <!-- NY MODAL TIL MASSE-IMPORT -->
-    <div id="bulk-import-modal" class="modal-overlay hidden">
+    <!-- MODAL FOR INVENTORY ITEM (FORMERLY MASTER PRODUCT) -->
+    <div id="inventory-item-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3>Masse-import af varer</h3>
-            <p class="small-text">
-                Indsæt en liste af varer i tekstfeltet nedenfor. Hver vare skal følge det kendte format.
-                Adskil hver ny vare med <strong>--- NY VARE ---</strong> på en ny linje.
-            </p>
-            <div class="input-group">
-                <textarea id="bulk-import-textarea" rows="15" placeholder="--- MASTER PRODUKT ---&#10;Navn: Hakket Oksekød 4-7%&#10;Kategori: Kød & Fisk&#10;...osv...&#10;&#10;--- NY VARE ---&#10;&#10;--- MASTER PRODUKT ---&#10;Navn: Gulerødder&#10;...osv..."></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-primary" id="start-bulk-import-btn">Start Import</button>
-            </div>
-            <div id="bulk-import-summary" class="hidden">
-                <h4>Import Rapport</h4>
-                <div id="bulk-import-summary-content"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="master-product-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="master-product-modal-title">Administrér Vare</h3>
-            <form id="master-product-form">
-                <input type="hidden" id="master-product-id">
-
-                <div class="form-section-box">
-                    <h4>Importer fra Gem-bot</h4>
-                    <p class="small-text">Indsæt tekst fra din Gem-bot for at udfylde felterne automatisk.</p>
-                    <div class="input-group">
-                        <textarea id="gem-bot-import-textarea" rows="6" placeholder="Indsæt tekst her..."></textarea>
-                    </div>
-                    <button type="button" id="gem-bot-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importér & Udfyld</button>
-                </div>
+            <h3 id="inventory-item-modal-title">Administrér Vare</h3>
+            <form id="inventory-item-form">
+                <input type="hidden" id="inventory-item-id">
                 
                 <div class="form-section-box">
-                    <h4>Master Produkt</h4>
+                    <h4>Generel Vareinformation</h4>
                     <p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
                     <div class="form-grid-2-col">
                         <div class="input-group">
-                            <label for="master-product-name">Varenavn (generisk)</label>
-                            <input type="text" id="master-product-name" placeholder="F.eks. Hakket Kylling" required>
+                            <label for="inventory-item-name">Varenavn (generisk)</label>
+                            <input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
                         </div>
                         <div class="input-group">
-                            <label for="master-product-category">Kategori</label>
-                            <select id="master-product-category" required></select>
+                            <label for="inventory-item-category">Kategori</label>
+                            <select id="inventory-item-category" required></select>
                         </div>
                     </div>
                     <div class="form-grid-2-col">
                         <div class="input-group">
-                            <label for="master-product-location">Placering i hjemmet</label>
-                            <select id="master-product-location" required></select>
+                            <label for="inventory-item-location">Placering i hjemmet</label>
+                            <select id="inventory-item-location" required></select>
                         </div>
                         <div class="input-group">
-                            <label for="master-product-default-unit">Standard Måleenhed</label>
-                            <select id="master-product-default-unit" required>
+                            <label for="inventory-item-default-unit">Standard Måleenhed (for total)</label>
+                            <select id="inventory-item-default-unit" required>
                                 <option value="g">Gram (g)</option>
                                 <option value="ml">Milliliter (ml)</option>
+                                <option value="stk">Styk (stk)</option>
                             </select>
                         </div>
+                    </div>
+                     <div class="input-group">
+                        <label for="inventory-item-reorder-point">Genbestillingspunkt (valgfri)</label>
+                        <input type="number" id="inventory-item-reorder-point" placeholder="F.eks. 500 (i standardenhed)">
                     </div>
                 </div>
 
                 <div class="form-section-box">
                     <h4>Konverteringsregler</h4>
                     <p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
-                    <div id="conversion-rules-container">
-                        </div>
+                    <div id="conversion-rules-container"></div>
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
                 </div>
 
                 <div class="form-section-box">
-                    <h4>Varevarianter</h4>
-                    <p class="small-text">Dette er de specifikke produkter, du køber i butikkerne. Tilføj en eller flere varianter.</p>
-                    <div id="variant-form-container">
-                        </div>
-                    <button type="button" id="add-variant-form-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ny variant</button>
+                    <div class="section-header">
+                        <h4>Batches på Lager</h4>
+                        <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Nyt Batch</button>
+                    </div>
+                    <p class="small-text">Dette er de specifikke indkøb af varen. Et batch repræsenterer én eller flere enheder fra samme indkøb.</p>
+                    <div id="batch-list-container">
+                        <!-- Batches will be rendered here by JS -->
+                    </div>
                 </div>
 
                 <div class="form-actions">
-                    <button type="button" class="btn btn-danger" id="delete-master-product-btn">Slet Hele Varen</button>
-                    <button type="submit" class="btn btn-primary" id="save-master-product-btn">Gem Vare og Varianter</button>
+                    <button type="button" class="btn btn-danger" id="delete-inventory-item-btn">Slet Hele Varen</button>
+                    <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem Vare</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="variant-edit-modal" class="modal-overlay hidden">
+    <!-- MODAL FOR ADDING/EDITING A BATCH -->
+    <div id="batch-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3 id="variant-edit-modal-title">Rediger Variant</h3>
-            <form id="variant-edit-form">
-                <input type="hidden" id="variant-edit-master-id">
-                <input type="hidden" id="variant-edit-variant-id">
+            <h3 id="batch-edit-modal-title">Rediger Batch</h3>
+            <form id="batch-edit-form">
+                <input type="hidden" id="batch-edit-item-id">
+                <input type="hidden" id="batch-edit-batch-id">
                 
-                <div class="input-group">
-                    <label for="variant-edit-name">Variant Navn</label>
-                    <input type="text" id="variant-edit-name" required>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="batch-edit-purchase-date">Indkøbsdato</label>
+                        <input type="date" id="batch-edit-purchase-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-expiry-date">Udløbsdato (valgfri)</label>
+                        <input type="date" id="batch-edit-expiry-date">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="variant-edit-store">Butik</label>
-                    <select id="variant-edit-store" required></select>
+
+                <div class="form-grid-3-col">
+                    <div class="input-group">
+                        <label for="batch-edit-quantity">Antal</label>
+                        <input type="number" id="batch-edit-quantity" min="0" value="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-size">Størrelse pr. stk.</label>
+                        <input type="number" id="batch-edit-size" min="0" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-unit">Enhed</label>
+                        <input type="text" id="batch-edit-unit" required>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="variant-edit-stock">Lager (stk)</label>
-                    <input type="number" id="variant-edit-stock" min="0">
+
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="batch-edit-price">Pris (total for batch)</label>
+                        <input type="number" id="batch-edit-price" min="0" step="0.01">
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-store">Butik</label>
+                        <select id="batch-edit-store" required></select>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="variant-edit-size">Størrelse (g/ml)</label>
-                    <input type="number" id="variant-edit-size" min="0" step="any">
-                </div>
-                <div class="input-group">
-                    <label for="variant-edit-price">Pris pr. kg/l</label>
-                    <input type="number" id="variant-edit-price" min="0" step="0.01">
-                </div>
-                <!-- Nyt felt for Kalorieindhold (kcal) -->
-                <div class="input-group">
-                    <label for="variant-edit-kcal">Kalorier (kcal)</label>
-                    <input type="number" id="variant-edit-kcal" min="0" step="1">
-                </div>
-                <div class="input-group switch-group">
-                    <label for="variant-edit-favorite">Favoritkøb?</label>
-                    <label class="switch">
-                        <input type="checkbox" id="variant-edit-favorite">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
+                
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Variant</button>
+                    <button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
+                    <button type="submit" class="btn btn-primary">Gem Batch</button>
                 </div>
             </form>
         </div>
     </div>
-
 
     <div id="reorder-assistant-modal" class="modal-overlay hidden">
         <div class="modal-content">
