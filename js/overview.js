@@ -52,49 +52,66 @@ function renderBudgetOverview() {
 function renderExpiringItems() {
     const listEl = document.getElementById('expiring-items-list');
     const today = new Date();
+    today.setHours(0,0,0,0);
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(today.getDate() + 7);
 
-    const expiringItems = [];
-    appState.inventory.forEach(item => {
-        if (item.batches && Array.isArray(item.batches)) {
-            item.batches.forEach(batch => {
-                if (batch.expiry_date) {
-                    const expiryDate = new Date(batch.expiry_date);
-                    if (expiryDate <= sevenDaysFromNow) {
-                        expiringItems.push({
-                            name: item.name,
-                            expiryDate: expiryDate,
-                            isExpired: expiryDate < today
-                        });
-                    }
-                }
-            });
-        }
+    const expiringBatches = appState.inventoryBatches.filter(batch => {
+        if (!batch.expiryDate) return false;
+        const expiryDate = new Date(batch.expiryDate);
+        return expiryDate <= sevenDaysFromNow;
     });
 
-    expiringItems.sort((a, b) => a.expiryDate - b.expiryDate);
+    expiringBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
     
-    if (expiringItems.length === 0) {
+    if (expiringBatches.length === 0) {
         listEl.innerHTML = '<p class="empty-state">Alt ser godt ud! Ingen varer udløber inden for 7 dage.</p>';
         return;
     }
 
-    listEl.innerHTML = expiringItems.slice(0, 5).map(item => `
-        <div class="expiring-item">
-            <span>${item.name}</span>
-            <span class="expiring-date ${item.isExpired ? 'is-expired' : ''}">
-                ${item.isExpired ? 'Udløbet' : ''} ${formatDate(item.expiryDate)}
-            </span>
-        </div>
-    `).join('');
+    listEl.innerHTML = expiringBatches.slice(0, 5).map(batch => {
+        const item = appState.inventoryItems.find(i => i.id === batch.itemId);
+        if (!item) return ''; // Skip if parent item not found
+
+        const expiryDate = new Date(batch.expiryDate);
+        const isExpired = expiryDate < today;
+
+        return `
+            <div class="expiring-item">
+                <span>${item.name} (${batch.quantity} x ${batch.size}${batch.unit})</span>
+                <span class="expiring-date ${isExpired ? 'is-expired' : ''}">
+                    ${isExpired ? 'Udløbet' : ''} ${formatDate(expiryDate)}
+                </span>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderInventorySummary() {
-    // This function will need a major overhaul once the data model changes.
-    // For now, it will likely show incorrect data or break.
     const summaryCard = appElements.inventorySummaryCard;
-    summaryCard.innerHTML = '<h3>Lagerstatus</h3><p><em>Opdateres efter ombygning...</em></p>';
+    const totalItems = appState.inventoryItems.length;
+    const itemsWithStock = appState.inventory.filter(item => item.totalStock > 0).length;
+    let totalValue = 0;
+
+    appState.inventoryBatches.forEach(batch => {
+        totalValue += batch.price || 0;
+    });
+    
+    summaryCard.innerHTML = `
+        <h3>Lagerstatus</h3>
+        <div class="summary-item">
+            <span>Antal varetyper</span>
+            <span class="summary-value">${totalItems}</span>
+        </div>
+        <div class="summary-item">
+            <span>Varetyper på lager</span>
+            <span class="summary-value">${itemsWithStock}</span>
+        </div>
+        <div class="summary-item">
+            <span>Estimeret lagerværdi</span>
+            <span class="summary-value">${totalValue.toFixed(2)} kr.</span>
+        </div>
+    `;
 }
 
 function renderFavoriteStoreSelector() {
