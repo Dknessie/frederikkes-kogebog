@@ -1,7 +1,7 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, setDoc, deleteField, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
@@ -14,11 +14,12 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initOverview, renderOverviewPage } from './overview.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Central state object for the entire application
     const state = {
         currentUser: null,
-        masterProducts: [],
-        inventoryVariants: [],
-        inventory: [], // Vil indeholde den kombinerede/nestede data
+        inventoryItems: [], // Formerly masterProducts
+        inventoryBatches: [], // Formerly inventoryVariants
+        inventory: [], // Will contain the combined/nested data of items and their batches
         recipes: [],
         references: {},
         preferences: {},
@@ -30,9 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
         recipeFormImage: { type: null, data: null },
-        listeners: {}
+        listeners: {} // To hold unsubscribe functions for Firestore listeners
     };
 
+    // Cache of DOM elements for performance
     const elements = {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
@@ -44,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
-        inventoryModalTitle: document.getElementById('inventory-modal-title'),
+        inventoryModalTitle: document.getElementById('inventory-item-modal-title'),
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
@@ -52,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeGrid: document.querySelector('.recipe-grid'),
         ingredientsContainer: document.getElementById('ingredients-container'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
-        importIngredientsBtn: document.getElementById('import-ingredients-btn'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
@@ -99,8 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reorderListContainer: document.getElementById('reorder-list-container'),
         reorderForm: document.getElementById('reorder-form'),
         inventorySearchInput: document.getElementById('inventory-search-input'),
-        inventoryFilterButtons: document.getElementById('inventory-filter-buttons'),
-        inventoryLocationTabs: document.getElementById('inventory-location-tabs'),
         inventoryListContainer: document.getElementById('inventory-list-container'),
         favoriteStoreSelect: document.getElementById('profile-favorite-store'),
         shoppingList: {
@@ -134,55 +133,64 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Combines master-products and variants into one unified data structure.
-     * Calculates total stock based on both weight (grams) and item count.
+     * Combines inventory items and their corresponding batches into a unified data structure.
+     * This function is central to the new inventory model. It calculates total stock
+     * based on all active batches for each item.
      */
     function combineInventoryData() {
-        if (!state.masterProducts || !state.inventoryVariants) return;
+        if (!state.inventoryItems || !state.inventoryBatches) return;
 
-        state.inventory = state.masterProducts.map(master => {
-            const variants = state.inventoryVariants.filter(variant => variant.masterProductId === master.id);
+        state.inventory = state.inventoryItems.map(item => {
+            const batches = state.inventoryBatches.filter(batch => batch.itemId === item.id);
             
-            const totalStockGrams = variants.reduce((sum, v) => {
-                const stock = v.currentStock || 0;
-                const size = v.purchaseSize || 0;
-                return sum + (stock * size);
-            }, 0);
-
-            const totalStockItems = variants.reduce((sum, v) => {
-                return sum + (v.currentStock || 0);
-            }, 0);
+            let totalStock = 0;
+            // The method of calculating total stock depends on the item's default unit.
+            if (item.defaultUnit === 'stk') {
+                totalStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+            } else { // Assumes 'g' or 'ml'
+                totalStock = batches.reduce((sum, b) => {
+                    const batchTotalSize = (b.quantity || 0) * (b.size || 0);
+                    return sum + batchTotalSize;
+                }, 0);
+            }
 
             return {
-                ...master,
-                variants: variants,
-                totalStockGrams: totalStockGrams,
-                totalStockItems: totalStockItems
+                ...item,
+                batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)), // Sort batches by expiry
+                totalStock: totalStock
             };
         });
     }
 
+    /**
+     * Sets up real-time Firestore listeners for all data collections.
+     * @param {string} userId - The UID of the currently logged-in user.
+     */
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
+        // Clean up any existing listeners to prevent memory leaks
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
 
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
 
-        const qMasterProducts = query(collection(db, 'master_products'), where("userId", "==", userId));
-        state.listeners.masterProducts = onSnapshot(qMasterProducts, (snapshot) => {
-            state.masterProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Listener for inventory items
+        const qItems = query(collection(db, 'inventory_items'), where("userId", "==", userId));
+        state.listeners.inventoryItems = onSnapshot(qItems, (snapshot) => {
+            state.inventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'master produkter'));
+            handleNavigation(window.location.hash); // Re-render current page with new data
+        }, (error) => commonErrorHandler(error, 'varer'));
 
-        const qVariants = query(collection(db, 'inventory_variants'), where("userId", "==", userId));
-        state.listeners.inventoryVariants = onSnapshot(qVariants, (snapshot) => {
-            state.inventoryVariants = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Listener for inventory batches
+        const qBatches = query(collection(db, 'inventory_batches'), where("userId", "==", userId));
+        state.listeners.inventoryBatches = onSnapshot(qBatches, (snapshot) => {
+            state.inventoryBatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'vare varianter'));
+            handleNavigation(window.location.hash); // Re-render current page with new data
+        }, (error) => commonErrorHandler(error, 'vare-batches'));
 
+        // Listener for recipes
         const qRecipes = query(collection(db, 'recipes'), where("userId", "==", userId));
         state.listeners.recipes = onSnapshot(qRecipes, (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -191,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'opskrifter'));
         
+        // Listeners for other parts of the app (unchanged)
         const year = state.currentDate.getFullYear();
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
@@ -201,9 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
             state.shoppingList = doc.exists() ? doc.data().items || {} : {};
             renderShoppingList();
-            if (window.location.hash === '#inventory') {
-                renderInventory();
-            }
         }, (error) => commonErrorHandler(error, 'indkøbsliste'));
 
         state.listeners.kitchenCounter = onSnapshot(doc(db, 'kitchen_counters', userId), (doc) => {
@@ -215,8 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.budget = onSnapshot(settingsRef, (doc) => {
             if (doc.exists()) {
                 state.budget = doc.data();
-            } else {
-                setDoc(settingsRef, state.budget).catch(e => handleError(e, "Kunne ikke oprette standardbudget."));
             }
             if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
         }, (error) => commonErrorHandler(error, 'budget'));
@@ -225,40 +229,28 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
             if (doc.exists()) {
                 state.preferences = doc.data();
-            } else {
-                setDoc(preferencesRef, { favoriteStoreId: '' }).catch(e => handleError(e, "Kunne ikke oprette standard præferencer."));
             }
-            if (document.querySelector('#overview:not(.hidden)')) {
-                renderOverviewPage();
-            }
+            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
         }, (error) => commonErrorHandler(error, 'præferencer'));
 
         const referencesRef = doc(db, 'references', userId);
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                
                 elements.addInventoryItemBtn.disabled = false;
                 elements.reorderAssistantBtn.disabled = false;
                 elements.addRecipeBtn.disabled = false;
                 setReferencesLoaded(true);
-
                 if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
                 if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
-
-            } else {
-                const defaultReferences = {
-                    itemCategories: ['Frugt & Grønt', 'Kød & Fisk', 'Mejeri', 'Kolonial', 'Frost'],
-                    itemLocations: ['Køleskab', 'Fryser', 'Skab'],
-                    standardUnits: ['g', 'kg', 'ml', 'l', 'stk', 'pakke', 'dåse', 'tsk', 'spsk', 'dl'],
-                    stores: ['REMA 1000', 'Netto', 'Føtex'],
-                    shelfLife: { 'Mejeri': 7, 'Kød & Fisk': 3 }
-                };
-                setDoc(referencesRef, defaultReferences).catch(e => handleError(e, "Kunne ikke oprette standard referencer.", "setDoc(references)"));
             }
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
 
+    /**
+     * Callback function executed on successful user login.
+     * @param {object} user - The Firebase user object.
+     */
     function onLogin(user) {
         state.currentUser = user;
         document.getElementById('profile-email').textContent = user.email;
@@ -271,6 +263,9 @@ document.addEventListener('DOMContentLoaded', () => {
         handleNavigation(currentHash);
     }
 
+    /**
+     * Callback function executed on user logout.
+     */
     function onLogout() {
         state.currentUser = null;
         elements.appContainer.classList.add('hidden');
@@ -283,6 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setReferencesLoaded(false);
     }
 
+    /**
+     * Handles routing within the app, calling the correct render function based on the URL hash.
+     * @param {string} hash - The current URL hash.
+     */
     function handleNavigation(hash) {
         switch(hash) {
             case '#meal-planner':
@@ -307,6 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    /**
+     * Main initialization function for the application.
+     */
     function init() {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
