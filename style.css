@@ -1,5 +1,5 @@
 /* =================================================================
-   STILGUIDE & DESIGN SYSTEM: Frederikkes Kogebog
+   STILGUIDE & DESIGN SYSTEM: Frederikkes Hjem
    ================================================================= */
 
 /* ===== 1. Generel Styling & Variabler ===== */
@@ -283,7 +283,7 @@ header {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-/* ===== 5. Madplan Side ===== */
+/* ===== 5. Kalender Side ===== */
 .meal-planner-layout {
     display: grid;
     grid-template-columns: 300px 1fr; 
@@ -567,7 +567,7 @@ header {
 #add-shopping-item-form button, #add-shopping-item-form-mobile button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
 
 
-/* ===== 7. Opskrifter & Referencer Sider ===== */
+/* ===== 7. Kogebog, Hjem & Referencer Sider ===== */
 .actions-bar { 
     margin-bottom: var(--spacing-l); 
     display: flex;
@@ -930,84 +930,50 @@ header {
     padding: var(--spacing-m);
 }
 
-/* Oversigt Side */
-.overview-layout {
+/* ===== 8. Dashboard & Hjem Sider ===== */
+.dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: var(--spacing-l);
 }
-.card {
+.dashboard-widget {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
     box-shadow: var(--strong-shadow);
     padding: var(--spacing-l);
 }
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-m);
-}
-.card-header h3 {
-    margin: 0;
-}
-#inventory-summary-card .summary-item, #expiring-items-list .expiring-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-m) 0;
-    font-size: 1rem;
-}
-#inventory-summary-card .summary-item:not(:last-child), #expiring-items-list .expiring-item:not(:last-child) {
-    border-bottom: 1px solid var(--border-color);
-}
-#inventory-summary-card .summary-value, #expiring-items-list .expiring-date {
-    font-weight: 700;
-    color: var(--primary-color);
-}
-#expiring-items-list .expiring-date.is-expired {
-    color: var(--status-red);
+.dashboard-widget.full-width {
+    grid-column: 1 / -1;
 }
 
-
-.budget-summary {
+.hjem-submodules {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-l);
+    margin-top: var(--spacing-l);
+}
+.hjem-module-card {
+    background: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    padding: var(--spacing-l);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-m);
-    margin-bottom: var(--spacing-l);
 }
-.budget-item {
+.hjem-module-card h3 {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    gap: var(--spacing-m);
 }
-.budget-label {
-    font-size: var(--small-font-size);
-    color: #666;
+.hjem-module-card p {
+    flex-grow: 1;
 }
-.budget-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text-color);
+.hjem-module-card .btn {
+    margin-top: auto;
 }
-.progress-bar-container {
-    background-color: #eee;
-    border-radius: 20px;
-    height: 12px;
-    overflow: hidden;
-}
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    border-radius: 20px;
-    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
-}
-.progress-bar.green { background-color: var(--status-green); }
-.progress-bar.yellow { background-color: var(--status-yellow); }
-.progress-bar.red { background-color: var(--status-red); }
 
 
-/* ===== 8. Modaler ===== */
+/* ===== 9. Modaler ===== */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -1023,7 +989,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1187,7 +1153,7 @@ header {
     margin-bottom: 1em;
 }
 
-#ingredients-container {
+#ingredients-container, #project-materials-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
@@ -1312,7 +1278,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-left: auto;
 }
 
-/* ===== 9. Billedupload Styling ===== */
+/* ===== 10. Billedupload Styling ===== */
 .image-options {
     display: flex;
     align-items: center;
@@ -1365,7 +1331,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
-/* ===== 10. Mobil-specifikke Styles ===== */
+/* ===== 11. Mobil-specifikke Styles ===== */
 .mobile-tab-bar {
     display: none;
     position: fixed;
@@ -1479,7 +1445,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: var(--spacing-s);
 }
 
-/* ===== 11. Responsive Design ===== */
+/* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
     .desktop-nav {
         display: none;
@@ -1532,6 +1498,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         height: 150px;
     }
     .inventory-filters {
+        grid-template-columns: 1fr;
+    }
+    .dashboard-grid {
         grid-template-columns: 1fr;
     }
 }
