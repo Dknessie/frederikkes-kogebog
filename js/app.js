@@ -11,16 +11,18 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingList } from './shoppingList.js';
 import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
-import { initOverview, renderOverviewPage } from './overview.js';
+import { initDashboard, renderDashboardPage } from './dashboard.js'; // NEW
+import { initProjects, renderProjects } from './projects.js'; // NEW
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
-        inventoryItems: [], // Formerly masterProducts
-        inventoryBatches: [], // Formerly inventoryVariants
-        inventory: [], // Will contain the combined/nested data of items and their batches
+        inventoryItems: [],
+        inventoryBatches: [],
+        inventory: [],
         recipes: [],
+        projects: [], // NEW
         references: {},
         preferences: {},
         mealPlan: {},
@@ -31,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
         recipeFormImage: { type: null, data: null },
-        listeners: {} // To hold unsubscribe functions for Firestore listeners
+        listeners: {}
     };
 
     // Cache of DOM elements for performance
@@ -39,10 +41,20 @@ document.addEventListener('DOMContentLoaded', () => {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
         loginForm: document.getElementById('login-form'),
-        logoutButtons: [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')],
+        logoutButtons: [document.getElementById('logout-btn-header')],
         navLinks: document.querySelectorAll('.desktop-nav .nav-link'),
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
+        
+        // Project elements (NEW)
+        projectEditModal: document.getElementById('project-edit-modal'),
+        projectForm: document.getElementById('project-form'),
+        addProjectBtn: document.getElementById('add-project-btn'),
+        projectsGrid: document.getElementById('projects-grid'),
+        projectMaterialsContainer: document.getElementById('project-materials-container'),
+        addMaterialBtn: document.getElementById('add-material-btn'),
+
+        // Existing elements
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
@@ -78,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
         mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
         referencesContainer: document.getElementById('references-container'),
-        inventorySummaryCard: document.getElementById('inventory-summary-card'),
         mobileTabBar: document.getElementById('mobile-tab-bar'),
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
         mobilePanelOverlay: document.getElementById('mobile-panel-overlay'),
@@ -91,17 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
         editBudgetModal: document.getElementById('edit-budget-modal'),
         editBudgetForm: document.getElementById('edit-budget-form'),
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
-        budgetSpentEl: document.getElementById('budget-spent'),
-        budgetTotalEl: document.getElementById('budget-total'),
-        budgetProgressBar: document.getElementById('budget-progress-bar'),
-        weeklyPriceDisplay: document.getElementById('weekly-price-display'),
         reorderAssistantBtn: document.getElementById('reorder-assistant-btn'),
         reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
         reorderListContainer: document.getElementById('reorder-list-container'),
         reorderForm: document.getElementById('reorder-form'),
         inventorySearchInput: document.getElementById('inventory-search-input'),
         inventoryListContainer: document.getElementById('inventory-list-container'),
-        favoriteStoreSelect: document.getElementById('profile-favorite-store'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
@@ -132,11 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    /**
-     * Combines inventory items and their corresponding batches into a unified data structure.
-     * This function is central to the new inventory model. It calculates total stock
-     * based on all active batches for each item.
-     */
     function combineInventoryData() {
         if (!state.inventoryItems || !state.inventoryBatches) return;
 
@@ -144,10 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const batches = state.inventoryBatches.filter(batch => batch.itemId === item.id);
             
             let totalStock = 0;
-            // The method of calculating total stock depends on the item's default unit.
             if (item.defaultUnit === 'stk') {
                 totalStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-            } else { // Assumes 'g' or 'ml'
+            } else {
                 totalStock = batches.reduce((sum, b) => {
                     const batchTotalSize = (b.quantity || 0) * (b.size || 0);
                     return sum + batchTotalSize;
@@ -156,55 +156,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return {
                 ...item,
-                batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)), // Sort batches by expiry
+                batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)),
                 totalStock: totalStock
             };
         });
     }
 
-    /**
-     * Sets up real-time Firestore listeners for all data collections.
-     * @param {string} userId - The UID of the currently logged-in user.
-     */
     function setupRealtimeListeners(userId) {
         if (!userId) return;
 
-        // Clean up any existing listeners to prevent memory leaks
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
 
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
 
-        // Listener for inventory items
         const qItems = query(collection(db, 'inventory_items'), where("userId", "==", userId));
         state.listeners.inventoryItems = onSnapshot(qItems, (snapshot) => {
             state.inventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
-            handleNavigation(window.location.hash); // Re-render current page with new data
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'varer'));
 
-        // Listener for inventory batches
         const qBatches = query(collection(db, 'inventory_batches'), where("userId", "==", userId));
         state.listeners.inventoryBatches = onSnapshot(qBatches, (snapshot) => {
             state.inventoryBatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             combineInventoryData();
-            handleNavigation(window.location.hash); // Re-render current page with new data
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'vare-batches'));
 
-        // Listener for recipes
         const qRecipes = query(collection(db, 'recipes'), where("userId", "==", userId));
         state.listeners.recipes = onSnapshot(qRecipes, (snapshot) => {
             state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            document.getElementById('profile-recipe-count').textContent = state.recipes.length;
-            document.getElementById('profile-favorite-count').textContent = state.recipes.filter(r => r.is_favorite).length;
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'opskrifter'));
         
-        // Listeners for other parts of the app (unchanged)
+        // NEW: Listener for projects
+        const qProjects = query(collection(db, 'projects'), where("userId", "==", userId));
+        state.listeners.projects = onSnapshot(qProjects, (snapshot) => {
+            state.projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'projekter'));
+
         const year = state.currentDate.getFullYear();
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
-            if (document.querySelector('#meal-planner:not(.hidden)')) renderMealPlanner();
-            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
+            if (document.querySelector('#calendar:not(.hidden)')) renderMealPlanner();
+            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
         }, (error) => commonErrorHandler(error, 'madplan'));
 
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
@@ -222,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (doc.exists()) {
                 state.budget = doc.data();
             }
-            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
+            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
         }, (error) => commonErrorHandler(error, 'budget'));
 
         const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
@@ -230,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (doc.exists()) {
                 state.preferences = doc.data();
             }
-            if (document.querySelector('#overview:not(.hidden)')) renderOverviewPage();
+            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
         }, (error) => commonErrorHandler(error, 'præferencer'));
 
         const referencesRef = doc(db, 'references', userId);
@@ -240,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.addInventoryItemBtn.disabled = false;
                 elements.reorderAssistantBtn.disabled = false;
                 elements.addRecipeBtn.disabled = false;
+                elements.addProjectBtn.disabled = false; // NEW
                 setReferencesLoaded(true);
                 if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
                 if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
@@ -247,25 +244,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
 
-    /**
-     * Callback function executed on successful user login.
-     * @param {object} user - The Firebase user object.
-     */
     function onLogin(user) {
         state.currentUser = user;
-        document.getElementById('profile-email').textContent = user.email;
         elements.loginPage.classList.add('hidden');
         elements.appContainer.classList.remove('hidden');
         setupRealtimeListeners(user.uid); 
         
-        const currentHash = window.location.hash || '#meal-planner';
+        const currentHash = window.location.hash || '#dashboard';
         navigateTo(currentHash);
         handleNavigation(currentHash);
     }
 
-    /**
-     * Callback function executed on user logout.
-     */
     function onLogout() {
         state.currentUser = null;
         elements.appContainer.classList.add('hidden');
@@ -275,44 +264,42 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
+        elements.addProjectBtn.disabled = true; // NEW
         setReferencesLoaded(false);
     }
 
-    /**
-     * Handles routing within the app, calling the correct render function based on the URL hash.
-     * @param {string} hash - The current URL hash.
-     */
     function handleNavigation(hash) {
         switch(hash) {
-            case '#meal-planner':
+            case '#dashboard':
             case '':
+                renderDashboardPage();
+                break;
+            case '#calendar':
                 renderMealPlanner();
                 renderShoppingList();
                 renderKitchenCounter();
+                break;
+            case '#hjem':
+                renderProjects();
                 break;
             case '#recipes':
                 renderPageTagFilters();
                 renderRecipes();
                 break;
-            case '#references':
-                renderReferencesPage();
-                break;
             case '#inventory':
                 renderInventory();
                 break;
-            case '#overview':
-                renderOverviewPage();
+            case '#references':
+                renderReferencesPage();
                 break;
         }
     }
 
-    /**
-     * Main initialization function for the application.
-     */
     function init() {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
+        elements.addProjectBtn.disabled = true; // NEW
 
         initAuth(onLogin, onLogout);
         setupAuthEventListeners(elements);
@@ -323,7 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initKitchenCounter(state, elements);
         initMealPlanner(state, elements);
         initReferences(state, elements);
-        initOverview(state, elements);
+        initDashboard(state, elements); // NEW
+        initProjects(state, elements); // NEW
 
         window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
     }
