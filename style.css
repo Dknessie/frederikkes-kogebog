@@ -826,12 +826,12 @@ header {
     margin-left: auto;
 }
 
-.empty-state-small {
+.empty-state, .empty-state-small {
     font-style: italic;
     color: #888;
     padding: var(--spacing-m) 0;
+    text-align: center;
 }
-
 
 /* Referencer Side */
 .references-layout {
@@ -942,9 +942,70 @@ header {
     box-shadow: var(--strong-shadow);
     padding: var(--spacing-l);
 }
-.dashboard-widget.full-width {
-    grid-column: 1 / -1;
+.dashboard-widget .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m);
 }
+.dashboard-widget h3 {
+    margin: 0;
+}
+
+#inventory-summary-list .summary-item, #expiring-items-list .expiring-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m) 0;
+    font-size: 1rem;
+}
+#inventory-summary-list .summary-item:not(:last-child), #expiring-items-list .expiring-item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+#inventory-summary-list .summary-value, #expiring-items-list .expiring-date {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+#expiring-items-list .expiring-date.is-expired {
+    color: var(--status-red);
+}
+
+.budget-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-l);
+}
+.budget-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.budget-label {
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.budget-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.progress-bar-container {
+    background-color: #eee;
+    border-radius: 20px;
+    height: 12px;
+    overflow: hidden;
+}
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 20px;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+}
+.progress-bar.green { background-color: var(--status-green); }
+.progress-bar.yellow { background-color: var(--status-yellow); }
+.progress-bar.red { background-color: var(--status-red); }
+
 
 .hjem-submodules {
     display: grid;
@@ -968,10 +1029,10 @@ header {
 .hjem-module-card p {
     flex-grow: 1;
 }
-.hjem-module-card .btn {
+.hjem-module-actions {
     margin-top: auto;
+    padding-top: var(--spacing-m);
 }
-
 
 /* ===== 9. Modaler ===== */
 .modal-overlay {
