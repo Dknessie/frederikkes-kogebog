@@ -17,35 +17,20 @@ let inventoryState = {
 
 export function initInventory(state, elements) {
     appState = state;
-    appElements = {
-        ...elements,
-        inventoryItemModal: document.getElementById('inventory-item-modal'),
-        inventoryItemForm: document.getElementById('inventory-item-form'),
-        inventoryItemModalTitle: document.getElementById('inventory-item-modal-title'),
-        deleteInventoryItemBtn: document.getElementById('delete-inventory-item-btn'),
-        conversionRulesContainer: document.getElementById('conversion-rules-container'),
-        addConversionRuleBtn: document.getElementById('add-conversion-rule-btn'),
-        inventoryFilterCategory: document.getElementById('inventory-filter-category'),
-        inventoryFilterLocation: document.getElementById('inventory-filter-location'),
-        inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
-        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
-        
-        // Batch related elements
-        batchListContainer: document.getElementById('batch-list-container'),
-        addBatchBtn: document.getElementById('add-batch-btn'),
-        batchEditModal: document.getElementById('batch-edit-modal'),
-        batchEditForm: document.getElementById('batch-edit-form'),
-        deleteBatchBtn: document.getElementById('delete-batch-btn')
-    };
+    appElements = elements;
 
     // Event Listeners for main item modal
     appElements.addInventoryItemBtn.addEventListener('click', () => openInventoryItemModal(null));
     appElements.inventoryItemForm.addEventListener('submit', handleSaveInventoryItem);
-    appElements.deleteInventoryItemBtn.addEventListener('click', handleDeleteInventoryItem);
+    
+    const deleteBtn = document.getElementById('delete-inventory-item-btn');
+    if(deleteBtn) deleteBtn.addEventListener('click', handleDeleteInventoryItem);
     
     // Event Listeners for conversion rules
-    appElements.addConversionRuleBtn.addEventListener('click', () => addConversionRuleRow());
-    appElements.conversionRulesContainer.addEventListener('click', e => {
+    const addConversionBtn = document.getElementById('add-conversion-rule-btn');
+    const conversionRulesContainer = document.getElementById('conversion-rules-container');
+    if(addConversionBtn) addConversionBtn.addEventListener('click', () => addConversionRuleRow());
+    if(conversionRulesContainer) conversionRulesContainer.addEventListener('click', e => {
         if (e.target.closest('.delete-rule-btn')) {
             e.target.closest('.conversion-rule-row').remove();
         }
@@ -94,7 +79,12 @@ export function initInventory(state, elements) {
     });
     
     // Event Listeners for batch management
-    appElements.addBatchBtn.addEventListener('click', () => {
+    const addBatchBtn = document.getElementById('add-batch-btn');
+    const batchListContainer = document.getElementById('batch-list-container');
+    const batchEditForm = document.getElementById('batch-edit-form');
+    const deleteBatchBtn = document.getElementById('delete-batch-btn');
+
+    if(addBatchBtn) addBatchBtn.addEventListener('click', () => {
         const itemId = document.getElementById('inventory-item-id').value;
         if (itemId) {
             openBatchModal(itemId, null);
@@ -102,7 +92,7 @@ export function initInventory(state, elements) {
             showNotification({title: "Gem Vare Først", message: "Du skal gemme varen, før du kan tilføje et batch."});
         }
     });
-    appElements.batchListContainer.addEventListener('click', e => {
+    if(batchListContainer) batchListContainer.addEventListener('click', e => {
         const editBtn = e.target.closest('.edit-batch-btn');
         if (editBtn) {
             const itemId = editBtn.dataset.itemId;
@@ -110,8 +100,8 @@ export function initInventory(state, elements) {
             openBatchModal(itemId, batchId);
         }
     });
-    appElements.batchEditForm.addEventListener('submit', handleSaveBatch);
-    appElements.deleteBatchBtn.addEventListener('click', handleDeleteBatch);
+    if(batchEditForm) batchEditForm.addEventListener('submit', handleSaveBatch);
+    if(deleteBatchBtn) deleteBatchBtn.addEventListener('click', handleDeleteBatch);
 }
 
 export function setReferencesLoaded(isLoaded) {
@@ -200,7 +190,7 @@ export function renderInventory() {
             <div class="inventory-item-header" data-id="${item.id}">
                 <div class="inventory-item-info">
                     <div class="inventory-item-title-group">
-                        <span class="completeness-indicator ${stockStatusClass}" title="Lagerstatus"></span>
+                        <span class="completeness-indicator status-indicator ${stockStatusClass}" title="Lagerstatus"></span>
                         <h4>${item.name}</h4>
                     </div>
                 </div>
@@ -226,19 +216,19 @@ export function renderInventory() {
 function openInventoryItemModal(itemId) {
     const form = appElements.inventoryItemForm;
     form.reset();
-    appElements.conversionRulesContainer.innerHTML = '';
-    appElements.batchListContainer.innerHTML = '';
+    document.getElementById('conversion-rules-container').innerHTML = '';
+    document.getElementById('batch-list-container').innerHTML = '';
     
     const item = itemId ? appState.inventory.find(p => p.id === itemId) : null;
 
     if (item) {
-        appElements.inventoryItemModalTitle.textContent = 'Rediger Vare';
+        appElements.inventoryModalTitle.textContent = 'Rediger Vare';
         document.getElementById('inventory-item-id').value = item.id;
         document.getElementById('inventory-item-name').value = item.name;
         document.getElementById('inventory-item-default-unit').value = item.defaultUnit;
         document.getElementById('inventory-item-reorder-point').value = item.reorderPoint || '';
-        appElements.deleteInventoryItemBtn.style.display = 'inline-flex';
-        appElements.addBatchBtn.style.display = 'inline-flex';
+        document.getElementById('delete-inventory-item-btn').style.display = 'inline-flex';
+        document.getElementById('add-batch-btn').style.display = 'inline-flex';
 
         if (item.conversion_rules) {
             for (const unit in item.conversion_rules) {
@@ -247,11 +237,11 @@ function openInventoryItemModal(itemId) {
         }
         renderBatchListInModal(item.batches);
     } else {
-        appElements.inventoryItemModalTitle.textContent = 'Opret Ny Vare';
+        appElements.inventoryModalTitle.textContent = 'Opret Ny Vare';
         document.getElementById('inventory-item-id').value = '';
-        appElements.deleteInventoryItemBtn.style.display = 'none';
-        appElements.addBatchBtn.style.display = 'none';
-        appElements.batchListContainer.innerHTML = '<p class="empty-state-small">Gem varen for at kunne tilføje batches.</p>';
+        document.getElementById('delete-inventory-item-btn').style.display = 'none';
+        document.getElementById('add-batch-btn').style.display = 'none';
+        document.getElementById('batch-list-container').innerHTML = '<p class="empty-state-small">Gem varen for at kunne tilføje batches.</p>';
     }
     
     populateReferenceDropdown(document.getElementById('inventory-item-category'), appState.references.itemCategories, 'Vælg kategori...');
@@ -266,7 +256,7 @@ function openInventoryItemModal(itemId) {
 }
 
 function renderBatchListInModal(batches) {
-    const container = appElements.batchListContainer;
+    const container = document.getElementById('batch-list-container');
     if (!batches || batches.length === 0) {
         container.innerHTML = '<p class="empty-state-small">Ingen batches registreret.</p>';
         return;
@@ -287,7 +277,7 @@ async function handleSaveInventoryItem(e) {
     const itemName = document.getElementById('inventory-item-name').value.trim();
 
     const conversionRules = {};
-    appElements.conversionRulesContainer.querySelectorAll('.conversion-rule-row').forEach(row => {
+    document.getElementById('conversion-rules-container').querySelectorAll('.conversion-rule-row').forEach(row => {
         const unit = row.querySelector('.rule-unit-select').value;
         const value = parseFloat(row.querySelector('.rule-value-input').value);
         if (unit && value > 0) {
@@ -315,13 +305,11 @@ async function handleSaveInventoryItem(e) {
             await updateDoc(doc(db, 'inventory_items', itemId), itemData);
         } else {
             const newDocRef = await addDoc(collection(db, 'inventory_items'), itemData);
-            // Update the form with the new ID so batches can be added
             document.getElementById('inventory-item-id').value = newDocRef.id;
-            appElements.addBatchBtn.style.display = 'inline-flex';
-            appElements.batchListContainer.innerHTML = ''; // Clear placeholder text
+            document.getElementById('add-batch-btn').style.display = 'inline-flex';
+            document.getElementById('batch-list-container').innerHTML = '';
         }
         
-        // No modal close here, user might want to add batches
         showNotification({ title: 'Gemt!', message: 'Varens generelle informationer er blevet gemt.' });
 
     } catch (error) {
@@ -358,7 +346,7 @@ async function handleDeleteInventoryItem() {
 
 // Batch Management Functions
 export function openBatchModal(itemId, batchId) {
-    const form = appElements.batchEditForm;
+    const form = document.getElementById('batch-edit-form');
     form.reset();
     
     const item = appState.inventory.find(i => i.id === itemId);
@@ -371,26 +359,27 @@ export function openBatchModal(itemId, batchId) {
 
     document.getElementById('batch-edit-item-id').value = itemId;
     document.getElementById('batch-edit-unit').value = item.defaultUnit || 'g';
-    document.getElementById('batch-edit-unit').disabled = true; // Unit is determined by parent item
+    document.getElementById('batch-edit-unit').disabled = true;
     
+    const modal = document.getElementById('batch-edit-modal');
     if (batch) {
-        appElements.batchEditModal.querySelector('h3').textContent = `Rediger Batch for ${item.name}`;
+        modal.querySelector('h3').textContent = `Rediger Batch for ${item.name}`;
         document.getElementById('batch-edit-batch-id').value = batch.id;
         document.getElementById('batch-edit-purchase-date').value = batch.purchaseDate || formatDate(new Date());
         document.getElementById('batch-edit-expiry-date').value = batch.expiryDate || '';
         document.getElementById('batch-edit-quantity').value = batch.quantity || 1;
         document.getElementById('batch-edit-size').value = batch.size || '';
         document.getElementById('batch-edit-price').value = batch.price || '';
-        appElements.deleteBatchBtn.style.display = 'inline-flex';
+        document.getElementById('delete-batch-btn').style.display = 'inline-flex';
     } else {
-        appElements.batchEditModal.querySelector('h3').textContent = `Nyt Batch for ${item.name}`;
+        modal.querySelector('h3').textContent = `Nyt Batch for ${item.name}`;
         document.getElementById('batch-edit-batch-id').value = '';
         document.getElementById('batch-edit-purchase-date').value = formatDate(new Date());
-        appElements.deleteBatchBtn.style.display = 'none';
+        document.getElementById('delete-batch-btn').style.display = 'none';
     }
 
     populateReferenceDropdown(document.getElementById('batch-edit-store'), appState.references.stores, 'Vælg butik...', batch?.store);
-    appElements.batchEditModal.classList.remove('hidden');
+    modal.classList.remove('hidden');
 }
 
 async function handleSaveBatch(e) {
@@ -421,7 +410,7 @@ async function handleSaveBatch(e) {
         } else {
             await addDoc(collection(db, 'inventory_batches'), batchData);
         }
-        appElements.batchEditModal.classList.add('hidden');
+        document.getElementById('batch-edit-modal').classList.add('hidden');
         showNotification({title: "Batch Gemt", message: "Dit batch er blevet gemt."});
     } catch (error) {
         handleError(error, "Batchet kunne ikke gemmes.", "handleSaveBatch");
@@ -437,7 +426,7 @@ async function handleDeleteBatch() {
 
     try {
         await deleteDoc(doc(db, 'inventory_batches', batchId));
-        appElements.batchEditModal.classList.add('hidden');
+        document.getElementById('batch-edit-modal').classList.add('hidden');
         showNotification({title: "Batch Slettet", message: "Batchet er blevet fjernet fra lageret."});
     } catch (error) {
         handleError(error, "Batchet kunne ikke slettes.", "handleDeleteBatch");
@@ -446,19 +435,20 @@ async function handleDeleteBatch() {
 
 // Helper functions
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
     (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
     selectElement.value = currentValue || "";
 }
 
 function addConversionRuleRow(rule = { unit: '', value: '' }) {
-    const container = appElements.conversionRulesContainer;
+    const container = document.getElementById('conversion-rules-container');
     const row = document.createElement('div');
     row.className = 'conversion-rule-row';
 
     const unitSelect = document.createElement('select');
     unitSelect.className = 'rule-unit-select';
-    const allUnits = appState.references.standardUnits.filter(u => u !== document.getElementById('inventory-item-default-unit').value);
+    const allUnits = (appState.references.standardUnits || []).filter(u => u !== document.getElementById('inventory-item-default-unit').value);
     populateReferenceDropdown(unitSelect, allUnits, 'Vælg enhed', rule.unit);
 
     row.innerHTML = `
