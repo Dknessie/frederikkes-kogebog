@@ -26,7 +26,7 @@ export function navigateTo(hash) {
     if (targetPage) {
         targetPage.classList.remove('hidden');
     } else {
-        document.getElementById('meal-planner').classList.remove('hidden'); // Fallback
+        document.getElementById('dashboard').classList.remove('hidden'); // Fallback to dashboard
     }
     
     // Update active link in navigations
@@ -40,9 +40,6 @@ export function navigateTo(hash) {
         }
     });
 
-    // Call render functions for the active page
-    // This part is handled by the main app logic after navigation.
-    // We expose navigateTo globally for convenience.
     window.navigateTo = navigateTo;
 }
 
@@ -52,7 +49,7 @@ export function navigateTo(hash) {
 function initNavigation() {
     UIElements.headerTitleLink.addEventListener('click', (e) => {
         e.preventDefault();
-        window.location.hash = '#meal-planner';
+        window.location.hash = '#dashboard';
     });
 
     UIElements.navLinks.forEach(link => {
@@ -64,7 +61,7 @@ function initNavigation() {
     });
     
     window.addEventListener('hashchange', () => {
-        navigateTo(window.location.hash || '#meal-planner');
+        navigateTo(window.location.hash || '#dashboard');
     });
 }
 
