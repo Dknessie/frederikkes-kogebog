@@ -52,41 +52,21 @@
             <section id="dashboard" class="page">
                 <h2>Dashboard</h2>
                 <div class="dashboard-grid">
-                    <div id="widget-profile" class="dashboard-widget">
-                        <h3>Profil</h3>
-                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                        <div class="input-group">
-                            <label for="profile-favorite-store">Favoritbutik</label>
-                            <select id="profile-favorite-store"></select>
-                        </div>
-                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                    <div class="dashboard-widget">
+                        <h3>Kalender i dag</h3>
+                        <div id="widget-today-calendar"></div>
                     </div>
-                    <div id="widget-budget" class="dashboard-widget">
-                        <div class="card-header">
-                            <h3>Budget</h3>
-                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                        </div>
-                        <div class="budget-summary">
-                            <div class="budget-item">
-                                <span class="budget-label">Forbrug (Måned)</span>
-                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
-                            </div>
-                            <div class="budget-item">
-                                <span class="budget-label">Budget</span>
-                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
-                            </div>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div id="budget-progress-bar" class="progress-bar"></div>
-                        </div>
+                    <div class="dashboard-widget">
+                        <h3>Projekter i gang</h3>
+                        <div id="widget-active-projects"></div>
                     </div>
-                    <div id="widget-expiring-items" class="dashboard-widget">
-                        <h3>Udløber Snart</h3>
-                        <div id="expiring-items-list"></div>
+                    <div class="dashboard-widget">
+                        <h3>Udløber snart</h3>
+                        <div id="widget-expiring-items"></div>
                     </div>
-                    <div id="widget-inventory-summary" class="dashboard-widget">
-                        <h3>Lagerstatus</h3>
-                        <div id="inventory-summary-list"></div>
+                     <div class="dashboard-widget full-width">
+                        <h3>Budget</h3>
+                        <div id="widget-budget"></div>
                     </div>
                 </div>
             </section>
@@ -147,9 +127,7 @@
                         <h3><i class="fas fa-tools"></i> Projekter</h3>
                         <p>Planlæg og spor større opgaver som renovering, havearbejde og andre forbedringer.</p>
                         <div id="projects-grid" class="recipe-grid"></div>
-                        <div class="hjem-module-actions">
-                            <button id="add-project-btn" class="btn btn-primary">Tilføj nyt projekt</button>
-                        </div>
+                        <button id="add-project-btn" class="btn btn-primary">Tilføj nyt projekt</button>
                     </div>
                     <div class="hjem-module-card">
                         <h3><i class="fas fa-broom"></i> Vedligehold</h3>
@@ -591,34 +569,6 @@
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="edit-budget-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Rediger Månedligt Budget</h3>
-            <form id="edit-budget-form">
-                <div class="input-group">
-                    <label for="monthly-budget-input">Budget (kr.)</label>
-                    <input type="number" id="monthly-budget-input" min="0" step="100" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Budget</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="reorder-assistant-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Genbestillings-assistent</h3>
-            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
-            <form id="reorder-form">
-                <div id="reorder-list-container"></div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
                 </div>
             </form>
         </div>
