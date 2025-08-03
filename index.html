@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frederikkes Kogebog</title>
+    <title>Frederikkes Hjem</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,12 +14,12 @@
 
     <main id="login-page" class="page">
         <div class="login-container">
-            <h1 class="app-title">Frederikkes Kogebog</h1>
-            <p class="app-subtitle">Din digitale assistent i køkkenet</p>
+            <h1 class="app-title">Frederikkes Hjem</h1>
+            <p class="app-subtitle">Din digitale assistent til hele huset</p>
             <form id="login-form">
                 <div class="input-group">
                     <label for="email">Email</label>
-                    <input type="email" id="email" value="frederikke@kogebog.dk" required>
+                    <input type="email" id="email" value="frederikke@hjem.dk" required>
                 </div>
                 <div class="input-group">
                     <label for="password">Adgangskode</label>
@@ -34,20 +34,45 @@
     <div id="app-container" class="hidden">
         <header>
             <div class="header-content">
-                <a href="#meal-planner" class="header-title-link"><span class="header-title">Frederikkes Kogebog</span></a>
+                <a href="#dashboard" class="header-title-link"><span id="header-title" class="header-title">Frederikkes Hjem</span></a>
                 <nav class="desktop-nav">
-                    <a href="#meal-planner" class="nav-link active"><i class="fas fa-calendar-alt"></i> Madplan</a>
-                    <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Opskrifter</a>
-                    <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
+                    <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
+                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjem</a>
+                    <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
-                    <a href="#overview" class="nav-link"><i class="fas fa-chart-pie"></i> Oversigt</a>
+                    <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                 </nav>
                  <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </header>
 
         <main id="app-main-content">
-            <section id="meal-planner" class="page">
+            <!-- NEW: Dashboard Page -->
+            <section id="dashboard" class="page">
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="dashboard-widget">
+                        <h3>Kalender i dag</h3>
+                        <div id="widget-today-calendar"></div>
+                    </div>
+                    <div class="dashboard-widget">
+                        <h3>Projekter i gang</h3>
+                        <div id="widget-active-projects"></div>
+                    </div>
+                    <div class="dashboard-widget">
+                        <h3>Udløber snart</h3>
+                        <div id="widget-expiring-items"></div>
+                    </div>
+                     <div class="dashboard-widget full-width">
+                        <h3>Budget</h3>
+                        <div id="widget-budget"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RENAMED: Calendar Page (from Meal Planner) -->
+            <section id="calendar" class="page hidden">
                 <div class="meal-planner-layout">
                     <aside id="meal-planner-sidebar-left" class="meal-planner-sidebar-left">
                         <div class="sidebar-panel-tabs">
@@ -93,9 +118,33 @@
                     </div>
                 </div>
             </section>
+            
+            <!-- NEW: Hjem Page -->
+            <section id="hjem" class="page hidden">
+                <h2>Hjem Administration</h2>
+                <div class="hjem-submodules">
+                    <div class="hjem-module-card">
+                        <h3><i class="fas fa-tools"></i> Projekter</h3>
+                        <p>Planlæg og spor større opgaver som renovering, havearbejde og andre forbedringer.</p>
+                        <div id="projects-grid" class="recipe-grid"></div>
+                        <button id="add-project-btn" class="btn btn-primary">Tilføj nyt projekt</button>
+                    </div>
+                    <div class="hjem-module-card">
+                        <h3><i class="fas fa-broom"></i> Vedligehold</h3>
+                        <p>Hold styr på tilbagevendende opgaver som rengøring, afkalkning og service.</p>
+                        <!-- Placeholder for maintenance tasks -->
+                    </div>
+                    <div class="hjem-module-card">
+                        <h3><i class="fas fa-door-open"></i> Rum</h3>
+                        <p>Administrer information pr. rum, f.eks. malingskoder, inventar og specifikke noter.</p>
+                        <!-- Placeholder for room management -->
+                    </div>
+                </div>
+            </section>
 
+            <!-- RENAMED: Kogebog Page (from Recipes) -->
             <section id="recipes" class="page hidden">
-                <h2>Opskrifter</h2>
+                <h2>Kogebog</h2>
                 <div class="actions-bar recipe-actions-bar">
                     <button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
                     <div class="switch-group">
@@ -110,12 +159,6 @@
                 <div id="recipe-grid" class="recipe-grid"></div>
             </section>
             
-            <section id="references" class="page hidden">
-                <h2>Referencer</h2>
-                <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
-                <div id="references-container" class="references-layout"></div>
-            </section>
-
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
                  <div class="actions-bar">
@@ -153,56 +196,19 @@
                 </div>
             </section>
 
-            <section id="overview" class="page hidden">
-                <h2>Oversigt</h2>
-                <div class="overview-layout">
-                    <div id="expiring-items-card" class="card">
-                        <h3>Udløber Snart</h3>
-                        <div id="expiring-items-list">
-                            <p class="empty-state">Alt ser godt ud!</p>
-                        </div>
-                    </div>
-                    <div id="budget-card" class="card">
-                        <div class="card-header">
-                            <h3>Budget</h3>
-                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                        </div>
-                        <div class="budget-summary">
-                            <div class="budget-item">
-                                <span class="budget-label">Forbrug (Måned)</span>
-                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
-                            </div>
-                            <div class="budget-item">
-                                <span class="budget-label">Budget</span>
-                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
-                            </div>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div id="budget-progress-bar" class="progress-bar"></div>
-                        </div>
-                    </div>
-                    <div id="inventory-summary-card" class="card"></div>
-                    <div id="profile-card" class="card">
-                        <h3>Profil</h3>
-                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                        <p><strong>Antal opskrifter:</strong> <span id="profile-recipe-count">0</span></p>
-                        <p><strong>Favoritopskrifter:</strong> <span id="profile-favorite-count">0</span></p>
-                        <div class="input-group">
-                            <label for="profile-favorite-store">Favoritbutik</label>
-                            <select id="profile-favorite-store"></select>
-                        </div>
-                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
-                    </div>
-                </div>
+            <section id="references" class="page hidden">
+                <h2>Referencer</h2>
+                <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
+                <div id="references-container" class="references-layout"></div>
             </section>
         </main>
 
         <nav id="mobile-tab-bar" class="mobile-tab-bar">
-            <a href="#meal-planner" class="mobile-tab-link active" data-page="meal-planner"><i class="fas fa-calendar-alt"></i><span>Madplan</span></a>
-            <a href="#recipes" class="mobile-tab-link" data-page="recipes"><i class="fas fa-book-open"></i><span>Opskrifter</span></a>
+            <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+            <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
+            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
+            <a href="#recipes" class="mobile-tab-link" data-page="recipes"><i class="fas fa-book-open"></i><span>Kogebog</span></a>
             <a href="#" class="mobile-tab-link" data-panel="shopping-list"><i class="fas fa-cart-shopping"></i><span>Indkøb</span></a>
-            <a href="#" class="mobile-tab-link" data-panel="kitchen-counter"><i class="fas fa-concierge-bell"></i><span>Køkkenbord</span></a>
-            <a href="#overview" class="mobile-tab-link" data-page="overview"><i class="fas fa-chart-pie"></i><span>Oversigt</span></a>
         </nav>
 
         <div id="mobile-panel-overlay" class="mobile-panel-overlay hidden">
@@ -239,7 +245,64 @@
         </div>
     </div>
     
-    <!-- MODAL FOR INVENTORY ITEM (FORMERLY MASTER PRODUCT) -->
+    <!-- MODALS -->
+
+    <!-- NEW: Project Edit Modal -->
+    <div id="project-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="project-edit-modal-title">Rediger Projekt</h3>
+            <form id="project-form">
+                <input type="hidden" id="project-id">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="project-title">Projekttitel</label>
+                        <input type="text" id="project-title" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="project-category">Kategori</label>
+                        <select id="project-category">
+                            <option value="">Vælg kategori...</option>
+                            <option value="Renovering">Renovering</option>
+                            <option value="Vedligehold">Vedligehold</option>
+                            <option value="Havearbejde">Havearbejde</option>
+                            <option value="Rengøring">Rengøring</option>
+                            <option value="Andet">Andet</option>
+                        </select>
+                    </div>
+                     <div class="input-group">
+                        <label for="project-scope">Omfang / Scope</label>
+                        <input type="text" id="project-scope" placeholder="f.eks. 10 m² altan">
+                    </div>
+                    <div class="input-group">
+                        <label for="project-time">Estimeret tid (timer)</label>
+                        <input type="number" id="project-time" placeholder="f.eks. 12">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="project-tags">Tags (separer med komma)</label>
+                    <input type="text" id="project-tags" placeholder="f.eks. udendørs, træarbejde, sommer">
+                </div>
+                <div class="input-group">
+                    <label for="project-instructions">Arbejdsplan / Trin</label>
+                    <textarea id="project-instructions" rows="8"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="project-source-url">Inspiration/Manual URL (valgfri)</label>
+                    <input type="url" id="project-source-url" placeholder="https://...">
+                </div>
+                <hr>
+                <h4>Materialer & Værktøj</h4>
+                <div id="project-materials-container"></div>
+                <button type="button" id="add-material-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj material</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-project-btn">Gem Projekt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Existing Modals (Recipe, Inventory, etc.) -->
     <div id="inventory-item-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -305,8 +368,6 @@
             </form>
         </div>
     </div>
-
-    <!-- MODAL FOR ADDING/EDITING A BATCH -->
     <div id="batch-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -359,66 +420,6 @@
             </form>
         </div>
     </div>
-
-    <div id="reorder-assistant-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Genbestillings-assistent</h3>
-            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
-            <form id="reorder-form">
-                <div id="reorder-list-container"></div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="edit-budget-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Rediger Månedligt Budget</h3>
-            <form id="edit-budget-form">
-                <div class="input-group">
-                    <label for="monthly-budget-input">Budget (kr.)</label>
-                    <input type="number" id="monthly-budget-input" min="0" step="100" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Budget</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="plan-meal-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="plan-meal-modal-title">Planlæg Måltid</h3>
-            <form id="plan-meal-form">
-                <input type="hidden" id="plan-meal-recipe-id">
-                <div class="input-group">
-                    <label for="plan-meal-date">Vælg dato</label>
-                    <input type="date" id="plan-meal-date" required>
-                </div>
-                <div class="input-group">
-                    <label>Vælg måltid</label>
-                    <div class="meal-type-selector">
-                        <button type="button" class="btn btn-secondary" data-meal="breakfast">Morgen</button>
-                        <button type="button" class="btn btn-secondary" data-meal="lunch">Frokost</button>
-                        <button type="button" class="btn btn-secondary" data-meal="dinner">Aften</button>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="plan-meal-portions">Antal portioner</label>
-                    <input type="number" id="plan-meal-portions" min="1" step="1" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div id="recipe-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -503,7 +504,6 @@
             </form>
         </div>
     </div>
-    
     <div id="recipe-read-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -538,12 +538,39 @@
             </div>
         </div>
     </div>
-
     <div id="notification-modal" class="modal-overlay hidden">
         <div class="modal-content modal-notification">
              <h3 id="notification-title"></h3>
              <p id="notification-message"></p>
              <div id="notification-actions" class="form-actions"></div>
+        </div>
+    </div>
+    <div id="plan-meal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="plan-meal-modal-title">Planlæg Måltid</h3>
+            <form id="plan-meal-form">
+                <input type="hidden" id="plan-meal-recipe-id">
+                <div class="input-group">
+                    <label for="plan-meal-date">Vælg dato</label>
+                    <input type="date" id="plan-meal-date" required>
+                </div>
+                <div class="input-group">
+                    <label>Vælg måltid</label>
+                    <div class="meal-type-selector">
+                        <button type="button" class="btn btn-secondary" data-meal="breakfast">Morgen</button>
+                        <button type="button" class="btn btn-secondary" data-meal="lunch">Frokost</button>
+                        <button type="button" class="btn btn-secondary" data-meal="dinner">Aften</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="plan-meal-portions">Antal portioner</label>
+                    <input type="number" id="plan-meal-portions" min="1" step="1" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
+                </div>
+            </form>
         </div>
     </div>
     
