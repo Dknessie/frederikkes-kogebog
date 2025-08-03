@@ -21,8 +21,9 @@ export function initUI(elements) {
  * @param {string} hash - The hash of the page to navigate to (e.g., '#recipes').
  */
 export function navigateTo(hash) {
+    const effectiveHash = hash || '#dashboard';
     UIElements.pages.forEach(page => page.classList.add('hidden'));
-    const targetPage = document.querySelector(hash);
+    const targetPage = document.querySelector(effectiveHash);
     if (targetPage) {
         targetPage.classList.remove('hidden');
     } else {
@@ -31,12 +32,12 @@ export function navigateTo(hash) {
     
     // Update active link in navigations
     UIElements.navLinks.forEach(link => {
-        link.classList.toggle('active', link.getAttribute('href') === hash);
+        link.classList.toggle('active', link.getAttribute('href') === effectiveHash);
     });
     UIElements.mobileTabLinks.forEach(link => {
         const page = link.dataset.page;
         if (page) {
-            link.classList.toggle('active', `#${page}` === hash);
+            link.classList.toggle('active', `#${page}` === effectiveHash);
         }
     });
 
@@ -128,8 +129,8 @@ function showMobilePanel(panelId) {
         return;
     }
 
-    UIElements.mobileShoppingListPanel.classList.remove('active');
-    UIElements.mobileKitchenCounterPanel.classList.remove('active');
+    if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
+    if (UIElements.mobileKitchenCounterPanel) UIElements.mobileKitchenCounterPanel.classList.remove('active');
     
     setTimeout(() => targetPanel.classList.add('active'), 10);
 }
@@ -139,8 +140,8 @@ function showMobilePanel(panelId) {
  */
 function hideMobilePanels() {
     UIElements.mobilePanelOverlay.classList.remove('active');
-    UIElements.mobileShoppingListPanel.classList.remove('active');
-    UIElements.mobileKitchenCounterPanel.classList.remove('active');
+    if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
+    if (UIElements.mobileKitchenCounterPanel) UIElements.mobileKitchenCounterPanel.classList.remove('active');
     setTimeout(() => {
         if (!UIElements.mobilePanelOverlay.classList.contains('active')) {
             UIElements.mobilePanelOverlay.classList.add('hidden');
