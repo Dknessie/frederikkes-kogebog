@@ -11,8 +11,8 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingList } from './shoppingList.js';
 import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
-import { initDashboard, renderDashboardPage } from './dashboard.js'; // NEW
-import { initProjects, renderProjects } from './projects.js'; // NEW
+import { initDashboard, renderDashboardPage } from './dashboard.js';
+import { initProjects, renderProjects } from './projects.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
-        projects: [], // NEW
+        projects: [],
         references: {},
         preferences: {},
         mealPlan: {},
@@ -41,12 +41,22 @@ document.addEventListener('DOMContentLoaded', () => {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
         loginForm: document.getElementById('login-form'),
-        logoutButtons: [document.getElementById('logout-btn-header')],
+        logoutButtons: [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')],
         navLinks: document.querySelectorAll('.desktop-nav .nav-link'),
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
-        // Project elements (NEW)
+        // Dashboard elements
+        profileEmail: document.getElementById('profile-email'),
+        favoriteStoreSelect: document.getElementById('profile-favorite-store'),
+        editBudgetBtn: document.getElementById('edit-budget-btn'),
+        budgetSpentEl: document.getElementById('budget-spent'),
+        budgetTotalEl: document.getElementById('budget-total'),
+        budgetProgressBar: document.getElementById('budget-progress-bar'),
+        expiringItemsList: document.getElementById('expiring-items-list'),
+        inventorySummaryList: document.getElementById('inventory-summary-list'),
+
+        // Project elements
         projectEditModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
         addProjectBtn: document.getElementById('add-project-btn'),
@@ -63,10 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
-        recipeGrid: document.querySelector('.recipe-grid'),
+        recipeGrid: document.querySelector('#recipes .recipe-grid'),
         ingredientsContainer: document.getElementById('ingredients-container'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
+        importRecipeBtn: document.getElementById('import-recipe-btn'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
         recipeImageUploadInput: document.getElementById('recipe-image-upload'),
@@ -83,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prevWeekBtn: document.getElementById('prev-week-btn'),
         nextWeekBtn: document.getElementById('next-week-btn'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
+        weeklyPriceDisplay: document.getElementById('weekly-price-display'),
         desktopPanelTabs: document.querySelectorAll('#meal-planner-sidebar-left .panel-tab'),
         desktopSidebarPanels: document.querySelectorAll('#meal-planner-sidebar-left .sidebar-panel'),
         planMealModal: document.getElementById('plan-meal-modal'),
@@ -108,6 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reorderForm: document.getElementById('reorder-form'),
         inventorySearchInput: document.getElementById('inventory-search-input'),
         inventoryListContainer: document.getElementById('inventory-list-container'),
+        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
+        inventoryFilterCategory: document.getElementById('inventory-filter-category'),
+        inventoryFilterLocation: document.getElementById('inventory-filter-location'),
+        inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
             clearBtn: document.getElementById('clear-shopping-list-btn'),
@@ -189,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'opskrifter'));
         
-        // NEW: Listener for projects
         const qProjects = query(collection(db, 'projects'), where("userId", "==", userId));
         state.listeners.projects = onSnapshot(qProjects, (snapshot) => {
             state.projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -236,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.addInventoryItemBtn.disabled = false;
                 elements.reorderAssistantBtn.disabled = false;
                 elements.addRecipeBtn.disabled = false;
-                elements.addProjectBtn.disabled = false; // NEW
+                elements.addProjectBtn.disabled = false;
                 setReferencesLoaded(true);
                 if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
                 if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
@@ -264,14 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
-        elements.addProjectBtn.disabled = true; // NEW
+        elements.addProjectBtn.disabled = true;
         setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
-        switch(hash) {
+        // Ensure the hash is valid, otherwise default to dashboard
+        const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#references'];
+        const currentHash = validHashes.includes(hash) ? hash : '#dashboard';
+        navigateTo(currentHash);
+
+        switch(currentHash) {
             case '#dashboard':
-            case '':
                 renderDashboardPage();
                 break;
             case '#calendar':
@@ -299,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.addInventoryItemBtn.disabled = true;
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
-        elements.addProjectBtn.disabled = true; // NEW
+        elements.addProjectBtn.disabled = true;
 
         initAuth(onLogin, onLogout);
         setupAuthEventListeners(elements);
@@ -310,8 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initKitchenCounter(state, elements);
         initMealPlanner(state, elements);
         initReferences(state, elements);
-        initDashboard(state, elements); // NEW
-        initProjects(state, elements); // NEW
+        initDashboard(state, elements);
+        initProjects(state, elements);
 
         window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
     }
