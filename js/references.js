@@ -29,6 +29,11 @@ export function renderReferencesPage() {
             items: appState.references.itemLocations || [],
             isSimpleList: true
         },
+        rooms: { // NEW
+            title: 'Rum i Hjemmet',
+            items: appState.references.rooms || [],
+            isSimpleList: true
+        },
         standardUnits: {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
@@ -255,17 +260,21 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     // 2. Update all related documents in other collections
     let fieldToUpdate = '';
     if (key === 'itemCategories') fieldToUpdate = 'category';
-    if (key === 'itemLocations') fieldToUpdate = 'home_location';
+    if (key === 'itemLocations') fieldToUpdate = 'location';
+    if (key === 'rooms') fieldToUpdate = 'room'; // For projects
     
+    let collectionToUpdate = 'inventory_items';
+    if (key === 'rooms') collectionToUpdate = 'projects';
+
     if (fieldToUpdate) {
-        const q = query(collection(db, "inventory_items"), where(fieldToUpdate, "==", oldValue));
+        const q = query(collection(db, collectionToUpdate), where(fieldToUpdate, "==", oldValue));
         try {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
                 batch.update(doc.ref, { [fieldToUpdate]: newValue });
             });
         } catch (error) {
-            handleError(error, "Kunne ikke finde relaterede varer at opdatere.", "queryInventoryForUpdate");
+            handleError(error, `Kunne ikke finde relaterede emner at opdatere i ${collectionToUpdate}.`, "queryForUpdate");
             return; // Stop if we can't query
         }
     }
@@ -273,7 +282,7 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     // 3. Commit the batch
     try {
         await batch.commit();
-        showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt, og alle relaterede varer er opdateret.`});
+        showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt, og alle relaterede emner er opdateret.`});
     } catch (error) {
         handleError(error, "En fejl opstod under opdateringen.", "saveReferenceUpdate");
     }
