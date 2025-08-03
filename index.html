@@ -269,13 +269,37 @@
     
     <!-- MODALS -->
 
-    <!-- NEW: Project Edit Modal -->
+    <!-- UPDATED: Project Edit Modal -->
     <div id="project-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <h3 id="project-edit-modal-title">Rediger Projekt</h3>
             <form id="project-form">
                 <input type="hidden" id="project-id">
+                
+                <div class="project-image-container">
+                    <div class="image-upload-container">
+                        <h4>Før Billede</h4>
+                        <img id="project-image-preview-before" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Før" alt="Før billede af projektet">
+                        <div class="image-options">
+                            <label for="project-image-upload-before" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload</label>
+                            <input type="file" id="project-image-upload-before" accept="image/*" class="hidden">
+                            <span class="image-option-divider">/</span>
+                            <input type="url" id="project-imageUrl-before" placeholder="Indsæt billede URL...">
+                        </div>
+                    </div>
+                    <div class="image-upload-container">
+                        <h4>Efter Billede</h4>
+                        <img id="project-image-preview-after" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Efter" alt="Efter billede af projektet">
+                        <div class="image-options">
+                            <label for="project-image-upload-after" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload</label>
+                            <input type="file" id="project-image-upload-after" accept="image/*" class="hidden">
+                            <span class="image-option-divider">/</span>
+                            <input type="url" id="project-imageUrl-after" placeholder="Indsæt billede URL...">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="project-title">Projekttitel</label>
@@ -292,13 +316,18 @@
                             <option value="Andet">Andet</option>
                         </select>
                     </div>
-                     <div class="input-group">
-                        <label for="project-scope">Omfang / Scope</label>
-                        <input type="text" id="project-scope" placeholder="f.eks. 10 m² altan">
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="project-room">Rum</label>
+                        <select id="project-room"></select>
                     </div>
                     <div class="input-group">
-                        <label for="project-time">Estimeret tid (timer)</label>
-                        <input type="number" id="project-time" placeholder="f.eks. 12">
+                        <label>Estimeret Tid</label>
+                        <div class="form-grid-2-col">
+                             <input type="number" id="project-time-days" placeholder="Dage">
+                             <input type="number" id="project-time-hours" placeholder="Timer">
+                        </div>
                     </div>
                 </div>
                 <div class="input-group">
