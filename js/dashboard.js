@@ -4,22 +4,20 @@ import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase
 import { showNotification, handleError } from './ui.js';
 import { calculateRecipePrice } from './recipes.js';
 import { formatDate } from './utils.js';
+import { openShoppingListModal } from './shoppingList.js';
 
 let appState;
 let appElements;
 
-/**
- * Initializes the dashboard module by setting up event listeners.
- * Includes checks to ensure elements exist before adding listeners.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initDashboard(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
+        materialsSummaryWidget: document.getElementById('widget-materials-summary'),
+        wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
+    };
 
-    // Defensive checks: Only add listeners if the elements exist on the page.
-    // This prevents errors during the build process or if the HTML changes.
     if (appElements.editBudgetBtn) {
         appElements.editBudgetBtn.addEventListener('click', openEditBudgetModal);
     }
@@ -29,11 +27,19 @@ export function initDashboard(state, elements) {
     if (appElements.favoriteStoreSelect) {
         appElements.favoriteStoreSelect.addEventListener('change', handleSaveFavoriteStore);
     }
+
+    // Add click listeners for new summary widgets
+    if (appElements.groceriesSummaryWidget) {
+        appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
+    }
+    if (appElements.materialsSummaryWidget) {
+        appElements.materialsSummaryWidget.addEventListener('click', () => openShoppingListModal('materials'));
+    }
+    if (appElements.wishlistSummaryWidget) {
+        appElements.wishlistSummaryWidget.addEventListener('click', () => openShoppingListModal('wishlist'));
+    }
 }
 
-/**
- * Renders the entire dashboard page by calling individual widget render functions.
- */
 export function renderDashboardPage() {
     if (!appState.currentUser) return;
     if (appElements.profileEmail) {
@@ -46,9 +52,6 @@ export function renderDashboardPage() {
     renderFavoriteStoreSelector();
 }
 
-/**
- * Renders the budget widget with current spending and progress bar.
- */
 function renderBudgetWidget() {
     if (!appElements.budgetSpentEl || !appElements.budgetTotalEl || !appElements.budgetProgressBar) return;
 
@@ -73,9 +76,6 @@ function renderBudgetWidget() {
     }
 }
 
-/**
- * Renders the widget showing items that are expiring soon.
- */
 function renderExpiringItemsWidget() {
     if (!appElements.expiringItemsList) return;
 
@@ -116,9 +116,6 @@ function renderExpiringItemsWidget() {
     }).join('');
 }
 
-/**
- * Renders the inventory summary widget (item counts, total value).
- */
 function renderInventorySummaryWidget() {
     if (!appElements.inventorySummaryList) return;
 
@@ -147,9 +144,6 @@ function renderInventorySummaryWidget() {
     `;
 }
 
-/**
- * Renders the favorite store selector dropdown in the profile widget.
- */
 function renderFavoriteStoreSelector() {
     if (!appElements.favoriteStoreSelect) return;
 
@@ -173,10 +167,6 @@ function renderFavoriteStoreSelector() {
     }
 }
 
-/**
- * Saves the selected favorite store to Firebase.
- * @param {Event} e - The change event from the select element.
- */
 async function handleSaveFavoriteStore(e) {
     const newFavoriteStore = e.target.value;
     if (!appState.currentUser) return;
@@ -190,10 +180,7 @@ async function handleSaveFavoriteStore(e) {
     }
 }
 
-/**
- * Calculates total spending for the current month based on the meal plan.
- * @returns {number} The total cost for the month.
- */
+
 function calculateMonthlySpending() {
     let totalCost = 0;
     const currentMonth = new Date().getMonth();
@@ -219,9 +206,6 @@ function calculateMonthlySpending() {
     return totalCost;
 }
 
-/**
- * Opens the modal for editing the monthly budget.
- */
 function openEditBudgetModal() {
     if (appElements.monthlyBudgetInput) {
         appElements.monthlyBudgetInput.value = appState.budget.monthlyAmount || '';
@@ -231,10 +215,6 @@ function openEditBudgetModal() {
     }
 }
 
-/**
- * Saves the new budget amount to Firebase.
- * @param {Event} e - The form submission event.
- */
 async function handleSaveBudget(e) {
     e.preventDefault();
     const newAmount = parseFloat(appElements.monthlyBudgetInput.value);
