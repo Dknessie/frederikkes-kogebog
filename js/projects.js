@@ -7,6 +7,8 @@ import { normalizeUnit } from './utils.js';
 
 let appState;
 let appElements;
+let projectFormImageBefore = { type: null, data: null };
+let projectFormImageAfter = { type: null, data: null };
 
 /**
  * Initializes the projects module.
@@ -15,7 +17,15 @@ let appElements;
  */
 export function initProjects(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        projectImagePreviewBefore: document.getElementById('project-image-preview-before'),
+        projectImageUploadBefore: document.getElementById('project-image-upload-before'),
+        projectImageUrlInputBefore: document.getElementById('project-imageUrl-before'),
+        projectImagePreviewAfter: document.getElementById('project-image-preview-after'),
+        projectImageUploadAfter: document.getElementById('project-image-upload-after'),
+        projectImageUrlInputAfter: document.getElementById('project-imageUrl-after'),
+    };
 
     appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
     appElements.projectForm.addEventListener('submit', handleSaveProject);
@@ -27,6 +37,12 @@ export function initProjects(state, elements) {
             e.target.closest('.ingredient-row').remove();
         }
     });
+
+    // Event listeners for image handling
+    appElements.projectImageUploadBefore.addEventListener('change', (e) => handleImageUpload(e, 'before'));
+    appElements.projectImageUrlInputBefore.addEventListener('input', (e) => handleImageUrlInput(e, 'before'));
+    appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
+    appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
 }
 
 /**
@@ -65,10 +81,13 @@ function createProjectCard(project) {
     const tagsHTML = (project.tags && project.tags.length > 0) 
         ? project.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
         : '';
+    
+    const imageUrl = project.imageBase64Before || project.imageUrlBefore || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(project.title)}`;
 
     card.innerHTML = `
+        <img src="${imageUrl}" alt="Før billede af ${project.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
         <div class="recipe-card-content">
-            <span class="recipe-card-category">${project.category || 'Ukategoriseret'}</span>
+            <span class="recipe-card-category">${project.room || project.category || 'Ukategoriseret'}</span>
             <h4>${project.title}</h4>
             <div class="recipe-card-tags">${tagsHTML}</div>
         </div>
@@ -126,12 +145,19 @@ async function handleSaveProject(e) {
         title: document.getElementById('project-title').value,
         category: document.getElementById('project-category').value,
         tags: tags,
-        scope: document.getElementById('project-scope').value || null,
-        time: Number(document.getElementById('project-time').value) || null,
+        room: document.getElementById('project-room').value || null,
+        time: {
+            days: Number(document.getElementById('project-time-days').value) || null,
+            hours: Number(document.getElementById('project-time-hours').value) || null,
+        },
         instructions: document.getElementById('project-instructions').value,
         source_url: document.getElementById('project-source-url').value,
         materials: materials,
-        userId: appState.currentUser.uid
+        userId: appState.currentUser.uid,
+        imageUrlBefore: projectFormImageBefore.type === 'url' ? projectFormImageBefore.data : null,
+        imageBase64Before: projectFormImageBefore.type === 'base64' ? projectFormImageBefore.data : null,
+        imageUrlAfter: projectFormImageAfter.type === 'url' ? projectFormImageAfter.data : null,
+        imageBase64After: projectFormImageAfter.type === 'base64' ? projectFormImageAfter.data : null,
     };
 
     try {
@@ -175,6 +201,13 @@ async function handleGridClick(e) {
     }
 }
 
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
+}
+
 /**
  * Opens the modal to add a new project.
  */
@@ -183,6 +216,15 @@ function openAddProjectModal() {
     appElements.projectForm.reset();
     document.getElementById('project-id').value = '';
     appElements.projectMaterialsContainer.innerHTML = '';
+    
+    // Reset images
+    projectFormImageBefore = { type: null, data: null };
+    projectFormImageAfter = { type: null, data: null };
+    appElements.projectImagePreviewBefore.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
+    appElements.projectImagePreviewAfter.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
+
+    populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...');
+
     createMaterialRow(appElements.projectMaterialsContainer);
     appElements.projectEditModal.classList.remove('hidden');
 }
@@ -201,11 +243,30 @@ function openEditProjectModal(projectId) {
         document.getElementById('project-title').value = project.title || '';
         document.getElementById('project-category').value = project.category || '';
         document.getElementById('project-tags').value = (project.tags && project.tags.join(', ')) || '';
-        document.getElementById('project-scope').value = project.scope || '';
-        document.getElementById('project-time').value = project.time || '';
+        
+        populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...', project.room);
+        
+        document.getElementById('project-time-days').value = project.time?.days || '';
+        document.getElementById('project-time-hours').value = project.time?.hours || '';
+        
         document.getElementById('project-instructions').value = project.instructions || '';
         document.getElementById('project-source-url').value = project.source_url || '';
         
+        // Handle images
+        projectFormImageBefore = { 
+            type: project.imageUrlBefore ? 'url' : (project.imageBase64Before ? 'base64' : null),
+            data: project.imageUrlBefore || project.imageBase64Before
+        };
+        projectFormImageAfter = { 
+            type: project.imageUrlAfter ? 'url' : (project.imageBase64After ? 'base64' : null),
+            data: project.imageUrlAfter || project.imageBase64After
+        };
+
+        appElements.projectImagePreviewBefore.src = projectFormImageBefore.data || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
+        appElements.projectImageUrlInputBefore.value = project.imageUrlBefore || '';
+        appElements.projectImagePreviewAfter.src = projectFormImageAfter.data || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
+        appElements.projectImageUrlInputAfter.value = project.imageUrlAfter || '';
+
         appElements.projectMaterialsContainer.innerHTML = '';
         if (project.materials && project.materials.length > 0) {
             project.materials.forEach(mat => createMaterialRow(appElements.projectMaterialsContainer, mat));
@@ -213,5 +274,40 @@ function openEditProjectModal(projectId) {
             createMaterialRow(appElements.projectMaterialsContainer);
         }
         appElements.projectEditModal.classList.remove('hidden');
+    }
+}
+
+// Image Handling Functions
+function handleImageUpload(e, type) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const imageData = { type: 'base64', data: event.target.result };
+        if (type === 'before') {
+            projectFormImageBefore = imageData;
+            appElements.projectImagePreviewBefore.src = event.target.result;
+            appElements.projectImageUrlInputBefore.value = '';
+        } else {
+            projectFormImageAfter = imageData;
+            appElements.projectImagePreviewAfter.src = event.target.result;
+            appElements.projectImageUrlInputAfter.value = '';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function handleImageUrlInput(e, type) {
+    const url = e.target.value;
+    const imageData = { type: 'url', data: url };
+    if (type === 'before') {
+        projectFormImageBefore = imageData;
+        appElements.projectImagePreviewBefore.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
+        appElements.projectImageUploadBefore.value = '';
+    } else {
+        projectFormImageAfter = imageData;
+        appElements.projectImagePreviewAfter.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
+        appElements.projectImageUploadAfter.value = '';
     }
 }
