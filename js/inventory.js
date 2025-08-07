@@ -7,6 +7,7 @@ import { debounce, formatDate } from './utils.js';
 
 let appState;
 let appElements;
+let onBatchSaveSuccessCallback = null;
 let inventoryState = {
     searchTerm: '',
     referencesLoaded: false,
@@ -84,6 +85,7 @@ export function initInventory(state, elements) {
     // Event Listeners for batch management
     const addBatchBtn = document.getElementById('add-batch-btn');
     const batchListContainer = document.getElementById('batch-list-container');
+    const batchEditModal = document.getElementById('batch-edit-modal');
     const batchEditForm = document.getElementById('batch-edit-form');
     const deleteBatchBtn = document.getElementById('delete-batch-btn');
 
@@ -105,6 +107,11 @@ export function initInventory(state, elements) {
     });
     if(batchEditForm) batchEditForm.addEventListener('submit', handleSaveBatch);
     if(deleteBatchBtn) deleteBatchBtn.addEventListener('click', handleDeleteBatch);
+    if (batchEditModal) {
+        batchEditModal.querySelector('.close-modal-btn').addEventListener('click', () => {
+            onBatchSaveSuccessCallback = null; // Reset callback if modal is closed manually
+        });
+    }
 
     // Event listener for category dropdowns in modal
     const mainCategorySelect = document.getElementById('inventory-item-main-category');
@@ -124,7 +131,7 @@ export function setReferencesLoaded(isLoaded) {
 
 function populateMainCategoryFilter() {
     const mainCategories = (appState.references.itemCategories || [])
-        .map(cat => (typeof cat === 'string' ? cat : cat.name)); // **FIX: Handle old and new format**
+        .map(cat => (typeof cat === 'string' ? cat : cat.name));
     populateReferenceDropdown(appElements.inventoryFilterMainCategory, mainCategories, 'Alle Overkategorier', inventoryState.selectedMainCategory);
 }
 
@@ -393,7 +400,8 @@ async function handleDeleteInventoryItem() {
 }
 
 // Batch Management Functions
-export function openBatchModal(itemId, batchId) {
+export function openBatchModal(itemId, batchId, onSaveSuccess) {
+    onBatchSaveSuccessCallback = onSaveSuccess || null;
     const form = document.getElementById('batch-edit-form');
     form.reset();
     
@@ -407,7 +415,6 @@ export function openBatchModal(itemId, batchId) {
 
     document.getElementById('batch-edit-item-id').value = itemId;
     document.getElementById('batch-edit-unit').value = item.defaultUnit || 'g';
-    document.getElementById('batch-edit-unit').disabled = true;
     
     const modal = document.getElementById('batch-edit-modal');
     if (batch) {
@@ -460,6 +467,11 @@ async function handleSaveBatch(e) {
         }
         document.getElementById('batch-edit-modal').classList.add('hidden');
         showNotification({title: "Batch Gemt", message: "Dit batch er blevet gemt."});
+
+        if (onBatchSaveSuccessCallback) {
+            onBatchSaveSuccessCallback(itemId);
+            onBatchSaveSuccessCallback = null; // Reset callback
+        }
     } catch (error) {
         handleError(error, "Batchet kunne ikke gemmes.", "handleSaveBatch");
     }
