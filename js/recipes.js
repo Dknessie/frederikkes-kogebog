@@ -4,8 +4,8 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { normalizeUnit, convertToGrams } from './utils.js';
-import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
 import { openPlanMealModal } from './mealPlanner.js';
+import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
@@ -43,13 +43,20 @@ export function initRecipes(state, elements) {
     appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
     appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
 
+    // Updated Read View Actions
     appElements.readViewPlanBtn.addEventListener('click', () => {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
     });
     appElements.readViewCookBtn.addEventListener('click', async () => {
-        await addToKitchenCounterFromRecipe(appState.currentlyViewedRecipeId);
-        appElements.recipeReadModal.classList.add('hidden');
+        const recipeId = appState.currentlyViewedRecipeId;
+        const recipe = appState.recipes.find(r => r.id === recipeId);
+        if (recipe) {
+            const wasDeducted = await confirmAndDeductIngredients(recipeId, recipe.portions);
+            if (wasDeducted) {
+                appElements.recipeReadModal.classList.add('hidden');
+            }
+        }
     });
     appElements.readViewEditBtn.addEventListener('click', openEditRecipeModal);
     appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
@@ -122,7 +129,6 @@ function createRecipeCard(recipe) {
         <div class="recipe-card-actions">
             <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
             <button class="btn-icon add-to-plan-btn" title="Føj til madplan"><i class="fas fa-calendar-plus"></i></button>
-            <button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>
             <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
         </div>`;
     return card;
@@ -476,11 +482,6 @@ async function handleGridClick(e) {
     
     if (e.target.closest('.add-to-plan-btn')) {
         openPlanMealModal(docId);
-        return;
-    }
-
-    if (e.target.closest('.cook-meal-btn')) {
-        await addToKitchenCounterFromRecipe(docId);
         return;
     }
 
