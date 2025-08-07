@@ -30,18 +30,27 @@ export function initAuth(onLogin, onLogout) {
  * @param {object} elements - The cached DOM elements from app.js.
  */
 export function setupAuthEventListeners(elements) {
-    elements.loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        signInWithEmailAndPassword(auth, email, password)
-            .catch((error) => {
-                console.error("Login Fejl:", error.code);
-                elements.loginForm.querySelector('#login-error').textContent = 'Login fejlede. Tjek email og adgangskode.';
-            });
-    });
+    if (elements.loginForm) {
+        elements.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginError = elements.loginForm.querySelector('#login-error');
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    console.error("Login Fejl:", error.code);
+                    if (loginError) {
+                        loginError.textContent = 'Login fejlede. Tjek email og adgangskode.';
+                    }
+                });
+        });
+    }
 
-    elements.logoutButtons.forEach(btn => {
+    // Filter out any null elements before adding listeners to make it more robust
+    const validLogoutButtons = elements.logoutButtons.filter(btn => btn !== null);
+    
+    validLogoutButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             signOut(auth).catch(error => handleError(error, "Logout fejlede.", "signOut"));
         });
