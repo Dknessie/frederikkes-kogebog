@@ -49,60 +49,85 @@
 
         <main id="app-main-content">
             <section id="dashboard" class="page">
-                <h2>Dashboard</h2>
-                <div class="dashboard-grid full-width">
-                    <div id="widget-groceries-summary" class="dashboard-widget clickable">
-                        <h3><i class="fas fa-carrot"></i> Dagligvarer</h3>
-                        <div class="widget-summary-content">
-                            <span id="groceries-count">0 varer</span>
-                            <span id="groceries-price">ca. 0.00 kr.</span>
+                <div class="dashboard-layout">
+                    <!-- Venstre Kolonne: Primær Information -->
+                    <div class="dashboard-main-column">
+                        <div id="welcome-widget" class="dashboard-widget">
+                            <h2 id="welcome-title">Velkommen</h2>
+                            <p id="welcome-summary">Laster data...</p>
+                        </div>
+                        <div id="today-overview-widget" class="dashboard-widget">
+                            <h3>Dagens Overblik</h3>
+                            <div id="today-overview-content"></div>
+                        </div>
+                        <div id="projects-focus-widget" class="dashboard-widget">
+                            <h3>Projekter i Fokus</h3>
+                            <div id="projects-focus-content"></div>
                         </div>
                     </div>
-                     <div id="widget-materials-summary" class="dashboard-widget clickable">
-                        <h3><i class="fas fa-hammer"></i> Materialer & Værktøj</h3>
-                        <div class="widget-summary-content">
-                            <span id="materials-count">0 varer</span>
-                            <span id="materials-price">ca. 0.00 kr.</span>
-                        </div>
-                    </div>
-                     <div id="widget-wishlist-summary" class="dashboard-widget clickable">
-                        <h3><i class="fas fa-couch"></i> Ønskeliste</h3>
-                        <div class="widget-summary-content">
-                            <span id="wishlist-count">0 ønsker</span>
-                            <span id="wishlist-price">ca. 0.00 kr.</span>
-                        </div>
-                    </div>
-                    <div id="widget-profile" class="dashboard-widget">
-                        <h3>Profil</h3>
-                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                        <div class="input-group">
-                            <label for="profile-favorite-store">Favoritbutik</label>
-                            <select id="profile-favorite-store"></select>
-                        </div>
-                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
-                    </div>
-                    <div id="widget-budget" class="dashboard-widget">
-                        <div class="card-header">
-                            <h3>Budget</h3>
-                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                        </div>
-                        <div class="budget-summary">
-                            <div class="budget-item">
-                                <span class="budget-label">Forbrug (Måned)</span>
-                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
+
+                    <!-- Højre Kolonne: Widgets & Hurtig Adgang -->
+                    <div class="dashboard-sidebar-column">
+                        <div id="shopping-widget" class="dashboard-widget">
+                            <h3><i class="fas fa-shopping-cart"></i> Indkøb</h3>
+                            <div class="shopping-widget-container">
+                                <div id="widget-groceries-summary" class="shopping-widget-item groceries clickable">
+                                    <div class="shopping-widget-title">
+                                        <i class="fas fa-carrot"></i> Dagligvarer
+                                    </div>
+                                    <div class="shopping-widget-content">
+                                        <span id="groceries-count">0 varer</span>
+                                    </div>
+                                </div>
+                                <div id="widget-materials-summary" class="shopping-widget-item materials clickable">
+                                    <div class="shopping-widget-title">
+                                        <i class="fas fa-hammer"></i> Materialer
+                                    </div>
+                                     <div class="shopping-widget-content">
+                                        <span id="materials-count">0 varer</span>
+                                    </div>
+                                </div>
+                                <div id="widget-wishlist-summary" class="shopping-widget-item wishlist clickable">
+                                     <div class="shopping-widget-title">
+                                        <i class="fas fa-couch"></i> Ønskeliste
+                                    </div>
+                                    <div id="wishlist-preview" class="wishlist-widget-preview">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="budget-item">
-                                <span class="budget-label">Budget</span>
-                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
+                        </div>
+                        <div id="budget-widget" class="dashboard-widget">
+                            <div class="card-header">
+                                <h3>Budget</h3>
+                                <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
+                            </div>
+                            <div id="budget-gauge-container">
+                                <!-- Gauge vil blive renderet her af JS -->
+                            </div>
+                            <div class="budget-summary">
+                                <div class="budget-item">
+                                    <span class="budget-label">Forbrug (Måned)</span>
+                                    <span id="budget-spent" class="budget-value">0,00 kr.</span>
+                                </div>
+                                <div class="budget-item">
+                                    <span class="budget-label">Budget</span>
+                                    <span id="budget-total" class="budget-value">4000,00 kr.</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="progress-bar-container">
-                            <div id="budget-progress-bar" class="progress-bar"></div>
+                        <div id="inventory-notifications-widget" class="dashboard-widget">
+                            <h3>Varelager Notifikationer</h3>
+                            <div id="inventory-notifications-content"></div>
                         </div>
-                    </div>
-                    <div id="widget-expiring-items" class="dashboard-widget">
-                        <h3>Udløber Snart</h3>
-                        <div id="expiring-items-list"></div>
+                        <div id="quick-actions-widget" class="dashboard-widget">
+                            <h3>Hurtig Adgang</h3>
+                            <div class="quick-actions-container">
+                                <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
+                                <a href="#hjem" data-action="add-project" class="quick-action-btn"><i class="fas fa-tools"></i><span>Nyt Projekt</span></a>
+                                <a href="#calendar" class="quick-action-btn"><i class="fas fa-calendar-plus"></i><span>Planlæg Måltid</span></a>
+                                <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -259,16 +284,9 @@
                 <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
                 <button class="close-modal-btn">&times;</button>
             </div>
-            <div id="shopping-list-modal-total" class="shopping-list-total"></div>
-            <div id="shopping-list-modal-container" class="shopping-list-content"></div>
-            <div class="shopping-list-actions">
-                 <button id="shopping-list-clear-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
-                 <button id="shopping-list-confirm-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Bekræft Indkøb</button>
+            <div id="shopping-list-modal-content-wrapper">
+                <!-- Tematiseret indhold indsættes her af JS -->
             </div>
-            <form id="add-shopping-item-modal-form" class="add-item-form-container">
-                <input type="text" id="add-shopping-item-modal-name" placeholder="Tilføj vare..." required>
-                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-            </form>
         </div>
     </div>
     <div id="room-edit-modal" class="modal-overlay hidden">
@@ -718,6 +736,10 @@
         </div>
     </div>
     
+    <!-- Third-party library for the budget gauge -->
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/raphael-2.1.4.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+
     <script type="module" src="js/app.js"></script>
 
 </body>
