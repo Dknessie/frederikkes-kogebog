@@ -3,17 +3,21 @@
 // This module handles general UI interactions, like navigation, modals, and notifications.
 
 let UIElements; // To hold a reference to the main elements object
+let appState; // To hold a reference to the main state object
 
 /**
- * Initializes the UI module with necessary elements.
+ * Initializes the UI module with necessary elements and state.
+ * @param {object} state - The global app state from app.js.
  * @param {object} elements - The cached DOM elements from app.js.
  */
-export function initUI(elements) {
+export function initUI(state, elements) {
     UIElements = elements;
+    appState = state;
     initNavigation();
     initModals();
     initMobileUI();
     initSidebarTabs();
+    initHjemTabs();
 }
 
 /**
@@ -45,7 +49,7 @@ export function navigateTo(hash) {
 }
 
 /**
- * Sets up the main navigation event listeners.
+ * Sets up the main navigation event listeners (only for clicks that change the hash).
  */
 function initNavigation() {
     UIElements.headerTitleLink.addEventListener('click', (e) => {
@@ -61,9 +65,7 @@ function initNavigation() {
         });
     });
     
-    window.addEventListener('hashchange', () => {
-        navigateTo(window.location.hash || '#dashboard');
-    });
+    // The single, authoritative hashchange listener now lives ONLY in app.js
 }
 
 /**
@@ -162,6 +164,24 @@ function initSidebarTabs() {
             UIElements.desktopSidebarPanels.forEach(panel => {
                 panel.classList.toggle('active', panel.id === targetPanelId);
             });
+        });
+    });
+}
+
+/**
+ * Sets up the sub-navigation tabs on the "Hjem" page.
+ */
+function initHjemTabs() {
+    UIElements.hjemNavTabs.addEventListener('click', e => {
+        const targetTab = e.target.closest('.hjem-tab');
+        if (!targetTab) return;
+
+        UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
+        targetTab.classList.add('active');
+
+        const targetId = targetTab.dataset.target;
+        UIElements.hjemSubpages.forEach(page => {
+            page.classList.toggle('active', page.id === targetId);
         });
     });
 }
