@@ -123,13 +123,15 @@ export function setReferencesLoaded(isLoaded) {
 }
 
 function populateMainCategoryFilter() {
-    const mainCategories = (appState.references.itemCategories || []).map(cat => cat.name);
+    const mainCategories = (appState.references.itemCategories || [])
+        .map(cat => (typeof cat === 'string' ? cat : cat.name)); // **FIX: Handle old and new format**
     populateReferenceDropdown(appElements.inventoryFilterMainCategory, mainCategories, 'Alle Overkategorier', inventoryState.selectedMainCategory);
 }
 
 function populateSubCategoryFilter() {
     const mainCatName = inventoryState.selectedMainCategory;
-    const mainCat = (appState.references.itemCategories || []).find(cat => cat.name === mainCatName);
+    const allCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+    const mainCat = allCategories.find(cat => cat.name === mainCatName);
     const subCategories = mainCat ? mainCat.subcategories : [];
     populateReferenceDropdown(appElements.inventoryFilterSubCategory, subCategories, 'Alle Underkategorier', inventoryState.selectedSubCategory);
     appElements.inventoryFilterSubCategory.disabled = !mainCatName;
@@ -488,12 +490,14 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
 }
 
 function populateMainCategoryDropdown(selectElement, currentValue) {
-    const mainCategories = (appState.references.itemCategories || []).map(cat => cat.name);
+    const mainCategories = (appState.references.itemCategories || [])
+        .map(cat => (typeof cat === 'string' ? cat : cat.name)); // Handle both formats
     populateReferenceDropdown(selectElement, mainCategories, 'Vælg overkategori...', currentValue);
 }
 
 function populateSubCategoryDropdown(selectElement, mainCategoryName, currentValue) {
-    const mainCat = (appState.references.itemCategories || []).find(cat => cat.name === mainCategoryName);
+    const allCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+    const mainCat = allCategories.find(cat => cat.name === mainCategoryName);
     const subCategories = mainCat ? mainCat.subcategories : [];
     populateReferenceDropdown(selectElement, subCategories, 'Vælg underkategori...', currentValue);
     selectElement.disabled = !mainCategoryName;
