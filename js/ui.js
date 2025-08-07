@@ -16,7 +16,6 @@ export function initUI(state, elements) {
     initNavigationClicks();
     initModals();
     initMobileUI();
-    // initSidebarTabs(); // Sidebar is removed, so this is no longer needed
     initHjemTabs();
 }
 
@@ -122,14 +121,11 @@ function showMobilePanel(panelId) {
     let targetPanel;
     if (panelId === 'shopping-list') {
         targetPanel = UIElements.mobileShoppingListPanel;
-    } else if (panelId === 'kitchen-counter') {
-        targetPanel = UIElements.mobileKitchenCounterPanel;
     } else {
         return;
     }
 
     if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
-    if (UIElements.mobileKitchenCounterPanel) UIElements.mobileKitchenCounterPanel.classList.remove('active');
     
     setTimeout(() => targetPanel.classList.add('active'), 10);
 }
@@ -140,13 +136,13 @@ function showMobilePanel(panelId) {
 function hideMobilePanels() {
     UIElements.mobilePanelOverlay.classList.remove('active');
     if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
-    if (UIElements.mobileKitchenCounterPanel) UIElements.mobileKitchenCounterPanel.classList.remove('active');
     setTimeout(() => {
         if (!UIElements.mobilePanelOverlay.classList.contains('active')) {
             UIElements.mobilePanelOverlay.classList.add('hidden');
         }
     }, 300);
 }
+
 
 /**
  * Sets up the sub-navigation tabs on the "Hjem" page.
