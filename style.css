@@ -1006,33 +1006,83 @@ header {
 .progress-bar.yellow { background-color: var(--status-yellow); }
 .progress-bar.red { background-color: var(--status-red); }
 
-
-.hjem-submodules {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-l);
-    margin-top: var(--spacing-l);
+.hjem-nav-tabs {
+    display: flex;
+    gap: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-l);
 }
-.hjem-module-card {
+.hjem-tab {
+    padding: var(--spacing-m) var(--spacing-l);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.hjem-tab:hover {
+    color: var(--primary-color);
+}
+.hjem-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+.hjem-subpage {
+    display: none;
+}
+.hjem-subpage.active {
+    display: block;
+}
+
+.room-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-l);
+}
+
+.room-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-l);
+}
+.room-detail-card {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
     box-shadow: var(--strong-shadow);
     padding: var(--spacing-l);
-    display: flex;
-    flex-direction: column;
 }
-.hjem-module-card h3 {
-    display: flex;
-    align-items: center;
+.room-detail-card h4 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-m);
+}
+.room-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: var(--spacing-m);
 }
-.hjem-module-card p {
-    flex-grow: 1;
+.room-gallery img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
 }
-.hjem-module-actions {
-    margin-top: auto;
-    padding-top: var(--spacing-m);
+.info-list .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-s) 0;
 }
+.info-list .info-item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+.info-list .info-label {
+    font-weight: 600;
+}
+
 
 /* ===== 9. Modaler ===== */
 .modal-overlay {
@@ -1050,7 +1100,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1068,7 +1118,8 @@ header {
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
 #reorder-assistant-modal .modal-content,
-#batch-edit-modal .modal-content {
+#batch-edit-modal .modal-content,
+#room-edit-modal .modal-content {
     max-width: 550px;
 }
 
@@ -1214,7 +1265,7 @@ header {
     margin-bottom: 1em;
 }
 
-#ingredients-container, #project-materials-container {
+#ingredients-container, #project-materials-container, #paint-list-container, #room-inventory-list-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
@@ -1224,14 +1275,20 @@ header {
     border-radius: var(--border-radius);
     margin: var(--spacing-m) 0;
 }
-.ingredient-row {
+.ingredient-row, .paint-row, .room-inventory-row {
     position: relative;
     display: grid;
-    grid-template-columns: 1fr auto auto auto auto;
+    grid-template-columns: 1fr auto;
     gap: var(--spacing-s);
     align-items: center;
 }
-.ingredient-row input {
+.paint-row {
+    grid-template-columns: 1fr 1fr 1fr auto;
+}
+.ingredient-row {
+    grid-template-columns: 1fr auto auto auto auto;
+}
+.ingredient-row input, .paint-row input, .room-inventory-row input {
     border: 1px solid var(--border-color);
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
@@ -1280,8 +1337,12 @@ header {
     width: 150px;
 }
 
-.ingredient-row .remove-ingredient-btn { color: #adb5bd; }
-.ingredient-row .remove-ingredient-btn:hover { color: var(--status-red); }
+.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn { 
+    color: #adb5bd; 
+}
+.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover { 
+    color: var(--status-red); 
+}
 
 .switch-group {
     display: flex;
