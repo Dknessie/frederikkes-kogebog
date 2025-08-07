@@ -49,50 +49,8 @@
 
         <main id="app-main-content">
             <section id="dashboard" class="page">
-                <h2>Dashboard</h2>
-                <div class="dashboard-grid">
-                    <div id="widget-profile" class="dashboard-widget">
-                        <h3>Profil</h3>
-                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                        <div class="input-group">
-                            <label for="profile-favorite-store">Favoritbutik</label>
-                            <select id="profile-favorite-store"></select>
-                        </div>
-                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
-                    </div>
-                    <div id="widget-budget" class="dashboard-widget">
-                        <div class="card-header">
-                            <h3>Budget</h3>
-                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                        </div>
-                        <div class="budget-summary">
-                            <div class="budget-item">
-                                <span class="budget-label">Forbrug (Måned)</span>
-                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
-                            </div>
-                            <div class="budget-item">
-                                <span class="budget-label">Budget</span>
-                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
-                            </div>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div id="budget-progress-bar" class="progress-bar"></div>
-                        </div>
-                    </div>
-                    <div id="widget-expiring-items" class="dashboard-widget">
-                        <h3>Udløber Snart</h3>
-                        <div id="expiring-items-list"></div>
-                    </div>
-                    <div id="widget-inventory-summary" class="dashboard-widget">
-                        <h3>Lagerstatus</h3>
-                        <div id="inventory-summary-list"></div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="calendar" class="page hidden">
-                <div class="meal-planner-layout">
-                    <aside id="meal-planner-sidebar-left" class="meal-planner-sidebar-left">
+                 <div class="page-with-sidebar-layout">
+                    <aside id="dashboard-sidebar" class="sidebar-left">
                         <div class="sidebar-panel-tabs">
                             <button class="panel-tab active" data-panel="shopping-list-panel-desktop"><i class="fas fa-cart-shopping"></i> Indkøbsliste</button>
                             <button class="panel-tab" data-panel="kitchen-counter-panel-desktop"><i class="fas fa-concierge-bell"></i> Køkkenbord</button>
@@ -120,20 +78,64 @@
                             <div id="kitchen-counter-container" class="sidebar-content"></div>
                         </div>
                     </aside>
-                    <div class="meal-planner-main">
-                        <div class="calendar-header">
-                            <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <div class="calendar-title-container">
-                                <h2 id="calendar-title"></h2>
-                                <div id="weekly-price-display" class="weekly-price-display"></div>
+                    <div class="main-content">
+                        <h2>Dashboard</h2>
+                        <div class="dashboard-grid">
+                            <div id="widget-profile" class="dashboard-widget">
+                                <h3>Profil</h3>
+                                <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
+                                <div class="input-group">
+                                    <label for="profile-favorite-store">Favoritbutik</label>
+                                    <select id="profile-favorite-store"></select>
+                                </div>
+                                <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
                             </div>
-                            <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                            <div id="widget-budget" class="dashboard-widget">
+                                <div class="card-header">
+                                    <h3>Budget</h3>
+                                    <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
+                                </div>
+                                <div class="budget-summary">
+                                    <div class="budget-item">
+                                        <span class="budget-label">Forbrug (Måned)</span>
+                                        <span id="budget-spent" class="budget-value">0,00 kr.</span>
+                                    </div>
+                                    <div class="budget-item">
+                                        <span class="budget-label">Budget</span>
+                                        <span id="budget-total" class="budget-value">4000,00 kr.</span>
+                                    </div>
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div id="budget-progress-bar" class="progress-bar"></div>
+                                </div>
+                            </div>
+                            <div id="widget-expiring-items" class="dashboard-widget">
+                                <h3>Udløber Snart</h3>
+                                <div id="expiring-items-list"></div>
+                            </div>
+                            <div id="widget-inventory-summary" class="dashboard-widget">
+                                <h3>Lagerstatus</h3>
+                                <div id="inventory-summary-list"></div>
+                            </div>
                         </div>
-                        <div class="calendar-actions">
-                            <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
-                        </div>
-                        <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
+                </div>
+            </section>
+
+            <section id="calendar" class="page hidden">
+                <div class="meal-planner-main" style="height: calc(100vh - 65px - (var(--spacing-l) * 2));">
+                    <div class="calendar-header">
+                        <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
+                        <div class="calendar-title-container">
+                            <h2 id="calendar-title"></h2>
+                            <div id="weekly-price-display" class="weekly-price-display"></div>
+                        </div>
+                        <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-actions">
+                        <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
+                    </div>
+                    <div id="calendar-grid" class="calendar-grid"></div>
                 </div>
             </section>
             
@@ -170,9 +172,7 @@
                     <h2 id="room-details-title"></h2>
                     <button id="edit-room-btn" class="btn btn-primary"><i class="fas fa-edit"></i> Rediger Rum</button>
                 </div>
-                <div id="room-details-content" class="room-details-grid">
-                    <!-- Room details will be rendered here by rooms.js -->
-                </div>
+                <div id="room-details-content" class="room-details-grid"></div>
             </section>
 
             <section id="recipes" class="page hidden">
@@ -206,12 +206,12 @@
                     </div>
                     <div class="inventory-filters">
                         <div class="input-group">
-                            <label for="inventory-filter-category">Kategori</label>
-                            <select id="inventory-filter-category"></select>
+                            <label for="inventory-filter-main-category">Overkategori</label>
+                            <select id="inventory-filter-main-category"></select>
                         </div>
                         <div class="input-group">
-                            <label for="inventory-filter-location">Placering</label>
-                            <select id="inventory-filter-location"></select>
+                            <label for="inventory-filter-sub-category">Underkategori</label>
+                            <select id="inventory-filter-sub-category"></select>
                         </div>
                          <div class="input-group">
                             <label for="inventory-filter-stock-status">Status</label>
@@ -409,14 +409,18 @@
                 <div class="form-section-box">
                     <h4>Generel Vareinformation</h4>
                     <p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
+                    <div class="input-group">
+                        <label for="inventory-item-name">Varenavn (generisk)</label>
+                        <input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
+                    </div>
                     <div class="form-grid-2-col">
                         <div class="input-group">
-                            <label for="inventory-item-name">Varenavn (generisk)</label>
-                            <input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
+                            <label for="inventory-item-main-category">Overkategori</label>
+                            <select id="inventory-item-main-category" required></select>
                         </div>
                         <div class="input-group">
-                            <label for="inventory-item-category">Kategori</label>
-                            <select id="inventory-item-category" required></select>
+                            <label for="inventory-item-sub-category">Underkategori</label>
+                            <select id="inventory-item-sub-category" required></select>
                         </div>
                     </div>
                     <div class="form-grid-2-col">
