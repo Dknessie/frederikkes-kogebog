@@ -1144,7 +1144,7 @@ header {
 .form-grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-m) var(--spacing-l); align-items: end; }
 .form-grid-3-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-m) var(--spacing-l); align-items: end; }
 
-.read-view-image, #recipe-edit-modal .image-upload-container img {
+.read-view-image, .image-upload-container img {
     width: 100%;
     height: 250px;
     max-height: 250px;
@@ -1356,6 +1356,34 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-weight: 600;
 }
 
+.project-image-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-l);
+    margin-bottom: var(--spacing-l);
+}
+.project-image-container .image-upload-container {
+    display: flex;
+    flex-direction: column;
+}
+.project-image-container .image-upload-container h4 {
+    margin-top: 0;
+    text-align: center;
+}
+.project-image-container .image-upload-container img {
+    height: 150px;
+    margin-bottom: var(--spacing-m);
+}
+.project-image-container .image-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-s);
+}
+.project-image-container .image-options input[type="url"]{
+    width: 100%;
+}
+
+
 /* ===== Varelager Modal Specifikke Styles ===== */
 #inventory-item-form .form-section-box {
     background-color: var(--white-color);
@@ -1533,6 +1561,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     .inventory-filters {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
+    #inventory .actions-bar {
+        display: flex;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1542,7 +1573,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     .form-grid-3-col, .form-grid-2-col {
         grid-template-columns: 1fr;
     }
-    .recipe-actions-bar, .inventory-controls {
+    .recipe-actions-bar, #inventory .actions-bar {
         flex-direction: column;
         align-items: stretch;
         gap: var(--spacing-m);
@@ -1562,6 +1593,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    .project-image-container {
         grid-template-columns: 1fr;
     }
 }
