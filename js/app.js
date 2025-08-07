@@ -8,8 +8,8 @@ import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
-import { initShoppingList, renderShoppingList } from './shoppingList.js';
-import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
+import { initShoppingList, renderShoppingListWidgets } from './shoppingList.js';
+// import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js'; // Temporarily removed
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
@@ -28,8 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
         references: {},
         preferences: {},
         mealPlan: {},
-        shoppingList: {},
-        kitchenCounter: {},
+        shoppingLists: {
+            groceries: {},
+            materials: {},
+            wishlist: {}
+        },
+        // kitchenCounter: {}, // Temporarily removed
         budget: { monthlyAmount: 4000 },
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
@@ -106,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prevWeekBtn: document.getElementById('prev-week-btn'),
         nextWeekBtn: document.getElementById('next-week-btn'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
+        generateGroceriesBtn: document.getElementById('generate-groceries-btn'),
         weeklyPriceDisplay: document.getElementById('weekly-price-display'),
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
@@ -134,34 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
         inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
         inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
-        shoppingList: {
-            generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
-            clearBtn: document.getElementById('clear-shopping-list-btn'),
-            confirmBtn: document.getElementById('confirm-purchase-btn'),
-            totalContainer: document.getElementById('shopping-list-total-container'),
-            container: document.getElementById('shopping-list-container'),
-            addForm: document.getElementById('add-shopping-item-form'),
-            addInput: document.getElementById('add-shopping-item-name'),
-        },
-        shoppingListMobile: {
-            generateBtn: document.getElementById('generate-weekly-shopping-list-btn-mobile'),
-            clearBtn: document.getElementById('clear-shopping-list-btn-mobile'),
-            confirmBtn: document.getElementById('confirm-purchase-btn-mobile'),
-            totalContainer: document.getElementById('shopping-list-total-container-mobile'),
-            container: document.getElementById('shopping-list-container-mobile'),
-            addForm: document.getElementById('add-shopping-item-form-mobile'),
-            addInput: document.getElementById('add-shopping-item-name-mobile'),
-        },
-        kitchenCounter: {
-            clearBtn: document.getElementById('clear-kitchen-counter-btn'),
-            confirmBtn: document.getElementById('confirm-cooking-btn'),
-            container: document.getElementById('kitchen-counter-container'),
-        },
-        kitchenCounterMobile: {
-            clearBtn: document.getElementById('clear-kitchen-counter-btn-mobile'),
-            confirmBtn: document.getElementById('confirm-cooking-btn-mobile'),
-            container: document.getElementById('kitchen-counter-container-mobile'),
-        }
     };
 
     function combineInventoryData() {
@@ -208,15 +185,22 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
 
-        state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
-            state.shoppingList = doc.exists() ? doc.data().items || {} : {};
-            renderShoppingList();
-        }, (error) => commonErrorHandler(error, 'indkøbsliste'));
+        state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
+            const data = doc.exists() ? doc.data() : {};
+            state.shoppingLists = {
+                groceries: data.groceries || {},
+                materials: data.materials || {},
+                wishlist: data.wishlist || {}
+            };
+            renderShoppingListWidgets();
+        }, (error) => commonErrorHandler(error, 'indkøbslister'));
 
-        state.listeners.kitchenCounter = onSnapshot(doc(db, 'kitchen_counters', userId), (doc) => {
-            state.kitchenCounter = doc.exists() ? doc.data().items || {} : {};
-            renderKitchenCounter();
-        }, (error) => commonErrorHandler(error, 'køkkenbord'));
+        // state.listeners.kitchenCounter = onSnapshot(doc(db, 'kitchen_counters', userId), (doc) => {
+        //     state.kitchenCounter = doc.exists() ? doc.data().items || {};
+        //     if(document.querySelector('#dashboard:not(.hidden)')) {
+        //         renderKitchenCounter();
+        //     }
+        // }, (error) => commonErrorHandler(error, 'køkkenbord'));
         
         const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
         state.listeners.budget = onSnapshot(settingsRef, (doc) => {
@@ -276,8 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
             switch(currentHash) {
                 case '#dashboard':
                     renderDashboardPage();
-                    renderShoppingList();
-                    renderKitchenCounter();
+                    renderShoppingListWidgets();
+                    // renderKitchenCounter(); // Temporarily removed
                     break;
                 case '#calendar':
                     renderMealPlanner();
@@ -318,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initInventory(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
-        initKitchenCounter(state, elements);
+        // initKitchenCounter(state, elements); // Temporarily removed
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
