@@ -16,7 +16,7 @@ export function initUI(state, elements) {
     initNavigationClicks();
     initModals();
     initMobileUI();
-    initSidebarTabs();
+    // initSidebarTabs(); // Sidebar is removed, so this is no longer needed
     initHjemTabs();
 }
 
@@ -149,41 +149,23 @@ function hideMobilePanels() {
 }
 
 /**
- * Sets up the desktop sidebar tab functionality.
- */
-function initSidebarTabs() {
-    const tabs = document.querySelectorAll('.sidebar-panel-tabs .panel-tab');
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const parent = tab.closest('.sidebar-panel-tabs');
-            const sidebar = parent.closest('aside');
-            parent.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-
-            const targetPanelId = tab.dataset.panel;
-            sidebar.querySelectorAll('.sidebar-panel').forEach(panel => {
-                panel.classList.toggle('active', panel.id === targetPanelId);
-            });
-        });
-    });
-}
-
-/**
  * Sets up the sub-navigation tabs on the "Hjem" page.
  */
 function initHjemTabs() {
-    UIElements.hjemNavTabs.addEventListener('click', e => {
-        const targetTab = e.target.closest('.hjem-tab');
-        if (!targetTab) return;
+    if (UIElements.hjemNavTabs) {
+        UIElements.hjemNavTabs.addEventListener('click', e => {
+            const targetTab = e.target.closest('.hjem-tab');
+            if (!targetTab) return;
 
-        UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
-        targetTab.classList.add('active');
+            UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
+            targetTab.classList.add('active');
 
-        const targetId = targetTab.dataset.target;
-        UIElements.hjemSubpages.forEach(page => {
-            page.classList.toggle('active', page.id === targetId);
+            const targetId = targetTab.dataset.target;
+            UIElements.hjemSubpages.forEach(page => {
+                page.classList.toggle('active', page.id === targetId);
+            });
         });
-    });
+    }
 }
 
 /**
