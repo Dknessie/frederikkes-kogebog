@@ -13,7 +13,7 @@ let appState; // To hold a reference to the main state object
 export function initUI(state, elements) {
     UIElements = elements;
     appState = state;
-    initNavigation();
+    initNavigationClicks();
     initModals();
     initMobileUI();
     initSidebarTabs();
@@ -21,7 +21,7 @@ export function initUI(state, elements) {
 }
 
 /**
- * Navigates to a specific page section (hash).
+ * Shows/hides the correct page section based on the hash.
  * @param {string} hash - The hash of the page to navigate to (e.g., '#recipes').
  */
 export function navigateTo(hash) {
@@ -44,14 +44,13 @@ export function navigateTo(hash) {
             link.classList.toggle('active', `#${page}` === effectiveHash);
         }
     });
-
-    window.navigateTo = navigateTo;
 }
 
 /**
- * Sets up the main navigation event listeners (only for clicks that change the hash).
+ * Sets up the main navigation event listeners that only change the URL hash.
+ * The actual page change is handled by the central listener in app.js.
  */
-function initNavigation() {
+function initNavigationClicks() {
     UIElements.headerTitleLink.addEventListener('click', (e) => {
         e.preventDefault();
         window.location.hash = '#dashboard';
@@ -64,8 +63,6 @@ function initNavigation() {
             window.location.hash = hash;
         });
     });
-    
-    // The single, authoritative hashchange listener now lives ONLY in app.js
 }
 
 /**
@@ -155,13 +152,16 @@ function hideMobilePanels() {
  * Sets up the desktop sidebar tab functionality.
  */
 function initSidebarTabs() {
-    UIElements.desktopPanelTabs.forEach(tab => {
+    const tabs = document.querySelectorAll('.sidebar-panel-tabs .panel-tab');
+    tabs.forEach(tab => {
         tab.addEventListener('click', () => {
-            UIElements.desktopPanelTabs.forEach(t => t.classList.remove('active'));
+            const parent = tab.closest('.sidebar-panel-tabs');
+            const sidebar = parent.closest('aside');
+            parent.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
             const targetPanelId = tab.dataset.panel;
-            UIElements.desktopSidebarPanels.forEach(panel => {
+            sidebar.querySelectorAll('.sidebar-panel').forEach(panel => {
                 panel.classList.toggle('active', panel.id === targetPanelId);
             });
         });
