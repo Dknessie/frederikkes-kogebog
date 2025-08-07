@@ -9,7 +9,6 @@ import { initInventory, renderInventory, setReferencesLoaded } from './inventory
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList, renderShoppingListWidgets } from './shoppingList.js';
-// import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js'; // Temporarily removed
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
@@ -33,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
             materials: {},
             wishlist: {}
         },
-        // kitchenCounter: {}, // Temporarily removed
         budget: { monthlyAmount: 4000 },
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
@@ -121,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
         mobilePanelOverlay: document.getElementById('mobile-panel-overlay'),
         mobileShoppingListPanel: document.getElementById('mobile-shopping-list-panel'),
-        mobileKitchenCounterPanel: document.getElementById('mobile-kitchen-counter-panel'),
         notificationModal: document.getElementById('notification-modal'),
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
@@ -194,13 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             renderShoppingListWidgets();
         }, (error) => commonErrorHandler(error, 'indkøbslister'));
-
-        // state.listeners.kitchenCounter = onSnapshot(doc(db, 'kitchen_counters', userId), (doc) => {
-        //     state.kitchenCounter = doc.exists() ? doc.data().items || {};
-        //     if(document.querySelector('#dashboard:not(.hidden)')) {
-        //         renderKitchenCounter();
-        //     }
-        // }, (error) => commonErrorHandler(error, 'køkkenbord'));
         
         const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
         state.listeners.budget = onSnapshot(settingsRef, (doc) => {
@@ -261,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 case '#dashboard':
                     renderDashboardPage();
                     renderShoppingListWidgets();
-                    // renderKitchenCounter(); // Temporarily removed
                     break;
                 case '#calendar':
                     renderMealPlanner();
