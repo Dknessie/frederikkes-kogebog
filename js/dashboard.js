@@ -8,11 +8,23 @@ import { openShoppingListModal } from './shoppingList.js';
 
 let appState;
 let appElements;
+let budgetGauge;
 
 export function initDashboard(state, elements) {
     appState = state;
     appElements = {
         ...elements,
+        // New Dashboard Elements
+        welcomeTitle: document.getElementById('welcome-title'),
+        welcomeSummary: document.getElementById('welcome-summary'),
+        todayOverviewContent: document.getElementById('today-overview-content'),
+        projectsFocusContent: document.getElementById('projects-focus-content'),
+        budgetGaugeContainer: document.getElementById('budget-gauge-container'),
+        inventoryNotificationsContent: document.getElementById('inventory-notifications-content'),
+        quickActionsContainer: document.getElementById('quick-actions-widget'),
+        wishlistPreview: document.getElementById('wishlist-preview'),
+
+        // Shopping List Widget Items
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
         materialsSummaryWidget: document.getElementById('widget-materials-summary'),
         wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
@@ -24,11 +36,8 @@ export function initDashboard(state, elements) {
     if (appElements.editBudgetForm) {
         appElements.editBudgetForm.addEventListener('submit', handleSaveBudget);
     }
-    if (appElements.favoriteStoreSelect) {
-        appElements.favoriteStoreSelect.addEventListener('change', handleSaveFavoriteStore);
-    }
 
-    // Add click listeners for new summary widgets
+    // Add click listeners for shopping list widgets
     if (appElements.groceriesSummaryWidget) {
         appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
     }
@@ -38,148 +47,175 @@ export function initDashboard(state, elements) {
     if (appElements.wishlistSummaryWidget) {
         appElements.wishlistSummaryWidget.addEventListener('click', () => openShoppingListModal('wishlist'));
     }
+    
+    // Quick Actions
+    if (appElements.quickActionsContainer) {
+        appElements.quickActionsContainer.addEventListener('click', (e) => {
+            const actionBtn = e.target.closest('.quick-action-btn');
+            if (!actionBtn) return;
+            
+            const action = actionBtn.dataset.action;
+            if (action === 'add-recipe') {
+                document.getElementById('add-recipe-btn').click();
+            } else if (action === 'add-project') {
+                document.getElementById('add-project-btn').click();
+            } else if (action === 'add-inventory') {
+                document.getElementById('add-inventory-item-btn').click();
+            }
+        });
+    }
 }
 
 export function renderDashboardPage() {
     if (!appState.currentUser) return;
-    if (appElements.profileEmail) {
-        appElements.profileEmail.textContent = appState.currentUser.email;
-    }
-
+    
+    renderWelcomeWidget();
+    renderTodayOverviewWidget();
+    renderProjectsFocusWidget();
     renderBudgetWidget();
-    renderInventorySummaryWidget();
-    renderExpiringItemsWidget();
-    renderFavoriteStoreSelector();
+    renderInventoryNotificationsWidget();
+    renderShoppingListWidgets(); // This will now also handle the wishlist preview
 }
 
-function renderBudgetWidget() {
-    if (!appElements.budgetSpentEl || !appElements.budgetTotalEl || !appElements.budgetProgressBar) return;
+function renderWelcomeWidget() {
+    const userEmail = appState.currentUser.email;
+    const name = userEmail.split('@')[0];
+    const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+    
+    const hours = new Date().getHours();
+    let greeting = "Velkommen";
+    if (hours < 10) greeting = "Godmorgen";
+    else if (hours < 18) greeting = "Goddag";
+    else greeting = "Godaften";
 
+    appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
+
+    const today = formatDate(new Date());
+    const mealsToday = appState.mealPlan[today] ? Object.values(appState.mealPlan[today]).flat().length : 0;
+    const activeProjects = appState.projects.filter(p => p.status !== 'completed').length; // Assuming a status field
+
+    appElements.welcomeSummary.innerHTML = `Du har <strong>${mealsToday}</strong> måltid(er) planlagt i dag og <strong>${activeProjects}</strong> aktive projekter.`;
+}
+
+function renderTodayOverviewWidget() {
+    const container = appElements.todayOverviewContent;
+    container.innerHTML = '';
+    const today = formatDate(new Date());
+    const dayPlan = appState.mealPlan[today];
+
+    let contentHTML = '';
+
+    if (dayPlan) {
+        if (dayPlan.dinner && dayPlan.dinner.length > 0) {
+            const recipe = appState.recipes.find(r => r.id === dayPlan.dinner[0].recipeId);
+            contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-utensils"></i> Aftensmad</span> <span>${recipe ? recipe.title : 'Ukendt'}</span></div>`;
+        }
+        if (dayPlan.lunch && dayPlan.lunch.length > 0) {
+            const recipe = appState.recipes.find(r => r.id === dayPlan.lunch[0].recipeId);
+            contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-sun"></i> Frokost</span> <span>${recipe ? recipe.title : 'Ukendt'}</span></div>`;
+        }
+    }
+    
+    // Placeholder for project task
+    contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-tasks"></i> Næste opgave</span> <span>Mal paneler i stuen</span></div>`;
+
+    if (contentHTML === '') {
+        container.innerHTML = '<p class="empty-state">Intet planlagt for i dag. Tid til at slappe af!</p>';
+    } else {
+        container.innerHTML = contentHTML;
+    }
+}
+
+function renderProjectsFocusWidget() {
+    const container = appElements.projectsFocusContent;
+    const activeProjects = appState.projects.filter(p => p.status !== 'completed').slice(0, 2);
+
+    if (activeProjects.length === 0) {
+        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Hjem" siden.</p>';
+        return;
+    }
+
+    container.innerHTML = activeProjects.map(p => {
+        const progress = p.progress || 30; // Placeholder
+        return `
+        <div class="project-focus-item">
+            <span class="project-focus-title">${p.title}</span>
+            <div class="project-progress-bar"><div style="width: ${progress}%"></div></div>
+        </div>
+        `;
+    }).join('');
+}
+
+
+function renderBudgetWidget() {
     const monthlyBudget = appState.budget.monthlyAmount || 0;
     const monthlySpent = calculateMonthlySpending();
 
-    appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2)} kr.`;
-    appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2)} kr.`;
-
-    const percentage = monthlyBudget > 0 ? (monthlySpent / monthlyBudget) * 100 : 0;
-    const progressBar = appElements.budgetProgressBar;
+    appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2).replace('.',',')} kr.`;
+    appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2).replace('.',',')} kr.`;
     
-    progressBar.style.width = `${Math.min(percentage, 100)}%`;
-
-    progressBar.classList.remove('green', 'yellow', 'red');
-    if (percentage > 100) {
-        progressBar.classList.add('red');
-    } else if (percentage > 75) {
-        progressBar.classList.add('yellow');
+    appElements.budgetGaugeContainer.innerHTML = '';
+    if (typeof JustGage !== 'undefined') {
+        budgetGauge = new JustGage({
+            id: 'budget-gauge-container',
+            value: monthlySpent,
+            min: 0,
+            max: monthlyBudget,
+            title: "Månedligt Forbrug",
+            label: "kr.",
+            levelColors: ["#4CAF50", "#FFC107", "#F44336"], // Green, Yellow, Red
+            valueFontColor: "#3d3d3d",
+            titleFontColor: "#3d3d3d",
+            labelFontColor: "#777",
+            gaugeWidthScale: 0.6,
+            counter: true,
+            formatNumber: true,
+            humanFriendlyDecimal: 2,
+            decimals: 2,
+        });
     } else {
-        progressBar.classList.add('green');
+        appElements.budgetGaugeContainer.innerHTML = '<p class="empty-state">Kunne ikke indlæse budget-graf.</p>';
     }
 }
 
-function renderExpiringItemsWidget() {
-    if (!appElements.expiringItemsList) return;
-
-    const listEl = appElements.expiringItemsList;
+function renderInventoryNotificationsWidget() {
+    const container = appElements.inventoryNotificationsContent;
     const today = new Date();
     today.setHours(0,0,0,0);
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(today.getDate() + 7);
 
-    const expiringBatches = appState.inventoryBatches.filter(batch => {
-        if (!batch.expiryDate) return false;
-        const expiryDate = new Date(batch.expiryDate);
-        return expiryDate <= sevenDaysFromNow;
-    });
+    const expiringBatches = appState.inventoryBatches
+        .filter(batch => {
+            if (!batch.expiryDate) return false;
+            const expiryDate = new Date(batch.expiryDate);
+            return expiryDate <= sevenDaysFromNow;
+        })
+        .map(b => ({...b, type: 'expiring'}));
 
-    expiringBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+    const lowStockItems = appState.inventory
+        .filter(item => item.reorderPoint && item.totalStock > 0 && item.totalStock <= item.reorderPoint)
+        .map(i => ({...i, type: 'low_stock'}));
+
+    const notifications = [...expiringBatches, ...lowStockItems];
     
-    if (expiringBatches.length === 0) {
-        listEl.innerHTML = '<p class="empty-state">Alt ser godt ud! Ingen varer udløber inden for 7 dage.</p>';
+    if (notifications.length === 0) {
+        container.innerHTML = '<p class="empty-state">Alt er fyldt op, og intet udløber snart. Godt gået!</p>';
         return;
     }
 
-    listEl.innerHTML = expiringBatches.slice(0, 5).map(batch => {
-        const item = appState.inventoryItems.find(i => i.id === batch.itemId);
-        if (!item) return '';
-
-        const expiryDate = new Date(batch.expiryDate);
-        const isExpired = expiryDate < today;
-
-        return `
-            <div class="expiring-item">
-                <span>${item.name} (${batch.quantity} x ${batch.size}${batch.unit})</span>
-                <span class="expiring-date ${isExpired ? 'is-expired' : ''}">
-                    ${isExpired ? 'Udløbet' : ''} ${formatDate(expiryDate)}
-                </span>
-            </div>
-        `;
+    container.innerHTML = notifications.slice(0, 5).map(item => {
+        let text = '';
+        let itemClass = `notification-item ${item.type}`;
+        if (item.type === 'expiring') {
+            const itemName = appState.inventoryItems.find(i => i.id === item.itemId)?.name || 'Ukendt vare';
+            text = `${itemName} udløber ${formatDate(item.expiryDate)}`;
+        } else {
+            text = `${item.name} er ved at løbe tør`;
+        }
+        return `<div class="${itemClass}"><span class="notification-text">${text}</span><button class="btn-icon" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`;
     }).join('');
 }
-
-function renderInventorySummaryWidget() {
-    if (!appElements.inventorySummaryList) return;
-
-    const listEl = appElements.inventorySummaryList;
-    const totalItems = appState.inventoryItems.length;
-    const itemsWithStock = appState.inventory.filter(item => item.totalStock > 0).length;
-    let totalValue = 0;
-
-    appState.inventoryBatches.forEach(batch => {
-        totalValue += batch.price || 0;
-    });
-    
-    listEl.innerHTML = `
-        <div class="summary-item">
-            <span>Antal varetyper</span>
-            <span class="summary-value">${totalItems}</span>
-        </div>
-        <div class="summary-item">
-            <span>Varetyper på lager</span>
-            <span class="summary-value">${itemsWithStock}</span>
-        </div>
-        <div class="summary-item">
-            <span>Estimeret lagerværdi</span>
-            <span class="summary-value">${totalValue.toFixed(2)} kr.</span>
-        </div>
-    `;
-}
-
-function renderFavoriteStoreSelector() {
-    if (!appElements.favoriteStoreSelect) return;
-
-    const select = appElements.favoriteStoreSelect;
-    const stores = appState.references.stores || [];
-    const favoriteStore = appState.preferences?.favoriteStoreId || '';
-
-    const focused = document.activeElement === select;
-
-    select.innerHTML = '<option value="">Vælg favoritbutik...</option>';
-    stores.sort((a, b) => a.localeCompare(b)).forEach(store => {
-        const option = document.createElement('option');
-        option.value = store;
-        option.textContent = store;
-        select.appendChild(option);
-    });
-    select.value = favoriteStore;
-
-    if (focused) {
-        select.focus();
-    }
-}
-
-async function handleSaveFavoriteStore(e) {
-    const newFavoriteStore = e.target.value;
-    if (!appState.currentUser) return;
-
-    const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'preferences');
-    try {
-        await setDoc(settingsRef, { favoriteStoreId: newFavoriteStore }, { merge: true });
-        showNotification({ title: "Gemt", message: "Din favoritbutik er opdateret." });
-    } catch (error) {
-        handleError(error, "Favoritbutik kunne ikke gemmes.", "saveFavoriteStore");
-    }
-}
-
 
 function calculateMonthlySpending() {
     let totalCost = 0;
