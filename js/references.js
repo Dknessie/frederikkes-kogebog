@@ -72,7 +72,10 @@ export function renderReferencesPage() {
                 </form>
             `;
         } else if (data.isHierarchical) {
-            const listItemsHTML = (data.items || []).sort((a,b) => a.name.localeCompare(b.name)).map(cat => `
+            const listItemsHTML = (data.items || [])
+                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat)) // **FIX: Handle old string format**
+                .sort((a,b) => a.name.localeCompare(b.name))
+                .map(cat => `
                 <li class="category-item" data-value="${cat.name}">
                     <div class="category-header">
                         <span class="reference-name">${cat.name}</span>
@@ -113,6 +116,7 @@ export function renderReferencesPage() {
         appElements.referencesContainer.appendChild(card);
     }
 }
+
 
 async function handleListClick(e) {
     const target = e.target;
@@ -177,36 +181,37 @@ async function addSimpleReference(key, value) {
 }
 
 async function addMainCategory(name) {
-    const categories = appState.references.itemCategories || [];
+    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     if (categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Overkategorien "${name}" findes allerede.`});
         return;
     }
     const newCategory = { name: name, subcategories: [] };
+    categories.push(newCategory);
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { itemCategories: arrayUnion(newCategory) });
+    await updateDoc(ref, { itemCategories: categories });
 }
 
 async function addSubCategory(mainCategoryName, subCategoryName) {
-    const categories = [...(appState.references.itemCategories || [])];
-    const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
-    if (mainCatIndex === -1) return;
+    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+    const mainCat = categories.find(cat => cat.name === mainCategoryName);
+    if (!mainCat) return;
 
-    const mainCat = categories[mainCatIndex];
-    if (mainCat.subcategories.some(sub => sub.toLowerCase() === subCategoryName.toLowerCase())) {
+    if ((mainCat.subcategories || []).some(sub => sub.toLowerCase() === subCategoryName.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Underkategorien "${subCategoryName}" findes allerede.`});
         return;
     }
     
+    if (!mainCat.subcategories) mainCat.subcategories = [];
     mainCat.subcategories.push(subCategoryName);
     const ref = doc(db, 'references', appState.currentUser.uid);
     await updateDoc(ref, { itemCategories: categories });
 }
 
 async function deleteSubCategory(mainCategoryName, subCategoryName) {
-    const categories = [...(appState.references.itemCategories || [])];
+    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     const mainCat = categories.find(cat => cat.name === mainCategoryName);
-    if (!mainCat) return;
+    if (!mainCat || !mainCat.subcategories) return;
 
     mainCat.subcategories = mainCat.subcategories.filter(sub => sub !== subCategoryName);
     const ref = doc(db, 'references', appState.currentUser.uid);
@@ -222,7 +227,9 @@ async function deleteReferenceItem(key, value) {
     const ref = doc(db, 'references', appState.currentUser.uid);
     
     if (key === 'itemCategories') {
-        const updatedCategories = appState.references.itemCategories.filter(cat => cat.name !== value);
+        const updatedCategories = (appState.references.itemCategories || [])
+            .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
+            .filter(cat => cat.name !== value);
         await updateDoc(ref, { itemCategories: updatedCategories });
     } else {
         await updateDoc(ref, { [key]: arrayRemove(value) });
@@ -264,26 +271,28 @@ function toggleEditMode(itemElement, isEditing) {
 }
 
 async function saveReferenceUpdate(key, oldValue, newValue) {
-    // This function needs to be updated to handle hierarchical data for itemCategories
-    // For now, it will only work for simple lists.
-    if (key === 'itemCategories') {
-        showNotification({title: "Funktion ikke klar", message: "Redigering af overkategorinavne er ikke implementeret endnu."});
-        const itemElement = document.querySelector(`.category-item[data-value="${oldValue}"]`);
-        toggleEditMode(itemElement, false);
-        return;
-    }
-
     if (!newValue || newValue === oldValue) {
-        const itemElement = document.querySelector(`.reference-item[data-value="${oldValue}"]`);
-        toggleEditMode(itemElement, false);
+        const itemElement = document.querySelector(`.reference-item[data-value="${oldValue}"], .category-item[data-value="${oldValue}"]`);
+        if(itemElement) toggleEditMode(itemElement, false);
         return;
     }
-
-    // ... (rest of the logic for simple lists remains the same)
+    
     const ref = doc(db, 'references', appState.currentUser.uid);
-    const batch = writeBatch(db);
-    batch.update(ref, { [key]: arrayRemove(oldValue) });
-    batch.update(ref, { [key]: arrayUnion(newValue) });
-    // Add logic to update documents that use this reference...
-    await batch.commit();
+    
+    if (key === 'itemCategories') {
+        const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+        const catToUpdate = categories.find(cat => cat.name === oldValue);
+        if (catToUpdate) {
+            catToUpdate.name = newValue;
+            await updateDoc(ref, { itemCategories: categories });
+            showNotification({title: "Opdateret!", message: `Kategorien er blevet omdøbt.`});
+        }
+    } else {
+        const batch = writeBatch(db);
+        batch.update(ref, { [key]: arrayRemove(oldValue) });
+        batch.update(ref, { [key]: arrayUnion(newValue) });
+        // Add logic to update documents that use this reference...
+        await batch.commit();
+        showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
+    }
 }
