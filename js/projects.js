@@ -26,6 +26,8 @@ export function initProjects(state, elements) {
         projectImageUploadAfter: document.getElementById('project-image-upload-after'),
         projectImageUrlInputAfter: document.getElementById('project-imageUrl-after'),
         addMissingMaterialsBtn: document.getElementById('add-missing-materials-btn'),
+        projectLinksContainer: document.getElementById('project-links-container'),
+        addProjectLinkBtn: document.getElementById('add-project-link-btn'),
     };
 
     appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
@@ -34,8 +36,11 @@ export function initProjects(state, elements) {
     appElements.addMaterialBtn.addEventListener('click', () => createMaterialRow(appElements.projectMaterialsContainer));
     
     appElements.projectEditModal.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-ingredient-btn')) { // Using same class for simplicity
+        if (e.target.closest('.remove-ingredient-btn')) {
             e.target.closest('.ingredient-row').remove();
+        }
+        if (e.target.closest('.remove-project-link-btn')) {
+            e.target.closest('.project-link-row').remove();
         }
     });
 
@@ -44,6 +49,7 @@ export function initProjects(state, elements) {
     appElements.projectImageUrlInputBefore.addEventListener('input', (e) => handleImageUrlInput(e, 'before'));
     appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
     appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
+    appElements.addProjectLinkBtn.addEventListener('click', () => createLinkRow());
 
     appElements.addMissingMaterialsBtn.addEventListener('click', handleAddMissingMaterials);
 }
@@ -119,6 +125,18 @@ function createMaterialRow(container, material = {}) {
     container.appendChild(row);
 }
 
+function createLinkRow(link = {}) {
+    const container = appElements.projectLinksContainer;
+    const row = document.createElement('div');
+    row.className = 'project-link-row';
+    row.innerHTML = `
+        <input type="text" class="project-link-title" placeholder="Beskrivelse" value="${link.title || ''}">
+        <input type="url" class="project-link-url" placeholder="https://..." value="${link.url || ''}">
+        <button type="button" class="btn-icon remove-project-link-btn"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(row);
+}
+
 /**
  * Handles saving a project from the modal form.
  * @param {Event} e - The form submission event.
@@ -142,6 +160,15 @@ async function handleSaveProject(e) {
         }
     });
 
+    const links = [];
+    appElements.projectLinksContainer.querySelectorAll('.project-link-row').forEach(row => {
+        const title = row.querySelector('.project-link-title').value.trim();
+        const url = row.querySelector('.project-link-url').value.trim();
+        if (title && url) {
+            links.push({ title, url });
+        }
+    });
+
     const tags = document.getElementById('project-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag);
 
     const projectData = {
@@ -154,8 +181,8 @@ async function handleSaveProject(e) {
             hours: Number(document.getElementById('project-time-hours').value) || null,
         },
         instructions: document.getElementById('project-instructions').value,
-        source_url: document.getElementById('project-source-url').value,
         materials: materials,
+        links: links,
         userId: appState.currentUser.uid,
         imageUrlBefore: projectFormImageBefore.type === 'url' ? projectFormImageBefore.data : null,
         imageBase64Before: projectFormImageBefore.type === 'base64' ? projectFormImageBefore.data : null,
@@ -219,6 +246,7 @@ function openAddProjectModal() {
     appElements.projectForm.reset();
     document.getElementById('project-id').value = '';
     appElements.projectMaterialsContainer.innerHTML = '';
+    appElements.projectLinksContainer.innerHTML = '';
     
     // Reset images
     projectFormImageBefore = { type: null, data: null };
@@ -229,6 +257,7 @@ function openAddProjectModal() {
     populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...');
 
     createMaterialRow(appElements.projectMaterialsContainer);
+    createLinkRow();
     appElements.projectEditModal.classList.remove('hidden');
 }
 
@@ -253,7 +282,6 @@ function openEditProjectModal(projectId) {
         document.getElementById('project-time-hours').value = project.time?.hours || '';
         
         document.getElementById('project-instructions').value = project.instructions || '';
-        document.getElementById('project-source-url').value = project.source_url || '';
         
         // Handle images
         projectFormImageBefore = { 
@@ -276,6 +304,14 @@ function openEditProjectModal(projectId) {
         } else {
             createMaterialRow(appElements.projectMaterialsContainer);
         }
+
+        appElements.projectLinksContainer.innerHTML = '';
+        if (project.links && project.links.length > 0) {
+            project.links.forEach(link => createLinkRow(link));
+        } else {
+            createLinkRow();
+        }
+
         appElements.projectEditModal.classList.remove('hidden');
     }
 }
@@ -316,7 +352,5 @@ function handleImageUrlInput(e, type) {
 }
 
 async function handleAddMissingMaterials() {
-    // This is a placeholder for the logic to add missing materials to the shopping list.
-    // It will be implemented fully once the shopping list functionality is updated.
     showNotification({title: "Kommer Snart", message: "Funktionen til at tilføje manglende materialer er under udvikling."});
 }
