@@ -308,6 +308,7 @@ async function handleClearShoppingList() {
     });
     if (confirmed) {
         await updateShoppingListInFirestore(currentListType, {});
+        renderListInModal(); // Immediate UI update
     }
 }
 
@@ -346,16 +347,18 @@ async function handleAddShoppingItem(itemName) {
     
     updatedList[key] = newItem;
     await updateShoppingListInFirestore(currentListType, updatedList);
+    renderListInModal(); // Immediate UI update
 }
 
 
-function handleRemoveShoppingItem(itemName) {
+async function handleRemoveShoppingItem(itemName) {
     const list = appState.shoppingLists[currentListType] || {};
     const updatedList = { ...list };
     const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
     if(keyToDelete) {
         delete updatedList[keyToDelete];
-        updateShoppingListInFirestore(currentListType, updatedList);
+        await updateShoppingListInFirestore(currentListType, updatedList);
+        renderListInModal(); // Immediate UI update
     }
 }
 
@@ -372,28 +375,73 @@ async function handleConfirmPurchase() {
         return;
     }
     
-    const list = appState.shoppingLists.groceries;
-    const updatedList = { ...list };
+    // Process items one by one to handle modals correctly
+    processItemsSequentially(checkedItems);
+}
 
-    for (const item of checkedItems) {
-        if (item.itemId) {
-            openBatchModal(item.itemId, null);
-        } else {
-            const createNew = await showNotification({
-                title: "Ny Vare",
-                message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den nu?`,
-                type: 'confirm'
-            });
-            if (createNew) {
-                appElements.shoppingListModal.classList.add('hidden');
-                document.getElementById('add-inventory-item-btn').click();
-                // Pre-fill name if possible in a future update
+async function processItemsSequentially(items) {
+    let currentList = { ...appState.shoppingLists.groceries };
+    let listChanged = false;
+
+    for (const item of items) {
+        const wasHandled = await new Promise(async (resolve) => {
+            if (item.itemId) {
+                // This function will be called ONLY if a batch is saved
+                const onSaveSuccess = (savedItemId) => {
+                    const itemToRemove = appState.inventory.find(i => i.id === savedItemId);
+                    if (itemToRemove) {
+                        const keyToDelete = Object.keys(currentList).find(k => currentList[k].name.toLowerCase() === itemToRemove.name.toLowerCase());
+                        if (keyToDelete) {
+                            delete currentList[keyToDelete];
+                            listChanged = true;
+                        }
+                    }
+                    resolve(true); // Mark as handled
+                };
+                openBatchModal(item.itemId, null, onSaveSuccess);
+
+                // We need to know if the user just closes the modal
+                const modal = document.getElementById('batch-edit-modal');
+                const closeHandler = () => {
+                    // If onSaveSuccess has not been called, it means the user cancelled.
+                    if (modal.classList.contains('hidden')) { // Check if it's still open
+                        resolve(false); // Mark as not handled
+                    }
+                };
+                // Listen for the modal to be hidden
+                const observer = new MutationObserver((mutations) => {
+                    for (let mutation of mutations) {
+                        if (mutation.attributeName === 'class' && modal.classList.contains('hidden')) {
+                            resolve(false); // User closed the modal
+                            observer.disconnect();
+                        }
+                    }
+                });
+                observer.observe(modal, { attributes: true });
+
+            } else {
+                const createNew = await showNotification({
+                    title: "Ny Vare",
+                    message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den nu?`,
+                    type: 'confirm'
+                });
+                if (createNew) {
+                    appElements.shoppingListModal.classList.add('hidden');
+                    document.getElementById('add-inventory-item-btn').click();
+                }
+                resolve(false); // Not handled in this loop
             }
+        });
+
+        // If user cancelled the batch modal for an item, we stop the whole process
+        if (!wasHandled) {
+            showNotification({ title: "Annulleret", message: "Processen blev afbrudt. Resterende varer er ikke blevet behandlet." });
+            return;
         }
-        
-        const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === item.name);
-        if(keyToDelete) delete updatedList[keyToDelete];
     }
-    
-    await updateShoppingListInFirestore('groceries', updatedList);
+
+    if (listChanged) {
+        await updateShoppingListInFirestore('groceries', currentList);
+        renderListInModal(); // Update the UI with the final list
+    }
 }
