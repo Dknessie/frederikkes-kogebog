@@ -234,7 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = false);
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+                buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
                 handleNavigation(window.location.hash);
             }
@@ -246,10 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.add('hidden');
         elements.appContainer.classList.remove('hidden');
         
-        // Setup everything that depends on a logged-in user
         setupRealtimeListeners(user.uid); 
         window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
-        handleNavigation(window.location.hash || '#dashboard'); // Initial navigation call
+        handleNavigation(window.location.hash || '#dashboard');
     }
 
     function onLogout() {
@@ -258,7 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = true);
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
 
@@ -310,10 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
-        // Disable all buttons that depend on data from the start
-        Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = true);
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
-        // Initialize all modules
         initUI(state, elements);
         initInventory(state, elements);
         initRecipes(state, elements);
@@ -326,8 +326,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initRooms(state, elements);
         setupAuthEventListeners(elements);
         
-        // The only thing that happens on init is setting up the auth listener.
-        // Everything else is triggered by the onLogin callback.
         initAuth(onLogin, onLogout);
     }
 
