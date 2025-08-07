@@ -13,6 +13,7 @@ import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
+import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js'; // NEW
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -23,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         projects: [],
+        rooms: [], // NEW
         references: {},
         preferences: {},
         mealPlan: {},
@@ -32,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
+        currentlyViewedRoomId: null, // NEW
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -46,6 +49,28 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
+        // Hjem Page elements
+        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
+        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
+
+        // Room elements (NEW)
+        roomsGrid: document.getElementById('rooms-grid'),
+        addRoomBtn: document.getElementById('add-room-btn'),
+        roomEditModal: document.getElementById('room-edit-modal'),
+        roomForm: document.getElementById('room-form'),
+        roomDetailsPage: document.getElementById('room-details'),
+        roomDetailsContent: document.getElementById('room-details-content'),
+        roomDetailsTitle: document.getElementById('room-details-title'),
+        editRoomBtn: document.getElementById('edit-room-btn'),
+
+        // Project elements
+        projectEditModal: document.getElementById('project-edit-modal'),
+        projectForm: document.getElementById('project-form'),
+        addProjectBtn: document.getElementById('add-project-btn'),
+        projectsGrid: document.getElementById('projects-grid'),
+        projectMaterialsContainer: document.getElementById('project-materials-container'),
+        addMaterialBtn: document.getElementById('add-material-btn'),
+
         // Dashboard elements
         profileEmail: document.getElementById('profile-email'),
         favoriteStoreSelect: document.getElementById('profile-favorite-store'),
@@ -55,14 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetProgressBar: document.getElementById('budget-progress-bar'),
         expiringItemsList: document.getElementById('expiring-items-list'),
         inventorySummaryList: document.getElementById('inventory-summary-list'),
-
-        // Project elements
-        projectEditModal: document.getElementById('project-edit-modal'),
-        projectForm: document.getElementById('project-form'),
-        addProjectBtn: document.getElementById('add-project-btn'),
-        projectsGrid: document.getElementById('projects-grid'),
-        projectMaterialsContainer: document.getElementById('project-materials-container'),
-        addMaterialBtn: document.getElementById('add-material-btn'),
 
         // Existing elements
         inventoryItemModal: document.getElementById('inventory-item-modal'),
@@ -211,6 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'projekter'));
 
+        // NEW: Listener for rooms
+        const qRooms = query(collection(db, 'rooms'), where("userId", "==", userId));
+        state.listeners.rooms = onSnapshot(qRooms, (snapshot) => {
+            state.rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'rum'));
+
         const year = state.currentDate.getFullYear();
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
@@ -252,6 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 elements.reorderAssistantBtn.disabled = false;
                 elements.addRecipeBtn.disabled = false;
                 elements.addProjectBtn.disabled = false;
+                elements.addRoomBtn.disabled = false;
                 setReferencesLoaded(true);
                 if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
                 if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
@@ -266,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setupRealtimeListeners(user.uid); 
         
         const currentHash = window.location.hash || '#dashboard';
-        navigateTo(currentHash);
         handleNavigation(currentHash);
     }
 
@@ -280,13 +304,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
         elements.addProjectBtn.disabled = true;
+        elements.addRoomBtn.disabled = true;
         setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
-        // Ensure the hash is valid, otherwise default to dashboard
-        const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#references'];
-        const currentHash = validHashes.includes(hash) ? hash : '#dashboard';
+        const [mainHash, subId] = hash.split('/');
+        state.currentlyViewedRoomId = subId || null;
+
+        const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
+        const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
         navigateTo(currentHash);
 
         switch(currentHash) {
@@ -299,7 +326,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderKitchenCounter();
                 break;
             case '#hjem':
+                renderRoomsListPage();
                 renderProjects();
+                break;
+            case '#room-details':
+                if (state.currentlyViewedRoomId) {
+                    renderRoomDetailsPage();
+                } else {
+                    navigateTo('#hjem'); // Redirect if no room ID
+                }
                 break;
             case '#recipes':
                 renderPageTagFilters();
@@ -319,10 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.reorderAssistantBtn.disabled = true;
         elements.addRecipeBtn.disabled = true;
         elements.addProjectBtn.disabled = true;
+        elements.addRoomBtn.disabled = true;
 
         initAuth(onLogin, onLogout);
         setupAuthEventListeners(elements);
-        initUI(elements);
+        initUI(state, elements);
         initInventory(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
@@ -331,8 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initProjects(state, elements);
+        initRooms(state, elements);
 
         window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
+        handleNavigation(window.location.hash); // Initial load
     }
 
     init();
