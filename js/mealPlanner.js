@@ -4,8 +4,7 @@ import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
-import { addToKitchenCounterFromRecipe } from './kitchenCounter.js';
-import { calculateRecipePrice } from './recipes.js';
+import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
@@ -95,11 +94,14 @@ function populateCalendarWithData() {
                 recipeDiv.className = 'planned-recipe';
                 if (isLeftovers) recipeDiv.classList.add('leftovers');
                 if (!recipeExists) recipeDiv.classList.add('deleted');
+                if (mealData.cooked) recipeDiv.classList.add('is-cooked');
 
                 recipeDiv.draggable = recipeExists;
-                recipeDiv.dataset.meal = JSON.stringify(mealData); // Store the whole meal object
+                recipeDiv.dataset.meal = JSON.stringify(mealData);
                 
-                const cookBtnHTML = recipeExists && !isLeftovers ? `<button class="btn-icon cook-meal-btn" title="Læg på Køkkenbord"><i class="fas fa-concierge-bell"></i></button>` : '';
+                const cookBtnHTML = recipeExists && !isLeftovers && !mealData.cooked
+                    ? `<button class="btn-icon cook-meal-btn" title="Markér som lavet og træk fra lager"><i class="fas fa-hat-chef"></i></button>` 
+                    : '';
 
                 recipeDiv.innerHTML = `
                     <span>${recipeName}</span>
@@ -149,17 +151,33 @@ async function handleCalendarClick(e) {
     if (!plannedRecipeDiv) return;
 
     const mealData = JSON.parse(plannedRecipeDiv.dataset.meal);
+    const slot = plannedRecipeDiv.closest('.meal-slot');
+    const date = slot.dataset.date;
+    const mealType = slot.dataset.meal;
 
     if (e.target.closest('.cook-meal-btn')) {
-        await addToKitchenCounterFromRecipe(mealData.recipeId, mealData.portions);
+        const wasDeducted = await confirmAndDeductIngredients(mealData.recipeId, mealData.portions);
+        if (wasDeducted) {
+            // Mark as cooked in Firestore
+            const year = new Date(date).getFullYear();
+            const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+            const fieldPath = `${date}.${mealType}`;
+            
+            // Create a new meal object with the cooked flag
+            const updatedMealData = { ...mealData, cooked: true };
+            
+            // Atomically remove the old and add the new
+            await updateDoc(mealPlanRef, {
+                [fieldPath]: arrayRemove(mealData)
+            });
+             await updateDoc(mealPlanRef, {
+                [fieldPath]: arrayUnion(updatedMealData)
+            });
+        }
         return;
     }
 
     if (e.target.closest('.remove-meal-btn')) {
-        const slot = plannedRecipeDiv.closest('.meal-slot');
-        const date = slot.dataset.date;
-        const mealType = slot.dataset.meal;
-
         const year = new Date(date).getFullYear();
         const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
         const fieldPath = `${date}.${mealType}`;
@@ -194,6 +212,7 @@ async function handlePlanMealSubmit(e) {
         recipeId,
         type: 'recipe',
         portions,
+        cooked: false, // New field
     };
 
     const year = new Date(date).getFullYear();
@@ -201,7 +220,6 @@ async function handlePlanMealSubmit(e) {
     const fieldPath = `${date}.${mealType}`;
     
     try {
-        // Using setDoc with merge ensures the document and nested fields are created if they don't exist.
         await setDoc(mealPlanRef, {
             [date]: {
                 [mealType]: arrayUnion(mealData)
