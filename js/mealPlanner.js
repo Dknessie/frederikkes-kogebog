@@ -34,6 +34,12 @@ export function initMealPlanner(state, elements) {
 }
 
 export function renderMealPlanner() {
+    // Guard clause to prevent rendering before data is ready
+    if (!appState.recipes || !appState.inventory) {
+        appElements.calendarGrid.innerHTML = '<p class="empty-state">Indlæser data...</p>';
+        return;
+    }
+
     appElements.calendarGrid.innerHTML = '';
     const start = getStartOfWeek(appState.currentDate);
     appElements.calendarTitle.textContent = `Uge ${getWeekNumber(start)}, ${start.getFullYear()}`;
