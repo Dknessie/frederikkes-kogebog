@@ -25,6 +25,7 @@ export function initProjects(state, elements) {
         projectImagePreviewAfter: document.getElementById('project-image-preview-after'),
         projectImageUploadAfter: document.getElementById('project-image-upload-after'),
         projectImageUrlInputAfter: document.getElementById('project-imageUrl-after'),
+        addMissingMaterialsBtn: document.getElementById('add-missing-materials-btn'),
     };
 
     appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
@@ -43,6 +44,8 @@ export function initProjects(state, elements) {
     appElements.projectImageUrlInputBefore.addEventListener('input', (e) => handleImageUrlInput(e, 'before'));
     appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
     appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
+
+    appElements.addMissingMaterialsBtn.addEventListener('click', handleAddMissingMaterials);
 }
 
 /**
@@ -310,4 +313,10 @@ function handleImageUrlInput(e, type) {
         appElements.projectImagePreviewAfter.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
         appElements.projectImageUploadAfter.value = '';
     }
+}
+
+async function handleAddMissingMaterials() {
+    // This is a placeholder for the logic to add missing materials to the shopping list.
+    // It will be implemented fully once the shopping list functionality is updated.
+    showNotification({title: "Kommer Snart", message: "Funktionen til at tilføje manglende materialer er under udvikling."});
 }
