@@ -255,20 +255,20 @@
     <!-- MODALS -->
     <div id="shopping-list-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
-            <div class="sidebar-actions">
-                 <button id="shopping-list-clear-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
-                 <button id="shopping-list-confirm-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Køb</button>
+            <div class="shopping-list-header">
+                <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
+                <button class="close-modal-btn">&times;</button>
             </div>
             <div id="shopping-list-modal-total" class="shopping-list-total"></div>
-            <div id="shopping-list-modal-container" class="sidebar-content"></div>
-            <div class="add-item-form-container">
-                <form id="add-shopping-item-modal-form">
-                    <input type="text" id="add-shopping-item-modal-name" placeholder="Tilføj vare..." required>
-                    <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                </form>
+            <div id="shopping-list-modal-container" class="shopping-list-content"></div>
+            <div class="shopping-list-actions">
+                 <button id="shopping-list-clear-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
+                 <button id="shopping-list-confirm-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Bekræft Indkøb</button>
             </div>
+            <form id="add-shopping-item-modal-form" class="add-item-form-container">
+                <input type="text" id="add-shopping-item-modal-name" placeholder="Tilføj vare..." required>
+                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+            </form>
         </div>
     </div>
     <div id="room-edit-modal" class="modal-overlay hidden">
