@@ -14,40 +14,51 @@ export function initRooms(state, elements) {
         addWishlistItemBtn: document.getElementById('add-wishlist-item-btn'),
     };
 
-    appElements.addRoomBtn.addEventListener('click', openAddRoomModal);
-    appElements.roomsGrid.addEventListener('click', (e) => {
-        const card = e.target.closest('.recipe-card');
-        if (card) {
-            const roomId = card.dataset.id;
-            window.location.hash = `#room-details/${roomId}`;
-        }
-    });
-    appElements.editRoomBtn.addEventListener('click', () => {
-        if(appState.currentlyViewedRoomId) {
-            openEditRoomModal(appState.currentlyViewedRoomId);
-        }
-    });
-    appElements.roomForm.addEventListener('submit', handleSaveRoom);
+    if (appElements.addRoomBtn) {
+        appElements.addRoomBtn.addEventListener('click', openAddRoomModal);
+    }
+    if (appElements.roomsGrid) {
+        appElements.roomsGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.recipe-card');
+            if (card) {
+                const roomId = card.dataset.id;
+                window.location.hash = `#room-details/${roomId}`;
+            }
+        });
+    }
+    if (appElements.editRoomBtn) {
+        appElements.editRoomBtn.addEventListener('click', () => {
+            if(appState.currentlyViewedRoomId) {
+                openEditRoomModal(appState.currentlyViewedRoomId);
+            }
+        });
+    }
+    if (appElements.roomForm) {
+        appElements.roomForm.addEventListener('submit', handleSaveRoom);
+    }
 
     // Event listeners for dynamic rows in modal
-    appElements.roomEditModal.addEventListener('click', e => {
-        if (e.target.closest('#add-room-inventory-btn')) {
-            createInventoryRow();
-        }
-        if (e.target.closest('#add-wishlist-item-btn')) {
-            createWishlistRow();
-        }
-        if (e.target.closest('.remove-room-inventory-btn')) {
-            e.target.closest('.room-inventory-row').remove();
-        }
-        if (e.target.closest('.remove-wishlist-item-btn')) {
-            e.target.closest('.wishlist-row').remove();
-        }
-    });
+    if (appElements.roomEditModal) {
+        appElements.roomEditModal.addEventListener('click', e => {
+            if (e.target.closest('#add-room-inventory-btn')) {
+                createInventoryRow();
+            }
+            if (e.target.closest('#add-wishlist-item-btn')) {
+                createWishlistRow();
+            }
+            if (e.target.closest('.remove-room-inventory-btn')) {
+                e.target.closest('.room-inventory-row').remove();
+            }
+            if (e.target.closest('.remove-wishlist-item-btn')) {
+                e.target.closest('.wishlist-row').remove();
+            }
+        });
+    }
 }
 
 export function renderRoomsListPage() {
     const grid = appElements.roomsGrid;
+    if (!grid) return;
     grid.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
@@ -75,6 +86,20 @@ export function renderRoomsListPage() {
     grid.appendChild(fragment);
 }
 
+function renderDetailCard(title, content) {
+    if (!content || (Array.isArray(content) && content.length === 0)) {
+        return '';
+    }
+    return `
+        <div class="room-detail-card">
+            <h4>${title}</h4>
+            <div class="info-list">
+                ${content}
+            </div>
+        </div>
+    `;
+}
+
 export function renderRoomDetailsPage() {
     const roomId = appState.currentlyViewedRoomId;
     const room = appState.rooms.find(r => r.id === roomId);
@@ -87,41 +112,40 @@ export function renderRoomDetailsPage() {
 
     appElements.roomDetailsTitle.textContent = room.name;
     const content = appElements.roomDetailsContent;
+
+    const keyInfoContent = [
+        room.area ? `<div class="info-item"><span class="info-label">Størrelse:</span><span>${room.area} m²</span></div>` : '',
+        room.ceilingHeight ? `<div class="info-item"><span class="info-label">Lofthøjde:</span><span>${room.ceilingHeight} m</span></div>` : ''
+    ].filter(Boolean).join('');
+
+    const notesContent = room.notes ? `<p>${room.notes.replace(/\n/g, '<br>')}</p>` : '';
+    const vvsContent = room.notesVVS ? `<p>${room.notesVVS.replace(/\n/g, '<br>')}</p>` : '';
+    const elContent = room.notesEl ? `<p>${room.notesEl.replace(/\n/g, '<br>')}</p>` : '';
+    const windowsContent = room.notesWindows ? `<p>${room.notesWindows.replace(/\n/g, '<br>')}</p>` : '';
+    const ventContent = room.notesVentilation ? `<p>${room.notesVentilation.replace(/\n/g, '<br>')}</p>` : '';
+    const surfacesContent = room.notesSurfaces ? `<p>${room.notesSurfaces.replace(/\n/g, '<br>')}</p>` : '';
+
+    const inventoryContent = (room.inventory && room.inventory.length > 0) 
+        ? room.inventory.map(i => `<div class="info-item"><span>${i.name}</span></div>`).join('') 
+        : '<p class="empty-state-small">Intet inventar registreret.</p>';
+
+    const wishlistContent = (room.wishlist && room.wishlist.length > 0) 
+        ? room.wishlist.map(i => {
+            const link = i.url ? `<a href="${i.url}" target="_blank" rel="noopener noreferrer">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
+            return `<div class="info-item"><span>${link}</span></div>`;
+        }).join('') 
+        : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>';
+
     content.innerHTML = `
-        <div class="room-detail-card">
-            <h4>Galleri</h4>
-            <div id="room-gallery-container" class="room-gallery">
-                ${(room.images && room.images.length > 0) ? room.images.map(img => `<img src="${img}" alt="Billede af ${room.name}">`).join('') : '<p class="empty-state-small">Intet galleri.</p>'}
-            </div>
-        </div>
-        <div class="room-detail-card">
-            <h4>Nøgleinformation</h4>
-            <div class="info-list">
-                <div class="info-item"><span class="info-label">Størrelse:</span><span>${room.area || 'N/A'} m²</span></div>
-                <div class="info-item"><span class="info-label">Lofthøjde:</span><span>${room.ceilingHeight || 'N/A'} m</span></div>
-            </div>
-        </div>
-        <div class="room-detail-card">
-            <h4>Noter</h4>
-            <p>${room.notes || 'Ingen noter tilføjet.'}</p>
-        </div>
-        <div class="room-detail-card">
-            <h4>Inventar</h4>
-             <div class="info-list">
-                ${(room.inventory && room.inventory.length > 0) ? room.inventory.map(i => `
-                    <div class="info-item"><span>${i.name}</span></div>
-                `).join('') : '<p class="empty-state-small">Intet inventar registreret.</p>'}
-            </div>
-        </div>
-         <div class="room-detail-card">
-            <h4>Ønskeliste</h4>
-             <div class="info-list">
-                ${(room.wishlist && room.wishlist.length > 0) ? room.wishlist.map(i => {
-                    const link = i.url ? `<a href="${i.url}" target="_blank">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
-                    return `<div class="info-item"><span>${link}</span></div>`;
-                }).join('') : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>'}
-            </div>
-        </div>
+        ${renderDetailCard('Nøgleinformation', keyInfoContent)}
+        ${renderDetailCard('Generelle Noter', notesContent)}
+        ${renderDetailCard('VVS & Sanitet', vvsContent)}
+        ${renderDetailCard('El-installationer', elContent)}
+        ${renderDetailCard('Vinduer & Døre', windowsContent)}
+        ${renderDetailCard('Ventilation', ventContent)}
+        ${renderDetailCard('Overflader', surfacesContent)}
+        ${renderDetailCard('Inventar', inventoryContent)}
+        ${renderDetailCard('Ønskeliste', wishlistContent)}
     `;
 }
 
@@ -162,6 +186,11 @@ function openEditRoomModal(roomId) {
     document.getElementById('room-area').value = room.area || '';
     document.getElementById('room-ceiling-height').value = room.ceilingHeight || '';
     document.getElementById('room-notes').value = room.notes || '';
+    document.getElementById('room-notes-vvs').value = room.notesVVS || '';
+    document.getElementById('room-notes-el').value = room.notesEl || '';
+    document.getElementById('room-notes-windows').value = room.notesWindows || '';
+    document.getElementById('room-notes-ventilation').value = room.notesVentilation || '';
+    document.getElementById('room-notes-surfaces').value = room.notesSurfaces || '';
 
     const inventoryContainer = document.getElementById('room-inventory-list-container');
     inventoryContainer.innerHTML = '';
@@ -210,6 +239,11 @@ async function handleSaveRoom(e) {
         area: Number(document.getElementById('room-area').value) || null,
         ceilingHeight: Number(document.getElementById('room-ceiling-height').value) || null,
         notes: document.getElementById('room-notes').value.trim() || null,
+        notesVVS: document.getElementById('room-notes-vvs').value.trim() || null,
+        notesEl: document.getElementById('room-notes-el').value.trim() || null,
+        notesWindows: document.getElementById('room-notes-windows').value.trim() || null,
+        notesVentilation: document.getElementById('room-notes-ventilation').value.trim() || null,
+        notesSurfaces: document.getElementById('room-notes-surfaces').value.trim() || null,
         inventory: inventory,
         wishlist: wishlist,
         images: appState.rooms.find(r => r.id === roomId)?.images || [],
