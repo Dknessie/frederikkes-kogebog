@@ -13,7 +13,7 @@ import { initKitchenCounter, renderKitchenCounter } from './kitchenCounter.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js'; // NEW
+import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         projects: [],
-        rooms: [], // NEW
+        rooms: [],
         references: {},
         preferences: {},
         mealPlan: {},
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        currentlyViewedRoomId: null, // NEW
+        currentlyViewedRoomId: null,
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
         hjemSubpages: document.querySelectorAll('.hjem-subpage'),
 
-        // Room elements (NEW)
+        // Room elements
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -112,8 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nextWeekBtn: document.getElementById('next-week-btn'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
         weeklyPriceDisplay: document.getElementById('weekly-price-display'),
-        desktopPanelTabs: document.querySelectorAll('#meal-planner-sidebar-left .panel-tab'),
-        desktopSidebarPanels: document.querySelectorAll('#meal-planner-sidebar-left .sidebar-panel'),
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
@@ -138,8 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inventorySearchInput: document.getElementById('inventory-search-input'),
         inventoryListContainer: document.getElementById('inventory-list-container'),
         clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
-        inventoryFilterCategory: document.getElementById('inventory-filter-category'),
-        inventoryFilterLocation: document.getElementById('inventory-filter-location'),
+        inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
+        inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
         inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
         shoppingList: {
             generateBtn: document.getElementById('generate-weekly-shopping-list-btn'),
@@ -228,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'projekter'));
 
-        // NEW: Listener for rooms
         const qRooms = query(collection(db, 'rooms'), where("userId", "==", userId));
         state.listeners.rooms = onSnapshot(qRooms, (snapshot) => {
             state.rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -319,11 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
         switch(currentHash) {
             case '#dashboard':
                 renderDashboardPage();
+                renderShoppingList();
+                renderKitchenCounter();
                 break;
             case '#calendar':
                 renderMealPlanner();
-                renderShoppingList();
-                renderKitchenCounter();
                 break;
             case '#hjem':
                 renderRoomsListPage();
@@ -333,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (state.currentlyViewedRoomId) {
                     renderRoomDetailsPage();
                 } else {
-                    navigateTo('#hjem'); // Redirect if no room ID
+                    window.location.hash = '#hjem';
                 }
                 break;
             case '#recipes':
