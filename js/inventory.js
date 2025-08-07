@@ -10,8 +10,8 @@ let appElements;
 let inventoryState = {
     searchTerm: '',
     referencesLoaded: false,
-    selectedCategory: '',
-    selectedLocation: '',
+    selectedMainCategory: '',
+    selectedSubCategory: '',
     selectedStockStatus: ''
 };
 
@@ -41,12 +41,14 @@ export function initInventory(state, elements) {
         inventoryState.searchTerm = e.target.value.toLowerCase();
         renderInventory();
     }, 300));
-    appElements.inventoryFilterCategory.addEventListener('change', (e) => {
-        inventoryState.selectedCategory = e.target.value;
+    appElements.inventoryFilterMainCategory.addEventListener('change', (e) => {
+        inventoryState.selectedMainCategory = e.target.value;
+        inventoryState.selectedSubCategory = ''; // Reset sub-category filter
+        populateSubCategoryFilter();
         renderInventory();
     });
-    appElements.inventoryFilterLocation.addEventListener('change', (e) => {
-        inventoryState.selectedLocation = e.target.value;
+    appElements.inventoryFilterSubCategory.addEventListener('change', (e) => {
+        inventoryState.selectedSubCategory = e.target.value;
         renderInventory();
     });
     appElements.inventoryFilterStockStatus.addEventListener('change', e => {
@@ -54,14 +56,15 @@ export function initInventory(state, elements) {
         renderInventory();
     });
     appElements.clearInventoryFiltersBtn.addEventListener('click', () => {
-        inventoryState.selectedCategory = '';
-        inventoryState.selectedLocation = '';
+        inventoryState.selectedMainCategory = '';
+        inventoryState.selectedSubCategory = '';
         inventoryState.selectedStockStatus = '';
         inventoryState.searchTerm = '';
-        appElements.inventoryFilterCategory.value = '';
-        appElements.inventoryFilterLocation.value = '';
+        appElements.inventoryFilterMainCategory.value = '';
+        appElements.inventoryFilterSubCategory.value = '';
         appElements.inventoryFilterStockStatus.value = '';
         appElements.inventorySearchInput.value = '';
+        populateSubCategoryFilter();
         renderInventory();
     });
 
@@ -102,6 +105,14 @@ export function initInventory(state, elements) {
     });
     if(batchEditForm) batchEditForm.addEventListener('submit', handleSaveBatch);
     if(deleteBatchBtn) deleteBatchBtn.addEventListener('click', handleDeleteBatch);
+
+    // Event listener for category dropdowns in modal
+    const mainCategorySelect = document.getElementById('inventory-item-main-category');
+    if (mainCategorySelect) {
+        mainCategorySelect.addEventListener('change', () => {
+            populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), mainCategorySelect.value);
+        });
+    }
 }
 
 export function setReferencesLoaded(isLoaded) {
@@ -111,22 +122,34 @@ export function setReferencesLoaded(isLoaded) {
     }
 }
 
+function populateMainCategoryFilter() {
+    const mainCategories = (appState.references.itemCategories || []).map(cat => cat.name);
+    populateReferenceDropdown(appElements.inventoryFilterMainCategory, mainCategories, 'Alle Overkategorier', inventoryState.selectedMainCategory);
+}
+
+function populateSubCategoryFilter() {
+    const mainCatName = inventoryState.selectedMainCategory;
+    const mainCat = (appState.references.itemCategories || []).find(cat => cat.name === mainCatName);
+    const subCategories = mainCat ? mainCat.subcategories : [];
+    populateReferenceDropdown(appElements.inventoryFilterSubCategory, subCategories, 'Alle Underkategorier', inventoryState.selectedSubCategory);
+    appElements.inventoryFilterSubCategory.disabled = !mainCatName;
+}
+
 export function renderInventory() {
     const container = appElements.inventoryListContainer;
     container.innerHTML = '';
 
-    // Populate filter dropdowns
-    populateReferenceDropdown(appElements.inventoryFilterCategory, appState.references.itemCategories, 'Alle kategorier', inventoryState.selectedCategory);
-    populateReferenceDropdown(appElements.inventoryFilterLocation, appState.references.itemLocations, 'Alle placeringer', inventoryState.selectedLocation);
+    populateMainCategoryFilter();
+    populateSubCategoryFilter();
 
     let inventoryItems = [...appState.inventory];
 
     // Apply filters
-    if (inventoryState.selectedCategory) {
-        inventoryItems = inventoryItems.filter(item => item.category === inventoryState.selectedCategory);
+    if (inventoryState.selectedMainCategory) {
+        inventoryItems = inventoryItems.filter(item => item.mainCategory === inventoryState.selectedMainCategory);
     }
-    if (inventoryState.selectedLocation) {
-        inventoryItems = inventoryItems.filter(item => item.location === inventoryState.selectedLocation);
+    if (inventoryState.selectedSubCategory) {
+        inventoryItems = inventoryItems.filter(item => item.subCategory === inventoryState.selectedSubCategory);
     }
     if (inventoryState.searchTerm) {
         const term = inventoryState.searchTerm;
@@ -148,10 +171,33 @@ export function renderInventory() {
         return;
     }
 
-    inventoryItems.sort((a, b) => a.name.localeCompare(b.name));
+    inventoryItems.sort((a, b) => {
+        const catA = `${a.mainCategory || ''}-${a.subCategory || ''}`;
+        const catB = `${b.mainCategory || ''}-${b.subCategory || ''}`;
+        if (catA < catB) return -1;
+        if (catA > catB) return 1;
+        return a.name.localeCompare(b.name);
+    });
 
     const fragment = document.createDocumentFragment();
+    let currentMainCategory = null;
+    let currentSubCategory = null;
+    
     inventoryItems.forEach(item => {
+        if (item.mainCategory !== currentMainCategory) {
+            currentMainCategory = item.mainCategory;
+            const h3 = document.createElement('h3');
+            h3.textContent = currentMainCategory || 'Ukategoriseret';
+            fragment.appendChild(h3);
+            currentSubCategory = null; // Reset sub-category when main changes
+        }
+        if (item.subCategory !== currentSubCategory) {
+            currentSubCategory = item.subCategory;
+            const h4 = document.createElement('h4');
+            h4.textContent = currentSubCategory || 'Ingen underkategori';
+            fragment.appendChild(h4);
+        }
+
         const itemDiv = document.createElement('div');
         itemDiv.className = 'inventory-item';
 
@@ -191,7 +237,7 @@ export function renderInventory() {
                 <div class="inventory-item-info">
                     <div class="inventory-item-title-group">
                         <span class="completeness-indicator status-indicator ${stockStatusClass}" title="Lagerstatus"></span>
-                        <h4>${item.name}</h4>
+                        <h5>${item.name}</h5>
                     </div>
                 </div>
                 <div class="inventory-item-stock-info">
@@ -221,6 +267,9 @@ function openInventoryItemModal(itemId) {
     
     const item = itemId ? appState.inventory.find(p => p.id === itemId) : null;
 
+    const mainCategorySelect = document.getElementById('inventory-item-main-category');
+    const subCategorySelect = document.getElementById('inventory-item-sub-category');
+
     if (item) {
         appElements.inventoryModalTitle.textContent = 'Rediger Vare';
         document.getElementById('inventory-item-id').value = item.id;
@@ -244,14 +293,10 @@ function openInventoryItemModal(itemId) {
         document.getElementById('batch-list-container').innerHTML = '<p class="empty-state-small">Gem varen for at kunne tilføje batches.</p>';
     }
     
-    populateReferenceDropdown(document.getElementById('inventory-item-category'), appState.references.itemCategories, 'Vælg kategori...');
-    populateReferenceDropdown(document.getElementById('inventory-item-location'), appState.references.itemLocations, 'Vælg placering...');
+    populateMainCategoryDropdown(mainCategorySelect, item?.mainCategory);
+    populateSubCategoryDropdown(subCategorySelect, item?.mainCategory, item?.subCategory);
+    populateReferenceDropdown(document.getElementById('inventory-item-location'), appState.references.itemLocations, 'Vælg placering...', item?.location);
     
-    if(item) {
-        document.getElementById('inventory-item-category').value = item.category;
-        document.getElementById('inventory-item-location').value = item.location;
-    }
-
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
@@ -287,7 +332,8 @@ async function handleSaveInventoryItem(e) {
 
     const itemData = {
         name: itemName,
-        category: document.getElementById('inventory-item-category').value,
+        mainCategory: document.getElementById('inventory-item-main-category').value,
+        subCategory: document.getElementById('inventory-item-sub-category').value,
         location: document.getElementById('inventory-item-location').value,
         defaultUnit: document.getElementById('inventory-item-default-unit').value,
         reorderPoint: Number(document.getElementById('inventory-item-reorder-point').value) || null,
@@ -295,8 +341,8 @@ async function handleSaveInventoryItem(e) {
         userId: userId
     };
 
-    if (!itemData.name || !itemData.category || !itemData.location) {
-        handleError(new Error("Udfyld venligst alle påkrævede felter for varen."), "Ufuldstændige data");
+    if (!itemData.name || !itemData.mainCategory || !itemData.subCategory) {
+        handleError(new Error("Udfyld venligst alle påkrævede felter for varen."), "Ufuldstændige data: Navn og kategorier er påkrævet.");
         return;
     }
 
@@ -439,6 +485,18 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
     (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
     selectElement.value = currentValue || "";
+}
+
+function populateMainCategoryDropdown(selectElement, currentValue) {
+    const mainCategories = (appState.references.itemCategories || []).map(cat => cat.name);
+    populateReferenceDropdown(selectElement, mainCategories, 'Vælg overkategori...', currentValue);
+}
+
+function populateSubCategoryDropdown(selectElement, mainCategoryName, currentValue) {
+    const mainCat = (appState.references.itemCategories || []).find(cat => cat.name === mainCategoryName);
+    const subCategories = mainCat ? mainCat.subcategories : [];
+    populateReferenceDropdown(selectElement, subCategories, 'Vælg underkategori...', currentValue);
+    selectElement.disabled = !mainCategoryName;
 }
 
 function addConversionRuleRow(rule = { unit: '', value: '' }) {
