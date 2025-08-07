@@ -283,22 +283,6 @@ header {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-.page-with-sidebar-layout {
-    display: grid;
-    grid-template-columns: 300px 1fr; 
-    gap: var(--spacing-l);
-}
-.sidebar-left {
-    display: flex;
-    flex-direction: column;
-    background: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
-    overflow: hidden;
-    height: fit-content;
-}
-
 /* ===== 5. Kalender Side ===== */
 .meal-planner-main {
     display: flex;
@@ -419,153 +403,125 @@ header {
 .cook-meal-btn { color: var(--accent-color); }
 .cook-meal-btn:hover { color: #3a5a40; }
 
-/* ===== 6. Sidebars & Indkøbsliste Modal ===== */
-.sidebar-panel-tabs {
+/* ===== 6. Indkøbsliste Modal & Temaer ===== */
+.shopping-list-header {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: var(--spacing-m);
-}
-
-.panel-tab {
-    flex: 1;
-    padding: var(--spacing-m);
-    text-align: center;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-weight: 600;
-    color: #777;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-s);
-    font-size: var(--small-font-size);
-}
-.panel-tab.active, .panel-tab:hover {
-    color: var(--primary-color);
-}
-.panel-tab.active {
-    border-bottom-color: var(--primary-color);
-}
-
-.sidebar-panel {
-    display: none;
-    flex-direction: column;
-    height: 100%;
-}
-.sidebar-panel.active { display: flex; }
-
-.sidebar-content {
-    flex-grow: 1;
-    overflow-y: auto; 
-    padding-right: var(--spacing-s); 
-}
-
-.shopping-list-total {
-    padding: var(--spacing-m);
-    margin-bottom: var(--spacing-m);
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-    text-align: center;
-    font-weight: 600;
-}
-
-.store-section h4 {
-    margin: var(--spacing-m) 0 var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-    padding-bottom: var(--spacing-s);
-    font-family: var(--body-font);
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-color);
-}
-.store-section ul { list-style: none; padding: 0; }
-
-.shopping-list-item, .kitchen-counter-item {
-    padding: var(--spacing-m) var(--spacing-xs);
-    display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: var(--spacing-s);
-    border-bottom: 1px solid #f0f0f0;
-}
-.shopping-list-item:last-child, .kitchen-counter-item:last-child { border-bottom: none; }
-
-.shopping-list-item .item-main-info {
-    display: flex;
     align-items: center;
-    gap: var(--spacing-m);
-    flex-grow: 1;
-    min-width: 0; 
+    margin-bottom: var(--spacing-m);
 }
-.item-name-details {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-.item-name-details label, .item-name-details .item-name {
-    font-weight: 600;
-    margin-bottom: var(--spacing-xs);
-}
-.item-details {
-    display: flex;
-    gap: var(--spacing-s);
-    align-items: center;
-    font-size: var(--small-font-size);
-    color: #666;
+.shopping-list-header h3 {
+    margin: 0;
 }
 
-.quantity-adjuster {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-s);
-}
-.quantity-adjuster .btn-icon {
-    width: 28px;
-    height: 28px;
-    font-size: 1rem;
-    color: var(--primary-color);
-}
-.item-quantity-input {
-    width: 50px;
-    padding: var(--spacing-xs);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    text-align: center;
-    -moz-appearance: textfield;
-}
-.item-quantity-input::-webkit-outer-spin-button,
-.item-quantity-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.item-unit-display {
-    font-weight: 600;
+#shopping-list-modal-content-wrapper {
+    margin-top: var(--spacing-l);
 }
 
-
-.item-actions {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    flex-shrink: 0;
+/* Tema 1: Dagligvarer (Notesblok) */
+.shopping-list-theme-groceries {
+    background-image:
+        repeating-linear-gradient(#f3f0e9 0 1px, transparent 1px 100%),
+        repeating-linear-gradient(to right, #f3f0e9 0 1px, transparent 1px 100%);
+    background-color: #fff9e9;
+    font-family: 'Georgia', serif;
+    border: 1px solid #ddd;
+    padding: var(--spacing-l);
 }
-.shopping-list-item input[type="checkbox"]:checked + .item-main-info .item-name-details label {
+.shopping-list-theme-groceries .shopping-list-item {
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px dotted #ccc;
+}
+.shopping-list-theme-groceries .shopping-list-item-label {
+    cursor: pointer;
+}
+.shopping-list-theme-groceries input[type="checkbox"] {
+    display: none;
+}
+.shopping-list-theme-groceries input[type="checkbox"]:checked + .shopping-list-item-label {
     text-decoration: line-through;
-    color: #999;
+    color: #888;
+    text-decoration-color: var(--status-red);
+}
+.shopping-list-theme-groceries .store-section h4 {
+    font-family: 'Playfair Display', serif;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
 }
 
-.add-item-form-container {
-    margin-top: auto;
-    padding-top: var(--spacing-m);
-    border-top: 1px solid var(--border-color);
+/* Tema 2: Materialer (Værktøjskasse) */
+.shopping-list-theme-materials {
+    background-color: #2c3e50;
+    color: #ecf0f1;
 }
-#add-shopping-item-form, #add-shopping-item-form-mobile, #add-shopping-item-modal-form { display: flex; gap: var(--spacing-s); }
-#add-shopping-item-form input, #add-shopping-item-form-mobile input, #add-shopping-item-modal-form input { flex-grow: 1; }
-#add-shopping-item-form button, #add-shopping-item-form-mobile button, #add-shopping-item-modal-form button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
+.shopping-list-theme-materials .shopping-list-header h3,
+.shopping-list-theme-materials h4 {
+    color: #f1c40f;
+}
+.shopping-list-theme-materials .close-modal-btn {
+    color: #bdc3c7;
+}
+.shopping-list-theme-materials .project-group h4 {
+    font-family: var(--body-font);
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding-bottom: var(--spacing-s);
+    border-bottom: 1px solid #34495e;
+}
+.shopping-list-theme-materials .material-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px 100px;
+    gap: var(--spacing-l);
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid #34495e;
+    align-items: center;
+}
+.shopping-list-theme-materials .material-name {
+    font-weight: 600;
+}
 
+/* Tema 3: Ønskeliste (Opslagstavle) */
+.shopping-list-theme-wishlist .wishlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-l);
+}
+.wishlist-card {
+    background: var(--white-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+}
+.wishlist-card-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    background-color: #f0f0f0;
+}
+.wishlist-card-content {
+    padding: var(--spacing-m);
+}
+.wishlist-card-title {
+    font-weight: 600;
+    margin-bottom: var(--spacing-s);
+    display: block;
+}
+.wishlist-card-price {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+.wishlist-card-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+}
+.wishlist-card a {
+    text-decoration: none;
+    color: inherit;
+}
 
 /* ===== 7. Kogebog, Hjem & Referencer Sider ===== */
 .actions-bar { 
@@ -948,14 +904,16 @@ header {
     padding-left: var(--spacing-l);
 }
 
-/* ===== 8. Dashboard & Hjem Sider ===== */
-.dashboard-grid {
+/* ===== 8. Nyt Dashboard Layout ===== */
+.dashboard-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: 2fr 1fr;
     gap: var(--spacing-l);
 }
-.dashboard-grid.full-width {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+.dashboard-main-column, .dashboard-sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
 }
 .dashboard-widget {
     background: var(--white-color);
@@ -963,96 +921,147 @@ header {
     box-shadow: var(--strong-shadow);
     padding: var(--spacing-l);
 }
-.dashboard-widget.clickable {
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.dashboard-widget.clickable:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-}
-.widget-summary-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-top: var(--spacing-m);
-    font-size: 1.2rem;
-}
-.widget-summary-content span:first-child {
-    font-weight: 600;
-    color: var(--text-color);
-}
-.widget-summary-content span:last-child {
-    font-size: 1rem;
-    color: #666;
-}
-
-.dashboard-widget .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-m);
-}
 .dashboard-widget h3 {
-    margin: 0;
+    margin-top: 0;
+    margin-bottom: var(--spacing-m);
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
 }
-
-#inventory-summary-list .summary-item, #expiring-items-list .expiring-item {
+#welcome-widget h2 {
+    margin-top: 0;
+}
+#welcome-summary {
+    font-size: 1.1rem;
+    color: #555;
+}
+#today-overview-content .overview-item, #projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-m) 0;
-    font-size: 1rem;
-}
-#inventory-summary-list .summary-item:not(:last-child), #expiring-items-list .expiring-item:not(:last-child) {
     border-bottom: 1px solid var(--border-color);
 }
-#inventory-summary-list .summary-value, #expiring-items-list .expiring-date {
-    font-weight: 700;
-    color: var(--primary-color);
+#today-overview-content .overview-item:last-child, #projects-focus-content .project-focus-item:last-child, #inventory-notifications-content .notification-item:last-child {
+    border-bottom: none;
 }
-#expiring-items-list .expiring-date.is-expired {
+.overview-item-label, .project-focus-title, .notification-text {
+    font-weight: 600;
+}
+.overview-item-label i {
+    margin-right: var(--spacing-s);
+    color: var(--accent-color);
+}
+.project-progress-bar {
+    width: 100px;
+    height: 8px;
+    background-color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.project-progress-bar div {
+    height: 100%;
+    background-color: var(--accent-color);
+}
+.notification-item.expiring {
     color: var(--status-red);
 }
+.notification-item.low-stock {
+    color: var(--status-yellow);
+}
 
-.budget-summary {
+/* Shopping Widget */
+.shopping-widget-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
-    margin-bottom: var(--spacing-l);
+}
+.shopping-widget-item {
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+    transition: transform 0.2s ease;
+}
+.shopping-widget-item.clickable:hover {
+    transform: scale(1.03);
+}
+.shopping-widget-title {
+    font-weight: 700;
+    margin-bottom: var(--spacing-s);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.shopping-widget-item.groceries {
+    background-color: #fff9e9;
+    border: 1px solid #fadf98;
+}
+.shopping-widget-item.materials {
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+.shopping-widget-item.wishlist {
+    background-color: #f4f4f4;
+}
+.wishlist-widget-preview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-s);
+    height: 50px;
+}
+.wishlist-widget-preview .preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    background-color: #e0e0e0;
+}
+
+/* Budget Widget */
+#budget-gauge-container {
+    height: 150px;
+    margin-bottom: var(--spacing-m);
+}
+.budget-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
 }
 .budget-item {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
 }
 .budget-label {
-    font-size: var(--small-font-size);
     color: #666;
 }
 .budget-value {
-    font-size: 1.2rem;
     font-weight: 700;
+}
+
+/* Quick Actions Widget */
+.quick-actions-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-m);
+}
+.quick-action-btn {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+    text-align: center;
+    text-decoration: none;
     color: var(--text-color);
+    font-weight: 600;
+    transition: background-color 0.2s ease;
 }
-.progress-bar-container {
-    background-color: #eee;
-    border-radius: 20px;
-    height: 12px;
-    overflow: hidden;
+.quick-action-btn:hover {
+    background-color: #e9e5dc;
 }
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    border-radius: 20px;
-    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+.quick-action-btn i {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-s);
+    color: var(--primary-color);
 }
-.progress-bar.green { background-color: var(--status-green); }
-.progress-bar.yellow { background-color: var(--status-yellow); }
-.progress-bar.red { background-color: var(--status-red); }
 
 .hjem-nav-tabs {
     display: flex;
@@ -1666,11 +1675,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     .mobile-tab-bar {
         display: flex;
     }
-    .page-with-sidebar-layout {
+    .dashboard-layout {
         grid-template-columns: 1fr;
-    }
-    #dashboard-sidebar {
-        display: none;
     }
     .page {
         padding: var(--spacing-m);
@@ -1713,9 +1719,6 @@ input:checked + .slider:before { transform: translateX(22px); }
         height: 150px;
     }
     .inventory-filters {
-        grid-template-columns: 1fr;
-    }
-    .dashboard-grid {
         grid-template-columns: 1fr;
     }
     .project-image-container {
