@@ -16,50 +16,34 @@ export function initShoppingList(state, elements) {
         ...elements,
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
-        shoppingListModalContainer: document.getElementById('shopping-list-modal-container'),
-        shoppingListModalTotal: document.getElementById('shopping-list-modal-total'),
-        shoppingListClearBtn: document.getElementById('shopping-list-clear-btn'),
-        shoppingListConfirmBtn: document.getElementById('shopping-list-confirm-btn'),
-        addShoppingItemModalForm: document.getElementById('add-shopping-item-modal-form'),
+        shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
     };
 
     appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
     
     // Modal listeners
-    appElements.shoppingListClearBtn.addEventListener('click', handleClearShoppingList);
-    appElements.shoppingListConfirmBtn.addEventListener('click', handleConfirmPurchase);
-    appElements.addShoppingItemModalForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('add-shopping-item-modal-name');
-        const itemName = input.value.trim();
-        if (itemName) {
-            handleAddShoppingItem(itemName);
-            input.value = '';
+    appElements.shoppingListModal.addEventListener('click', (e) => {
+        if (e.target.closest('.shopping-list-clear-btn')) {
+            handleClearShoppingList();
+        } else if (e.target.closest('.shopping-list-confirm-btn')) {
+            handleConfirmPurchase();
+        } else if (e.target.closest('.remove-from-list-btn')) {
+            const itemName = e.target.closest('[data-item-name]').dataset.itemName;
+            handleRemoveShoppingItem(itemName);
         }
     });
-    appElements.shoppingListModalContainer.addEventListener('input', handleShoppingListInput);
-    appElements.shoppingListModalContainer.addEventListener('click', handleShoppingListClick);
-}
 
-export function renderShoppingListWidgets() {
-    updateWidgetSummary('groceries');
-    updateWidgetSummary('materials');
-    updateWidgetSummary('wishlist');
-}
-
-function updateWidgetSummary(listType) {
-    const list = appState.shoppingLists[listType] || {};
-    const count = Object.keys(list).length;
-    let totalEstimatedPrice = 0;
-    Object.values(list).forEach(item => {
-        totalEstimatedPrice += item.estimatedPrice || 0;
+    appElements.shoppingListModal.addEventListener('submit', (e) => {
+        if (e.target.matches('.add-item-form')) {
+            e.preventDefault();
+            const input = e.target.querySelector('input');
+            const itemName = input.value.trim();
+            if (itemName) {
+                handleAddShoppingItem(itemName);
+                input.value = '';
+            }
+        }
     });
-
-    const countEl = document.getElementById(`${listType}-count`);
-    const priceEl = document.getElementById(`${listType}-price`);
-
-    if (countEl) countEl.textContent = `${count} ${listType === 'wishlist' ? 'ønsker' : 'varer'}`;
-    if (priceEl) priceEl.textContent = `ca. ${totalEstimatedPrice.toFixed(2)} kr.`;
 }
 
 export function openShoppingListModal(listType) {
@@ -67,87 +51,160 @@ export function openShoppingListModal(listType) {
     const titles = {
         groceries: 'Indkøbsliste - Dagligvarer',
         materials: 'Indkøbsliste - Materialer & Værktøj',
-        wishlist: 'Ønskeliste - Møbler & Inventar'
+        wishlist: 'Ønskeliste'
     };
     appElements.shoppingListModalTitle.textContent = titles[listType];
+    
+    const modalContent = appElements.shoppingListModal.querySelector('.modal-content');
+    modalContent.className = 'modal-content'; // Reset classes
+    modalContent.classList.add(`shopping-list-theme-${listType}`);
+
     renderListInModal();
     appElements.shoppingListModal.classList.remove('hidden');
 }
 
 function renderListInModal() {
-    const container = appElements.shoppingListModalContainer;
+    const wrapper = appElements.shoppingListModalContentWrapper;
     const list = appState.shoppingLists[currentListType] || {};
-    
-    const groupedByStore = {};
-    let totalEstimatedPrice = 0;
+    wrapper.innerHTML = ''; // Clear previous content
 
-    Object.values(list).sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+    switch (currentListType) {
+        case 'groceries':
+            wrapper.innerHTML = renderGroceriesList(list);
+            break;
+        case 'materials':
+            wrapper.innerHTML = renderMaterialsList(list);
+            break;
+        case 'wishlist':
+            wrapper.innerHTML = renderWishlist(list);
+            break;
+    }
+}
+
+function renderGroceriesList(list) {
+    const groupedByStore = {};
+    Object.values(list).forEach(item => {
         const store = item.storeId || 'Andet';
         if (!groupedByStore[store]) groupedByStore[store] = [];
         groupedByStore[store].push(item);
-        totalEstimatedPrice += item.estimatedPrice || 0;
     });
 
-    const hasItems = Object.keys(groupedByStore).length > 0;
-    const fragment = document.createDocumentFragment();
-
-    if (!hasItems) {
-        const p = document.createElement('p');
-        p.className = 'empty-state';
-        p.textContent = 'Denne indkøbsliste er tom.';
-        fragment.appendChild(p);
-    } else {
-        const storeOrder = [appState.preferences.favoriteStoreId, ...Object.keys(groupedByStore).filter(s => s !== appState.preferences.favoriteStoreId).sort()];
-        
-        storeOrder.forEach(store => {
-            if (groupedByStore[store]) {
-                const sectionDiv = document.createElement('div');
-                sectionDiv.className = 'store-section';
-                
-                let listItemsHTML = '';
-                groupedByStore[store].forEach(item => {
-                    const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-                    listItemsHTML += `
-                        <li class="shopping-list-item" data-item-name="${item.name}">
-                            <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
-                            <div class="item-main-info">
-                                 <div class="item-name-details">
-                                    <label for="shop-${safeItemName}">${item.name}</label>
-                                    <div class="item-details">
-                                        <div class="quantity-adjuster">
-                                            <button class="btn-icon quantity-btn decrease-quantity" data-item-name="${item.name}"><i class="fas fa-minus-circle"></i></button>
-                                            <input type="number" class="item-quantity-input" value="${item.quantity_to_buy}" step="1">
-                                            <button class="btn-icon quantity-btn increase-quantity" data-item-name="${item.name}"><i class="fas fa-plus-circle"></i></button>
-                                        </div>
-                                        <span class="item-unit-display">${item.unit}</span>
-                                    </div>
-                                 </div>
-                            </div>
-                            <div class="item-actions">
-                                <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
-                            </div>
-                        </li>`;
-                });
-
-                sectionDiv.innerHTML = `<h4>${store}</h4><ul>${listItemsHTML}</ul>`;
-                fragment.appendChild(sectionDiv);
-            }
-        });
+    if (Object.keys(groupedByStore).length === 0) {
+        return '<p class="empty-state">Indkøbslisten er tom.</p>';
     }
 
-    container.innerHTML = '';
-    container.appendChild(fragment.cloneNode(true));
+    let html = '';
+    const storeOrder = [appState.preferences.favoriteStoreId, ...Object.keys(groupedByStore).filter(s => s !== appState.preferences.favoriteStoreId).sort()];
     
-    appElements.shoppingListModalTotal.textContent = `Est. Pris: ${totalEstimatedPrice.toFixed(2)} kr.`;
-    appElements.shoppingListModalTotal.classList.toggle('hidden', !hasItems);
-    appElements.shoppingListConfirmBtn.style.display = hasItems ? 'inline-flex' : 'none';
+    storeOrder.forEach(store => {
+        if (groupedByStore[store]) {
+            html += `<div class="store-section"><h4>${store}</h4><ul>`;
+            groupedByStore[store].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+                const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
+                html += `
+                    <li class="shopping-list-item" data-item-name="${item.name}">
+                        <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
+                        <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${item.quantity_to_buy} ${item.unit})</span></label>
+                        <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
+                    </li>`;
+            });
+            html += `</ul></div>`;
+        }
+    });
+
+    html += getModalFooter();
+    return html;
 }
+
+function renderMaterialsList(list) {
+    const groupedByProject = {};
+     Object.values(list).forEach(item => {
+        const project = item.projectId || 'Generelle Materialer';
+        if (!groupedByProject[project]) groupedByProject[project] = [];
+        groupedByProject[project].push(item);
+    });
+
+    if (Object.keys(groupedByProject).length === 0) {
+        return '<p class="empty-state">Materialelisten er tom.</p>';
+    }
+
+    let html = '';
+    for (const projectId in groupedByProject) {
+        const projectName = appState.projects.find(p => p.id === projectId)?.title || projectId;
+        html += `<div class="project-group"><h4>${projectName}</h4>`;
+        html += `
+            <div class="material-row material-header">
+                <span>Materiale</span>
+                <span>Antal</span>
+                <span>Butik</span>
+                <span>Pris</span>
+            </div>
+        `;
+        groupedByProject[projectId].forEach(item => {
+            html += `
+                <div class="material-row" data-item-name="${item.name}">
+                    <span class="material-name">${item.name}</span>
+                    <span>${item.quantity_to_buy} ${item.unit || ''}</span>
+                    <span>${item.storeId || 'N/A'}</span>
+                    <span>${item.price ? `${item.price.toFixed(2)} kr.` : 'N/A'}</span>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+    html += getModalFooter();
+    return html;
+}
+
+function renderWishlist(list) {
+    const items = Object.values(list);
+    if (items.length === 0) {
+        return '<p class="empty-state">Ønskelisten er tom.</p>';
+    }
+
+    let html = '<div class="wishlist-grid">';
+    items.forEach(item => {
+        const imageUrl = item.imageUrl || `https://placehold.co/200x150/f3f0e9/d1603d?text=${encodeURIComponent(item.name)}`;
+        html += `
+            <div class="wishlist-card" data-item-name="${item.name}">
+                <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer">
+                    <img src="${imageUrl}" alt="${item.name}" class="wishlist-card-image" onerror="this.onerror=null;this.src='https://placehold.co/200x150/f3f0e9/d1603d?text=Billede+mangler';">
+                    <div class="wishlist-card-content">
+                        <span class="wishlist-card-title">${item.name}</span>
+                        ${item.price ? `<span class="wishlist-card-price">${item.price.toFixed(2)} kr.</span>` : ''}
+                    </div>
+                </a>
+                <div class="wishlist-card-actions">
+                    <button class="btn-icon remove-from-list-btn" title="Fjern ønske"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    html += getModalFooter(true); // isWishlist = true
+    return html;
+}
+
+function getModalFooter(isWishlist = false) {
+    const confirmText = isWishlist ? "Marker som købt" : "Bekræft Indkøb";
+    return `
+        <div class="shopping-list-actions form-actions">
+            <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
+            ${!isWishlist ? `<button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>` : ''}
+        </div>
+        <form class="add-item-form">
+            <input type="text" placeholder="Tilføj ${isWishlist ? 'ønske' : 'vare'}..." required>
+            <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+        </form>
+    `;
+}
+
 
 async function updateShoppingListInFirestore(listType, newList) {
     if (!appState.currentUser) return;
     try {
         const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
-        await updateDoc(shoppingListRef, { [listType]: newList });
+        await setDoc(shoppingListRef, { [listType]: newList }, { merge: true });
     } catch (error) {
         handleError(error, "Indkøbslisten kunne ikke gemmes.", "updateShoppingList");
     }
@@ -223,7 +280,7 @@ async function generateGroceriesList() {
                  quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
             }
 
-            const key = inventoryItem.id;
+            const key = inventoryItem.name.toLowerCase();
             shoppingList[key] = {
                 name: inventoryItem.name,
                 quantity_to_buy: quantityToBuy,
@@ -248,13 +305,11 @@ async function handleClearShoppingList() {
     });
     if (confirmed) {
         await updateShoppingListInFirestore(currentListType, {});
-        renderListInModal();
-        showNotification({title: "Indkøbsliste Tømt", message: "Alle varer er blevet fjernet."});
     }
 }
 
 function handleAddShoppingItem(itemName) {
-    const list = appState.shoppingLists[currentListType];
+    const list = appState.shoppingLists[currentListType] || {};
     const updatedList = { ...list };
     const key = itemName.toLowerCase();
     
@@ -265,10 +320,21 @@ function handleAddShoppingItem(itemName) {
         quantity_to_buy: 1,
         unit: 'stk',
         storeId: 'Manuelt tilføjet',
-        itemId: existingItem ? existingItem.id : null
+        itemId: existingItem ? existingItem.id : null,
+        price: null,
+        url: null
     };
     updateShoppingListInFirestore(currentListType, updatedList);
-    renderListInModal();
+}
+
+function handleRemoveShoppingItem(itemName) {
+    const list = appState.shoppingLists[currentListType] || {};
+    const updatedList = { ...list };
+    const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === itemName);
+    if(keyToDelete) {
+        delete updatedList[keyToDelete];
+        updateShoppingListInFirestore(currentListType, updatedList);
+    }
 }
 
 async function handleConfirmPurchase() {
@@ -297,6 +363,7 @@ async function handleConfirmPurchase() {
                 type: 'confirm'
             });
             if (createNew) {
+                // This should ideally open the inventory item modal pre-filled
                 showNotification({title: "Handling påkrævet", message: `Gå til varelager og opret "${item.name}" manuelt.`});
             }
         }
@@ -306,55 +373,4 @@ async function handleConfirmPurchase() {
     }
     
     await updateShoppingListInFirestore(currentListType, updatedList);
-    renderListInModal();
-}
-
-
-function handleShoppingListInput(e) {
-    const target = e.target;
-    if (target.classList.contains('item-quantity-input')) {
-        const listItem = target.closest('.shopping-list-item');
-        const itemName = listItem.dataset.itemName;
-        const list = appState.shoppingLists[currentListType];
-        const updatedList = { ...list };
-        const keyToUpdate = Object.keys(updatedList).find(k => updatedList[k].name === itemName);
-
-        if(keyToUpdate) {
-            updatedList[keyToUpdate].quantity_to_buy = parseFloat(target.value) || 0;
-            updateShoppingListInFirestore(currentListType, updatedList);
-        }
-    }
-}
-
-function handleShoppingListClick(e) {
-    const button = e.target.closest('button');
-    if (!button) return;
-
-    const listItem = button.closest('.shopping-list-item');
-    if (!listItem) return;
-
-    const itemName = listItem.dataset.itemName;
-    const list = appState.shoppingLists[currentListType];
-    const keyToUpdate = Object.keys(list).find(k => list[k].name === itemName);
-    if (!keyToUpdate) return;
-
-    const updatedList = { ...list };
-
-    if (button.classList.contains('remove-from-list-btn')) {
-        delete updatedList[keyToUpdate];
-        updateShoppingListInFirestore(currentListType, updatedList);
-        renderListInModal();
-        return;
-    }
-
-    if (button.classList.contains('quantity-btn')) {
-        const item = updatedList[keyToUpdate];
-        if (button.classList.contains('increase-quantity')) {
-            item.quantity_to_buy += 1;
-        } else if (button.classList.contains('decrease-quantity')) {
-            item.quantity_to_buy = Math.max(0, item.quantity_to_buy - 1);
-        }
-        updateShoppingListInFirestore(currentListType, updatedList);
-        renderListInModal();
-    }
 }
