@@ -9,7 +9,10 @@ let appElements;
 
 export function initRooms(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        addWishlistItemBtn: document.getElementById('add-wishlist-item-btn'),
+    };
 
     appElements.addRoomBtn.addEventListener('click', openAddRoomModal);
     appElements.roomsGrid.addEventListener('click', (e) => {
@@ -34,11 +37,17 @@ export function initRooms(state, elements) {
         if (e.target.closest('#add-room-inventory-btn')) {
             createInventoryRow();
         }
+        if (e.target.closest('#add-wishlist-item-btn')) {
+            createWishlistRow();
+        }
         if (e.target.closest('.remove-paint-btn')) {
             e.target.closest('.paint-row').remove();
         }
         if (e.target.closest('.remove-room-inventory-btn')) {
             e.target.closest('.room-inventory-row').remove();
+        }
+        if (e.target.closest('.remove-wishlist-item-btn')) {
+            e.target.closest('.wishlist-row').remove();
         }
     });
 }
@@ -118,6 +127,14 @@ export function renderRoomDetailsPage() {
                 `).join('') : '<p class="empty-state-small">Intet inventar registreret.</p>'}
             </div>
         </div>
+         <div class="room-detail-card">
+            <h4>Ønskeliste</h4>
+             <div class="info-list">
+                ${(room.wishlist && room.wishlist.length > 0) ? room.wishlist.map(i => `
+                    <div class="info-item"><span>${i.name}</span></div>
+                `).join('') : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>'}
+            </div>
+        </div>
     `;
 }
 
@@ -132,6 +149,7 @@ function openAddRoomModal() {
 
     document.getElementById('paint-list-container').innerHTML = '';
     document.getElementById('room-inventory-list-container').innerHTML = '';
+    document.getElementById('room-wishlist-container').innerHTML = '';
 
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
@@ -166,6 +184,10 @@ function openEditRoomModal(roomId) {
     const inventoryContainer = document.getElementById('room-inventory-list-container');
     inventoryContainer.innerHTML = '';
     if (room.inventory) room.inventory.forEach(i => createInventoryRow(i));
+
+    const wishlistContainer = document.getElementById('room-wishlist-container');
+    wishlistContainer.innerHTML = '';
+    if (room.wishlist) room.wishlist.forEach(i => createWishlistRow(i));
 
     modal.classList.remove('hidden');
 }
@@ -202,6 +224,14 @@ async function handleSaveRoom(e) {
         }
     });
 
+    const wishlist = [];
+    document.querySelectorAll('#room-wishlist-container .wishlist-row').forEach(row => {
+        const name = row.querySelector('.wishlist-item-name').value.trim();
+        if (name) {
+            wishlist.push({ name });
+        }
+    });
+
     const roomData = {
         name: roomName,
         area: Number(document.getElementById('room-area').value) || null,
@@ -209,6 +239,7 @@ async function handleSaveRoom(e) {
         flooring: document.getElementById('room-flooring').value.trim() || null,
         paints: paints,
         inventory: inventory,
+        wishlist: wishlist,
         images: appState.rooms.find(r => r.id === roomId)?.images || [],
         userId: appState.currentUser.uid
     };
@@ -246,6 +277,17 @@ function createInventoryRow(item = {}) {
     row.innerHTML = `
         <input type="text" class="room-inventory-name" placeholder="Navn på genstand" value="${item.name || ''}">
         <button type="button" class="btn-icon remove-room-inventory-btn"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(row);
+}
+
+function createWishlistRow(item = {}) {
+    const container = document.getElementById('room-wishlist-container');
+    const row = document.createElement('div');
+    row.className = 'wishlist-row';
+    row.innerHTML = `
+        <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}">
+        <button type="button" class="btn-icon remove-wishlist-item-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
 }
