@@ -279,3 +279,31 @@ function renderWeeklyPrice() {
     
     appElements.weeklyPriceDisplay.textContent = `Estimeret Ugepris: ${weeklyTotal.toFixed(2)} kr.`;
 }
+
+// Helper to calculate recipe price, moved from recipes.js to avoid circular dependencies if needed, but fine here for now.
+function calculateRecipePrice(recipe, inventory, portionsOverride) {
+    let totalPrice = 0;
+    if (!recipe.ingredients) return 0;
+
+    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
+
+    recipe.ingredients.forEach(ing => {
+        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
+            const cheapestBatch = inventoryItem.batches
+                .filter(b => b.price && b.size > 0 && b.quantity > 0)
+                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
+            
+            if (cheapestBatch) {
+                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
+                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
+                
+                if (conversion.grams !== null) {
+                    const pricePerBaseUnit = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
+                    totalPrice += conversion.grams * pricePerBaseUnit;
+                }
+            }
+        }
+    });
+    return totalPrice;
+}
