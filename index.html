@@ -49,75 +49,60 @@
 
         <main id="app-main-content">
             <section id="dashboard" class="page">
-                 <div class="page-with-sidebar-layout">
-                    <aside id="dashboard-sidebar" class="sidebar-left">
-                        <div class="sidebar-panel-tabs">
-                            <button class="panel-tab active" data-panel="shopping-list-panel-desktop"><i class="fas fa-cart-shopping"></i> Indkøbsliste</button>
-                            <button class="panel-tab" data-panel="kitchen-counter-panel-desktop"><i class="fas fa-concierge-bell"></i> Køkkenbord</button>
+                <h2>Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div id="widget-groceries-summary" class="dashboard-widget clickable">
+                        <h3><i class="fas fa-carrot"></i> Dagligvarer</h3>
+                        <div class="widget-summary-content">
+                            <span id="groceries-count">0 varer</span>
+                            <span id="groceries-price">ca. 0.00 kr.</span>
                         </div>
-                        <div id="shopping-list-panel-desktop" class="sidebar-panel active">
-                            <div class="sidebar-actions">
-                                 <button id="generate-weekly-shopping-list-btn" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld</button>
-                                 <button id="clear-shopping-list-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
-                                 <button id="confirm-purchase-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Køb</button>
-                            </div>
-                            <div id="shopping-list-total-container" class="shopping-list-total"></div>
-                            <div id="shopping-list-container" class="sidebar-content"></div>
-                            <div class="add-item-form-container">
-                                <form id="add-shopping-item-form">
-                                    <input type="text" id="add-shopping-item-name" placeholder="Tilføj vare..." required>
-                                    <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                                </form>
-                            </div>
+                    </div>
+                     <div id="widget-materials-summary" class="dashboard-widget clickable">
+                        <h3><i class="fas fa-hammer"></i> Materialer & Værktøj</h3>
+                        <div class="widget-summary-content">
+                            <span id="materials-count">0 varer</span>
+                            <span id="materials-price">ca. 0.00 kr.</span>
                         </div>
-                        <div id="kitchen-counter-panel-desktop" class="sidebar-panel">
-                             <div class="sidebar-actions">
-                                 <button id="clear-kitchen-counter-btn" class="btn btn-secondary" title="Ryd hele køkkenbordet" disabled><i class="fas fa-trash"></i> Ryd</button>
-                                 <button id="confirm-cooking-btn" class="btn btn-primary" title="Bekræft madlavning og nedskriv fra lager" disabled><i class="fas fa-check"></i> Bekræft Madlavning</button>
-                            </div>
-                            <div id="kitchen-counter-container" class="sidebar-content"></div>
+                    </div>
+                     <div id="widget-wishlist-summary" class="dashboard-widget clickable">
+                        <h3><i class="fas fa-couch"></i> Ønskeliste</h3>
+                        <div class="widget-summary-content">
+                            <span id="wishlist-count">0 ønsker</span>
+                            <span id="wishlist-price">ca. 0.00 kr.</span>
                         </div>
-                    </aside>
-                    <div class="main-content">
-                        <h2>Dashboard</h2>
-                        <div class="dashboard-grid">
-                            <div id="widget-profile" class="dashboard-widget">
-                                <h3>Profil</h3>
-                                <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
-                                <div class="input-group">
-                                    <label for="profile-favorite-store">Favoritbutik</label>
-                                    <select id="profile-favorite-store"></select>
-                                </div>
-                                <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                    </div>
+                    <div id="widget-profile" class="dashboard-widget">
+                        <h3>Profil</h3>
+                        <p><strong>Bruger:</strong> <span id="profile-email"></span></p>
+                        <div class="input-group">
+                            <label for="profile-favorite-store">Favoritbutik</label>
+                            <select id="profile-favorite-store"></select>
+                        </div>
+                        <button id="logout-btn-profile" class="btn btn-danger">Log ud</button>
+                    </div>
+                    <div id="widget-budget" class="dashboard-widget">
+                        <div class="card-header">
+                            <h3>Budget</h3>
+                            <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
+                        </div>
+                        <div class="budget-summary">
+                            <div class="budget-item">
+                                <span class="budget-label">Forbrug (Måned)</span>
+                                <span id="budget-spent" class="budget-value">0,00 kr.</span>
                             </div>
-                            <div id="widget-budget" class="dashboard-widget">
-                                <div class="card-header">
-                                    <h3>Budget</h3>
-                                    <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                                </div>
-                                <div class="budget-summary">
-                                    <div class="budget-item">
-                                        <span class="budget-label">Forbrug (Måned)</span>
-                                        <span id="budget-spent" class="budget-value">0,00 kr.</span>
-                                    </div>
-                                    <div class="budget-item">
-                                        <span class="budget-label">Budget</span>
-                                        <span id="budget-total" class="budget-value">4000,00 kr.</span>
-                                    </div>
-                                </div>
-                                <div class="progress-bar-container">
-                                    <div id="budget-progress-bar" class="progress-bar"></div>
-                                </div>
-                            </div>
-                            <div id="widget-expiring-items" class="dashboard-widget">
-                                <h3>Udløber Snart</h3>
-                                <div id="expiring-items-list"></div>
-                            </div>
-                            <div id="widget-inventory-summary" class="dashboard-widget">
-                                <h3>Lagerstatus</h3>
-                                <div id="inventory-summary-list"></div>
+                            <div class="budget-item">
+                                <span class="budget-label">Budget</span>
+                                <span id="budget-total" class="budget-value">4000,00 kr.</span>
                             </div>
                         </div>
+                        <div class="progress-bar-container">
+                            <div id="budget-progress-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                    <div id="widget-expiring-items" class="dashboard-widget">
+                        <h3>Udløber Snart</h3>
+                        <div id="expiring-items-list"></div>
                     </div>
                 </div>
             </section>
@@ -133,6 +118,7 @@
                         <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                     </div>
                     <div class="calendar-actions">
+                        <button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
                         <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
                     </div>
                     <div id="calendar-grid" class="calendar-grid"></div>
@@ -278,6 +264,24 @@
     </div>
     
     <!-- MODALS -->
+    <div id="shopping-list-modal" class="modal-overlay hidden">
+        <div class="modal-content large">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
+            <div class="sidebar-actions">
+                 <button id="shopping-list-clear-btn" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
+                 <button id="shopping-list-confirm-btn" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Køb</button>
+            </div>
+            <div id="shopping-list-modal-total" class="shopping-list-total"></div>
+            <div id="shopping-list-modal-container" class="sidebar-content"></div>
+            <div class="add-item-form-container">
+                <form id="add-shopping-item-modal-form">
+                    <input type="text" id="add-shopping-item-modal-name" placeholder="Tilføj vare..." required>
+                    <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
     <div id="room-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -311,6 +315,10 @@
                 <h4>Inventar</h4>
                 <div id="room-inventory-list-container"></div>
                 <button type="button" id="add-room-inventory-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Inventar</button>
+                <hr>
+                <h4>Ønskeliste</h4>
+                <div id="room-wishlist-container"></div>
+                <button type="button" id="add-wishlist-item-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Ønske</button>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Rum</button>
                 </div>
@@ -394,6 +402,7 @@
                 <div id="project-materials-container"></div>
                 <button type="button" id="add-material-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj material</button>
                 <div class="form-actions">
+                    <button type="button" id="add-missing-materials-btn" class="btn btn-secondary">Tilføj manglende til indkøbsliste</button>
                     <button type="submit" class="btn btn-primary" id="save-project-btn">Gem Projekt</button>
                 </div>
             </form>
