@@ -283,15 +283,23 @@ header {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-/* ===== 5. Kalender Side ===== */
-.meal-planner-layout {
+.page-with-sidebar-layout {
     display: grid;
     grid-template-columns: 300px 1fr; 
     gap: var(--spacing-l);
-    height: calc(100vh - 65px - (var(--spacing-l) * 2)); 
+}
+.sidebar-left {
+    display: flex;
+    flex-direction: column;
+    background: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    padding: var(--spacing-l);
+    overflow: hidden;
 }
 
-.meal-planner-main, .meal-planner-sidebar-left {
+/* ===== 5. Kalender Side ===== */
+.meal-planner-main {
     display: flex;
     flex-direction: column;
     background: var(--white-color);
@@ -722,6 +730,19 @@ header {
     flex-direction: column;
     gap: var(--spacing-s);
 }
+.inventory-category-group h3 {
+    margin-top: var(--spacing-l);
+    margin-bottom: var(--spacing-s);
+    padding-bottom: var(--spacing-s);
+    border-bottom: 2px solid var(--secondary-color);
+}
+.inventory-category-group h4 {
+    margin-top: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+    color: var(--text-color);
+    font-size: 1rem;
+    font-family: var(--body-font);
+}
 
 .inventory-item {
     background-color: var(--white-color);
@@ -755,7 +776,7 @@ header {
     gap: var(--spacing-m);
 }
 
-.inventory-item-header h4 {
+.inventory-item-header h5 {
     margin: 0;
     color: var(--text-color);
     font-family: var(--body-font);
@@ -869,29 +890,6 @@ header {
 .reference-item:last-child {
     border-bottom: none;
 }
-.reference-item.combined-item {
-    gap: var(--spacing-m);
-}
-.shelf-life-group {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-s);
-}
-.shelf-life-input {
-    width: 80px;
-    text-align: right;
-    padding: var(--spacing-s);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    box-sizing: border-box;
-    -moz-appearance: textfield; /* Firefox */
-}
-.shelf-life-input::-webkit-outer-spin-button,
-.shelf-life-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
-
 .reference-actions {
     display: flex;
     align-items: center;
@@ -911,7 +909,6 @@ header {
 .edit-actions {
     display: flex;
 }
-
 .add-reference-form {
     display: flex;
     gap: var(--spacing-s);
@@ -928,6 +925,35 @@ header {
 }
 .add-reference-form .btn {
     padding: var(--spacing-m);
+}
+.category-item {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+}
+.subcategory-list {
+    list-style: none;
+    padding-left: var(--spacing-l);
+    margin-top: var(--spacing-s);
+}
+.subcategory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+.add-subcategory-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-s);
+    padding-left: var(--spacing-l);
 }
 
 /* ===== 8. Dashboard & Hjem Sider ===== */
@@ -1603,11 +1629,10 @@ input:checked + .slider:before { transform: translateX(22px); }
     .mobile-tab-bar {
         display: flex;
     }
-    .meal-planner-layout {
+    .page-with-sidebar-layout {
         grid-template-columns: 1fr;
-        height: auto;
     }
-    #meal-planner-sidebar-left {
+    #dashboard-sidebar {
         display: none;
     }
     .page {
