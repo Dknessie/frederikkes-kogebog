@@ -147,7 +147,7 @@
 
                 <div id="hjem-rooms" class="hjem-subpage active">
                     <div class="actions-bar">
-                        <button id="add-room-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Rum</button>
+                        <button id="add-room-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Rum Detaljer</button>
                     </div>
                     <div id="rooms-grid" class="recipe-grid"></div>
                 </div>
@@ -284,15 +284,10 @@
             <h3 id="room-edit-modal-title">Rediger Rum</h3>
             <form id="room-form">
                 <input type="hidden" id="room-id">
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="room-name">Navn på Rum</label>
-                        <input type="text" id="room-name" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-type">Type</label>
-                        <select id="room-type" required></select>
-                    </div>
+                <div class="input-group">
+                    <label for="room-name-select">Vælg Rum</label>
+                    <select id="room-name-select" required></select>
+                    <input type="text" id="room-name-display" disabled class="hidden">
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
