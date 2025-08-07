@@ -12,6 +12,7 @@ export function initRooms(state, elements) {
     appElements = {
         ...elements,
         addWishlistItemBtn: document.getElementById('add-wishlist-item-btn'),
+        addRoomInventoryBtn: document.getElementById('add-room-inventory-btn'),
     };
 
     if (appElements.addRoomBtn) {
@@ -87,7 +88,7 @@ export function renderRoomsListPage() {
 }
 
 function renderDetailCard(title, content) {
-    if (!content || (Array.isArray(content) && content.length === 0)) {
+    if (!content || (Array.isArray(content) && content.length === 0) || content.trim() === '') {
         return '';
     }
     return `
@@ -155,7 +156,9 @@ function openAddRoomModal() {
     appElements.roomForm.reset();
     document.getElementById('room-id').value = '';
     
-    document.getElementById('room-name-select').classList.remove('hidden');
+    const roomNameSelect = document.getElementById('room-name-select');
+    roomNameSelect.classList.remove('hidden');
+    roomNameSelect.required = true;
     document.getElementById('room-name-display').classList.add('hidden');
 
     document.getElementById('room-inventory-list-container').innerHTML = '';
@@ -164,7 +167,7 @@ function openAddRoomModal() {
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
     
-    populateReferenceDropdown(document.getElementById('room-name-select'), availableRooms, 'Vælg et rum...');
+    populateReferenceDropdown(roomNameSelect, availableRooms, 'Vælg et rum...');
 
     modal.classList.remove('hidden');
 }
@@ -178,7 +181,9 @@ function openEditRoomModal(roomId) {
     appElements.roomForm.reset();
     document.getElementById('room-id').value = room.id;
 
-    document.getElementById('room-name-select').classList.add('hidden');
+    const roomNameSelect = document.getElementById('room-name-select');
+    roomNameSelect.classList.add('hidden');
+    roomNameSelect.required = false; // **FIX: Disable requirement when editing**
     const nameDisplay = document.getElementById('room-name-display');
     nameDisplay.classList.remove('hidden');
     nameDisplay.value = room.name;
@@ -229,8 +234,9 @@ async function handleSaveRoom(e) {
     document.querySelectorAll('#room-wishlist-container .wishlist-row').forEach(row => {
         const name = row.querySelector('.wishlist-item-name').value.trim();
         const url = row.querySelector('.wishlist-item-url').value.trim();
+        const price = Number(row.querySelector('.wishlist-item-price').value) || null;
         if (name) {
-            wishlist.push({ name, url });
+            wishlist.push({ name, url, price });
         }
     });
 
@@ -281,6 +287,7 @@ function createWishlistRow(item = {}) {
     row.innerHTML = `
         <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}">
         <input type="url" class="wishlist-item-url" placeholder="https://..." value="${item.url || ''}">
+        <input type="number" class="wishlist-item-price" placeholder="Pris" value="${item.price || ''}">
         <button type="button" class="btn-icon remove-wishlist-item-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
