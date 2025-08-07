@@ -2,7 +2,7 @@
 
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { showNotification, handleError, navigateTo } from './ui.js';
+import { showNotification, handleError } from './ui.js';
 
 let appState;
 let appElements;
@@ -49,7 +49,7 @@ export function renderRoomsListPage() {
     const fragment = document.createDocumentFragment();
 
     if (appState.rooms.length === 0) {
-        grid.innerHTML = `<p class="empty-state">Du har ikke oprettet nogen rum endnu. Klik på knappen for at tilføje dit første!</p>`;
+        grid.innerHTML = `<p class="empty-state">Du har ikke tilføjet detaljer for nogen rum endnu. Opret dine rum under "Referencer" først, og tilføj dem derefter her.</p>`;
         return;
     }
 
@@ -58,13 +58,12 @@ export function renderRoomsListPage() {
         card.className = 'recipe-card'; // Re-use style
         card.dataset.id = room.id;
         
-        // Use first image from gallery as preview, or a placeholder
         const imageUrl = (room.images && room.images.length > 0) ? room.images[0] : `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(room.name)}`;
 
         card.innerHTML = `
             <img src="${imageUrl}" alt="Billede af ${room.name}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
             <div class="recipe-card-content">
-                <span class="recipe-card-category">${room.type || 'Rum'}</span>
+                <span class="recipe-card-category">${room.area ? `${room.area} m²` : 'Rum'}</span>
                 <h4>${room.name}</h4>
             </div>
         `;
@@ -79,7 +78,7 @@ export function renderRoomDetailsPage() {
 
     if (!room) {
         handleError(new Error("Rum ikke fundet"), "Kunne ikke finde det valgte rum.");
-        navigateTo('#hjem');
+        window.location.hash = '#hjem';
         return;
     }
 
@@ -95,7 +94,6 @@ export function renderRoomDetailsPage() {
         <div class="room-detail-card">
             <h4>Nøgleinformation</h4>
             <div class="info-list">
-                <div class="info-item"><span class="info-label">Type:</span><span>${room.type || 'N/A'}</span></div>
                 <div class="info-item"><span class="info-label">Størrelse:</span><span>${room.area || 'N/A'} m²</span></div>
                 <div class="info-item"><span class="info-label">Lofthøjde:</span><span>${room.ceilingHeight || 'N/A'} m</span></div>
                 <div class="info-item"><span class="info-label">Gulv:</span><span>${room.flooring || 'N/A'}</span></div>
@@ -125,14 +123,20 @@ export function renderRoomDetailsPage() {
 
 function openAddRoomModal() {
     const modal = appElements.roomEditModal;
-    modal.querySelector('h3').textContent = 'Opret Nyt Rum';
+    modal.querySelector('h3').textContent = 'Tilføj Rum Detaljer';
     appElements.roomForm.reset();
     document.getElementById('room-id').value = '';
     
+    document.getElementById('room-name-select').classList.remove('hidden');
+    document.getElementById('room-name-display').classList.add('hidden');
+
     document.getElementById('paint-list-container').innerHTML = '';
     document.getElementById('room-inventory-list-container').innerHTML = '';
 
-    populateReferenceDropdown(document.getElementById('room-type'), appState.references.roomTypes, 'Vælg type...');
+    const existingRoomNames = appState.rooms.map(r => r.name);
+    const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
+    
+    populateReferenceDropdown(document.getElementById('room-name-select'), availableRooms, 'Vælg et rum...');
 
     modal.classList.remove('hidden');
 }
@@ -146,24 +150,22 @@ function openEditRoomModal(roomId) {
     appElements.roomForm.reset();
     document.getElementById('room-id').value = room.id;
 
-    document.getElementById('room-name').value = room.name || '';
+    document.getElementById('room-name-select').classList.add('hidden');
+    const nameDisplay = document.getElementById('room-name-display');
+    nameDisplay.classList.remove('hidden');
+    nameDisplay.value = room.name;
+
     document.getElementById('room-area').value = room.area || '';
     document.getElementById('room-ceiling-height').value = room.ceilingHeight || '';
     document.getElementById('room-flooring').value = room.flooring || '';
 
-    populateReferenceDropdown(document.getElementById('room-type'), appState.references.roomTypes, 'Vælg type...', room.type);
-
     const paintContainer = document.getElementById('paint-list-container');
     paintContainer.innerHTML = '';
-    if (room.paints) {
-        room.paints.forEach(p => createPaintRow(p));
-    }
+    if (room.paints) room.paints.forEach(p => createPaintRow(p));
 
     const inventoryContainer = document.getElementById('room-inventory-list-container');
     inventoryContainer.innerHTML = '';
-    if (room.inventory) {
-        room.inventory.forEach(i => createInventoryRow(i));
-    }
+    if (room.inventory) room.inventory.forEach(i => createInventoryRow(i));
 
     modal.classList.remove('hidden');
 }
@@ -171,6 +173,16 @@ function openEditRoomModal(roomId) {
 async function handleSaveRoom(e) {
     e.preventDefault();
     const roomId = document.getElementById('room-id').value;
+    const isEditing = !!roomId;
+
+    const roomName = isEditing 
+        ? document.getElementById('room-name-display').value
+        : document.getElementById('room-name-select').value;
+
+    if (!roomName) {
+        showNotification({title: "Mangler Rum", message: "Vælg venligst et rum fra listen."});
+        return;
+    }
 
     const paints = [];
     document.querySelectorAll('#paint-list-container .paint-row').forEach(row => {
@@ -191,19 +203,18 @@ async function handleSaveRoom(e) {
     });
 
     const roomData = {
-        name: document.getElementById('room-name').value,
-        type: document.getElementById('room-type').value,
+        name: roomName,
         area: Number(document.getElementById('room-area').value) || null,
         ceilingHeight: Number(document.getElementById('room-ceiling-height').value) || null,
         flooring: document.getElementById('room-flooring').value.trim() || null,
         paints: paints,
         inventory: inventory,
-        images: appState.rooms.find(r => r.id === roomId)?.images || [], // Preserve existing images for now
+        images: appState.rooms.find(r => r.id === roomId)?.images || [],
         userId: appState.currentUser.uid
     };
 
     try {
-        if (roomId) {
+        if (isEditing) {
             await updateDoc(doc(db, 'rooms', roomId), roomData);
         } else {
             await addDoc(collection(db, 'rooms'), roomData);
