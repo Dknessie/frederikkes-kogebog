@@ -8,7 +8,7 @@ import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
-import { initShoppingList, renderShoppingListWidgets } from './shoppingList.js';
+import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
@@ -46,14 +46,19 @@ document.addEventListener('DOMContentLoaded', () => {
         loginPage: document.getElementById('login-page'),
         appContainer: document.getElementById('app-container'),
         loginForm: document.getElementById('login-form'),
-        logoutButtons: [document.getElementById('logout-btn-header'), document.getElementById('logout-btn-profile')],
+        logoutButtons: [document.getElementById('logout-btn-header')],
         navLinks: document.querySelectorAll('.desktop-nav .nav-link'),
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
+        // Dashboard
+        editBudgetBtn: document.getElementById('edit-budget-btn'),
+        budgetSpentEl: document.getElementById('budget-spent'),
+        budgetTotalEl: document.getElementById('budget-total'),
+
+        // Hjem
         hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
         hjemSubpages: document.querySelectorAll('.hjem-subpage'),
-
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -62,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
         roomDetailsContent: document.getElementById('room-details-content'),
         roomDetailsTitle: document.getElementById('room-details-title'),
         editRoomBtn: document.getElementById('edit-room-btn'),
-
         projectEditModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
         addProjectBtn: document.getElementById('add-project-btn'),
@@ -70,19 +74,23 @@ document.addEventListener('DOMContentLoaded', () => {
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
 
-        profileEmail: document.getElementById('profile-email'),
-        favoriteStoreSelect: document.getElementById('profile-favorite-store'),
-        editBudgetBtn: document.getElementById('edit-budget-btn'),
-        budgetSpentEl: document.getElementById('budget-spent'),
-        budgetTotalEl: document.getElementById('budget-total'),
-        budgetProgressBar: document.getElementById('budget-progress-bar'),
-        expiringItemsList: document.getElementById('expiring-items-list'),
-        inventorySummaryList: document.getElementById('inventory-summary-list'),
-
+        // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
         inventoryModalTitle: document.getElementById('inventory-item-modal-title'),
+        reorderAssistantBtn: document.getElementById('reorder-assistant-btn'),
+        reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
+        reorderListContainer: document.getElementById('reorder-list-container'),
+        reorderForm: document.getElementById('reorder-form'),
+        inventorySearchInput: document.getElementById('inventory-search-input'),
+        inventoryListContainer: document.getElementById('inventory-list-container'),
+        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
+        inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
+        inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
+        inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
+
+        // Recipes
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
@@ -103,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewEditBtn: document.getElementById('read-view-edit-btn'),
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
+
+        // Calendar
         calendarGrid: document.getElementById('calendar-grid'),
         calendarTitle: document.getElementById('calendar-title'),
         prevWeekBtn: document.getElementById('prev-week-btn'),
@@ -114,11 +124,17 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
         mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
+
+        // References
         referencesContainer: document.getElementById('references-container'),
+
+        // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
         mobilePanelOverlay: document.getElementById('mobile-panel-overlay'),
         mobileShoppingListPanel: document.getElementById('mobile-shopping-list-panel'),
+
+        // Modals
         notificationModal: document.getElementById('notification-modal'),
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
@@ -126,16 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
         editBudgetModal: document.getElementById('edit-budget-modal'),
         editBudgetForm: document.getElementById('edit-budget-form'),
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
-        reorderAssistantBtn: document.getElementById('reorder-assistant-btn'),
-        reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
-        reorderListContainer: document.getElementById('reorder-list-container'),
-        reorderForm: document.getElementById('reorder-form'),
-        inventorySearchInput: document.getElementById('inventory-search-input'),
-        inventoryListContainer: document.getElementById('inventory-list-container'),
-        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
-        inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
-        inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
-        inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
     };
 
     function combineInventoryData() {
@@ -189,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 materials: data.materials || {},
                 wishlist: data.wishlist || {}
             };
-            renderShoppingListWidgets();
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'indkøbslister'));
         
         const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
@@ -250,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
             switch(currentHash) {
                 case '#dashboard':
                     renderDashboardPage();
-                    renderShoppingListWidgets();
                     break;
                 case '#calendar':
                     renderMealPlanner();
@@ -291,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initInventory(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
-        // initKitchenCounter(state, elements); // Temporarily removed
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
