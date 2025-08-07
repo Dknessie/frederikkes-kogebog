@@ -119,7 +119,7 @@ function createMaterialRow(container, material = {}) {
         <input type="text" class="ingredient-name" placeholder="Materiale/Værktøj" value="${material.name || ''}" required>
         <input type="number" step="any" class="ingredient-quantity" placeholder="Antal" value="${material.quantity || ''}">
         <input type="text" class="ingredient-unit" placeholder="Enhed" value="${material.unit || ''}">
-        <input type="text" class="ingredient-note-input" placeholder="Note (f.eks. 4x4 tommer)" value="${material.note || ''}">
+        <input type="number" step="0.01" class="material-item-price" placeholder="Pris" value="${material.price || ''}">
         <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
@@ -149,13 +149,13 @@ async function handleSaveProject(e) {
         const name = row.querySelector('.ingredient-name').value.trim();
         const quantity = row.querySelector('.ingredient-quantity').value;
         const unit = row.querySelector('.ingredient-unit').value.trim();
-        const note = row.querySelector('.ingredient-note-input').value.trim();
+        const price = Number(row.querySelector('.material-item-price').value) || null;
         if (name) {
             materials.push({ 
                 name, 
                 quantity: Number(quantity) || null, 
                 unit: normalizeUnit(unit),
-                note: note || null 
+                price
             });
         }
     });
@@ -300,9 +300,9 @@ function openEditProjectModal(projectId) {
 
         appElements.projectMaterialsContainer.innerHTML = '';
         if (project.materials && project.materials.length > 0) {
-            project.materials.forEach(mat => createMaterialRow(appElements.projectMaterialsContainer, mat));
+            project.materials.forEach(mat => createMaterialRow(mat));
         } else {
-            createMaterialRow(appElements.projectMaterialsContainer);
+            createMaterialRow();
         }
 
         appElements.projectLinksContainer.innerHTML = '';
