@@ -29,8 +29,8 @@ export function renderReferencesPage() {
             items: appState.references.itemLocations || [],
             isSimpleList: true
         },
-        rooms: { // NEW
-            title: 'Rum i Hjemmet',
+        rooms: {
+            title: 'Rum',
             items: appState.references.rooms || [],
             isSimpleList: true
         },
@@ -228,7 +228,7 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
 
     const confirmed = await showNotification({
         title: "Opdater Referencer",
-        message: `Vil du omdøbe "${oldValue}" til "${newValue}"? <br><br><strong>Vigtigt:</strong> Dette vil opdatere alle varer, der bruger denne reference.`,
+        message: `Vil du omdøbe "${oldValue}" til "${newValue}"? <br><br><strong>Vigtigt:</strong> Dette vil opdatere alle varer, rum og projekter, der bruger denne reference.`,
         type: 'confirm'
     });
 
@@ -238,44 +238,52 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     const userRef = doc(db, 'references', appState.currentUser.uid);
 
     // 1. Update the references document
-    const updatePayload = {
-        [key]: arrayRemove(oldValue),
-    };
-    batch.update(userRef, updatePayload);
-    
-    const secondUpdatePayload = {
-        [key]: arrayUnion(newValue)
-    };
+    batch.update(userRef, { [key]: arrayUnion(newValue) });
+    batch.update(userRef, { [key]: arrayRemove(oldValue) });
 
     if (key === 'itemCategories') {
         const oldShelfLife = appState.references.shelfLife?.[oldValue];
         if (oldShelfLife !== undefined) {
-            secondUpdatePayload[`shelfLife.${oldValue}`] = deleteField();
-            secondUpdatePayload[`shelfLife.${newValue}`] = oldShelfLife;
+            batch.update(userRef, {
+                [`shelfLife.${newValue}`]: oldShelfLife,
+                [`shelfLife.${oldValue}`]: deleteField()
+            });
         }
     }
-    batch.set(userRef, secondUpdatePayload, { merge: true });
-
-
+    
     // 2. Update all related documents in other collections
     let fieldToUpdate = '';
-    if (key === 'itemCategories') fieldToUpdate = 'category';
-    if (key === 'itemLocations') fieldToUpdate = 'location';
-    if (key === 'rooms') fieldToUpdate = 'room'; // For projects
-    
-    let collectionToUpdate = 'inventory_items';
-    if (key === 'rooms') collectionToUpdate = 'projects';
+    let collectionsToUpdate = [];
 
-    if (fieldToUpdate) {
-        const q = query(collection(db, collectionToUpdate), where(fieldToUpdate, "==", oldValue));
+    if (key === 'itemCategories') {
+        fieldToUpdate = 'category';
+        collectionsToUpdate.push('inventory_items');
+    }
+    if (key === 'itemLocations') {
+        fieldToUpdate = 'location';
+        collectionsToUpdate.push('inventory_items');
+    }
+    if (key === 'rooms') {
+        fieldToUpdate = 'room';
+        collectionsToUpdate.push('projects');
+        // Also need to update the `name` field in the `rooms` collection itself
+        const roomDocQuery = query(collection(db, "rooms"), where("name", "==", oldValue), where("userId", "==", appState.currentUser.uid));
+        const roomDocSnapshot = await getDocs(roomDocQuery);
+        roomDocSnapshot.forEach(doc => {
+            batch.update(doc.ref, { name: newValue });
+        });
+    }
+    
+    for (const coll of collectionsToUpdate) {
+        const q = query(collection(db, coll), where(fieldToUpdate, "==", oldValue), where("userId", "==", appState.currentUser.uid));
         try {
             const querySnapshot = await getDocs(q);
             querySnapshot.forEach((doc) => {
                 batch.update(doc.ref, { [fieldToUpdate]: newValue });
             });
         } catch (error) {
-            handleError(error, `Kunne ikke finde relaterede emner at opdatere i ${collectionToUpdate}.`, "queryForUpdate");
-            return; // Stop if we can't query
+            handleError(error, `Kunne ikke finde relaterede emner at opdatere i ${coll}.`, "queryForUpdate");
+            return;
         }
     }
 
