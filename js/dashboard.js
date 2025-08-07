@@ -28,6 +28,10 @@ export function initDashboard(state, elements) {
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
         materialsSummaryWidget: document.getElementById('widget-materials-summary'),
         wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
+        
+        // Shopping list counts
+        groceriesCount: document.getElementById('groceries-count'),
+        materialsCount: document.getElementById('materials-count'),
     };
 
     if (appElements.editBudgetBtn) {
@@ -74,8 +78,35 @@ export function renderDashboardPage() {
     renderProjectsFocusWidget();
     renderBudgetWidget();
     renderInventoryNotificationsWidget();
-    renderShoppingListWidgets(); // This will now also handle the wishlist preview
+    renderShoppingListWidgets();
 }
+
+function renderShoppingListWidgets() {
+    // Groceries
+    const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
+    appElements.groceriesCount.textContent = `${groceriesCount} vare${groceriesCount !== 1 ? 'r' : ''}`;
+
+    // Materials
+    const materialsCount = Object.keys(appState.shoppingLists.materials || {}).length;
+    appElements.materialsCount.textContent = `${materialsCount} vare${materialsCount !== 1 ? 'r' : ''}`;
+
+    // Wishlist
+    const wishlistItems = Object.values(appState.shoppingLists.wishlist || {});
+    const previewContainer = appElements.wishlistPreview;
+    previewContainer.innerHTML = '';
+    if (wishlistItems.length > 0) {
+        wishlistItems.slice(0, 3).forEach(item => {
+            const img = document.createElement('img');
+            img.src = item.imageUrl || `https://placehold.co/100x100/f3f0e9/d1603d?text=?`;
+            img.alt = item.name;
+            img.className = 'preview-img';
+            previewContainer.appendChild(img);
+        });
+    } else {
+        previewContainer.innerHTML = '<p class="empty-state-small">Tom</p>';
+    }
+}
+
 
 function renderWelcomeWidget() {
     const userEmail = appState.currentUser.email;
@@ -117,7 +148,11 @@ function renderTodayOverviewWidget() {
     }
     
     // Placeholder for project task
-    contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-tasks"></i> Næste opgave</span> <span>Mal paneler i stuen</span></div>`;
+    const firstProject = appState.projects.find(p => p.status !== 'completed');
+    if(firstProject) {
+        contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-tasks"></i> Næste opgave</span> <span>${firstProject.title}</span></div>`;
+    }
+
 
     if (contentHTML === '') {
         container.innerHTML = '<p class="empty-state">Intet planlagt for i dag. Tid til at slappe af!</p>';
@@ -160,7 +195,7 @@ function renderBudgetWidget() {
             id: 'budget-gauge-container',
             value: monthlySpent,
             min: 0,
-            max: monthlyBudget,
+            max: monthlyBudget > 0 ? monthlyBudget : 1, // Ensure max is not 0
             title: "Månedligt Forbrug",
             label: "kr.",
             levelColors: ["#4CAF50", "#FFC107", "#F44336"], // Green, Yellow, Red
