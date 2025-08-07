@@ -49,11 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
-        // Hjem Page elements
         hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
         hjemSubpages: document.querySelectorAll('.hjem-subpage'),
 
-        // Room elements
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -63,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
         roomDetailsTitle: document.getElementById('room-details-title'),
         editRoomBtn: document.getElementById('edit-room-btn'),
 
-        // Project elements
         projectEditModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
         addProjectBtn: document.getElementById('add-project-btn'),
@@ -71,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
 
-        // Dashboard elements
         profileEmail: document.getElementById('profile-email'),
         favoriteStoreSelect: document.getElementById('profile-favorite-store'),
         editBudgetBtn: document.getElementById('edit-budget-btn'),
@@ -81,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
         expiringItemsList: document.getElementById('expiring-items-list'),
         inventorySummaryList: document.getElementById('inventory-summary-list'),
 
-        // Existing elements
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
@@ -171,72 +166,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function combineInventoryData() {
         if (!state.inventoryItems || !state.inventoryBatches) return;
-
         state.inventory = state.inventoryItems.map(item => {
             const batches = state.inventoryBatches.filter(batch => batch.itemId === item.id);
-            
             let totalStock = 0;
             if (item.defaultUnit === 'stk') {
                 totalStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
             } else {
-                totalStock = batches.reduce((sum, b) => {
-                    const batchTotalSize = (b.quantity || 0) * (b.size || 0);
-                    return sum + batchTotalSize;
-                }, 0);
+                totalStock = batches.reduce((sum, b) => sum + ((b.quantity || 0) * (b.size || 0)), 0);
             }
-
-            return {
-                ...item,
-                batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)),
-                totalStock: totalStock
-            };
+            return { ...item, batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)), totalStock };
         });
     }
 
     function setupRealtimeListeners(userId) {
         if (!userId) return;
-
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
-
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
-
-        const qItems = query(collection(db, 'inventory_items'), where("userId", "==", userId));
-        state.listeners.inventoryItems = onSnapshot(qItems, (snapshot) => {
-            state.inventoryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            combineInventoryData();
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'varer'));
-
-        const qBatches = query(collection(db, 'inventory_batches'), where("userId", "==", userId));
-        state.listeners.inventoryBatches = onSnapshot(qBatches, (snapshot) => {
-            state.inventoryBatches = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            combineInventoryData();
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'vare-batches'));
-
-        const qRecipes = query(collection(db, 'recipes'), where("userId", "==", userId));
-        state.listeners.recipes = onSnapshot(qRecipes, (snapshot) => {
-            state.recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'opskrifter'));
         
-        const qProjects = query(collection(db, 'projects'), where("userId", "==", userId));
-        state.listeners.projects = onSnapshot(qProjects, (snapshot) => {
-            state.projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'projekter'));
+        const collections = {
+            inventory_items: 'inventoryItems',
+            inventory_batches: 'inventoryBatches',
+            recipes: 'recipes',
+            projects: 'projects',
+            rooms: 'rooms'
+        };
 
-        const qRooms = query(collection(db, 'rooms'), where("userId", "==", userId));
-        state.listeners.rooms = onSnapshot(qRooms, (snapshot) => {
-            state.rooms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'rum'));
-
+        for (const [coll, stateKey] of Object.entries(collections)) {
+            const q = query(collection(db, coll), where("userId", "==", userId));
+            state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
+                state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
+                    combineInventoryData();
+                }
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, coll));
+        }
+        
         const year = state.currentDate.getFullYear();
         state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
             state.mealPlan = doc.exists() ? doc.data() : {};
-            if (document.querySelector('#calendar:not(.hidden)')) renderMealPlanner();
-            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
 
         state.listeners.shoppingList = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
@@ -251,32 +220,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
         state.listeners.budget = onSnapshot(settingsRef, (doc) => {
-            if (doc.exists()) {
-                state.budget = doc.data();
-            }
-            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
+            state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'budget'));
 
         const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
         state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
-            if (doc.exists()) {
-                state.preferences = doc.data();
-            }
-            if (document.querySelector('#dashboard:not(.hidden)')) renderDashboardPage();
+            state.preferences = doc.exists() ? doc.data() : {};
+            handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'præferencer'));
 
         const referencesRef = doc(db, 'references', userId);
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                elements.addInventoryItemBtn.disabled = false;
-                elements.reorderAssistantBtn.disabled = false;
-                elements.addRecipeBtn.disabled = false;
-                elements.addProjectBtn.disabled = false;
-                elements.addRoomBtn.disabled = false;
+                Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = false);
                 setReferencesLoaded(true);
-                if (document.querySelector('#references:not(.hidden)')) renderReferencesPage();
-                if (document.querySelector('#inventory:not(.hidden)')) renderInventory();
+                handleNavigation(window.location.hash);
             }
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
@@ -285,10 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
         state.currentUser = user;
         elements.loginPage.classList.add('hidden');
         elements.appContainer.classList.remove('hidden');
-        setupRealtimeListeners(user.uid); 
         
-        const currentHash = window.location.hash || '#dashboard';
-        handleNavigation(currentHash);
+        // Setup everything that depends on a logged-in user
+        setupRealtimeListeners(user.uid); 
+        window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
+        handleNavigation(window.location.hash || '#dashboard'); // Initial navigation call
     }
 
     function onLogout() {
@@ -297,64 +258,62 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        elements.addInventoryItemBtn.disabled = true;
-        elements.reorderAssistantBtn.disabled = true;
-        elements.addRecipeBtn.disabled = true;
-        elements.addProjectBtn.disabled = true;
-        elements.addRoomBtn.disabled = true;
+        Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = true);
         setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
-        const [mainHash, subId] = hash.split('/');
-        state.currentlyViewedRoomId = subId || null;
+        try {
+            const [mainHash, subId] = hash.split('/');
+            state.currentlyViewedRoomId = subId || null;
 
-        const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
-        const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
-        navigateTo(currentHash);
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
+            const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
+            
+            navigateTo(currentHash);
 
-        switch(currentHash) {
-            case '#dashboard':
-                renderDashboardPage();
-                renderShoppingList();
-                renderKitchenCounter();
-                break;
-            case '#calendar':
-                renderMealPlanner();
-                break;
-            case '#hjem':
-                renderRoomsListPage();
-                renderProjects();
-                break;
-            case '#room-details':
-                if (state.currentlyViewedRoomId) {
-                    renderRoomDetailsPage();
-                } else {
-                    window.location.hash = '#hjem';
-                }
-                break;
-            case '#recipes':
-                renderPageTagFilters();
-                renderRecipes();
-                break;
-            case '#inventory':
-                renderInventory();
-                break;
-            case '#references':
-                renderReferencesPage();
-                break;
+            switch(currentHash) {
+                case '#dashboard':
+                    renderDashboardPage();
+                    renderShoppingList();
+                    renderKitchenCounter();
+                    break;
+                case '#calendar':
+                    renderMealPlanner();
+                    break;
+                case '#hjem':
+                    renderRoomsListPage();
+                    renderProjects();
+                    break;
+                case '#room-details':
+                    if (state.currentlyViewedRoomId) {
+                        renderRoomDetailsPage();
+                    } else {
+                        window.location.hash = '#hjem';
+                    }
+                    break;
+                case '#recipes':
+                    renderPageTagFilters();
+                    renderRecipes();
+                    break;
+                case '#inventory':
+                    renderInventory();
+                    break;
+                case '#references':
+                    renderReferencesPage();
+                    break;
+            }
+        } catch (error) {
+            console.error("Fejl under navigation:", error);
+            handleError(error, "Der opstod en fejl under navigation.");
         }
     }
 
     function init() {
-        elements.addInventoryItemBtn.disabled = true;
-        elements.reorderAssistantBtn.disabled = true;
-        elements.addRecipeBtn.disabled = true;
-        elements.addProjectBtn.disabled = true;
-        elements.addRoomBtn.disabled = true;
+        // Disable all buttons that depend on data from the start
+        Object.assign(elements, { addInventoryItemBtn, reorderAssistantBtn, addRecipeBtn, addProjectBtn, addRoomBtn }).forEach(btn => btn.disabled = true);
 
-        initAuth(onLogin, onLogout);
-        setupAuthEventListeners(elements);
+        // Initialize all modules
         initUI(state, elements);
         initInventory(state, elements);
         initRecipes(state, elements);
@@ -365,9 +324,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-
-        window.addEventListener('hashchange', () => handleNavigation(window.location.hash));
-        handleNavigation(window.location.hash); // Initial load
+        setupAuthEventListeners(elements);
+        
+        // The only thing that happens on init is setting up the auth listener.
+        // Everything else is triggered by the onLogin callback.
+        initAuth(onLogin, onLogout);
     }
 
     init();
