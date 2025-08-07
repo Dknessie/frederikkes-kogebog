@@ -31,17 +31,11 @@ export function initRooms(state, elements) {
 
     // Event listeners for dynamic rows in modal
     appElements.roomEditModal.addEventListener('click', e => {
-        if (e.target.closest('#add-paint-btn')) {
-            createPaintRow();
-        }
         if (e.target.closest('#add-room-inventory-btn')) {
             createInventoryRow();
         }
         if (e.target.closest('#add-wishlist-item-btn')) {
             createWishlistRow();
-        }
-        if (e.target.closest('.remove-paint-btn')) {
-            e.target.closest('.paint-row').remove();
         }
         if (e.target.closest('.remove-room-inventory-btn')) {
             e.target.closest('.room-inventory-row').remove();
@@ -70,7 +64,7 @@ export function renderRoomsListPage() {
         const imageUrl = (room.images && room.images.length > 0) ? room.images[0] : `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(room.name)}`;
 
         card.innerHTML = `
-            <img src="${imageUrl}" alt="Billede af ${room.name}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+            <img src="${imageUrl}" alt="Billede af ${room.name}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x400/f3f0e9/d1603d?text=Billede+mangler';">
             <div class="recipe-card-content">
                 <span class="recipe-card-category">${room.area ? `${room.area} m²` : 'Rum'}</span>
                 <h4>${room.name}</h4>
@@ -105,19 +99,11 @@ export function renderRoomDetailsPage() {
             <div class="info-list">
                 <div class="info-item"><span class="info-label">Størrelse:</span><span>${room.area || 'N/A'} m²</span></div>
                 <div class="info-item"><span class="info-label">Lofthøjde:</span><span>${room.ceilingHeight || 'N/A'} m</span></div>
-                <div class="info-item"><span class="info-label">Gulv:</span><span>${room.flooring || 'N/A'}</span></div>
             </div>
         </div>
         <div class="room-detail-card">
-            <h4>Maling</h4>
-            <div class="info-list">
-                ${(room.paints && room.paints.length > 0) ? room.paints.map(p => `
-                    <div class="info-item">
-                        <span>${p.brand || ''} <strong>${p.colorCode || ''}</strong></span>
-                        <span>${p.finish || ''}</span>
-                    </div>
-                `).join('') : '<p class="empty-state-small">Ingen maling registreret.</p>'}
-            </div>
+            <h4>Noter</h4>
+            <p>${room.notes || 'Ingen noter tilføjet.'}</p>
         </div>
         <div class="room-detail-card">
             <h4>Inventar</h4>
@@ -130,9 +116,10 @@ export function renderRoomDetailsPage() {
          <div class="room-detail-card">
             <h4>Ønskeliste</h4>
              <div class="info-list">
-                ${(room.wishlist && room.wishlist.length > 0) ? room.wishlist.map(i => `
-                    <div class="info-item"><span>${i.name}</span></div>
-                `).join('') : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>'}
+                ${(room.wishlist && room.wishlist.length > 0) ? room.wishlist.map(i => {
+                    const link = i.url ? `<a href="${i.url}" target="_blank">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
+                    return `<div class="info-item"><span>${link}</span></div>`;
+                }).join('') : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>'}
             </div>
         </div>
     `;
@@ -147,7 +134,6 @@ function openAddRoomModal() {
     document.getElementById('room-name-select').classList.remove('hidden');
     document.getElementById('room-name-display').classList.add('hidden');
 
-    document.getElementById('paint-list-container').innerHTML = '';
     document.getElementById('room-inventory-list-container').innerHTML = '';
     document.getElementById('room-wishlist-container').innerHTML = '';
 
@@ -175,11 +161,7 @@ function openEditRoomModal(roomId) {
 
     document.getElementById('room-area').value = room.area || '';
     document.getElementById('room-ceiling-height').value = room.ceilingHeight || '';
-    document.getElementById('room-flooring').value = room.flooring || '';
-
-    const paintContainer = document.getElementById('paint-list-container');
-    paintContainer.innerHTML = '';
-    if (room.paints) room.paints.forEach(p => createPaintRow(p));
+    document.getElementById('room-notes').value = room.notes || '';
 
     const inventoryContainer = document.getElementById('room-inventory-list-container');
     inventoryContainer.innerHTML = '';
@@ -206,16 +188,6 @@ async function handleSaveRoom(e) {
         return;
     }
 
-    const paints = [];
-    document.querySelectorAll('#paint-list-container .paint-row').forEach(row => {
-        const brand = row.querySelector('.paint-brand').value.trim();
-        const colorCode = row.querySelector('.paint-color-code').value.trim();
-        const finish = row.querySelector('.paint-finish').value.trim();
-        if (brand || colorCode || finish) {
-            paints.push({ brand, colorCode, finish });
-        }
-    });
-
     const inventory = [];
     document.querySelectorAll('#room-inventory-list-container .room-inventory-row').forEach(row => {
         const name = row.querySelector('.room-inventory-name').value.trim();
@@ -227,8 +199,9 @@ async function handleSaveRoom(e) {
     const wishlist = [];
     document.querySelectorAll('#room-wishlist-container .wishlist-row').forEach(row => {
         const name = row.querySelector('.wishlist-item-name').value.trim();
+        const url = row.querySelector('.wishlist-item-url').value.trim();
         if (name) {
-            wishlist.push({ name });
+            wishlist.push({ name, url });
         }
     });
 
@@ -236,8 +209,7 @@ async function handleSaveRoom(e) {
         name: roomName,
         area: Number(document.getElementById('room-area').value) || null,
         ceilingHeight: Number(document.getElementById('room-ceiling-height').value) || null,
-        flooring: document.getElementById('room-flooring').value.trim() || null,
-        paints: paints,
+        notes: document.getElementById('room-notes').value.trim() || null,
         inventory: inventory,
         wishlist: wishlist,
         images: appState.rooms.find(r => r.id === roomId)?.images || [],
@@ -257,19 +229,6 @@ async function handleSaveRoom(e) {
     }
 }
 
-function createPaintRow(paint = {}) {
-    const container = document.getElementById('paint-list-container');
-    const row = document.createElement('div');
-    row.className = 'paint-row';
-    row.innerHTML = `
-        <input type="text" class="paint-brand" placeholder="Mærke" value="${paint.brand || ''}">
-        <input type="text" class="paint-color-code" placeholder="Farvekode" value="${paint.colorCode || ''}">
-        <input type="text" class="paint-finish" placeholder="Finish/Glans" value="${paint.finish || ''}">
-        <button type="button" class="btn-icon remove-paint-btn"><i class="fas fa-trash"></i></button>
-    `;
-    container.appendChild(row);
-}
-
 function createInventoryRow(item = {}) {
     const container = document.getElementById('room-inventory-list-container');
     const row = document.createElement('div');
@@ -287,6 +246,7 @@ function createWishlistRow(item = {}) {
     row.className = 'wishlist-row';
     row.innerHTML = `
         <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}">
+        <input type="url" class="wishlist-item-url" placeholder="https://..." value="${item.url || ''}">
         <button type="button" class="btn-icon remove-wishlist-item-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
