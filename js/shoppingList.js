@@ -1,7 +1,7 @@
 // js/shoppingList.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
 import { openBatchModal } from './inventory.js';
@@ -30,6 +30,9 @@ export function initShoppingList(state, elements) {
         } else if (e.target.closest('.remove-from-list-btn')) {
             const itemName = e.target.closest('[data-item-name]').dataset.itemName;
             handleRemoveShoppingItem(itemName);
+        } else if (e.target.matches('.shopping-list-checkbox')) {
+            const listItem = e.target.closest('.shopping-list-item');
+            listItem.classList.toggle('is-checked');
         }
     });
 
@@ -90,7 +93,7 @@ function renderGroceriesList(list) {
     });
 
     if (Object.keys(groupedByStore).length === 0) {
-        return '<p class="empty-state">Indkøbslisten er tom.</p>';
+        return `<p class="empty-state">Indkøbslisten er tom.</p>${getModalFooter()}`;
     }
 
     let html = '';
@@ -125,7 +128,7 @@ function renderMaterialsList(list) {
     });
 
     if (Object.keys(groupedByProject).length === 0) {
-        return '<p class="empty-state">Materialelisten er tom.</p>';
+        return `<p class="empty-state">Materialelisten er tom.</p>${getModalFooter()}`;
     }
 
     let html = '';
@@ -159,7 +162,7 @@ function renderMaterialsList(list) {
 function renderWishlist(list) {
     const items = Object.values(list);
     if (items.length === 0) {
-        return '<p class="empty-state">Ønskelisten er tom.</p>';
+        return `<p class="empty-state">Ønskelisten er tom.</p>${getModalFooter(true)}`;
     }
 
     let html = '<div class="wishlist-grid">';
@@ -308,29 +311,48 @@ async function handleClearShoppingList() {
     }
 }
 
-function handleAddShoppingItem(itemName) {
+async function handleAddShoppingItem(itemName) {
     const list = appState.shoppingLists[currentListType] || {};
     const updatedList = { ...list };
     const key = itemName.toLowerCase();
+
+    if (updatedList[key]) {
+        showNotification({ title: "Vare findes allerede", message: `${itemName} er allerede på listen.`});
+        return;
+    }
     
-    const existingItem = appState.inventory.find(i => i.name.toLowerCase() === key);
+    const inventoryItem = appState.inventory.find(i => i.name.toLowerCase() === key);
     
-    updatedList[key] = {
-        name: existingItem ? existingItem.name : itemName,
+    let newItem = {
+        name: itemName,
         quantity_to_buy: 1,
         unit: 'stk',
-        storeId: 'Manuelt tilføjet',
-        itemId: existingItem ? existingItem.id : null,
+        storeId: appState.preferences.favoriteStoreId || 'Andet',
+        itemId: null,
         price: null,
         url: null
     };
-    updateShoppingListInFirestore(currentListType, updatedList);
+
+    if (inventoryItem) {
+        newItem.name = inventoryItem.name; // Use correct casing
+        newItem.itemId = inventoryItem.id;
+        newItem.unit = inventoryItem.defaultUnit || 'stk';
+        const lastBatch = inventoryItem.batches.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
+        if (lastBatch) {
+            newItem.storeId = lastBatch.store;
+            newItem.price = lastBatch.price / lastBatch.quantity;
+        }
+    }
+    
+    updatedList[key] = newItem;
+    await updateShoppingListInFirestore(currentListType, updatedList);
 }
+
 
 function handleRemoveShoppingItem(itemName) {
     const list = appState.shoppingLists[currentListType] || {};
     const updatedList = { ...list };
-    const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name === itemName);
+    const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
     if(keyToDelete) {
         delete updatedList[keyToDelete];
         updateShoppingListInFirestore(currentListType, updatedList);
@@ -341,16 +363,16 @@ async function handleConfirmPurchase() {
     const checkedItems = [];
     document.querySelectorAll('.shopping-list-checkbox:checked').forEach(checkbox => {
         const itemName = checkbox.closest('.shopping-list-item').dataset.itemName;
-        const item = Object.values(appState.shoppingLists[currentListType]).find(i => i.name === itemName);
+        const item = Object.values(appState.shoppingLists.groceries).find(i => i.name === itemName);
         if (item) checkedItems.push(item);
     });
 
     if (checkedItems.length === 0) {
-        await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt." });
+        await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt, ved at sætte flueben." });
         return;
     }
     
-    const list = appState.shoppingLists[currentListType];
+    const list = appState.shoppingLists.groceries;
     const updatedList = { ...list };
 
     for (const item of checkedItems) {
@@ -359,12 +381,13 @@ async function handleConfirmPurchase() {
         } else {
             const createNew = await showNotification({
                 title: "Ny Vare",
-                message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den?`,
+                message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den nu?`,
                 type: 'confirm'
             });
             if (createNew) {
-                // This should ideally open the inventory item modal pre-filled
-                showNotification({title: "Handling påkrævet", message: `Gå til varelager og opret "${item.name}" manuelt.`});
+                appElements.shoppingListModal.classList.add('hidden');
+                document.getElementById('add-inventory-item-btn').click();
+                // Pre-fill name if possible in a future update
             }
         }
         
@@ -372,5 +395,5 @@ async function handleConfirmPurchase() {
         if(keyToDelete) delete updatedList[keyToDelete];
     }
     
-    await updateShoppingListInFirestore(currentListType, updatedList);
+    await updateShoppingListInFirestore('groceries', updatedList);
 }
