@@ -1323,7 +1323,7 @@ header {
     margin-bottom: 1em;
 }
 
-#ingredients-container, #project-materials-container, #paint-list-container, #room-inventory-list-container, #room-wishlist-container {
+#ingredients-container, #project-materials-container, #paint-list-container, #room-inventory-list-container, #room-wishlist-container, #project-links-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
@@ -1333,7 +1333,7 @@ header {
     border-radius: var(--border-radius);
     margin: var(--spacing-m) 0;
 }
-.ingredient-row, .paint-row, .room-inventory-row, .wishlist-row {
+.ingredient-row, .paint-row, .room-inventory-row, .wishlist-row, .project-link-row {
     position: relative;
     display: grid;
     grid-template-columns: 1fr auto;
@@ -1346,7 +1346,10 @@ header {
 .ingredient-row {
     grid-template-columns: 1fr auto auto auto auto;
 }
-.ingredient-row input, .paint-row input, .room-inventory-row input, .wishlist-row input {
+.wishlist-row, .project-link-row {
+    grid-template-columns: 1fr 1fr auto;
+}
+.ingredient-row input, .paint-row input, .room-inventory-row input, .wishlist-row input, .project-link-row input {
     border: 1px solid var(--border-color);
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
@@ -1395,10 +1398,10 @@ header {
     width: 150px;
 }
 
-.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn, .wishlist-row .remove-wishlist-item-btn { 
+.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn, .wishlist-row .remove-wishlist-item-btn, .project-link-row .remove-project-link-btn { 
     color: #adb5bd; 
 }
-.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover { 
+.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover, .project-link-row .remove-project-link-btn:hover { 
     color: var(--status-red); 
 }
 
