@@ -375,7 +375,7 @@ header {
 .meal-slot {
     padding: var(--spacing-s);
     border-bottom: 1px dashed #eee;
-    transition: background-color: 0.2s ease;
+    transition: background-color 0.2s ease;
     overflow-y: auto;
     min-height: 40px;
     display: flex;
@@ -462,16 +462,6 @@ header {
     overflow-y: auto; 
     padding-right: var(--spacing-s); 
 }
-
-.sidebar-actions {
-    display: grid;
-    gap: var(--spacing-s);
-    margin-bottom: var(--spacing-m);
-}
-#shopping-list-panel-desktop .sidebar-actions, #mobile-shopping-list-panel .sidebar-actions { 
-    grid-template-columns: repeat(3, 1fr); 
-}
-.sidebar-actions .btn { font-size: 0.8rem; padding: 0.6rem 0.25rem; }
 
 .shopping-list-total {
     padding: var(--spacing-m);
@@ -965,7 +955,7 @@ header {
     gap: var(--spacing-l);
 }
 .dashboard-grid.full-width {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 .dashboard-widget {
     background: var(--white-color);
@@ -1352,7 +1342,10 @@ header {
 .ingredient-row {
     grid-template-columns: 1fr auto auto auto auto;
 }
-.wishlist-row, .project-link-row {
+.wishlist-row {
+    grid-template-columns: 1fr 1fr 100px auto;
+}
+.project-link-row {
     grid-template-columns: 1fr 1fr auto;
 }
 .ingredient-row input, .paint-row input, .room-inventory-row input, .wishlist-row input, .project-link-row input {
