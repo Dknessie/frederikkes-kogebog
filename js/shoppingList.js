@@ -380,9 +380,6 @@ async function handleConfirmPurchase() {
 }
 
 async function processItemsSequentially(items) {
-    let currentList = { ...appState.shoppingLists.groceries };
-    let listChanged = false;
-
     for (const item of items) {
         const wasHandled = await new Promise(async (resolve) => {
             if (item.itemId) {
@@ -390,11 +387,7 @@ async function processItemsSequentially(items) {
                 const onSaveSuccess = (savedItemId) => {
                     const itemToRemove = appState.inventory.find(i => i.id === savedItemId);
                     if (itemToRemove) {
-                        const keyToDelete = Object.keys(currentList).find(k => currentList[k].name.toLowerCase() === itemToRemove.name.toLowerCase());
-                        if (keyToDelete) {
-                            delete currentList[keyToDelete];
-                            listChanged = true;
-                        }
+                        handleRemoveShoppingItem(itemToRemove.name); // This will update Firestore and re-render
                     }
                     resolve(true); // Mark as handled
                 };
@@ -402,17 +395,10 @@ async function processItemsSequentially(items) {
 
                 // We need to know if the user just closes the modal
                 const modal = document.getElementById('batch-edit-modal');
-                const closeHandler = () => {
-                    // If onSaveSuccess has not been called, it means the user cancelled.
-                    if (modal.classList.contains('hidden')) { // Check if it's still open
-                        resolve(false); // Mark as not handled
-                    }
-                };
-                // Listen for the modal to be hidden
                 const observer = new MutationObserver((mutations) => {
                     for (let mutation of mutations) {
                         if (mutation.attributeName === 'class' && modal.classList.contains('hidden')) {
-                            resolve(false); // User closed the modal
+                            resolve(false); // User closed the modal without saving
                             observer.disconnect();
                         }
                     }
@@ -428,20 +414,16 @@ async function processItemsSequentially(items) {
                 if (createNew) {
                     appElements.shoppingListModal.classList.add('hidden');
                     document.getElementById('add-inventory-item-btn').click();
+                    // Pre-fill name if possible in a future update
                 }
-                resolve(false); // Not handled in this loop
+                resolve(false); // Not handled in this loop, user needs to create item first
             }
         });
 
         // If user cancelled the batch modal for an item, we stop the whole process
         if (!wasHandled) {
             showNotification({ title: "Annulleret", message: "Processen blev afbrudt. Resterende varer er ikke blevet behandlet." });
-            return;
+            return; // Exit the loop
         }
-    }
-
-    if (listChanged) {
-        await updateShoppingListInFirestore('groceries', currentList);
-        renderListInModal(); // Update the UI with the final list
     }
 }
