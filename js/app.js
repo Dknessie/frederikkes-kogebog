@@ -13,6 +13,7 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
+import { initKitchenCounter } from './kitchenCounter.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -296,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initInventory(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
+        initKitchenCounter(state);
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
