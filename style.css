@@ -382,6 +382,15 @@ header {
 }
 .planned-recipe:active { cursor: grabbing; }
 
+.planned-recipe.is-cooked {
+    background-color: #e0e0e0;
+    border-left-color: var(--status-green);
+    opacity: 0.7;
+}
+.planned-recipe.is-cooked span {
+    text-decoration: line-through;
+}
+
 .planned-recipe.deleted {
     border-left-color: var(--deleted-color);
     color: var(--deleted-color);
@@ -418,27 +427,40 @@ header {
     margin-top: var(--spacing-l);
 }
 
+.shopping-list-actions {
+    margin-top: var(--spacing-l);
+    padding-top: var(--spacing-l);
+    border-top: 1px solid var(--border-color);
+}
+
+.add-item-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-m);
+}
+.add-item-form input { flex-grow: 1; }
+.add-item-form button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
+
+
 /* Tema 1: Dagligvarer (Notesblok) */
 .shopping-list-theme-groceries {
     background-image:
-        repeating-linear-gradient(#f3f0e9 0 1px, transparent 1px 100%),
-        repeating-linear-gradient(to right, #f3f0e9 0 1px, transparent 1px 100%);
-    background-color: #fff9e9;
+        repeating-linear-gradient(to bottom, transparent, transparent 24px, #e0e0e0 25px);
+    background-color: #fff;
     font-family: 'Georgia', serif;
-    border: 1px solid #ddd;
     padding: var(--spacing-l);
 }
 .shopping-list-theme-groceries .shopping-list-item {
     padding: var(--spacing-s) 0;
-    border-bottom: 1px dotted #ccc;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
 }
 .shopping-list-theme-groceries .shopping-list-item-label {
     cursor: pointer;
+    flex-grow: 1;
 }
-.shopping-list-theme-groceries input[type="checkbox"] {
-    display: none;
-}
-.shopping-list-theme-groceries input[type="checkbox"]:checked + .shopping-list-item-label {
+.shopping-list-theme-groceries .shopping-list-item.is-checked .shopping-list-item-label {
     text-decoration: line-through;
     color: #888;
     text-decoration-color: var(--status-red);
@@ -447,6 +469,10 @@ header {
     font-family: 'Playfair Display', serif;
     color: var(--primary-color);
     border-bottom: 2px solid var(--primary-color);
+}
+.shopping-list-theme-groceries ul {
+    list-style: none;
+    padding: 0;
 }
 
 /* Tema 2: Materialer (Værktøjskasse) */
@@ -478,6 +504,11 @@ header {
 }
 .shopping-list-theme-materials .material-name {
     font-weight: 600;
+}
+.shopping-list-theme-materials .add-item-form input {
+    background-color: #34495e;
+    color: #ecf0f1;
+    border-color: #7f8c8d;
 }
 
 /* Tema 3: Ønskeliste (Opslagstavle) */
@@ -1014,6 +1045,10 @@ header {
     object-fit: cover;
     border-radius: 4px;
     background-color: #e0e0e0;
+}
+.wishlist-widget-preview .empty-state-small {
+    grid-column: 1 / -1;
+    align-self: center;
 }
 
 /* Budget Widget */
