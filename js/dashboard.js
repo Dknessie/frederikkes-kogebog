@@ -47,7 +47,7 @@ export function renderDashboardPage() {
     if (!appState.currentUser || !appState.recipes || !appState.projects || !appState.inventory) return;
     
     renderWelcomeWidget();
-    renderTimelineWidget(); // REPLACES renderTodayOverviewWidget
+    renderTimelineWidget();
     renderProjectsFocusWidget();
     renderBudgetWidget();
     renderInventoryNotificationsWidget();
@@ -108,27 +108,32 @@ function renderTimelineWidget() {
     const currentYear = today.getFullYear();
     appState.events.forEach(event => {
         const eventDate = new Date(event.date);
+        let displayDate = new Date(event.date);
+        
         if (event.isRecurring) {
-            eventDate.setFullYear(currentYear);
-            if (eventDate >= today) { // Only show future recurring events for this year
-                 timelineItems.push({
-                    date: eventDate,
-                    type: event.category,
-                    icon: getIconForCategory(event.category),
-                    text: event.title,
-                    isComplete: event.isComplete
-                });
+            displayDate.setFullYear(currentYear);
+            // If birthday has already passed this year, show for next year
+            if (displayDate < today) {
+                displayDate.setFullYear(currentYear + 1);
             }
-        } else {
-            if (eventDate >= today) {
-                timelineItems.push({
-                    date: eventDate,
-                    type: event.category,
-                    icon: getIconForCategory(event.category),
-                    text: event.title,
-                    isComplete: event.isComplete
-                });
+        }
+        
+        // Only include events within the next 7 days for the timeline
+        const dayDiff = (displayDate - today) / (1000 * 60 * 60 * 24);
+        if (dayDiff >= 0 && dayDiff < 7) {
+            let title = event.title;
+            if (event.category === 'Fødselsdag' && event.birthYear) {
+                const age = displayDate.getFullYear() - event.birthYear;
+                title = `${event.name}'s Fødselsdag (${age} år)`;
             }
+
+            timelineItems.push({
+                date: displayDate,
+                type: event.category,
+                icon: getIconForCategory(event),
+                text: title,
+                isComplete: event.isComplete
+            });
         }
     });
 
@@ -151,7 +156,7 @@ function renderTimelineWidget() {
     }
 
     let html = '';
-    Object.keys(groupedByDate).forEach(dateString => {
+    Object.keys(groupedByDate).sort().forEach(dateString => {
         const date = new Date(dateString);
         const dayDiff = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
         let dayLabel = date.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -173,18 +178,22 @@ function renderTimelineWidget() {
     container.innerHTML = html;
 }
 
-function getIconForCategory(category) {
-    switch (category) {
+function getIconForCategory(eventData) {
+    switch (eventData.category) {
         case 'To-do': return 'fa-check-square';
         case 'Aftale': return 'fa-calendar-check';
         case 'Fødselsdag': return 'fa-birthday-cake';
-        case 'Begivenhed': return 'fa-star';
+        case 'Udgivelse':
+            switch(eventData.subCategory) {
+                case 'Film': return 'fa-film';
+                case 'Bog': return 'fa-book-open';
+                case 'Spil': return 'fa-gamepad';
+                case 'Produkt': return 'fa-box';
+                default: return 'fa-star';
+            }
         default: return 'fa-info-circle';
     }
 }
-
-// --- Other functions (renderWelcomeWidget, renderProjectsFocusWidget, etc.) remain the same ---
-// ... (rest of the file is identical to the previous version)
 
 function renderShoppingListWidgets() {
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
