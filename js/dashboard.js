@@ -2,7 +2,6 @@
 import { db } from './firebase.js';
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { calculateRecipePrice } from './recipes.js';
 import { formatDate } from './utils.js';
 import { openShoppingListModal } from './shoppingList.js';
 
@@ -22,16 +21,18 @@ export function initDashboard(state, elements) {
         budgetGaugeContainer: document.getElementById('budget-gauge-container'),
         inventoryNotificationsContent: document.getElementById('inventory-notifications-content'),
         quickActionsContainer: document.getElementById('quick-actions-widget'),
-        wishlistPreview: document.getElementById('wishlist-preview'),
-
+        
         // Shopping List Widget Items
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
         materialsSummaryWidget: document.getElementById('widget-materials-summary'),
         wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
         
-        // Shopping list counts
+        // Shopping list counts and prices
         groceriesCount: document.getElementById('groceries-count'),
         materialsCount: document.getElementById('materials-count'),
+        materialsPrice: document.getElementById('materials-price'),
+        wishlistCount: document.getElementById('wishlist-count'),
+        wishlistPrice: document.getElementById('wishlist-price'),
     };
 
     if (appElements.editBudgetBtn) {
@@ -58,6 +59,7 @@ export function initDashboard(state, elements) {
             const actionBtn = e.target.closest('.quick-action-btn');
             if (!actionBtn) return;
             
+            e.preventDefault(); // Prevent hash change for actions that open modals
             const action = actionBtn.dataset.action;
             if (action === 'add-recipe') {
                 document.getElementById('add-recipe-btn').click();
@@ -65,13 +67,16 @@ export function initDashboard(state, elements) {
                 document.getElementById('add-project-btn').click();
             } else if (action === 'add-inventory') {
                 document.getElementById('add-inventory-item-btn').click();
+            } else {
+                // For actions that navigate, let the default href work
+                window.location.hash = actionBtn.getAttribute('href');
             }
         });
     }
 }
 
 export function renderDashboardPage() {
-    if (!appState.currentUser) return;
+    if (!appState.currentUser || !appState.recipes || !appState.projects) return;
     
     renderWelcomeWidget();
     renderTodayOverviewWidget();
@@ -86,25 +91,19 @@ function renderShoppingListWidgets() {
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
     appElements.groceriesCount.textContent = `${groceriesCount} vare${groceriesCount !== 1 ? 'r' : ''}`;
 
-    // Materials
-    const materialsCount = Object.keys(appState.shoppingLists.materials || {}).length;
-    appElements.materialsCount.textContent = `${materialsCount} vare${materialsCount !== 1 ? 'r' : ''}`;
+    // Materials (Computed)
+    const materialsList = Object.values(appState.shoppingLists.materials || {});
+    const materialsCount = materialsList.length;
+    const materialsPrice = materialsList.reduce((sum, item) => sum + (item.price || 0), 0);
+    appElements.materialsCount.textContent = `${materialsCount} stk.`;
+    appElements.materialsPrice.textContent = `${materialsPrice.toFixed(2).replace('.',',')} kr.`;
 
-    // Wishlist
+    // Wishlist (Computed)
     const wishlistItems = Object.values(appState.shoppingLists.wishlist || {});
-    const previewContainer = appElements.wishlistPreview;
-    previewContainer.innerHTML = '';
-    if (wishlistItems.length > 0) {
-        wishlistItems.slice(0, 3).forEach(item => {
-            const img = document.createElement('img');
-            img.src = item.imageUrl || `https://placehold.co/100x100/f3f0e9/d1603d?text=?`;
-            img.alt = item.name;
-            img.className = 'preview-img';
-            previewContainer.appendChild(img);
-        });
-    } else {
-        previewContainer.innerHTML = '<p class="empty-state-small">Tom</p>';
-    }
+    const wishlistCount = wishlistItems.length;
+    const wishlistPrice = wishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
+    appElements.wishlistCount.textContent = `${wishlistCount} ${wishlistCount !== 1 ? 'ønsker' : 'ønske'}`;
+    appElements.wishlistPrice.textContent = `${wishlistPrice.toFixed(2).replace('.',',')} kr.`;
 }
 
 
@@ -147,7 +146,6 @@ function renderTodayOverviewWidget() {
         }
     }
     
-    // Placeholder for project task
     const firstProject = appState.projects.find(p => p.status !== 'completed');
     if(firstProject) {
         contentHTML += `<div class="overview-item"><span class="overview-item-label"><i class="fas fa-tasks"></i> Næste opgave</span> <span>${firstProject.title}</span></div>`;
@@ -184,7 +182,7 @@ function renderProjectsFocusWidget() {
 
 function renderBudgetWidget() {
     const monthlyBudget = appState.budget.monthlyAmount || 0;
-    const monthlySpent = calculateMonthlySpending();
+    const monthlySpent = 0; // Placeholder until calculation is implemented
 
     appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2).replace('.',',')} kr.`;
     appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2).replace('.',',')} kr.`;
@@ -250,31 +248,6 @@ function renderInventoryNotificationsWidget() {
         }
         return `<div class="${itemClass}"><span class="notification-text">${text}</span><button class="btn-icon" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`;
     }).join('');
-}
-
-function calculateMonthlySpending() {
-    let totalCost = 0;
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    for (const dateString in appState.mealPlan) {
-        const date = new Date(dateString);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            const dayPlan = appState.mealPlan[dateString];
-            for (const mealType in dayPlan) {
-                const mealArray = dayPlan[mealType];
-                if (Array.isArray(mealArray)) {
-                    mealArray.forEach(meal => {
-                        const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                        if (recipe) {
-                            totalCost += calculateRecipePrice(recipe, appState.inventory, meal.portions);
-                        }
-                    });
-                }
-            }
-        }
-    }
-    return totalCost;
 }
 
 function openEditBudgetModal() {
