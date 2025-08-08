@@ -64,6 +64,10 @@
                             <h3>Projekter i Fokus</h3>
                             <div id="projects-focus-content"></div>
                         </div>
+                        <div id="category-values-widget" class="dashboard-widget">
+                            <h3>Lagerværdi pr. Kategori</h3>
+                            <div id="category-values-content"></div>
+                        </div>
                     </div>
 
                     <!-- Højre Kolonne: Widgets & Hurtig Adgang -->
@@ -84,7 +88,7 @@
                                         <i class="fas fa-hammer"></i> Materialer
                                     </div>
                                      <div class="shopping-widget-content">
-                                        <span id="materials-count">0 varer</span>
+                                        <span id="materials-count">0 stk.</span>
                                         <span id="materials-price" class="widget-price">0,00 kr.</span>
                                     </div>
                                 </div>
@@ -210,8 +214,13 @@
                  <div class="actions-bar">
                     <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
                     <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
+                    <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
                 </div>
                 <div class="inventory-dashboard">
+                    <div class="inventory-summary-bar">
+                        <span>Total Lagerværdi:</span>
+                        <span id="inventory-total-value">0,00 kr.</span>
+                    </div>
                     <div class="inventory-controls">
                         <div class="search-bar">
                             <i class="fas fa-search"></i>
@@ -254,30 +263,7 @@
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
             <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
-            <a href="#" class="mobile-tab-link" data-panel="shopping-list"><i class="fas fa-cart-shopping"></i><span>Indkøb</span></a>
         </nav>
-
-        <div id="mobile-panel-overlay" class="mobile-panel-overlay hidden">
-            <div id="mobile-shopping-list-panel" class="mobile-panel">
-                <div class="mobile-panel-header">
-                    <h3>Indkøbsliste</h3>
-                    <button class="close-mobile-panel-btn">&times;</button>
-                </div>
-                <div class="sidebar-actions">
-                     <button id="generate-weekly-shopping-list-btn-mobile" class="btn btn-secondary" title="Fyld indkøbsliste baseret på denne uges madplan"><i class="fas fa-magic-wand-sparkles"></i> Fyld</button>
-                     <button id="clear-shopping-list-btn-mobile" class="btn btn-secondary" title="Ryd hele indkøbslisten"><i class="fas fa-trash"></i> Ryd</button>
-                     <button id="confirm-purchase-btn-mobile" class="btn btn-primary" title="Bekræft Indkøb og opdater varelager"><i class="fas fa-check"></i> Køb</button>
-                </div>
-                <div id="shopping-list-total-container-mobile" class="shopping-list-total"></div>
-                <div id="shopping-list-container-mobile" class="sidebar-content"></div>
-                <div class="add-item-form-container">
-                    <form id="add-shopping-item-form-mobile">
-                        <input type="text" id="add-shopping-item-name-mobile" placeholder="Tilføj vare..." required>
-                        <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
     
     <!-- MODALS -->
@@ -557,6 +543,61 @@
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
                     <button type="submit" class="btn btn-primary">Gem Batch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="impulse-purchase-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Hurtigt Køb</h3>
+            <p>Registrer et impulskøb direkte til dit varelager.</p>
+            <form id="impulse-purchase-form">
+                <div class="input-group">
+                    <label for="impulse-item-search">Søg efter vare</label>
+                    <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at finde en vare..." required>
+                    <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <input type="hidden" id="impulse-item-id">
+                
+                <div id="impulse-details-section" class="hidden">
+                    <div class="form-grid-3-col">
+                        <div class="input-group">
+                            <label>Antal</label>
+                            <input type="number" id="impulse-quantity" min="1" value="1" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Vægt/størrelse pr. enhed</label>
+                             <div class="unit-input-wrapper">
+                                <input type="number" id="impulse-size" min="0" step="any" required>
+                                <span id="impulse-size-unit"></span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Enhedstype</label>
+                            <input type="text" id="impulse-unit" required>
+                        </div>
+                    </div>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label>Pris (total)</label>
+                            <div class="price-input-wrapper">
+                                <input type="number" id="impulse-price" min="0" step="0.01">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Butik</label>
+                            <select id="impulse-store" required></select>
+                        </div>
+                    </div>
+                     <div class="input-group">
+                        <label>Udløbsdato (valgfri)</label>
+                        <input type="date" id="impulse-expiry-date">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-impulse-purchase-btn" disabled>Tilføj til Lager</button>
                 </div>
             </form>
         </div>
