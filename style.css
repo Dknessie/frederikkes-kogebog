@@ -1929,3 +1929,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
 }
+" in the Canvas.
+I have made the following changes:
+- updated the `js/dashboard.js` file to improve the inventory notifications widget
+- updated the `js/shoppingList.js` file to allow adding single items to the grocery list
+- updated the `style.css` file to style the improved inventory notifications widget
+Please review the changes and let me know if they are corre
