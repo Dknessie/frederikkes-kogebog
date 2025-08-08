@@ -8,7 +8,7 @@ import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
-// NEW: State for the "Add to Calendar" modal
+// State for the "Add to Calendar" modal
 let calendarEventState = {
     date: null,
     meal: null
@@ -37,7 +37,7 @@ export function initMealPlanner(state, elements) {
     });
     appElements.planMealForm.addEventListener('submit', handlePlanMealSubmit);
 
-    // NEW: Listeners for the "Add to Calendar" modal
+    // Listeners for the "Add to Calendar" modal
     appElements.calendarEventViewChooser.addEventListener('click', handleCalendarEventViewChoice);
     appElements.calendarRecipeSearch.addEventListener('input', debounce(e => populateCalendarRecipeList(e.target.value), 300));
     appElements.calendarRecipeList.addEventListener('click', handleCalendarRecipeSelect);
@@ -69,14 +69,20 @@ export function renderMealPlanner() {
         dayDiv.className = 'calendar-day';
         if (dateString === todayString) dayDiv.classList.add('is-today');
 
+        // UPDATED: Added add button to each slot, removed from day-container
         dayDiv.innerHTML = `
             <div class="calendar-day-header">${days[i]} <span class="date-number">${dayDate.getDate()}.</span></div>
             <div class="meal-slots">
-                <div class="meal-slot" data-date="${dateString}" data-meal="breakfast"></div>
-                <div class="meal-slot" data-date="${dateString}" data-meal="lunch"></div>
-                <div class="meal-slot" data-date="${dateString}" data-meal="dinner"></div>
+                <div class="meal-slot" data-date="${dateString}" data-meal="breakfast">
+                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="meal-slot" data-date="${dateString}" data-meal="lunch">
+                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
+                </div>
+                <div class="meal-slot" data-date="${dateString}" data-meal="dinner">
+                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
+                </div>
             </div>
-            <button class="add-event-to-day-btn" data-date="${dateString}"><i class="fas fa-plus"></i></button>
         `;
         fragment.appendChild(dayDiv);
     }
@@ -87,7 +93,9 @@ export function renderMealPlanner() {
 
 function populateCalendarWithData() {
     document.querySelectorAll('.meal-slot').forEach(slot => {
-        slot.innerHTML = ''; // Clear previous content
+        // Clear previous content, but keep the add button
+        slot.querySelectorAll('[data-event]').forEach(el => el.remove());
+
         const date = slot.dataset.date;
         const mealType = slot.dataset.meal;
         const events = appState.mealPlan[date]?.[mealType] || [];
@@ -101,7 +109,7 @@ function populateCalendarWithData() {
     });
 }
 
-// NEW: Create a div for any type of calendar event
+// Create a div for any type of calendar event
 function createEventDiv(eventData) {
     const eventDiv = document.createElement('div');
     eventDiv.dataset.event = JSON.stringify(eventData);
@@ -181,10 +189,11 @@ async function handleClearMealPlan() {
 async function handleCalendarClick(e) {
     const eventDiv = e.target.closest('[data-event]');
     
-    // NEW: Handle click on "add event" button
-    const addBtn = e.target.closest('.add-event-to-day-btn');
+    // UPDATED: Handle click on "add event" button inside a slot
+    const addBtn = e.target.closest('.add-event-to-slot-btn');
     if (addBtn) {
-        openAddCalendarEventModal(addBtn.dataset.date);
+        const slot = addBtn.closest('.meal-slot');
+        openAddCalendarEventModal(slot.dataset.date, slot.dataset.meal);
         return;
     }
 
@@ -333,7 +342,7 @@ function calculateRecipePrice(recipe, inventory, portionsOverride) {
 }
 
 
-// NEW: Functions for the "Add to Calendar" Modal
+// Functions for the "Add to Calendar" Modal
 
 function openAddCalendarEventModal(date, meal = 'dinner') {
     calendarEventState.date = date;
