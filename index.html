@@ -378,14 +378,11 @@
                         <input type="text" id="project-title" required>
                     </div>
                     <div class="input-group">
-                        <label for="project-category">Kategori</label>
-                        <select id="project-category">
-                            <option value="">Vælg kategori...</option>
-                            <option value="Renovering">Renovering</option>
-                            <option value="Vedligehold">Vedligehold</option>
-                            <option value="Havearbejde">Havearbejde</option>
-                            <option value="Rengøring">Rengøring</option>
-                            <option value="Andet">Andet</option>
+                        <label for="project-status">Status</label>
+                        <select id="project-status">
+                            <option value="Planlagt">Planlagt</option>
+                            <option value="Igangværende" selected>Igangværende</option>
+                            <option value="Afsluttet">Afsluttet</option>
                         </select>
                     </div>
                 </div>
@@ -782,6 +779,43 @@
                     <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
                 </div>
             </form>
+        </div>
+    </div>
+    <div id="add-calendar-event-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="calendar-event-modal-title">Tilføj til Kalender</h3>
+            <div id="calendar-event-view-chooser">
+                <p>Hvad vil du tilføje til denne dag?</p>
+                <div class="quick-actions-container">
+                    <button class="quick-action-btn" data-view="recipe"><i class="fas fa-utensils"></i><span>Madplan</span></button>
+                    <button class="quick-action-btn" data-view="project"><i class="fas fa-tasks"></i><span>Projektopgave</span></button>
+                    <button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Andet</span></button>
+                </div>
+            </div>
+            <div id="calendar-event-view-recipe" class="calendar-event-view hidden">
+                <h4>Vælg Opskrift</h4>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="calendar-recipe-search" placeholder="Søg i dine opskrifter...">
+                </div>
+                <ul id="calendar-recipe-list" class="selection-list"></ul>
+            </div>
+             <div id="calendar-event-view-project" class="calendar-event-view hidden">
+                <h4>Vælg Projekt</h4>
+                <ul id="calendar-project-list" class="selection-list"></ul>
+            </div>
+             <div id="calendar-event-view-task" class="calendar-event-view hidden">
+                <h4>Beskriv Opgave</h4>
+                <form id="calendar-task-form">
+                    <div class="input-group">
+                        <input type="text" id="calendar-task-name" placeholder="F.eks. Rengør ovn" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Tilføj Opgave</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     <div id="edit-budget-modal" class="modal-overlay hidden">
