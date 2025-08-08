@@ -16,7 +16,7 @@ let calendarEventState = {
 let calendarViewState = {
     currentView: 'week', // 'week' or 'month'
     draggedEventData: null,
-    dayDetailsDate: null // NEW: To store the date for the day details modal
+    dayDetailsDate: null 
 };
 
 export function initMealPlanner(state, elements) {
@@ -51,17 +51,18 @@ export function initMealPlanner(state, elements) {
     appElements.calendarTaskList.addEventListener('click', handleCalendarTaskSelect);
     appElements.calendarTaskForm.addEventListener('submit', handleCalendarTaskSubmit);
 
-    // NEW: Listeners for Day Details Modal
+    // Listeners for Day Details Modal
     if (appElements.dayDetailsModal) {
         appElements.dayDetailsModal.addEventListener('click', e => {
             const eventDiv = e.target.closest('[data-event]');
             if (eventDiv) {
                 const eventData = JSON.parse(eventDiv.dataset.event);
                 if (eventData.type === 'personal') {
+                    appElements.dayDetailsModal.classList.add('hidden'); // Close details before opening edit
                     openEventModal(null, eventData);
                 }
-                // Future: Could add logic to open recipe read view for recipe clicks
             } else if (e.target.closest('#day-details-add-event-btn')) {
+                appElements.dayDetailsModal.classList.add('hidden'); // Close details before opening new
                 openEventModal(calendarViewState.dayDetailsDate);
             }
         });
@@ -167,7 +168,7 @@ function populateWeekViewWithData() {
                 
                 if (event.isRecurring) {
                     const eventDateThisYear = new Date(event.date);
-                    eventDateThisYear.setFullYear(currentYear);
+                    eventDateThisYear.setFullYear(new Date(date).getFullYear());
                     return formatDate(eventDateThisYear) === date;
                 }
                 return event.date === date;
@@ -285,19 +286,26 @@ function createEventDiv(eventData) {
             eventDiv.draggable = false;
             eventDiv.classList.add(eventData.category.toLowerCase());
             content = eventData.title;
-            icon = `<i class="fas ${getIconForCategory(eventData.category)}"></i>`;
+            icon = `<i class="fas ${getIconForCategory(eventData)}"></i>`;
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div>`;
             break;
     }
     return eventDiv;
 }
 
-function getIconForCategory(category) {
-    switch (category) {
+function getIconForCategory(eventData) {
+    switch (eventData.category) {
         case 'To-do': return 'fa-check-square';
         case 'Aftale': return 'fa-calendar-check';
         case 'Fødselsdag': return 'fa-birthday-cake';
-        case 'Begivenhed': return 'fa-star';
+        case 'Udgivelse':
+            switch(eventData.subCategory) {
+                case 'Film': return 'fa-film';
+                case 'Bog': return 'fa-book-open';
+                case 'Spil': return 'fa-gamepad';
+                case 'Produkt': return 'fa-box';
+                default: return 'fa-star';
+            }
         default: return 'fa-info-circle';
     }
 }
@@ -350,7 +358,6 @@ async function handleCalendarClick(e) {
 
     const eventData = JSON.parse(eventDiv.dataset.event);
     
-    // NEW: Handle clicks on personal events in week view
     if (eventData.type === 'personal') {
         openEventModal(null, eventData);
         return;
@@ -379,7 +386,7 @@ async function handleMonthGridClick(e) {
     if (!dayCell) return;
 
     const date = dayCell.dataset.date;
-    calendarViewState.dayDetailsDate = date; // Store date for the "add" button
+    calendarViewState.dayDetailsDate = date; 
 
     const mealEventsToday = Object.values(appState.mealPlan[date] || {}).flat();
     const personalEventsToday = appState.events.filter(event => event.date === date && event.category !== 'To-do');
