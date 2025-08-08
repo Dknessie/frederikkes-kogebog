@@ -13,6 +13,11 @@
     --light-bg-color: #fdfdfd;
     --white-color: #ffffff;
     
+    /* NEW: Theme colors for calendar */
+    --theme-bg: #F5F5F1;
+    --theme-light-blue: #E3F2FD;
+    --theme-grey: #B0B0B0;
+
     /* Statusfarver */
     --status-green: #4CAF50;
     --status-yellow: #FFC107;
@@ -201,9 +206,10 @@ hr {
     color: var(--accent-color);
 }
 .btn-icon.remove-meal-btn {
-    font-size: 1rem;
-    width: 24px;
-    height: 24px;
+    font-size: 0.8rem;
+    width: 20px;
+    height: 20px;
+    color: #aaa;
 }
 .btn-icon.remove-meal-btn:hover {
     background-color: transparent;
@@ -291,175 +297,219 @@ header {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-/* ===== 5. Kalender Side ===== */
-.meal-planner-main {
+/* ===== 5. NEW CALENDAR DESIGN ===== */
+#calendar .page {
+    padding: 0; /* Remove default page padding */
+}
+.calendar-main-container {
+    background-color: var(--theme-bg);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--strong-shadow);
     display: flex;
     flex-direction: column;
-    background: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
-    overflow: hidden;
+    gap: var(--spacing-l);
 }
-
 .calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-m);
-}
-
-.calendar-title-container {
-    text-align: center;
-}
-.weekly-price-display {
-    font-size: var(--small-font-size);
-    color: #666;
-    font-weight: 600;
-}
-
-.calendar-actions {
-    display: flex;
-    justify-content: center;
+    flex-wrap: wrap;
     gap: var(--spacing-m);
-    margin-bottom: var(--spacing-m);
 }
+.calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+}
+.calendar-view-toggle {
+    display: flex;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+.calendar-view-toggle .btn {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+.calendar-view-toggle .btn.active {
+    background-color: var(--white-color);
+    box-shadow: var(--shadow);
+}
+.calendar-actions {
+    margin-left: auto;
+    display: flex;
+    gap: var(--spacing-m);
+}
+.calendar-view { display: none; }
+.calendar-view.active { display: block; }
 
+/* Week View */
+.calendar-week-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+    padding: 0 var(--spacing-s);
+}
+.calendar-week-day-header {
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-color);
+}
+.calendar-week-day-header .date-number {
+    font-size: var(--small-font-size);
+    color: #777;
+    margin-left: var(--spacing-s);
+}
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: var(--spacing-s);
-    flex-grow: 1;
+    gap: var(--spacing-m);
 }
-
-.calendar-day {
-    background-color: var(--light-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+.calendar-day-card {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    transition: background-color: 0.3s ease;
+    min-height: 400px;
 }
-
-.calendar-day.is-today {
-    background-color: #e8f5e9;
-    border-color: var(--accent-color);
+.calendar-day-card.is-today {
+    border: 2px solid var(--theme-light-blue);
 }
-.calendar-day.is-today .calendar-day-header {
-    color: var(--accent-color);
-    font-weight: 700;
-}
-
-.calendar-day-header {
-    padding: var(--spacing-s);
-    font-weight: 600;
-    border-bottom: 1px solid var(--border-color);
-    text-align: center;
-    font-size: var(--small-font-size);
-}
-
-.meal-slots {
-    flex-grow: 1;
-    display: grid;
-    grid-template-rows: 1fr 1fr 1fr;
-}
-
 .meal-slot {
+    flex: 1;
     padding: var(--spacing-s);
-    border-bottom: 1px dashed #eee;
-    transition: background-color 0.2s ease;
-    overflow-y: auto;
-    min-height: 40px;
+    border-bottom: 1px dashed var(--border-color);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
-    position: relative; /* For positioning the add button */
+    gap: var(--spacing-s);
+    position: relative;
 }
-.meal-slot:last-child { border-bottom: none; }
-.meal-slot.drag-over { background-color: #d1e7dd; }
-
-/* UPDATED: Styling for the new add button in calendar slots */
-.meal-slot .add-event-to-slot-btn {
+.meal-slot:last-child {
+    border-bottom: none;
+}
+.meal-slot.drag-over {
+    background-color: var(--theme-light-blue);
+}
+.add-event-to-slot-btn {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--border-color);
-    color: var(--primary-color);
     border-radius: 50%;
     width: 32px;
     height: 32px;
-    font-size: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+    transition: all 0.2s ease;
 }
 .meal-slot:hover .add-event-to-slot-btn {
     opacity: 1;
 }
-.meal-slot .add-event-to-slot-btn:hover {
+.add-event-to-slot-btn:hover {
     transform: translate(-50%, -50%) scale(1.1);
+    background-color: var(--white-color);
 }
 
-
-.planned-recipe, .planned-project, .planned-task {
+.calendar-event {
     padding: var(--spacing-s);
-    border-radius: 4px;
-    font-size: 0.8rem;
+    border-radius: var(--border-radius);
+    font-size: var(--small-font-size);
     cursor: grab;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: var(--spacing-s);
+    border-left: 4px solid;
+    background-color: var(--light-bg-color);
 }
-.planned-recipe:active, .planned-project:active, .planned-task:active { cursor: grabbing; }
-
-.planned-recipe {
-    background-color: var(--secondary-color);
-    border-left: 3px solid var(--primary-color);
+.calendar-event.is-dragging {
+    opacity: 0.5;
 }
-.planned-project {
-    background-color: #e3f2fd;
-    border-left: 3px solid #2196F3;
+.calendar-event .event-content {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.planned-task {
-    background-color: #f3e5f5;
-    border-left: 3px solid #9C27B0;
+.calendar-event .event-actions {
+    display: flex;
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
-
-.planned-recipe.is-cooked {
-    background-color: #e0e0e0;
-    border-left-color: var(--status-green);
-    opacity: 0.7;
+.calendar-event:hover .event-actions {
+    opacity: 1;
 }
-.planned-recipe.is-cooked span {
+.calendar-event.recipe { border-color: var(--primary-color); }
+.calendar-event.project { border-color: var(--accent-color); }
+.calendar-event.task { border-color: var(--theme-grey); }
+.calendar-event.is-cooked {
+    opacity: 0.6;
     text-decoration: line-through;
 }
 
-.planned-recipe.deleted, .planned-project.deleted, .planned-task.deleted {
-    border-left-color: var(--deleted-color);
-    color: var(--deleted-color);
-    font-style: italic;
-    cursor: not-allowed;
+/* Month View */
+.calendar-month-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: var(--spacing-m);
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--border-color);
 }
-
-.planned-recipe-actions {
+.calendar-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-s);
+}
+.calendar-month-day {
+    background-color: var(--white-color);
+    border-radius: var(--border-radius);
+    min-height: 100px;
+    padding: var(--spacing-s);
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+}
+.calendar-month-day:hover {
+    box-shadow: var(--strong-shadow);
+}
+.calendar-month-day.is-today .month-day-number {
+    background-color: var(--theme-light-blue);
+    color: var(--text-color);
+    border-radius: 50%;
+}
+.month-day-number {
+    font-weight: 600;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    justify-content: center;
 }
-.planned-recipe:hover .planned-recipe-actions {
-    opacity: 1;
+.event-dots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: var(--spacing-s);
 }
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.event-dot.recipe { background-color: var(--primary-color); }
+.event-dot.project { background-color: var(--accent-color); }
+.event-dot.task { background-color: var(--theme-grey); }
 
-.cook-meal-btn { color: var(--accent-color); }
-.cook-meal-btn:hover { color: #3a5a40; }
 
 /* ===== 6. Indkøbsliste Modal & Temaer ===== */
 .shopping-list-header {
@@ -730,26 +780,6 @@ header {
     min-width: 250px;
     max-width: 400px;
 }
-
-/* UPDATED: Search bar styling */
-.search-bar {
-    position: relative;
-}
-.search-bar i {
-    position: absolute;
-    right: var(--spacing-m); /* Move icon to the right */
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-}
-.search-bar input {
-    width: 100%;
-    padding: var(--spacing-m);
-    padding-right: calc(var(--spacing-m) * 2 + 1em); /* Add padding to the right for the icon */
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-
 
 .inventory-filters {
     display: grid;
@@ -1323,7 +1353,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1337,9 +1367,11 @@ header {
     overflow-y: auto;
     position: relative;
 }
-/* UPDATED: Increased max-width for large modal */
 .modal-content.large {
     max-width: 1100px;
+}
+.modal-content.small {
+    max-width: 450px;
 }
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
@@ -1349,7 +1381,6 @@ header {
 #impulse-purchase-modal .modal-content {
     max-width: 550px;
 }
-/* UPDATED: Increased max-width for calendar event modal */
 #add-calendar-event-modal .modal-content {
     max-width: 650px;
 }
@@ -1390,20 +1421,6 @@ header {
 }
 .input-group input.hidden {
     margin-top: var(--spacing-s);
-}
-.input-group.with-icon {
-    position: relative;
-}
-.input-group.with-icon i {
-    position: absolute;
-    left: var(--spacing-m);
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    pointer-events: none;
-}
-.input-group.with-icon input {
-    padding-left: calc(var(--spacing-m) * 2 + 1em);
 }
 
 .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
@@ -1819,7 +1836,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     header {
         padding: 0 var(--spacing-m);
     }
-    .calendar-day-header .date-number {
+    .calendar-week-day-header .date-number {
         display: block;
     }
     .inventory-filters {
