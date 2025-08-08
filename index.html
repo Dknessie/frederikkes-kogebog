@@ -144,13 +144,14 @@
                 </div>
             </section>
             
-            <!-- UPDATED CALENDAR STRUCTURE -->
             <section id="calendar" class="page hidden">
                 <div class="calendar-main-container">
                     <div class="calendar-header">
                         <div class="calendar-nav">
                             <button id="prev-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <h2 id="calendar-title"></h2>
+                            <div class="calendar-title-wrapper">
+                                <h2 id="calendar-title"></h2>
+                            </div>
                             <button id="next-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="calendar-view-toggle">
@@ -288,7 +289,6 @@
     </div>
     
     <!-- MODALS -->
-    <!-- NEW: Event Modal -->
     <div id="event-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -357,6 +357,9 @@
             <button class="close-modal-btn">&times;</button>
             <h3 id="day-details-title"></h3>
             <div id="day-details-content"></div>
+            <div class="form-actions">
+                <button id="day-details-add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Begivenhed</button>
+            </div>
         </div>
     </div>
     <div id="shopping-list-modal" class="modal-overlay hidden">
