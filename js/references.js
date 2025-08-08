@@ -17,6 +17,7 @@ export function initReferences(state, elements) {
 
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
+    // NEW: Added maintenanceTasks to the reference data object
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier',
@@ -33,15 +34,21 @@ export function renderReferencesPage() {
             items: appState.references.rooms || [],
             isSimpleList: true
         },
-        standardUnits: {
-            title: 'Standardenheder',
-            items: appState.references.standardUnits || [],
-            isSimpleList: true
-        },
         stores: {
             title: 'Butikker',
             items: appState.references.stores || [],
             isSimpleList: true
+        },
+        maintenanceTasks: {
+            title: 'Vedligeholdelsesopgaver',
+            items: appState.references.maintenanceTasks || [],
+            isSimpleList: true
+        },
+        standardUnits: {
+            title: 'Standardenheder',
+            items: appState.references.standardUnits || [],
+            isSimpleList: true,
+            isReadOnly: true // Example of a read-only list
         }
     };
 
@@ -55,25 +62,27 @@ export function renderReferencesPage() {
             const listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
                 <li class="reference-item" data-value="${item}">
                     <span class="reference-name">${item}</span>
+                    ${!data.isReadOnly ? `
                     <div class="reference-actions">
                         <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
-                    </div>
+                    </div>` : ''}
                 </li>
             `).join('');
             card.innerHTML = `
                 <h4>${data.title}</h4>
                 <ul class="reference-list">${listItemsHTML}</ul>
+                ${!data.isReadOnly ? `
                 <form class="add-reference-form">
                     <div class="input-group">
                         <input type="text" placeholder="Tilføj ny..." required>
                     </div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-                </form>
+                </form>` : '<p class="small-text">Denne liste administreres af systemet.</p>'}
             `;
         } else if (data.isHierarchical) {
             const listItemsHTML = (data.items || [])
-                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat)) // **FIX: Handle old string format**
+                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat)) // Handle old string format
                 .sort((a,b) => a.name.localeCompare(b.name))
                 .map(cat => `
                 <li class="category-item" data-value="${cat.name}">
@@ -177,7 +186,7 @@ async function addSimpleReference(key, value) {
         return;
     }
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { [key]: arrayUnion(value) });
+    await setDoc(ref, { [key]: arrayUnion(value) }, { merge: true });
 }
 
 async function addMainCategory(name) {
@@ -187,16 +196,16 @@ async function addMainCategory(name) {
         return;
     }
     const newCategory = { name: name, subcategories: [] };
-    categories.push(newCategory);
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { itemCategories: categories });
+    await updateDoc(ref, { itemCategories: arrayUnion(newCategory) });
 }
 
 async function addSubCategory(mainCategoryName, subCategoryName) {
     const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = categories.find(cat => cat.name === mainCategoryName);
-    if (!mainCat) return;
+    const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
+    if (mainCatIndex === -1) return;
 
+    const mainCat = categories[mainCatIndex];
     if ((mainCat.subcategories || []).some(sub => sub.toLowerCase() === subCategoryName.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Underkategorien "${subCategoryName}" findes allerede.`});
         return;
@@ -204,13 +213,17 @@ async function addSubCategory(mainCategoryName, subCategoryName) {
     
     if (!mainCat.subcategories) mainCat.subcategories = [];
     mainCat.subcategories.push(subCategoryName);
+    
     const ref = doc(db, 'references', appState.currentUser.uid);
     await updateDoc(ref, { itemCategories: categories });
 }
 
 async function deleteSubCategory(mainCategoryName, subCategoryName) {
     const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = categories.find(cat => cat.name === mainCategoryName);
+    const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
+    if (mainCatIndex === -1) return;
+
+    const mainCat = categories[mainCatIndex];
     if (!mainCat || !mainCat.subcategories) return;
 
     mainCat.subcategories = mainCat.subcategories.filter(sub => sub !== subCategoryName);
@@ -227,10 +240,12 @@ async function deleteReferenceItem(key, value) {
     const ref = doc(db, 'references', appState.currentUser.uid);
     
     if (key === 'itemCategories') {
-        const updatedCategories = (appState.references.itemCategories || [])
-            .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
-            .filter(cat => cat.name !== value);
-        await updateDoc(ref, { itemCategories: updatedCategories });
+        const categoryToDelete = (appState.references.itemCategories || [])
+            .find(cat => (typeof cat === 'object' ? cat.name : cat) === value);
+        
+        if (categoryToDelete) {
+            await updateDoc(ref, { itemCategories: arrayRemove(categoryToDelete) });
+        }
     } else {
         await updateDoc(ref, { [key]: arrayRemove(value) });
     }
