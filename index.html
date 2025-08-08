@@ -57,9 +57,13 @@
                             <h2 id="welcome-title">Velkommen</h2>
                             <p id="welcome-summary">Laster data...</p>
                         </div>
-                        <div id="today-overview-widget" class="dashboard-widget">
-                            <h3>Dagens Overblik</h3>
-                            <div id="today-overview-content"></div>
+                        <!-- NEW: Timeline Widget -->
+                        <div id="timeline-widget" class="dashboard-widget">
+                            <div class="widget-header">
+                                <h3>Min Tidslinje</h3>
+                                <button id="add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
+                            </div>
+                            <div id="timeline-content"></div>
                         </div>
                         <div id="projects-focus-widget" class="dashboard-widget">
                             <h3>Projekter i Fokus</h3>
@@ -284,6 +288,42 @@
     </div>
     
     <!-- MODALS -->
+    <!-- NEW: Event Modal -->
+    <div id="event-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="event-modal-title">Tilføj Begivenhed</h3>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <div class="input-group">
+                    <label for="event-title">Titel</label>
+                    <input type="text" id="event-title" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="event-date">Dato</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="event-type">Kategori</label>
+                        <select id="event-type" required>
+                            <option value="">Vælg type...</option>
+                            <option value="To-do">To-do</option>
+                            <option value="Aftale">Aftale</option>
+                            <option value="Fødselsdag">Fødselsdag</option>
+                            <option value="Begivenhed">Begivenhed</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="event-type-specific-fields">
+                    <!-- Dynamic fields based on type will be inserted here -->
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div id="maintenance-log-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
