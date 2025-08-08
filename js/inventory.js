@@ -108,8 +108,10 @@ export function initInventory(state, elements) {
     if(batchEditForm) batchEditForm.addEventListener('submit', handleSaveBatch);
     if(deleteBatchBtn) deleteBatchBtn.addEventListener('click', handleDeleteBatch);
     if (batchEditModal) {
-        batchEditModal.querySelector('.close-modal-btn').addEventListener('click', () => {
-            onBatchSaveSuccessCallback = null; // Reset callback if modal is closed manually
+        batchEditModal.addEventListener('click', (e) => {
+            if (e.target.matches('.modal-overlay') || e.target.matches('.close-modal-btn')) {
+                onBatchSaveSuccessCallback = null; // Reset callback if modal is closed manually
+            }
         });
     }
 
@@ -120,6 +122,10 @@ export function initInventory(state, elements) {
             populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), mainCategorySelect.value);
         });
     }
+
+    // Impulse Purchase
+    appElements.impulsePurchaseBtn.addEventListener('click', openImpulsePurchaseModal);
+    appElements.impulsePurchaseForm.addEventListener('submit', handleSaveImpulsePurchase);
 }
 
 export function setReferencesLoaded(isLoaded) {
@@ -152,6 +158,13 @@ export function renderInventory() {
     populateSubCategoryFilter();
 
     let inventoryItems = [...appState.inventory];
+    let totalValue = 0;
+    inventoryItems.forEach(item => {
+        item.batches.forEach(batch => {
+            totalValue += batch.price || 0;
+        });
+    });
+    document.getElementById('inventory-total-value').textContent = `${totalValue.toFixed(2).replace('.',',')} kr.`;
 
     // Apply filters
     if (inventoryState.selectedMainCategory) {
@@ -246,7 +259,10 @@ export function renderInventory() {
                 <div class="inventory-item-info">
                     <div class="inventory-item-title-group">
                         <span class="completeness-indicator status-indicator ${stockStatusClass}" title="Lagerstatus"></span>
-                        <h5>${item.name}</h5>
+                        <div>
+                            <h5>${item.name}</h5>
+                            <div class="inventory-item-location">${item.location || ''}</div>
+                        </div>
                     </div>
                 </div>
                 <div class="inventory-item-stock-info">
@@ -414,7 +430,8 @@ export function openBatchModal(itemId, batchId, onSaveSuccess) {
     const batch = batchId ? appState.inventoryBatches.find(b => b.id === batchId) : null;
 
     document.getElementById('batch-edit-item-id').value = itemId;
-    document.getElementById('batch-edit-unit').value = item.defaultUnit || 'g';
+    document.getElementById('batch-edit-unit').value = item.defaultUnit || 'stk';
+    document.getElementById('batch-edit-size-unit').textContent = item.defaultUnit || 'stk';
     
     const modal = document.getElementById('batch-edit-modal');
     if (batch) {
@@ -470,8 +487,8 @@ async function handleSaveBatch(e) {
 
         if (onBatchSaveSuccessCallback) {
             onBatchSaveSuccessCallback(itemId);
-            onBatchSaveSuccessCallback = null; // Reset callback
         }
+        onBatchSaveSuccessCallback = null; // Reset callback
     } catch (error) {
         handleError(error, "Batchet kunne ikke gemmes.", "handleSaveBatch");
     }
@@ -540,4 +557,88 @@ function addConversionRuleRow(rule = { unit: '', value: '' }) {
     `;
     row.querySelector('.input-group:nth-child(2)').appendChild(unitSelect);
     container.appendChild(row);
+}
+
+// Impulse Purchase Functions
+function openImpulsePurchaseModal() {
+    const form = appElements.impulsePurchaseForm;
+    form.reset();
+    document.getElementById('impulse-details-section').classList.add('hidden');
+    document.getElementById('save-impulse-purchase-btn').disabled = true;
+    document.getElementById('impulse-item-suggestions').innerHTML = '';
+    
+    const searchInput = document.getElementById('impulse-item-search');
+    searchInput.addEventListener('input', handleImpulseSearch);
+    searchInput.addEventListener('blur', () => {
+        setTimeout(() => document.getElementById('impulse-item-suggestions').innerHTML = '', 200);
+    });
+
+    appElements.impulsePurchaseModal.classList.remove('hidden');
+}
+
+function handleImpulseSearch(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const suggestionsContainer = document.getElementById('impulse-item-suggestions');
+    suggestionsContainer.innerHTML = '';
+    if (searchTerm.length < 2) return;
+
+    const suggestions = appState.inventoryItems
+        .filter(item => item.name.toLowerCase().includes(searchTerm))
+        .slice(0, 5);
+
+    suggestions.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-suggestion';
+        div.textContent = item.name;
+        div.addEventListener('click', () => selectImpulseItem(item));
+        suggestionsContainer.appendChild(div);
+    });
+}
+
+function selectImpulseItem(item) {
+    document.getElementById('impulse-item-search').value = item.name;
+    document.getElementById('impulse-item-id').value = item.id;
+    document.getElementById('impulse-item-suggestions').innerHTML = '';
+    
+    document.getElementById('impulse-size-unit').textContent = item.defaultUnit || 'stk';
+    document.getElementById('impulse-unit').value = item.defaultUnit || 'stk';
+
+    populateReferenceDropdown(document.getElementById('impulse-store'), appState.references.stores, 'Vælg butik...');
+
+    document.getElementById('impulse-details-section').classList.remove('hidden');
+    document.getElementById('save-impulse-purchase-btn').disabled = false;
+}
+
+async function handleSaveImpulsePurchase(e) {
+    e.preventDefault();
+    const itemId = document.getElementById('impulse-item-id').value;
+    if (!itemId) {
+        showNotification({title: "Ingen vare valgt", message: "Søg venligst og vælg en vare fra listen."});
+        return;
+    }
+
+    const batchData = {
+        itemId: itemId,
+        userId: appState.currentUser.uid,
+        purchaseDate: formatDate(new Date()),
+        expiryDate: document.getElementById('impulse-expiry-date').value || null,
+        quantity: Number(document.getElementById('impulse-quantity').value),
+        size: Number(document.getElementById('impulse-size').value),
+        unit: document.getElementById('impulse-unit').value,
+        price: Number(document.getElementById('impulse-price').value) || null,
+        store: document.getElementById('impulse-store').value,
+    };
+
+    if (!batchData.purchaseDate || batchData.quantity <= 0 || batchData.size <= 0 || !batchData.store) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Sørg for at antal, størrelse og butik er udfyldt korrekt."});
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'inventory_batches'), batchData);
+        appElements.impulsePurchaseModal.classList.add('hidden');
+        showNotification({title: "Køb Registreret", message: "Dit hurtige køb er blevet tilføjet til varelageret."});
+    } catch (error) {
+        handleError(error, "Kunne ikke gemme hurtigt køb.", "handleSaveImpulsePurchase");
+    }
 }
