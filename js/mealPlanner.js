@@ -25,9 +25,9 @@ export function initMealPlanner(state, elements) {
     appElements.weekViewBtn.addEventListener('click', () => switchCalendarView('week'));
     appElements.monthViewBtn.addEventListener('click', () => switchCalendarView('month'));
 
-    // Navigation
-    appElements.prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
-    appElements.nextMonthBtn.addEventListener('click', () => navigateMonth(1));
+    // UPDATED: Navigation now handles both week and month
+    appElements.prevPeriodBtn.addEventListener('click', () => navigateCalendarPeriod(-1));
+    appElements.nextPeriodBtn.addEventListener('click', () => navigateCalendarPeriod(1));
 
     // Main Actions
     appElements.clearMealPlanBtn.addEventListener('click', handleClearMealPlan);
@@ -65,19 +65,25 @@ function switchCalendarView(view) {
     renderMealPlanner();
 }
 
-function navigateMonth(direction) {
-    appState.currentDate.setMonth(appState.currentDate.getMonth() + direction, 1); // Go to the 1st to avoid day overflow issues
+// NEW: Combined navigation function for week and month
+function navigateCalendarPeriod(direction) {
+    if (calendarViewState.currentView === 'week') {
+        appState.currentDate.setDate(appState.currentDate.getDate() + (7 * direction));
+    } else {
+        appState.currentDate.setMonth(appState.currentDate.getMonth() + direction, 1);
+    }
     renderMealPlanner();
 }
 
 export function renderMealPlanner() {
     if (!appState.recipes || !appState.inventory) return;
-
-    appElements.calendarTitle.textContent = appState.currentDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
     
     if (calendarViewState.currentView === 'week') {
+        const startOfWeek = getStartOfWeek(appState.currentDate);
+        appElements.calendarTitle.textContent = `Uge ${getWeekNumber(startOfWeek)}, ${startOfWeek.getFullYear()}`;
         renderWeekView();
     } else {
+        appElements.calendarTitle.textContent = appState.currentDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
         renderMonthView();
     }
 }
@@ -414,7 +420,8 @@ function openAddCalendarEventModal(date, meal = 'dinner') {
     calendarEventState.date = date;
     calendarEventState.meal = meal;
 
-    appElements.calendarEventModalTitle.textContent = `Tilføj til ${new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric' })} (${meal})`;
+    const mealName = { breakfast: 'morgenmad', lunch: 'frokost', dinner: 'aftensmad'}[meal];
+    appElements.calendarEventModalTitle.textContent = `Tilføj til ${new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric' })} (${mealName})`;
     
     appElements.calendarEventViewChooser.classList.remove('hidden');
     appElements.calendarEventViews.forEach(view => view.classList.add('hidden'));
