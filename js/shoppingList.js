@@ -12,12 +12,7 @@ let currentListType = 'groceries'; // To track which list is open in the modal
 
 export function initShoppingList(state, elements) {
     appState = state;
-    appElements = {
-        ...elements,
-        shoppingListModal: document.getElementById('shopping-list-modal'),
-        shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
-        shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
-    };
+    appElements = elements;
 
     appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
     
@@ -204,7 +199,7 @@ function getModalFooter(isWishlist = false) {
 
 
 async function updateShoppingListInFirestore(listType, newList) {
-    if (!appState.currentUser) return;
+    if (!appState.currentUser || listType !== 'groceries') return;
     try {
         const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
         await setDoc(shoppingListRef, { [listType]: newList }, { merge: true });
@@ -301,6 +296,10 @@ async function generateGroceriesList() {
 
 
 async function handleClearShoppingList() {
+    if (currentListType !== 'groceries') {
+        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde (Projekter eller Rum)."})
+        return;
+    }
     const confirmed = await showNotification({
         title: "Ryd Indkøbsliste",
         message: `Er du sikker på, at du vil slette alle varer fra listen "${appElements.shoppingListModalTitle.textContent}"?`,
@@ -313,7 +312,11 @@ async function handleClearShoppingList() {
 }
 
 async function handleAddShoppingItem(itemName) {
-    const list = appState.shoppingLists[currentListType] || {};
+    if (currentListType !== 'groceries') {
+        showNotification({title: "Handling ikke tilladt", message: "Varer til denne liste tilføjes automatisk fra Projekter eller Rum."});
+        return;
+    }
+    const list = appState.shoppingLists.groceries || {};
     const updatedList = { ...list };
     const key = itemName.toLowerCase();
 
@@ -346,18 +349,22 @@ async function handleAddShoppingItem(itemName) {
     }
     
     updatedList[key] = newItem;
-    await updateShoppingListInFirestore(currentListType, updatedList);
+    await updateShoppingListInFirestore('groceries', updatedList);
     renderListInModal(); // Immediate UI update
 }
 
 
 async function handleRemoveShoppingItem(itemName) {
-    const list = appState.shoppingLists[currentListType] || {};
+    if (currentListType !== 'groceries') {
+        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde (Projekter eller Rum)."})
+        return;
+    }
+    const list = appState.shoppingLists.groceries || {};
     const updatedList = { ...list };
     const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
     if(keyToDelete) {
         delete updatedList[keyToDelete];
-        await updateShoppingListInFirestore(currentListType, updatedList);
+        await updateShoppingListInFirestore('groceries', updatedList);
         renderListInModal(); // Immediate UI update
     }
 }
@@ -382,29 +389,17 @@ async function handleConfirmPurchase() {
 async function processItemsSequentially(items) {
     for (const item of items) {
         const wasHandled = await new Promise(async (resolve) => {
+            const onSaveSuccess = () => {
+                handleRemoveShoppingItem(item.name);
+                resolve(true); // Mark as handled
+            };
+            
+            const onCancel = () => {
+                resolve(false); // Mark as not handled
+            };
+
             if (item.itemId) {
-                // This function will be called ONLY if a batch is saved
-                const onSaveSuccess = (savedItemId) => {
-                    const itemToRemove = appState.inventory.find(i => i.id === savedItemId);
-                    if (itemToRemove) {
-                        handleRemoveShoppingItem(itemToRemove.name); // This will update Firestore and re-render
-                    }
-                    resolve(true); // Mark as handled
-                };
-                openBatchModal(item.itemId, null, onSaveSuccess);
-
-                // We need to know if the user just closes the modal
-                const modal = document.getElementById('batch-edit-modal');
-                const observer = new MutationObserver((mutations) => {
-                    for (let mutation of mutations) {
-                        if (mutation.attributeName === 'class' && modal.classList.contains('hidden')) {
-                            resolve(false); // User closed the modal without saving
-                            observer.disconnect();
-                        }
-                    }
-                });
-                observer.observe(modal, { attributes: true });
-
+                openBatchModal(item.itemId, null, onSaveSuccess, onCancel);
             } else {
                 const createNew = await showNotification({
                     title: "Ny Vare",
@@ -414,13 +409,11 @@ async function processItemsSequentially(items) {
                 if (createNew) {
                     appElements.shoppingListModal.classList.add('hidden');
                     document.getElementById('add-inventory-item-btn').click();
-                    // Pre-fill name if possible in a future update
                 }
-                resolve(false); // Not handled in this loop, user needs to create item first
+                resolve(false); 
             }
         });
 
-        // If user cancelled the batch modal for an item, we stop the whole process
         if (!wasHandled) {
             showNotification({ title: "Annulleret", message: "Processen blev afbrudt. Resterende varer er ikke blevet behandlet." });
             return; // Exit the loop
