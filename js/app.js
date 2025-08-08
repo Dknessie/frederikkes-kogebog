@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         projects: [],
         rooms: [],
-        references: {},
+        references: {
+            maintenanceTasks: [] // NEW: Add maintenance tasks to references
+        },
         preferences: {},
         mealPlan: {},
         shoppingLists: {
@@ -128,7 +130,19 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
         mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
+        
+        // NEW: Calendar Event Modal Elements
         addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
+        calendarEventModalTitle: document.getElementById('calendar-event-modal-title'),
+        calendarEventViewChooser: document.getElementById('calendar-event-view-chooser'),
+        calendarEventViews: document.querySelectorAll('.calendar-event-view'),
+        calendarRecipeSearch: document.getElementById('calendar-recipe-search'),
+        calendarRecipeList: document.getElementById('calendar-recipe-list'),
+        calendarProjectList: document.getElementById('calendar-project-list'),
+        calendarTaskSearch: document.getElementById('calendar-task-search'),
+        calendarTaskList: document.getElementById('calendar-task-list'),
+        calendarTaskForm: document.getElementById('calendar-task-form'),
+
 
         // References
         referencesContainer: document.getElementById('references-container'),
