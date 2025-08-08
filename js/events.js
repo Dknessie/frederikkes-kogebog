@@ -18,13 +18,13 @@ export function initEvents(state, elements) {
     appElements = {
         ...elements,
         eventModal: document.getElementById('event-modal'),
-        eventForm: document.getElementById('event-form'),
         eventModalTitle: document.getElementById('event-modal-title'),
         eventTypeSpecificFields: document.getElementById('event-type-specific-fields'),
         eventTypeSelect: document.getElementById('event-type'),
         eventTitleGroup: document.getElementById('event-title-group'),
     };
 
+    // The eventForm is now passed directly from the central elements cache
     if (appElements.eventForm) {
         appElements.eventForm.addEventListener('submit', handleSaveEvent);
     }
@@ -145,7 +145,6 @@ async function handleSaveEvent(e) {
         date: document.getElementById('event-date').value,
         category: category,
         userId: appState.currentUser.uid,
-        // Set default values, will be overwritten by specific types
         title: document.getElementById('event-title').value.trim(),
         isRecurring: false,
         isComplete: false,
