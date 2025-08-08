@@ -5,6 +5,7 @@ import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemov
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, debounce } from './utils.js';
 import { confirmAndDeductIngredients } from './kitchenCounter.js';
+import { openEventModal } from './events.js'; // NEW: Import event modal
 
 let appState;
 let appElements;
@@ -113,6 +114,9 @@ function renderWeekView() {
         }
 
         dayCard.innerHTML = `
+            <div class="meal-slot" data-date="${formatDate(dayDate)}" data-meal="events">
+                 <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
+            </div>
             <div class="meal-slot" data-date="${formatDate(dayDate)}" data-meal="breakfast">
                  <button class="add-event-to-slot-btn" title="Tilføj til morgenmad"><i class="fas fa-plus"></i></button>
             </div>
@@ -134,11 +138,34 @@ function populateWeekViewWithData() {
 
         const date = slot.dataset.date;
         const mealType = slot.dataset.meal;
-        const events = appState.mealPlan[date]?.[mealType] || [];
 
-        if (Array.isArray(events)) {
-            events.forEach(eventData => {
+        // Populate meals
+        const mealEvents = appState.mealPlan[date]?.[mealType] || [];
+        if (Array.isArray(mealEvents)) {
+            mealEvents.forEach(eventData => {
                 const eventDiv = createEventDiv(eventData);
+                slot.appendChild(eventDiv);
+            });
+        }
+
+        // NEW: Populate personal events into the top slot
+        if (mealType === 'events') {
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            const personalEvents = appState.events.filter(event => {
+                // Filter out To-do's from calendar view
+                if (event.category === 'To-do') return false;
+                
+                if (event.isRecurring) {
+                    const eventDateThisYear = new Date(event.date);
+                    eventDateThisYear.setFullYear(currentYear);
+                    return formatDate(eventDateThisYear) === date;
+                }
+                return event.date === date;
+            });
+
+            personalEvents.forEach(eventData => {
+                const eventDiv = createEventDiv({ ...eventData, type: 'personal' });
                 slot.appendChild(eventDiv);
             });
         }
@@ -183,8 +210,13 @@ function renderMonthView() {
             dayCell.classList.add('is-today');
         }
 
-        const eventsToday = Object.values(appState.mealPlan[dateString] || {}).flat();
-        const eventDots = eventsToday.map(event => `<div class="event-dot ${event.type}"></div>`).join('');
+        const mealEventsToday = Object.values(appState.mealPlan[dateString] || {}).flat();
+        const personalEventsToday = appState.events.filter(event => event.date === dateString && event.category !== 'To-do');
+
+        const eventDots = [
+            ...mealEventsToday.map(event => `<div class="event-dot recipe"></div>`),
+            ...personalEventsToday.map(event => `<div class="event-dot ${event.category.toLowerCase()}"></div>`)
+        ].join('');
 
         dayCell.innerHTML = `
             <div class="month-day-number">${day}</div>
@@ -238,8 +270,26 @@ function createEventDiv(eventData) {
             icon = `<i class="fas fa-broom"></i>`;
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
+
+        case 'personal': // NEW: Handle personal events
+            eventDiv.classList.add(eventData.category.toLowerCase());
+            content = eventData.title;
+            icon = `<i class="fas ${getIconForCategory(eventData.category)}"></i>`;
+            eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div>`;
+            eventDiv.draggable = false; // Personal events are not draggable for now
+            break;
     }
     return eventDiv;
+}
+
+function getIconForCategory(category) {
+    switch (category) {
+        case 'To-do': return 'fa-check-square';
+        case 'Aftale': return 'fa-calendar-check';
+        case 'Fødselsdag': return 'fa-birthday-cake';
+        case 'Begivenhed': return 'fa-star';
+        default: return 'fa-info-circle';
+    }
 }
 
 
@@ -278,7 +328,11 @@ async function handleCalendarClick(e) {
     const addBtn = e.target.closest('.add-event-to-slot-btn');
     if (addBtn) {
         const slot = addBtn.closest('.meal-slot');
-        openAddCalendarEventModal(slot.dataset.date, slot.dataset.meal);
+        if (slot.dataset.meal === 'events') {
+            openEventModal(slot.dataset.date);
+        } else {
+            openAddCalendarEventModal(slot.dataset.date, slot.dataset.meal);
+        }
         return;
     }
 
