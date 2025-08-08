@@ -1,34 +1,45 @@
 // js/mealPlanner.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, debounce } from './utils.js';
 import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
-// State for the "Add to Calendar" modal
 let calendarEventState = {
     date: null,
     meal: null
+};
+let calendarViewState = {
+    currentView: 'week', // 'week' or 'month'
+    draggedEventData: null
 };
 
 export function initMealPlanner(state, elements) {
     appState = state;
     appElements = elements;
 
+    // View Toggle
+    appElements.weekViewBtn.addEventListener('click', () => switchCalendarView('week'));
+    appElements.monthViewBtn.addEventListener('click', () => switchCalendarView('month'));
+
+    // Navigation
+    appElements.prevMonthBtn.addEventListener('click', () => navigateMonth(-1));
+    appElements.nextMonthBtn.addEventListener('click', () => navigateMonth(1));
+
+    // Main Actions
     appElements.clearMealPlanBtn.addEventListener('click', handleClearMealPlan);
-    appElements.prevWeekBtn.addEventListener('click', () => {
-        appState.currentDate.setDate(appState.currentDate.getDate() - 7);
-        renderMealPlanner();
-    });
-    appElements.nextWeekBtn.addEventListener('click', () => {
-        appState.currentDate.setDate(appState.currentDate.getDate() + 7);
-        renderMealPlanner();
-    });
+
+    // Event Delegation for Grids
     appElements.calendarGrid.addEventListener('click', handleCalendarClick);
+    appElements.calendarMonthGrid.addEventListener('click', handleMonthGridClick);
+
+    // Drag and Drop Listeners
+    setupDragAndDrop();
     
+    // Modals
     appElements.mealTypeSelector.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -36,8 +47,6 @@ export function initMealPlanner(state, elements) {
         target.classList.add('active');
     });
     appElements.planMealForm.addEventListener('submit', handlePlanMealSubmit);
-
-    // Listeners for the "Add to Calendar" modal
     appElements.calendarEventViewChooser.addEventListener('click', handleCalendarEventViewChoice);
     appElements.calendarRecipeSearch.addEventListener('input', debounce(e => populateCalendarRecipeList(e.target.value), 300));
     appElements.calendarRecipeList.addEventListener('click', handleCalendarRecipeSelect);
@@ -47,54 +56,75 @@ export function initMealPlanner(state, elements) {
     appElements.calendarTaskForm.addEventListener('submit', handleCalendarTaskSubmit);
 }
 
-export function renderMealPlanner() {
-    if (!appState.recipes || !appState.inventory) {
-        appElements.calendarGrid.innerHTML = '<p class="empty-state">Indlæser data...</p>';
-        return;
-    }
-
-    appElements.calendarGrid.innerHTML = '';
-    const start = getStartOfWeek(appState.currentDate);
-    appElements.calendarTitle.textContent = `Uge ${getWeekNumber(start)}, ${start.getFullYear()}`;
-    const days = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
-    const todayString = formatDate(new Date());
-
-    const fragment = document.createDocumentFragment();
-    for(let i = 0; i < 7; i++) {
-        const dayDate = new Date(start);
-        dayDate.setDate(start.getDate() + i);
-        const dateString = formatDate(dayDate);
-
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'calendar-day';
-        if (dateString === todayString) dayDiv.classList.add('is-today');
-
-        // UPDATED: Added add button to each slot, removed from day-container
-        dayDiv.innerHTML = `
-            <div class="calendar-day-header">${days[i]} <span class="date-number">${dayDate.getDate()}.</span></div>
-            <div class="meal-slots">
-                <div class="meal-slot" data-date="${dateString}" data-meal="breakfast">
-                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
-                </div>
-                <div class="meal-slot" data-date="${dateString}" data-meal="lunch">
-                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
-                </div>
-                <div class="meal-slot" data-date="${dateString}" data-meal="dinner">
-                    <button class="add-event-to-slot-btn" title="Tilføj begivenhed"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-        `;
-        fragment.appendChild(dayDiv);
-    }
-    appElements.calendarGrid.appendChild(fragment);
-    populateCalendarWithData();
-    renderWeeklyPrice();
+function switchCalendarView(view) {
+    calendarViewState.currentView = view;
+    appElements.weekViewBtn.classList.toggle('active', view === 'week');
+    appElements.monthViewBtn.classList.toggle('active', view === 'month');
+    appElements.calendarWeekView.classList.toggle('active', view === 'week');
+    appElements.calendarMonthView.classList.toggle('active', view === 'month');
+    renderMealPlanner();
 }
 
-function populateCalendarWithData() {
-    document.querySelectorAll('.meal-slot').forEach(slot => {
-        // Clear previous content, but keep the add button
-        slot.querySelectorAll('[data-event]').forEach(el => el.remove());
+function navigateMonth(direction) {
+    appState.currentDate.setMonth(appState.currentDate.getMonth() + direction, 1); // Go to the 1st to avoid day overflow issues
+    renderMealPlanner();
+}
+
+export function renderMealPlanner() {
+    if (!appState.recipes || !appState.inventory) return;
+
+    appElements.calendarTitle.textContent = appState.currentDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
+    
+    if (calendarViewState.currentView === 'week') {
+        renderWeekView();
+    } else {
+        renderMonthView();
+    }
+}
+
+function renderWeekView() {
+    const grid = appElements.calendarGrid;
+    const header = appElements.calendarWeekHeader;
+    grid.innerHTML = '';
+    header.innerHTML = '';
+
+    const startOfWeek = getStartOfWeek(appState.currentDate);
+    const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startOfWeek);
+        dayDate.setDate(startOfWeek.getDate() + i);
+        
+        const headerEl = document.createElement('div');
+        headerEl.className = 'calendar-week-day-header';
+        headerEl.innerHTML = `<span>${days[i]}</span><span class="date-number">${dayDate.getDate()}</span>`;
+        header.appendChild(headerEl);
+
+        const dayCard = document.createElement('div');
+        dayCard.className = 'calendar-day-card';
+        if (formatDate(dayDate) === formatDate(new Date())) {
+            dayCard.classList.add('is-today');
+        }
+
+        dayCard.innerHTML = `
+            <div class="meal-slot" data-date="${formatDate(dayDate)}" data-meal="breakfast">
+                 <button class="add-event-to-slot-btn" title="Tilføj til morgenmad"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="meal-slot" data-date="${formatDate(dayDate)}" data-meal="lunch">
+                 <button class="add-event-to-slot-btn" title="Tilføj til frokost"><i class="fas fa-plus"></i></button>
+            </div>
+            <div class="meal-slot" data-date="${formatDate(dayDate)}" data-meal="dinner">
+                 <button class="add-event-to-slot-btn" title="Tilføj til aftensmad"><i class="fas fa-plus"></i></button>
+            </div>
+        `;
+        grid.appendChild(dayCard);
+    }
+    populateWeekViewWithData();
+}
+
+function populateWeekViewWithData() {
+    document.querySelectorAll('#calendar-week-view .meal-slot').forEach(slot => {
+        slot.querySelectorAll('.calendar-event').forEach(el => el.remove());
 
         const date = slot.dataset.date;
         const mealType = slot.dataset.meal;
@@ -109,47 +139,98 @@ function populateCalendarWithData() {
     });
 }
 
-// Create a div for any type of calendar event
+function renderMonthView() {
+    const grid = appElements.calendarMonthGrid;
+    const header = document.querySelector('.calendar-month-header');
+    grid.innerHTML = '';
+    header.innerHTML = '';
+
+    const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+    days.forEach(day => {
+        const headerEl = document.createElement('div');
+        headerEl.className = 'calendar-month-day-header';
+        headerEl.textContent = day;
+        header.appendChild(headerEl);
+    });
+
+    const date = appState.currentDate;
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    
+    const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // 0=Mandag, 6=Søndag
+    
+    // Add spacer divs for days before the 1st of the month
+    for (let i = 0; i < startDayOfWeek; i++) {
+        grid.appendChild(document.createElement('div'));
+    }
+
+    for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+        const dayDate = new Date(year, month, day);
+        const dateString = formatDate(dayDate);
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-month-day';
+        dayCell.dataset.date = dateString;
+        if (dateString === formatDate(new Date())) {
+            dayCell.classList.add('is-today');
+        }
+
+        const eventsToday = Object.values(appState.mealPlan[dateString] || {}).flat();
+        const eventDots = eventsToday.map(event => `<div class="event-dot ${event.type}"></div>`).join('');
+
+        dayCell.innerHTML = `
+            <div class="month-day-number">${day}</div>
+            <div class="event-dots-container">${eventDots}</div>
+        `;
+        grid.appendChild(dayCell);
+    }
+}
+
+
 function createEventDiv(eventData) {
     const eventDiv = document.createElement('div');
     eventDiv.dataset.event = JSON.stringify(eventData);
+    eventDiv.className = 'calendar-event';
+    eventDiv.draggable = true;
     let content = '';
     let icon = '';
 
     switch (eventData.type) {
         case 'recipe':
             const recipe = appState.recipes.find(r => r.id === eventData.recipeId);
-            eventDiv.className = 'planned-recipe';
+            eventDiv.classList.add('recipe');
             if (eventData.cooked) eventDiv.classList.add('is-cooked');
             if (!recipe) eventDiv.classList.add('deleted');
             
             const cookBtnHTML = recipe && !eventData.cooked
-                ? `<button class="btn-icon cook-meal-btn" title="Markér som lavet og træk fra lager"><i class="fas fa-hat-chef"></i></button>`
+                ? `<button class="btn-icon cook-meal-btn" title="Markér som lavet"><i class="fas fa-hat-chef"></i></button>`
                 : '';
             
             content = recipe ? recipe.title : 'Slettet Opskrift';
             icon = `<i class="fas fa-utensils"></i>`;
             eventDiv.innerHTML = `
-                <span>${icon} ${content}</span>
-                <div class="planned-recipe-actions">
+                <div class="event-content">${icon} ${content}</div>
+                <div class="event-actions">
                     ${cookBtnHTML}
-                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>
+                    <button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button>
                 </div>`;
             break;
         
         case 'project':
             const project = appState.projects.find(p => p.id === eventData.projectId);
-            eventDiv.className = 'planned-project';
+            eventDiv.classList.add('project');
             content = project ? project.title : 'Slettet Projekt';
             icon = `<i class="fas fa-tasks"></i>`;
-            eventDiv.innerHTML = `<span>${icon} ${content}</span><button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>`;
+            eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
 
         case 'task':
-            eventDiv.className = 'planned-task';
+            eventDiv.classList.add('task');
             content = eventData.taskName;
             icon = `<i class="fas fa-broom"></i>`;
-            eventDiv.innerHTML = `<span>${icon} ${content}</span><button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>`;
+            eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
     }
     return eventDiv;
@@ -163,17 +244,16 @@ async function handleClearMealPlan() {
         type: 'confirm'
     });
     if (!confirmed) return;
-
-    const year = appState.currentDate.getFullYear();
-    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
-    const batch = writeBatch(db);
+    
     const start = getStartOfWeek(appState.currentDate);
+    const batch = writeBatch(db);
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(start);
         dayDate.setDate(start.getDate() + i);
         const dateString = formatDate(dayDate);
         if (appState.mealPlan[dateString]) {
+            const mealPlanRef = doc(db, 'meal_plans', `plan_${dayDate.getFullYear()}`);
             batch.update(mealPlanRef, { [dateString]: deleteField() });
         }
     }
@@ -189,7 +269,6 @@ async function handleClearMealPlan() {
 async function handleCalendarClick(e) {
     const eventDiv = e.target.closest('[data-event]');
     
-    // UPDATED: Handle click on "add event" button inside a slot
     const addBtn = e.target.closest('.add-event-to-slot-btn');
     if (addBtn) {
         const slot = addBtn.closest('.meal-slot');
@@ -214,16 +293,46 @@ async function handleCalendarClick(e) {
     }
 
     if (e.target.closest('.remove-meal-btn')) {
-        const year = new Date(date).getFullYear();
-        const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
-        const fieldPath = `${date}.${mealType}`;
-        
-        try {
-            await updateDoc(mealPlanRef, { [fieldPath]: arrayRemove(eventData) });
-        } catch (error) {
-            handleError(error, "Begivenheden kunne ikke fjernes.", "removeEvent");
-        }
+        await removeEventFromCalendar(date, mealType, eventData);
     }
+}
+
+async function handleMonthGridClick(e) {
+    const dayCell = e.target.closest('.calendar-month-day');
+    if (!dayCell) return;
+
+    const date = dayCell.dataset.date;
+    const eventsToday = Object.entries(appState.mealPlan[date] || {}).flat();
+
+    appElements.dayDetailsTitle.textContent = new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+    const contentDiv = appElements.dayDetailsContent;
+    contentDiv.innerHTML = '';
+
+    if (eventsToday.length === 0) {
+        contentDiv.innerHTML = '<p class="empty-state">Ingen begivenheder planlagt.</p>';
+    } else {
+        const mealOrder = ['breakfast', 'lunch', 'dinner'];
+        const groupedEvents = { breakfast: [], lunch: [], dinner: [] };
+        
+        Object.entries(appState.mealPlan[date] || {}).forEach(([mealType, events]) => {
+            if (groupedEvents[mealType]) {
+                groupedEvents[mealType].push(...events);
+            }
+        });
+
+        mealOrder.forEach(mealType => {
+            if (groupedEvents[mealType].length > 0) {
+                const mealTitle = document.createElement('h4');
+                mealTitle.textContent = { breakfast: 'Morgenmad', lunch: 'Frokost', dinner: 'Aftensmad'}[mealType];
+                contentDiv.appendChild(mealTitle);
+                groupedEvents[mealType].forEach(event => {
+                    contentDiv.appendChild(createEventDiv(event));
+                });
+            }
+        });
+    }
+
+    appElements.dayDetailsModal.classList.remove('hidden');
 }
 
 async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
@@ -232,13 +341,27 @@ async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
     const fieldPath = `${date}.${mealType}`;
 
     try {
-        const batch = writeBatch(db);
-        // Atomically remove the old and add the new
-        batch.update(mealPlanRef, { [fieldPath]: arrayRemove(oldEvent) });
-        batch.update(mealPlanRef, { [fieldPath]: arrayUnion(newEvent) });
-        await batch.commit();
+        const docSnap = await getDoc(mealPlanRef);
+        if (docSnap.exists()) {
+            const batch = writeBatch(db);
+            batch.update(mealPlanRef, { [fieldPath]: arrayRemove(oldEvent) });
+            batch.update(mealPlanRef, { [fieldPath]: arrayUnion(newEvent) });
+            await batch.commit();
+        }
     } catch (error) {
-        handleError(error, "Kunne ikke opdatere begivenhed i kalenderen.", "updateCalendarEvent");
+        handleError(error, "Kunne ikke opdatere begivenhed.", "updateCalendarEvent");
+    }
+}
+
+async function removeEventFromCalendar(date, mealType, eventData) {
+    const year = new Date(date).getFullYear();
+    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    const fieldPath = `${date}.${mealType}`;
+    
+    try {
+        await updateDoc(mealPlanRef, { [fieldPath]: arrayRemove(eventData) });
+    } catch (error) {
+        handleError(error, "Begivenheden kunne ikke fjernes.", "removeEvent");
     }
 }
 
@@ -284,73 +407,15 @@ export function openPlanMealModal(recipeId) {
     appElements.planMealModal.classList.remove('hidden');
 }
 
-function renderWeeklyPrice() {
-    let weeklyTotal = 0;
-    const start = getStartOfWeek(appState.currentDate);
 
-    for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(start);
-        dayDate.setDate(start.getDate() + i);
-        const dateString = formatDate(dayDate);
-        const dayPlan = appState.mealPlan[dateString];
-
-        if (dayPlan) {
-            Object.values(dayPlan).forEach(mealArray => {
-                if(Array.isArray(mealArray)) {
-                    mealArray.forEach(event => {
-                        if (event.type === 'recipe') {
-                            const recipe = appState.recipes.find(r => r.id === event.recipeId);
-                            if (recipe) {
-                                weeklyTotal += calculateRecipePrice(recipe, appState.inventory, event.portions);
-                            }
-                        }
-                    });
-                }
-            });
-        }
-    }
-    
-    appElements.weeklyPriceDisplay.textContent = `Estimeret Ugepris: ${weeklyTotal.toFixed(2).replace('.',',')} kr.`;
-}
-
-// Helper to calculate recipe price, moved from recipes.js to avoid circular dependencies if needed, but fine here for now.
-function calculateRecipePrice(recipe, inventory, portionsOverride) {
-    let totalPrice = 0;
-    if (!recipe.ingredients) return 0;
-
-    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
-
-    recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
-            const cheapestBatch = inventoryItem.batches
-                .filter(b => b.price && b.size > 0 && b.quantity > 0)
-                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
-            
-            if (cheapestBatch) {
-                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
-                
-                if (conversion.grams !== null) {
-                    const pricePerBaseUnit = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
-                    totalPrice += conversion.grams * pricePerBaseUnit;
-                }
-            }
-        }
-    });
-    return totalPrice;
-}
-
-
-// Functions for the "Add to Calendar" Modal
+// "Add to Calendar" Modal Functions
 
 function openAddCalendarEventModal(date, meal = 'dinner') {
     calendarEventState.date = date;
     calendarEventState.meal = meal;
 
-    appElements.calendarEventModalTitle.textContent = `Tilføj til ${new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    appElements.calendarEventModalTitle.textContent = `Tilføj til ${new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric' })} (${meal})`;
     
-    // Reset views
     appElements.calendarEventViewChooser.classList.remove('hidden');
     appElements.calendarEventViews.forEach(view => view.classList.add('hidden'));
     
@@ -367,7 +432,6 @@ function handleCalendarEventViewChoice(e) {
         view.classList.toggle('hidden', !view.id.includes(viewName));
     });
 
-    // Populate the chosen view
     if (viewName === 'recipe') populateCalendarRecipeList();
     if (viewName === 'project') populateCalendarProjectList();
     if (viewName === 'task') populateCalendarTaskList();
@@ -378,7 +442,7 @@ function populateCalendarRecipeList(searchTerm = '') {
     list.innerHTML = '';
     const filteredRecipes = appState.recipes
         .filter(r => r.title.toLowerCase().includes(searchTerm.toLowerCase()))
-        .slice(0, 10); // Limit results for performance
+        .slice(0, 10); 
 
     if (filteredRecipes.length === 0) {
         list.innerHTML = `<li class="selection-list-item-empty">Ingen opskrifter fundet.</li>`;
@@ -469,7 +533,7 @@ function handleCalendarTaskSelect(e) {
     const taskName = item.dataset.name;
     document.getElementById('calendar-task-search').value = taskName;
     document.getElementById('calendar-task-name-hidden').value = taskName;
-    appElements.calendarTaskList.innerHTML = ''; // Clear suggestions
+    appElements.calendarTaskList.innerHTML = '';
 }
 
 async function handleCalendarTaskSubmit(e) {
@@ -495,11 +559,71 @@ async function addEventToCalendar(date, mealType, eventData) {
     
     try {
         await setDoc(mealPlanRef, {
+            userId: appState.currentUser.uid,
             [date]: {
                 [mealType]: arrayUnion(eventData)
             }
         }, { merge: true });
     } catch (error) {
-        handleError(error, "Kunne ikke tilføje begivenhed til kalenderen.", "addEventToCalendar");
+        handleError(error, "Kunne ikke tilføje begivenhed.", "addEventToCalendar");
     }
+}
+
+// Drag and Drop Logic
+function setupDragAndDrop() {
+    const container = appElements.calendarGrid;
+
+    container.addEventListener('dragstart', e => {
+        const eventEl = e.target.closest('.calendar-event');
+        if (eventEl) {
+            e.dataTransfer.effectAllowed = 'move';
+            calendarViewState.draggedEventData = JSON.parse(eventEl.dataset.event);
+            setTimeout(() => eventEl.classList.add('is-dragging'), 0);
+        }
+    });
+
+    container.addEventListener('dragend', e => {
+        const eventEl = e.target.closest('.calendar-event');
+        if (eventEl) {
+            eventEl.classList.remove('is-dragging');
+        }
+        calendarViewState.draggedEventData = null;
+    });
+
+    container.addEventListener('dragover', e => {
+        e.preventDefault();
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.add('drag-over');
+        }
+    });
+
+    container.addEventListener('dragleave', e => {
+        const slot = e.target.closest('.meal-slot');
+        if (slot) {
+            slot.classList.remove('drag-over');
+        }
+    });
+
+    container.addEventListener('drop', async e => {
+        e.preventDefault();
+        const dropSlot = e.target.closest('.meal-slot');
+        if (!dropSlot || !calendarViewState.draggedEventData) return;
+
+        dropSlot.classList.remove('drag-over');
+        
+        const originalEvent = calendarViewState.draggedEventData;
+        const originalSlot = document.querySelector(`.calendar-event[data-event*='${originalEvent.id}']`).closest('.meal-slot');
+
+        const fromDate = originalSlot.dataset.date;
+        const fromMeal = originalSlot.dataset.meal;
+        const toDate = dropSlot.dataset.date;
+        const toMeal = dropSlot.dataset.meal;
+
+        if (fromDate === toDate && fromMeal === toMeal) return;
+
+        // Update Firestore
+        await removeEventFromCalendar(fromDate, fromMeal, originalEvent);
+        await addEventToCalendar(toDate, toMeal, originalEvent);
+    });
 }
