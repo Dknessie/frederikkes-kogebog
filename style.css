@@ -1100,22 +1100,58 @@ header {
     font-size: 1.1rem;
     color: #555;
 }
-#today-overview-content .overview-item, #projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
+/* NEW: Timeline Widget Styles */
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m);
+}
+.widget-header h3 {
+    margin: 0;
+}
+.timeline-day-group h4 {
+    margin-top: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+    padding-bottom: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
+    font-family: var(--body-font);
+    font-size: 1rem;
+    color: var(--text-color);
+}
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    padding: var(--spacing-s) 0;
+    font-size: var(--small-font-size);
+}
+.timeline-item-icon {
+    width: 24px;
+    text-align: center;
+    color: #888;
+}
+.timeline-item-icon .fa-utensils { color: var(--primary-color); }
+.timeline-item-icon .fa-tasks { color: var(--accent-color); }
+.timeline-item-icon .fa-birthday-cake { color: #E91E63; }
+.timeline-item-icon .fa-calendar-check { color: #2196F3; }
+.timeline-item-text.is-complete {
+    text-decoration: line-through;
+    color: #999;
+}
+
+#projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-m) 0;
     border-bottom: 1px solid var(--border-color);
 }
-#today-overview-content .overview-item:last-child, #projects-focus-content .project-focus-item:last-child, #inventory-notifications-content .notification-item:last-child {
+#projects-focus-content .project-focus-item:last-child, #inventory-notifications-content .notification-item:last-child {
     border-bottom: none;
 }
-.overview-item-label, .project-focus-title, .notification-text {
+.project-focus-title, .notification-text {
     font-weight: 600;
-}
-.overview-item-label i {
-    margin-right: var(--spacing-s);
-    color: var(--accent-color);
 }
 .project-progress-bar {
     width: 100px;
@@ -1128,12 +1164,11 @@ header {
     height: 100%;
     background-color: var(--accent-color);
 }
-.notification-item.expiring {
-    color: var(--status-red);
-}
-.notification-item.low-stock {
-    color: var(--status-yellow);
-}
+.notification-item.expiring { color: var(--status-red); }
+.notification-item.low-stock { color: var(--status-yellow); }
+.notification-item.out-of-stock { color: var(--status-red); font-weight: 700; }
+.stock-details { font-weight: normal; color: #666; font-size: 0.8em; }
+
 #category-values-content .category-value-item {
     display: flex;
     align-items: center;
@@ -1399,7 +1434,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1425,7 +1460,8 @@ header {
 #reorder-assistant-modal .modal-content,
 #batch-edit-modal .modal-content,
 #impulse-purchase-modal .modal-content,
-#maintenance-log-modal .modal-content {
+#maintenance-log-modal .modal-content,
+#event-modal .modal-content {
     max-width: 550px;
 }
 #add-calendar-event-modal .modal-content {
@@ -1468,6 +1504,14 @@ header {
 }
 .input-group input.hidden {
     margin-top: var(--spacing-s);
+}
+.input-group-inline {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.input-group-inline input[type="checkbox"] {
+    width: auto;
 }
 
 .input-group input:focus, .input-group textarea:focus, .input-group select:focus {
@@ -1929,9 +1973,3 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
 }
-" in the Canvas.
-I have made the following changes:
-- updated the `js/dashboard.js` file to improve the inventory notifications widget
-- updated the `js/shoppingList.js` file to allow adding single items to the grocery list
-- updated the `style.css` file to style the improved inventory notifications widget
-Please review the changes and let me know if they are corre
