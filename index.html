@@ -555,13 +555,41 @@
             <p>Registrer et impulskøb direkte til dit varelager.</p>
             <form id="impulse-purchase-form">
                 <div class="input-group">
-                    <label for="impulse-item-search">Søg efter vare</label>
-                    <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at finde en vare..." required>
+                    <label for="impulse-item-search">Søg eller opret vare</label>
+                    <input type="text" id="impulse-item-search" placeholder="Begynd at skrive..." required>
                     <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
                 </div>
                 <input type="hidden" id="impulse-item-id">
+                <input type="hidden" id="impulse-is-new-item" value="false">
                 
                 <div id="impulse-details-section" class="hidden">
+                    <div id="impulse-new-item-fields" class="hidden">
+                         <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="impulse-main-category">Overkategori</label>
+                                <select id="impulse-main-category" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="impulse-sub-category">Underkategori</label>
+                                <select id="impulse-sub-category" required></select>
+                            </div>
+                        </div>
+                        <div class="form-grid-2-col">
+                             <div class="input-group">
+                                <label for="impulse-location">Placering</label>
+                                <select id="impulse-location" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="impulse-default-unit">Standard Måleenhed</label>
+                                <select id="impulse-default-unit" required>
+                                    <option value="g">Gram (g)</option>
+                                    <option value="ml">Milliliter (ml)</option>
+                                    <option value="stk">Styk (stk)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-grid-3-col">
                         <div class="input-group">
                             <label>Antal</label>
