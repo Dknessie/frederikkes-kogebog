@@ -14,6 +14,7 @@ import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
+import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -25,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         projects: [],
         rooms: [],
+        maintenanceLogs: [], // NEW: State for maintenance logs
         references: {
             maintenanceTasks: []
         },
@@ -233,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
             projects: 'projects',
-            rooms: 'rooms'
+            rooms: 'rooms',
+            maintenance_logs: 'maintenanceLogs' // NEW: Listener for maintenance logs
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -332,8 +335,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    renderRoomsListPage();
-                    renderProjects();
+                    // NEW: Render maintenance page when its tab is active
+                    const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
+                    if (activeTab === 'hjem-maintenance') {
+                        renderMaintenancePage();
+                    } else {
+                        renderRoomsListPage();
+                        renderProjects();
+                    }
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
@@ -373,6 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
+        initMaintenance(state, elements); // NEW: Initialize maintenance module
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
