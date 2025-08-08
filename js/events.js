@@ -33,12 +33,10 @@ export function initEvents(state) {
  * @param {object} [eventData] - Optional event data for editing.
  */
 export function openEventModal(date, eventData = null) {
-    // FIX: Look up elements directly when the function is called for robustness.
     const modal = document.getElementById('event-modal');
     const form = document.getElementById('event-form');
     const modalTitle = document.getElementById('event-modal-title');
 
-    // Defensive check to ensure modal elements exist before proceeding.
     if (!form || !modal || !modalTitle) {
         console.error("Event modal elements not found in the DOM.");
         return;
@@ -54,9 +52,8 @@ export function openEventModal(date, eventData = null) {
         document.getElementById('event-date').value = eventData.date;
         document.getElementById('event-type').value = eventData.category;
         
-        toggleEventTypeFields(); // Create the specific fields for the event type.
+        toggleEventTypeFields();
         
-        // Use a timeout to ensure dynamic fields are in the DOM before populating them.
         setTimeout(() => {
             if (eventData.category === 'Fødselsdag') {
                 document.getElementById('event-birthday-name').value = eventData.name || '';
@@ -77,7 +74,7 @@ export function openEventModal(date, eventData = null) {
         modalTitle.textContent = 'Tilføj Begivenhed';
         document.getElementById('event-id').value = '';
         document.getElementById('event-date').value = date || formatDate(new Date());
-        toggleEventTypeFields(); // Set the initial state for a new event.
+        toggleEventTypeFields();
     }
 
     modal.classList.remove('hidden');
@@ -87,17 +84,21 @@ export function openEventModal(date, eventData = null) {
  * Shows or hides specific form fields based on the selected event type.
  */
 function toggleEventTypeFields() {
-    // FIX: Look up elements directly each time to handle dynamic content.
     const eventTypeSelect = document.getElementById('event-type');
     const specificFieldsContainer = document.getElementById('event-type-specific-fields');
     const eventTitleGroup = document.getElementById('event-title-group');
+    const eventTitleInput = document.getElementById('event-title'); // Get the input itself
 
-    if (!eventTypeSelect || !specificFieldsContainer || !eventTitleGroup) {
+    if (!eventTypeSelect || !specificFieldsContainer || !eventTitleGroup || !eventTitleInput) {
         return;
     }
 
     const category = eventTypeSelect.value;
-    eventTitleGroup.classList.toggle('hidden', ['Fødselsdag', 'Udgivelse'].includes(category));
+    const isTitleHidden = ['Fødselsdag', 'Udgivelse'].includes(category);
+
+    // FIX: Toggle visibility AND the 'required' attribute simultaneously.
+    eventTitleGroup.classList.toggle('hidden', isTitleHidden);
+    eventTitleInput.required = !isTitleHidden;
     
     let specificHTML = '';
     switch(category) {
@@ -184,8 +185,10 @@ async function handleSaveEvent(e) {
         eventData.isComplete = document.getElementById('event-is-complete')?.checked || false;
     }
 
-    if (!eventData.title || !eventData.date || !eventData.category) {
-        showNotification({ title: "Udfyld påkrævede felter", message: "Alle nødvendige felter skal være udfyldt." });
+    // The main title is now only required if it's visible.
+    // The specific fields for Birthday/Release have their own 'required' attributes.
+    if (!eventData.date || !eventData.category) {
+        showNotification({ title: "Udfyld påkrævede felter", message: "Dato og kategori skal altid være udfyldt." });
         return;
     }
 
