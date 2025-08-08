@@ -14,34 +14,38 @@ export function initShoppingList(state, elements) {
     appState = state;
     appElements = elements;
 
-    appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
+    if (appElements.generateGroceriesBtn) {
+        appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
+    }
     
     // Modal listeners
-    appElements.shoppingListModal.addEventListener('click', (e) => {
-        if (e.target.closest('.shopping-list-clear-btn')) {
-            handleClearShoppingList();
-        } else if (e.target.closest('.shopping-list-confirm-btn')) {
-            handleConfirmPurchase();
-        } else if (e.target.closest('.remove-from-list-btn')) {
-            const itemName = e.target.closest('[data-item-name]').dataset.itemName;
-            handleRemoveShoppingItem(itemName);
-        } else if (e.target.matches('.shopping-list-checkbox')) {
-            const listItem = e.target.closest('.shopping-list-item');
-            listItem.classList.toggle('is-checked');
-        }
-    });
-
-    appElements.shoppingListModal.addEventListener('submit', (e) => {
-        if (e.target.matches('.add-item-form')) {
-            e.preventDefault();
-            const input = e.target.querySelector('input');
-            const itemName = input.value.trim();
-            if (itemName) {
-                handleAddShoppingItem(itemName);
-                input.value = '';
+    if (appElements.shoppingListModal) {
+        appElements.shoppingListModal.addEventListener('click', (e) => {
+            if (e.target.closest('.shopping-list-clear-btn')) {
+                handleClearShoppingList();
+            } else if (e.target.closest('.shopping-list-confirm-btn')) {
+                handleConfirmPurchase();
+            } else if (e.target.closest('.remove-from-list-btn')) {
+                const itemName = e.target.closest('[data-item-name]').dataset.itemName;
+                handleRemoveShoppingItem(itemName);
+            } else if (e.target.matches('.shopping-list-checkbox')) {
+                const listItem = e.target.closest('.shopping-list-item');
+                listItem.classList.toggle('is-checked');
             }
-        }
-    });
+        });
+
+        appElements.shoppingListModal.addEventListener('submit', (e) => {
+            if (e.target.matches('.add-item-form')) {
+                e.preventDefault();
+                const input = e.target.querySelector('input');
+                const itemName = input.value.trim();
+                if (itemName) {
+                    handleAddShoppingItem(itemName);
+                    input.value = '';
+                }
+            }
+        });
+    }
 }
 
 export function openShoppingListModal(listType) {
