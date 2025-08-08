@@ -339,28 +339,6 @@ header {
     display: flex;
     flex-direction: column;
     transition: background-color: 0.3s ease;
-    position: relative;
-}
-.calendar-day .add-event-to-day-btn {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    background-color: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    color: var(--primary-color);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 0.8rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-}
-.calendar-day:hover .add-event-to-day-btn {
-    opacity: 1;
 }
 
 .calendar-day.is-today {
@@ -395,9 +373,38 @@ header {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+    position: relative; /* For positioning the add button */
 }
 .meal-slot:last-child { border-bottom: none; }
 .meal-slot.drag-over { background-color: #d1e7dd; }
+
+/* UPDATED: Styling for the new add button in calendar slots */
+.meal-slot .add-event-to-slot-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+.meal-slot:hover .add-event-to-slot-btn {
+    opacity: 1;
+}
+.meal-slot .add-event-to-slot-btn:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
 
 .planned-recipe, .planned-project, .planned-task {
     padding: var(--spacing-s);
@@ -724,12 +731,13 @@ header {
     max-width: 400px;
 }
 
+/* UPDATED: Search bar styling */
 .search-bar {
     position: relative;
 }
 .search-bar i {
     position: absolute;
-    left: var(--spacing-m);
+    right: var(--spacing-m); /* Move icon to the right */
     top: 50%;
     transform: translateY(-50%);
     color: #aaa;
@@ -737,10 +745,11 @@ header {
 .search-bar input {
     width: 100%;
     padding: var(--spacing-m);
-    padding-left: calc(var(--spacing-m) * 2 + 1em);
+    padding-right: calc(var(--spacing-m) * 2 + 1em); /* Add padding to the right for the icon */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
 }
+
 
 .inventory-filters {
     display: grid;
@@ -1328,19 +1337,23 @@ header {
     overflow-y: auto;
     position: relative;
 }
+/* UPDATED: Increased max-width for large modal */
 .modal-content.large {
-    max-width: 950px;
+    max-width: 1100px;
 }
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
 #reorder-assistant-modal .modal-content,
 #batch-edit-modal .modal-content,
-#room-edit-modal .modal-content,
-#impulse-purchase-modal .modal-content,
-#add-calendar-event-modal .modal-content {
+#impulse-purchase-modal .modal-content {
     max-width: 550px;
 }
+/* UPDATED: Increased max-width for calendar event modal */
+#add-calendar-event-modal .modal-content {
+    max-width: 650px;
+}
+
 #shopping-list-modal .modal-content {
     max-width: 700px;
 }
@@ -1755,7 +1768,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: 4px;
 }
 
-/* NEW: Styles for Add to Calendar Modal */
+/* Styles for Add to Calendar Modal */
 .selection-list {
     list-style: none;
     padding: 0;
