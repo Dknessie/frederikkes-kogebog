@@ -22,6 +22,7 @@ export function initEvents(state, elements) {
         eventModalTitle: document.getElementById('event-modal-title'),
         eventTypeSpecificFields: document.getElementById('event-type-specific-fields'),
         eventTypeSelect: document.getElementById('event-type'),
+        eventTitleGroup: document.getElementById('event-title-group'),
     };
 
     if (appElements.eventForm) {
@@ -50,12 +51,21 @@ export function openEventModal(date, eventData = null) {
         document.getElementById('event-date').value = eventData.date;
         document.getElementById('event-type').value = eventData.category;
         
-        if (eventData.isRecurring) {
-            document.getElementById('event-is-recurring').checked = true;
-        }
-        if (eventData.isComplete) {
-            document.getElementById('event-is-complete').checked = true;
-        }
+        // Populate specific fields for editing
+        setTimeout(() => {
+            if (eventData.category === 'Fødselsdag') {
+                document.getElementById('event-birthday-name').value = eventData.name || '';
+                document.getElementById('event-birth-year').value = eventData.birthYear || '';
+            }
+            if (eventData.category === 'Udgivelse') {
+                document.getElementById('event-release-title').value = eventData.releaseTitle || '';
+                document.getElementById('event-release-subcategory').value = eventData.subCategory || '';
+            }
+            if (eventData.isComplete) {
+                document.getElementById('event-is-complete').checked = true;
+            }
+        }, 0);
+        
     } else {
         // Adding new event
         appElements.eventModalTitle.textContent = 'Tilføj Begivenhed';
@@ -73,29 +83,53 @@ export function openEventModal(date, eventData = null) {
 function toggleEventTypeFields() {
     const category = appElements.eventTypeSelect.value;
     const specificFieldsContainer = appElements.eventTypeSpecificFields;
+    appElements.eventTitleGroup.classList.toggle('hidden', ['Fødselsdag', 'Udgivelse'].includes(category));
     
     let specificHTML = '';
-    if (category === 'Fødselsdag') {
-        specificHTML = `
-            <div class="input-group-inline">
-                <input type="checkbox" id="event-is-recurring" name="event-is-recurring">
-                <label for="event-is-recurring">Gentag årligt</label>
-            </div>
-        `;
-    } else if (category === 'To-do') {
-        specificHTML = `
-            <div class="input-group-inline">
-                <input type="checkbox" id="event-is-complete" name="event-is-complete">
-                <label for="event-is-complete">Marker som færdig</label>
-            </div>
-        `;
+    switch(category) {
+        case 'Fødselsdag':
+            specificHTML = `
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="event-birthday-name">Navn</label>
+                        <input type="text" id="event-birthday-name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="event-birth-year">Fødselsår (valgfri)</label>
+                        <input type="number" id="event-birth-year" placeholder="F.eks. 1990">
+                    </div>
+                </div>
+            `;
+            break;
+        case 'Udgivelse':
+            specificHTML = `
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="event-release-title">Titel</label>
+                        <input type="text" id="event-release-title" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="event-release-subcategory">Type</label>
+                        <select id="event-release-subcategory" required>
+                            <option value="Film">Film</option>
+                            <option value="Bog">Bog</option>
+                            <option value="Spil">Spil</option>
+                            <option value="Produkt">Produkt</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            break;
+        case 'To-do':
+            specificHTML = `
+                <div class="input-group-inline">
+                    <input type="checkbox" id="event-is-complete" name="event-is-complete">
+                    <label for="event-is-complete">Marker som færdig</label>
+                </div>
+            `;
+            break;
     }
     specificFieldsContainer.innerHTML = specificHTML;
-
-    // Pre-check recurring for birthdays if it's a new event
-    if (category === 'Fødselsdag' && !document.getElementById('event-id').value) {
-        document.getElementById('event-is-recurring').checked = true;
-    }
 }
 
 /**
@@ -108,16 +142,37 @@ async function handleSaveEvent(e) {
     const category = document.getElementById('event-type').value;
 
     const eventData = {
-        title: document.getElementById('event-title').value.trim(),
         date: document.getElementById('event-date').value,
         category: category,
-        isRecurring: category === 'Fødselsdag' ? document.getElementById('event-is-recurring')?.checked || false : false,
-        isComplete: category === 'To-do' ? document.getElementById('event-is-complete')?.checked || false : false,
-        userId: appState.currentUser.uid
+        userId: appState.currentUser.uid,
+        // Set default values, will be overwritten by specific types
+        title: document.getElementById('event-title').value.trim(),
+        isRecurring: false,
+        isComplete: false,
+        name: null,
+        birthYear: null,
+        releaseTitle: null,
+        subCategory: null,
     };
 
+    if (category === 'Fødselsdag') {
+        const name = document.getElementById('event-birthday-name').value.trim();
+        const birthYear = document.getElementById('event-birth-year').value;
+        eventData.name = name;
+        eventData.birthYear = birthYear ? parseInt(birthYear, 10) : null;
+        eventData.title = `${name}'s Fødselsdag`;
+        eventData.isRecurring = true;
+    } else if (category === 'Udgivelse') {
+        const releaseTitle = document.getElementById('event-release-title').value.trim();
+        eventData.releaseTitle = releaseTitle;
+        eventData.subCategory = document.getElementById('event-release-subcategory').value;
+        eventData.title = `${eventData.subCategory}: ${releaseTitle}`;
+    } else if (category === 'To-do') {
+        eventData.isComplete = document.getElementById('event-is-complete')?.checked || false;
+    }
+
     if (!eventData.title || !eventData.date || !eventData.category) {
-        showNotification({ title: "Udfyld påkrævede felter", message: "Titel, dato og kategori skal være udfyldt." });
+        showNotification({ title: "Udfyld påkrævede felter", message: "Alle nødvendige felter skal være udfyldt." });
         return;
     }
 
