@@ -781,6 +781,27 @@ header {
     max-width: 400px;
 }
 
+/* UPDATED: Standardized Search Bar Styling */
+.search-bar {
+    position: relative;
+}
+.search-bar i {
+    position: absolute;
+    right: var(--spacing-m);
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+    pointer-events: none; /* So you can click through the icon */
+}
+.search-bar input {
+    width: 100%;
+    padding: var(--spacing-m);
+    padding-right: calc(var(--spacing-m) * 2 + 1em); /* Space for the icon */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius); /* Ensure rounded corners */
+}
+
+
 .inventory-filters {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
