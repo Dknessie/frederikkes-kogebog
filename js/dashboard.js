@@ -9,35 +9,6 @@ let appState;
 let appElements;
 let budgetGauge;
 
-// Helper function to calculate recipe price, needed for budget calculation
-function calculateRecipePrice(recipe, inventory, portionsOverride) {
-    let totalPrice = 0;
-    if (!recipe.ingredients) return 0;
-
-    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
-
-    recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
-            const cheapestBatch = inventoryItem.batches
-                .filter(b => b.price && b.size > 0 && b.quantity > 0)
-                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
-            
-            if (cheapestBatch) {
-                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
-                
-                if (conversion.grams !== null) {
-                    const pricePerBaseUnit = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
-                    totalPrice += conversion.grams * pricePerBaseUnit;
-                }
-            }
-        }
-    });
-    return totalPrice;
-}
-
-
 export function initDashboard(state, elements) {
     appState = state;
     appElements = {
@@ -222,28 +193,16 @@ function renderProjectsFocusWidget() {
 }
 
 function calculateMonthlySpending() {
-    let totalCost = 0;
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
-    for (const dateString in appState.mealPlan) {
-        const date = new Date(dateString);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            const dayPlan = appState.mealPlan[dateString];
-            for (const mealType in dayPlan) {
-                const mealArray = dayPlan[mealType];
-                if (Array.isArray(mealArray)) {
-                    mealArray.forEach(meal => {
-                        const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                        if (recipe) {
-                            totalCost += calculateRecipePrice(recipe, appState.inventory, meal.portions);
-                        }
-                    });
-                }
-            }
-        }
-    }
-    return totalCost;
+    return appState.expenses
+        .filter(expense => {
+            if (!expense.date || !expense.date.toDate) return false;
+            const expenseDate = expense.date.toDate();
+            return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+        })
+        .reduce((total, expense) => total + expense.amount, 0);
 }
 
 
@@ -261,7 +220,7 @@ function renderBudgetWidget() {
             value: monthlySpent,
             min: 0,
             max: monthlyBudget > 0 ? monthlyBudget : 1, // Ensure max is not 0
-            title: "Månedligt Forbrug",
+            title: "Faktisk Forbrug",
             label: "kr.",
             levelColors: ["#4CAF50", "#FFC107", "#F44336"], // Green, Yellow, Red
             valueFontColor: "#3d3d3d",
