@@ -79,9 +79,9 @@ function renderTimelineWidget() {
     container.innerHTML = '';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const timelineItems = [];
+    let allFutureEvents = [];
 
-    // 1. Aggregate Meals
+    // 1. Aggregate Meals for the next 7 days
     for (let i = 0; i < 7; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
@@ -92,7 +92,7 @@ function renderTimelineWidget() {
                 meals.forEach(meal => {
                     if (meal.type === 'recipe') {
                         const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                        timelineItems.push({
+                        allFutureEvents.push({
                             date: date,
                             type: 'Madplan',
                             icon: 'fa-utensils',
@@ -104,30 +104,31 @@ function renderTimelineWidget() {
         }
     }
 
-    // 2. Aggregate Personal Events
-    const currentYear = today.getFullYear();
+    // 2. Aggregate all future Personal Events
     appState.events.forEach(event => {
+        let displayDate;
         const eventDate = new Date(event.date);
-        let displayDate = new Date(event.date);
         
         if (event.isRecurring) {
-            displayDate.setFullYear(currentYear);
-            // If birthday has already passed this year, show for next year
+            // Calculate next occurrence of recurring event
+            displayDate = new Date(event.date);
+            displayDate.setFullYear(today.getFullYear());
             if (displayDate < today) {
-                displayDate.setFullYear(currentYear + 1);
+                displayDate.setFullYear(today.getFullYear() + 1);
             }
+        } else {
+            displayDate = eventDate;
         }
         
-        // Only include events within the next 7 days for the timeline
-        const dayDiff = (displayDate - today) / (1000 * 60 * 60 * 24);
-        if (dayDiff >= 0 && dayDiff < 7) {
+        // Only include events from today onwards
+        if (displayDate >= today) {
             let title = event.title;
             if (event.category === 'Fødselsdag' && event.birthYear) {
                 const age = displayDate.getFullYear() - event.birthYear;
                 title = `${event.name}'s Fødselsdag (${age} år)`;
             }
 
-            timelineItems.push({
+            allFutureEvents.push({
                 date: displayDate,
                 type: event.category,
                 icon: getIconForCategory(event),
@@ -137,8 +138,9 @@ function renderTimelineWidget() {
         }
     });
 
-    // 3. Sort all items by date
-    timelineItems.sort((a, b) => a.date - b.date);
+    // 3. Sort all events by date and take the next 10
+    allFutureEvents.sort((a, b) => a.date - b.date);
+    const timelineItems = allFutureEvents.slice(0, 10);
 
     // 4. Group and Render
     const groupedByDate = {};
@@ -158,7 +160,10 @@ function renderTimelineWidget() {
     let html = '';
     Object.keys(groupedByDate).sort().forEach(dateString => {
         const date = new Date(dateString);
+        // Set time to noon to avoid timezone issues with date comparison
+        date.setHours(12, 0, 0, 0);
         const dayDiff = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
+        
         let dayLabel = date.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
         if (dayDiff === 0) dayLabel = 'I dag';
         if (dayDiff === 1) dayLabel = 'I morgen';
@@ -177,6 +182,7 @@ function renderTimelineWidget() {
     });
     container.innerHTML = html;
 }
+
 
 function getIconForCategory(eventData) {
     switch (eventData.category) {
