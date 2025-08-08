@@ -49,7 +49,6 @@ export function getWeekNumber(d) {
     d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
     d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
     var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    // Corrected the calculation to explicitly use getTime() for robust subtraction
     var weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
     return weekNo;
 }
@@ -67,13 +66,17 @@ export function getStartOfWeek(date) {
 }
 
 /**
- * Formats a Date object into a YYYY-MM-DD string.
+ * Formats a Date object into a YYYY-MM-DD string, respecting the local timezone.
  * @param {Date} date The date to format.
  * @returns {string} The formatted date string.
  */
 export function formatDate(date) {
     if (!(date instanceof Date) || isNaN(date)) return '';
-    return date.toISOString().split('T')[0];
+    // FIX: Use local date parts to avoid timezone issues with toISOString()
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 /**
