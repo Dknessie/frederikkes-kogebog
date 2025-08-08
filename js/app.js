@@ -128,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
         mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
+        addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
 
         // References
         referencesContainer: document.getElementById('references-container'),
@@ -146,6 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
+        shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
     };
 
     function computeDerivedShoppingLists() {
