@@ -339,6 +339,28 @@ header {
     display: flex;
     flex-direction: column;
     transition: background-color: 0.3s ease;
+    position: relative;
+}
+.calendar-day .add-event-to-day-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.calendar-day:hover .add-event-to-day-btn {
+    opacity: 1;
 }
 
 .calendar-day.is-today {
@@ -377,18 +399,30 @@ header {
 .meal-slot:last-child { border-bottom: none; }
 .meal-slot.drag-over { background-color: #d1e7dd; }
 
-.planned-recipe {
-    background-color: var(--secondary-color);
+.planned-recipe, .planned-project, .planned-task {
     padding: var(--spacing-s);
     border-radius: 4px;
     font-size: 0.8rem;
-    border-left: 3px solid var(--primary-color);
     cursor: grab;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--spacing-s);
 }
-.planned-recipe:active { cursor: grabbing; }
+.planned-recipe:active, .planned-project:active, .planned-task:active { cursor: grabbing; }
+
+.planned-recipe {
+    background-color: var(--secondary-color);
+    border-left: 3px solid var(--primary-color);
+}
+.planned-project {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196F3;
+}
+.planned-task {
+    background-color: #f3e5f5;
+    border-left: 3px solid #9C27B0;
+}
 
 .planned-recipe.is-cooked {
     background-color: #e0e0e0;
@@ -399,7 +433,7 @@ header {
     text-decoration: line-through;
 }
 
-.planned-recipe.deleted {
+.planned-recipe.deleted, .planned-project.deleted, .planned-task.deleted {
     border-left-color: var(--deleted-color);
     color: var(--deleted-color);
     font-style: italic;
@@ -1182,6 +1216,9 @@ header {
     margin-bottom: var(--spacing-s);
     color: var(--primary-color);
 }
+#add-calendar-event-modal .quick-actions-container {
+    grid-template-columns: repeat(3, 1fr);
+}
 
 .hjem-nav-tabs {
     display: flex;
@@ -1277,7 +1314,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1300,7 +1337,8 @@ header {
 #reorder-assistant-modal .modal-content,
 #batch-edit-modal .modal-content,
 #room-edit-modal .modal-content,
-#impulse-purchase-modal .modal-content {
+#impulse-purchase-modal .modal-content,
+#add-calendar-event-modal .modal-content {
     max-width: 550px;
 }
 #shopping-list-modal .modal-content {
@@ -1717,6 +1755,40 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: 4px;
 }
 
+/* NEW: Styles for Add to Calendar Modal */
+.selection-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-m) 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.selection-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.selection-list-item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+.selection-list-item:hover {
+    background-color: var(--secondary-color);
+}
+.selection-list-item i {
+    color: var(--accent-color);
+}
+.selection-list-item-empty {
+    padding: var(--spacing-m);
+    color: #888;
+    font-style: italic;
+}
+
+
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
     .desktop-nav {
@@ -1774,6 +1846,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     .project-image-container {
+        grid-template-columns: 1fr;
+    }
+    #add-calendar-event-modal .quick-actions-container {
         grid-template-columns: 1fr;
     }
 }
