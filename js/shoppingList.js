@@ -67,6 +67,10 @@ export function openShoppingListModal(listType) {
 
 function renderListInModal() {
     const wrapper = appElements.shoppingListModalContentWrapper;
+    if (!wrapper) {
+        console.error("shoppingListModalContentWrapper is not found in the DOM");
+        return;
+    }
     const list = appState.shoppingLists[currentListType] || {};
     wrapper.innerHTML = ''; // Clear previous content
 
