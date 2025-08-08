@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         projects: [],
         rooms: [],
         references: {
-            maintenanceTasks: [] // NEW: Add maintenance tasks to references
+            maintenanceTasks: []
         },
         preferences: {},
         mealPlan: {},
@@ -118,20 +118,25 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
-        // Calendar
+        // UPDATED: Calendar Elements
         calendarGrid: document.getElementById('calendar-grid'),
         calendarTitle: document.getElementById('calendar-title'),
-        prevWeekBtn: document.getElementById('prev-week-btn'),
-        nextWeekBtn: document.getElementById('next-week-btn'),
+        prevMonthBtn: document.getElementById('prev-month-btn'),
+        nextMonthBtn: document.getElementById('next-month-btn'),
+        weekViewBtn: document.getElementById('week-view-btn'),
+        monthViewBtn: document.getElementById('month-view-btn'),
+        calendarWeekView: document.getElementById('calendar-week-view'),
+        calendarMonthView: document.getElementById('calendar-month-view'),
+        calendarWeekHeader: document.querySelector('.calendar-week-header'),
+        calendarMonthGrid: document.getElementById('calendar-month-grid'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
         generateGroceriesBtn: document.getElementById('generate-groceries-btn'),
-        weeklyPriceDisplay: document.getElementById('weekly-price-display'),
+        
+        // Modals related to calendar
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
         mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
-        
-        // NEW: Calendar Event Modal Elements
         addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
         calendarEventModalTitle: document.getElementById('calendar-event-modal-title'),
         calendarEventViewChooser: document.getElementById('calendar-event-view-chooser'),
@@ -142,6 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarTaskSearch: document.getElementById('calendar-task-search'),
         calendarTaskList: document.getElementById('calendar-task-list'),
         calendarTaskForm: document.getElementById('calendar-task-form'),
+        dayDetailsModal: document.getElementById('day-details-modal'),
+        dayDetailsTitle: document.getElementById('day-details-title'),
+        dayDetailsContent: document.getElementById('day-details-content'),
 
 
         // References
@@ -169,7 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const materialsList = {};
         state.projects.forEach(project => {
             (project.materials || []).forEach(material => {
-                // A simple key for now, could be improved to handle duplicates
                 const key = material.name.toLowerCase();
                 materialsList[key] = {
                     name: material.name,
@@ -177,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     unit: material.unit || 'stk',
                     price: material.price || null,
                     projectId: project.id,
-                    storeId: 'Byggemarked' // Placeholder
+                    storeId: 'Byggemarked'
                 };
             });
         });
@@ -193,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     price: item.price || null,
                     url: item.url || null,
                     roomId: room.id,
-                    quantity_to_buy: 1, // Always 1 for wishlist items
+                    quantity_to_buy: 1,
                     unit: 'stk'
                 };
             });
@@ -245,17 +252,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
         
-        const year = state.currentDate.getFullYear();
-        state.listeners.mealPlan = onSnapshot(doc(db, 'meal_plans', `plan_${year}`), (doc) => {
-            state.mealPlan = doc.exists() ? doc.data() : {};
+        // UPDATED: Listener for all meal plans, not just one year
+        const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
+        state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
+            state.mealPlan = {};
+            snapshot.forEach(doc => {
+                state.mealPlan = { ...state.mealPlan, ...doc.data() };
+            });
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
+
 
         // Listener for the manually managed groceries list
         state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
             const data = doc.exists() ? doc.data() : {};
             state.shoppingLists.groceries = data.groceries || {};
-            // Materials and wishlist are now computed, so we don't read them from here.
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'indkøbslister'));
         
