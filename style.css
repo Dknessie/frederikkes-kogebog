@@ -299,7 +299,7 @@ header {
 
 /* ===== 5. NEW CALENDAR DESIGN ===== */
 #calendar .page {
-    padding: 0; /* Remove default page padding */
+    padding: 0;
 }
 .calendar-main-container {
     background-color: var(--theme-bg);
@@ -321,6 +321,17 @@ header {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
+    flex-grow: 1; /* Allow nav to take space */
+}
+.calendar-title-wrapper {
+    flex-grow: 1;
+    text-align: center;
+}
+.calendar-title-wrapper h2 {
+    margin: 0;
+}
+.calendar-nav .btn {
+    flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 .calendar-view-toggle {
     display: flex;
@@ -338,7 +349,6 @@ header {
     box-shadow: var(--shadow);
 }
 .calendar-actions {
-    margin-left: auto;
     display: flex;
     gap: var(--spacing-m);
 }
@@ -388,9 +398,8 @@ header {
     gap: var(--spacing-s);
     position: relative;
 }
-/* NEW: Top slot for events has a different style */
 .meal-slot[data-meal="events"] {
-    flex: 0 0 auto; /* Don't grow, take content size */
+    flex: 0 0 auto;
     min-height: 60px;
     border-bottom: 1px solid var(--border-color);
 }
@@ -457,7 +466,6 @@ header {
 .calendar-event.recipe { border-color: var(--primary-color); }
 .calendar-event.project { border-color: var(--accent-color); }
 .calendar-event.task { border-color: var(--theme-grey); }
-/* NEW: Calendar event styles for personal events */
 .calendar-event.fødselsdag { border-color: #E91E63; }
 .calendar-event.aftale { border-color: #2196F3; }
 .calendar-event.begivenhed { border-color: #9C27B0; }
@@ -465,6 +473,9 @@ header {
 .calendar-event.is-cooked {
     opacity: 0.6;
     text-decoration: line-through;
+}
+#day-details-content .calendar-event {
+    cursor: pointer;
 }
 
 /* Month View */
@@ -520,7 +531,6 @@ header {
 .event-dot.recipe { background-color: var(--primary-color); }
 .event-dot.project { background-color: var(--accent-color); }
 .event-dot.task { background-color: var(--theme-grey); }
-/* NEW: Month view dots for personal events */
 .event-dot.fødselsdag { background-color: #E91E63; }
 .event-dot.aftale { background-color: #2196F3; }
 .event-dot.begivenhed { background-color: #9C27B0; }
