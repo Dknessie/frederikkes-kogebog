@@ -12,9 +12,8 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
+import { initRooms, renderRoomsListPage, renderRoomDetailsPage, initRoomDetails } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
-import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
 
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         projects: [],
         rooms: [],
-        maintenanceLogs: [],
         expenses: [],
         events: [],
         references: {
@@ -240,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
             recipes: 'recipes',
             projects: 'projects',
             rooms: 'rooms',
-            maintenance_logs: 'maintenanceLogs',
             expenses: 'expenses',
             events: 'events'
         };
@@ -341,13 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
-                    if (activeTab === 'hjem-maintenance') {
-                        renderMaintenancePage();
-                    } else {
-                        renderRoomsListPage();
-                        renderProjects();
-                    }
+                    renderRoomsListPage();
+                    renderProjects();
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
@@ -387,9 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        initMaintenance(state, elements);
+        initRoomDetails(state, elements); // Initialize listeners for the room details page
         initExpenses(state);
-        initEvents(state); // FIX: Removed 'elements' argument as it's no longer needed
+        initEvents(state);
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
