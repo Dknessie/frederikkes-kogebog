@@ -438,8 +438,24 @@ header {
     gap: var(--spacing-s);
     margin-top: var(--spacing-m);
 }
-.add-item-form input { flex-grow: 1; }
-.add-item-form button { flex-shrink: 0; font-size: 1.4rem; color: var(--accent-color); }
+.add-item-form input { 
+    flex-grow: 1; 
+    padding: var(--spacing-m);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.add-item-form button { 
+    flex-shrink: 0; 
+    font-size: 1.4rem; 
+    color: var(--accent-color); 
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    width: 44px;
+    height: 44px;
+}
+.add-item-form button:hover {
+    background-color: #e9e5dc;
+}
 
 
 /* Tema 1: Dagligvarer (Notesblok) */
@@ -1014,6 +1030,7 @@ header {
 }
 .shopping-widget-item.clickable:hover {
     transform: scale(1.03);
+    cursor: pointer;
 }
 .shopping-widget-title {
     font-weight: 700;
@@ -1022,6 +1039,17 @@ header {
     align-items: center;
     gap: var(--spacing-s);
 }
+.shopping-widget-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.9rem;
+    color: #555;
+}
+.widget-price {
+    font-weight: 600;
+    color: var(--text-color);
+}
 .shopping-widget-item.groceries {
     background-color: #fff9e9;
     border: 1px solid #fadf98;
@@ -1029,6 +1057,9 @@ header {
 .shopping-widget-item.materials {
     background-color: #34495e;
     color: #ecf0f1;
+}
+.shopping-widget-item.materials .widget-price {
+    color: #f1c40f;
 }
 .shopping-widget-item.wishlist {
     background-color: #f4f4f4;
@@ -1387,7 +1418,7 @@ header {
     grid-template-columns: 1fr auto auto auto auto;
 }
 .wishlist-row {
-    grid-template-columns: 1fr 1fr 100px auto;
+    grid-template-columns: 1fr 1fr auto auto;
 }
 .project-link-row {
     grid-template-columns: 1fr 1fr auto;
@@ -1396,9 +1427,6 @@ header {
     border: 1px solid var(--border-color);
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
-}
-.wishlist-row .wishlist-item-price, .ingredient-row .material-item-price {
-    width: 100px;
 }
 
 .autocomplete-suggestions {
@@ -1507,7 +1535,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-left: auto;
 }
 
-/* ===== 10. Billedupload Styling ===== */
+/* ===== 10. Billedupload & Input Wrappers ===== */
 .image-options {
     display: flex;
     align-items: center;
@@ -1549,6 +1577,21 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .project-image-container .image-options input[type="url"]{
     width: 100%;
+}
+
+.price-input-wrapper, .unit-input-wrapper {
+    position: relative;
+}
+.price-input-wrapper::after, .unit-input-wrapper span {
+    position: absolute;
+    right: var(--spacing-m);
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888;
+    font-weight: 600;
+}
+.price-input-wrapper::after {
+    content: 'kr.';
 }
 
 
