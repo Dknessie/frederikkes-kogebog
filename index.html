@@ -85,13 +85,16 @@
                                     </div>
                                      <div class="shopping-widget-content">
                                         <span id="materials-count">0 varer</span>
+                                        <span id="materials-price" class="widget-price">0,00 kr.</span>
                                     </div>
                                 </div>
                                 <div id="widget-wishlist-summary" class="shopping-widget-item wishlist clickable">
                                      <div class="shopping-widget-title">
                                         <i class="fas fa-couch"></i> Ønskeliste
                                     </div>
-                                    <div id="wishlist-preview" class="wishlist-widget-preview">
+                                    <div class="shopping-widget-content">
+                                        <span id="wishlist-count">0 ønsker</span>
+                                        <span id="wishlist-price" class="widget-price">0,00 kr.</span>
                                     </div>
                                 </div>
                             </div>
@@ -429,7 +432,6 @@
                 <div id="project-links-container"></div>
                 <button type="button" id="add-project-link-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Link</button>
                 <div class="form-actions">
-                    <button type="button" id="add-missing-materials-btn" class="btn btn-secondary">Tilføj manglende til indkøbsliste</button>
                     <button type="submit" class="btn btn-primary" id="save-project-btn">Gem Projekt</button>
                 </div>
             </form>
@@ -527,11 +529,14 @@
                         <input type="number" id="batch-edit-quantity" min="0" value="1" required>
                     </div>
                     <div class="input-group">
-                        <label for="batch-edit-size">Størrelse pr. stk.</label>
-                        <input type="number" id="batch-edit-size" min="0" step="any" required>
+                        <label for="batch-edit-size">Vægt/størrelse pr. enhed</label>
+                        <div class="unit-input-wrapper">
+                             <input type="number" id="batch-edit-size" min="0" step="any" required>
+                             <span id="batch-edit-size-unit"></span>
+                        </div>
                     </div>
                     <div class="input-group">
-                        <label for="batch-edit-unit">Enhed</label>
+                        <label for="batch-edit-unit">Enhedstype</label>
                         <input type="text" id="batch-edit-unit" required>
                     </div>
                 </div>
@@ -539,7 +544,9 @@
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="batch-edit-price">Pris (total for batch)</label>
-                        <input type="number" id="batch-edit-price" min="0" step="0.01">
+                        <div class="price-input-wrapper">
+                            <input type="number" id="batch-edit-price" min="0" step="0.01">
+                        </div>
                     </div>
                     <div class="input-group">
                         <label for="batch-edit-store">Butik</label>
@@ -653,7 +660,7 @@
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
                     <button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
-                    <button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-concierge-bell"></i> Læg på Køkkenbord</button>
+                    <button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-hat-chef"></i> Markér som lavet</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
                 </div>
@@ -714,7 +721,9 @@
             <form id="edit-budget-form">
                 <div class="input-group">
                     <label for="monthly-budget-input">Budget (kr.)</label>
-                    <input type="number" id="monthly-budget-input" min="0" step="100" required>
+                    <div class="price-input-wrapper">
+                        <input type="number" id="monthly-budget-input" min="0" step="100" required>
+                    </div>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Budget</button>
