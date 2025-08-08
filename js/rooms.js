@@ -88,7 +88,7 @@ export function renderRoomsListPage() {
 }
 
 function renderDetailCard(title, content) {
-    if (!content || (Array.isArray(content) && content.length === 0) || content.trim() === '') {
+    if (!content || (Array.isArray(content) && content.length === 0) || (typeof content === 'string' && content.trim() === '')) {
         return '';
     }
     return `
@@ -133,7 +133,8 @@ export function renderRoomDetailsPage() {
     const wishlistContent = (room.wishlist && room.wishlist.length > 0) 
         ? room.wishlist.map(i => {
             const link = i.url ? `<a href="${i.url}" target="_blank" rel="noopener noreferrer">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
-            return `<div class="info-item"><span>${link}</span></div>`;
+            const price = i.price ? `<span>${i.price.toFixed(2)} kr.</span>` : '';
+            return `<div class="info-item"><span>${link}</span>${price}</div>`;
         }).join('') 
         : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>';
 
@@ -287,7 +288,9 @@ function createWishlistRow(item = {}) {
     row.innerHTML = `
         <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}">
         <input type="url" class="wishlist-item-url" placeholder="https://..." value="${item.url || ''}">
-        <input type="number" class="wishlist-item-price" placeholder="Pris" value="${item.price || ''}">
+        <div class="price-input-wrapper">
+            <input type="number" class="wishlist-item-price" placeholder="Pris" value="${item.price || ''}">
+        </div>
         <button type="button" class="btn-icon remove-wishlist-item-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
