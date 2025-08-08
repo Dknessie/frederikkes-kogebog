@@ -145,6 +145,44 @@ document.addEventListener('DOMContentLoaded', () => {
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
     };
 
+    function computeDerivedShoppingLists() {
+        // Compute materials list from projects
+        const materialsList = {};
+        state.projects.forEach(project => {
+            (project.materials || []).forEach(material => {
+                // A simple key for now, could be improved to handle duplicates
+                const key = material.name.toLowerCase();
+                materialsList[key] = {
+                    name: material.name,
+                    quantity_to_buy: material.quantity || 1,
+                    unit: material.unit || 'stk',
+                    price: material.price || null,
+                    projectId: project.id,
+                    storeId: 'Byggemarked' // Placeholder
+                };
+            });
+        });
+        state.shoppingLists.materials = materialsList;
+
+        // Compute wishlist from rooms
+        const wishlist = {};
+        state.rooms.forEach(room => {
+            (room.wishlist || []).forEach(item => {
+                const key = item.name.toLowerCase();
+                wishlist[key] = {
+                    name: item.name,
+                    price: item.price || null,
+                    url: item.url || null,
+                    roomId: room.id,
+                    quantity_to_buy: 1, // Always 1 for wishlist items
+                    unit: 'stk'
+                };
+            });
+        });
+        state.shoppingLists.wishlist = wishlist;
+    }
+
+
     function combineInventoryData() {
         if (!state.inventoryItems || !state.inventoryBatches) return;
         state.inventory = state.inventoryItems.map(item => {
@@ -176,9 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, coll), where("userId", "==", userId));
             state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
                 state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
+                if (stateKey === 'projects' || stateKey === 'rooms') {
+                    computeDerivedShoppingLists();
+                }
+
                 handleNavigation(window.location.hash);
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -189,13 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
 
+        // Listener for the manually managed groceries list
         state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
             const data = doc.exists() ? doc.data() : {};
-            state.shoppingLists = {
-                groceries: data.groceries || {},
-                materials: data.materials || {},
-                wishlist: data.wishlist || {}
-            };
+            state.shoppingLists.groceries = data.groceries || {};
+            // Materials and wishlist are now computed, so we don't read them from here.
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'indkøbslister'));
         
