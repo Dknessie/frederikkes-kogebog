@@ -90,6 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
         inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
         inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
+        impulsePurchaseBtn: document.getElementById('impulse-purchase-btn'),
+        impulsePurchaseModal: document.getElementById('impulse-purchase-modal'),
+        impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
 
         // Recipes
         recipeEditModal: document.getElementById('recipe-edit-modal'),
@@ -132,8 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
-        mobilePanelOverlay: document.getElementById('mobile-panel-overlay'),
-        mobileShoppingListPanel: document.getElementById('mobile-shopping-list-panel'),
 
         // Modals
         notificationModal: document.getElementById('notification-modal'),
