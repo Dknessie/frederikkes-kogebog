@@ -121,8 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // UPDATED: Calendar Elements
         calendarGrid: document.getElementById('calendar-grid'),
         calendarTitle: document.getElementById('calendar-title'),
-        prevMonthBtn: document.getElementById('prev-month-btn'),
-        nextMonthBtn: document.getElementById('next-month-btn'),
+        prevPeriodBtn: document.getElementById('prev-period-btn'),
+        nextPeriodBtn: document.getElementById('next-period-btn'),
         weekViewBtn: document.getElementById('week-view-btn'),
         monthViewBtn: document.getElementById('month-view-btn'),
         calendarWeekView: document.getElementById('calendar-week-view'),
@@ -252,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
         
-        // UPDATED: Listener for all meal plans, not just one year
         const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
         state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
             state.mealPlan = {};
