@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initRooms(state, elements);
         initMaintenance(state, elements);
         initExpenses(state);
-        initEvents(state, elements);
+        initEvents(state); // FIX: Removed 'elements' argument as it's no longer needed
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
