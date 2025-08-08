@@ -428,3 +428,52 @@ async function processItemsSequentially(items) {
         }
     }
 }
+
+/**
+ * NEW: Adds a single item to the grocery list, typically from a notification.
+ * @param {string} itemId - The ID of the inventory item to add.
+ */
+export async function addSingleItemToGroceries(itemId) {
+    const inventoryItem = appState.inventory.find(i => i.id === itemId);
+    if (!inventoryItem) {
+        handleError(new Error("Vare ikke fundet"), "Varen kunne ikke tilføjes til indkøbslisten.");
+        return;
+    }
+
+    const list = appState.shoppingLists.groceries || {};
+    const key = inventoryItem.name.toLowerCase();
+
+    if (list[key]) {
+        showNotification({ title: "Vare findes allerede", message: `${inventoryItem.name} er allerede på indkøbslisten.` });
+        return;
+    }
+
+    // Find the most recent purchase to guess the store and price
+    const lastBatch = inventoryItem.batches
+        .filter(b => b.size > 0)
+        .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
+
+    const purchaseSize = lastBatch?.size || 1;
+    const purchaseUnit = lastBatch?.unit || inventoryItem.defaultUnit;
+    const storeId = lastBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt';
+    const pricePerUnit = lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null;
+
+    const newItem = {
+        name: inventoryItem.name,
+        quantity_to_buy: 1, // Default to 1, user can adjust later
+        unit: `stk á ${purchaseSize}${purchaseUnit}`,
+        storeId: storeId,
+        itemId: inventoryItem.id,
+        estimatedPrice: pricePerUnit
+    };
+
+    const updatedList = { ...list, [key]: newItem };
+
+    try {
+        const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+        await setDoc(shoppingListRef, { groceries: updatedList }, { merge: true });
+        showNotification({ title: "Tilføjet!", message: `${inventoryItem.name} er blevet tilføjet til din indkøbsliste.` });
+    } catch (error) {
+        handleError(error, "Varen kunne ikke tilføjes til listen.", "addSingleItemToGroceries");
+    }
+}
