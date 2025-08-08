@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, formatDate } from './utils.js';
+import { logExpense } from './expenses.js'; // NEW: Import logExpense
 
 let appState;
 let appElements;
@@ -497,11 +498,21 @@ async function handleSaveBatch(e) {
     }
 
     try {
+        let newBatchId;
         if (batchId) {
             await updateDoc(doc(db, 'inventory_batches', batchId), batchData);
         } else {
-            await addDoc(collection(db, 'inventory_batches'), batchData);
+            const newDocRef = await addDoc(collection(db, 'inventory_batches'), batchData);
+            newBatchId = newDocRef.id;
         }
+        
+        // NEW: Log expense if a new batch is created with a price
+        if (!batchId && batchData.price > 0) {
+            const item = appState.inventory.find(i => i.id === itemId);
+            const description = `${item.name} (${batchData.quantity} x ${batchData.size}${batchData.unit})`;
+            await logExpense(batchData.price, 'Dagligvarer', description, itemId);
+        }
+
         document.getElementById('batch-edit-modal').classList.add('hidden');
         showNotification({title: "Batch Gemt", message: "Dit batch er blevet gemt."});
 
