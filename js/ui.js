@@ -15,7 +15,7 @@ export function initUI(state, elements) {
     appState = state;
     initNavigationClicks();
     initModals();
-    initMobileUI();
+    initMobileNav();
     initHjemTabs();
 }
 
@@ -68,15 +68,9 @@ function initNavigationClicks() {
  * Sets up event listeners for closing modals.
  */
 function initModals() {
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.currentTarget.closest('.modal-overlay').classList.add('hidden');
-        });
-    });
-
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
+            if (e.target === overlay || e.target.closest('.close-modal-btn')) {
                 overlay.classList.add('hidden');
             }
         });
@@ -84,63 +78,21 @@ function initModals() {
 }
 
 /**
- * Sets up mobile-specific UI event listeners (tab bar, panels).
+ * Sets up mobile-specific UI event listeners (tab bar).
  */
-function initMobileUI() {
-    UIElements.mobileTabBar.addEventListener('click', (e) => {
-        const link = e.target.closest('.mobile-tab-link');
-        if (!link) return;
-        
-        e.preventDefault();
-        
-        const page = link.dataset.page;
-        const panel = link.dataset.panel;
-
-        if (page) {
-            window.location.hash = `#${page}`;
-        } else if (panel) {
-            showMobilePanel(panel);
-        }
-    });
-
-    UIElements.mobilePanelOverlay.addEventListener('click', (e) => {
-        if (e.target === UIElements.mobilePanelOverlay || e.target.closest('.close-mobile-panel-btn')) {
-            hideMobilePanels();
-        }
-    });
-}
-
-/**
- * Shows a mobile slide-in panel.
- * @param {string} panelId - The ID of the panel to show ('shopping-list' or 'kitchen-counter').
- */
-function showMobilePanel(panelId) {
-    UIElements.mobilePanelOverlay.classList.remove('hidden');
-    UIElements.mobilePanelOverlay.classList.add('active');
-    
-    let targetPanel;
-    if (panelId === 'shopping-list') {
-        targetPanel = UIElements.mobileShoppingListPanel;
-    } else {
-        return;
+function initMobileNav() {
+    if (UIElements.mobileTabBar) {
+        UIElements.mobileTabBar.addEventListener('click', (e) => {
+            const link = e.target.closest('.mobile-tab-link');
+            if (!link) return;
+            
+            e.preventDefault();
+            const page = link.dataset.page;
+            if (page) {
+                window.location.hash = `#${page}`;
+            }
+        });
     }
-
-    if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
-    
-    setTimeout(() => targetPanel.classList.add('active'), 10);
-}
-
-/**
- * Hides all mobile slide-in panels.
- */
-function hideMobilePanels() {
-    UIElements.mobilePanelOverlay.classList.remove('active');
-    if (UIElements.mobileShoppingListPanel) UIElements.mobileShoppingListPanel.classList.remove('active');
-    setTimeout(() => {
-        if (!UIElements.mobilePanelOverlay.classList.contains('active')) {
-            UIElements.mobilePanelOverlay.classList.add('hidden');
-        }
-    }, 300);
 }
 
 
