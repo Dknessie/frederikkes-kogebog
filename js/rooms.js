@@ -1,19 +1,17 @@
 // js/rooms.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
+import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
 
+// Handles listeners on the main #hjem page
 export function initRooms(state, elements) {
     appState = state;
-    appElements = {
-        ...elements,
-        addWishlistItemBtn: document.getElementById('add-wishlist-item-btn'),
-        addRoomInventoryBtn: document.getElementById('add-room-inventory-btn'),
-    };
+    appElements = elements;
 
     if (appElements.addRoomBtn) {
         appElements.addRoomBtn.addEventListener('click', openAddRoomModal);
@@ -27,6 +25,43 @@ export function initRooms(state, elements) {
             }
         });
     }
+    if (appElements.roomForm) {
+        appElements.roomForm.addEventListener('submit', handleSaveRoom);
+    }
+
+    // Listeners for dynamic rows in the room edit modal
+    if (appElements.roomEditModal) {
+        appElements.roomEditModal.addEventListener('click', e => {
+            if (e.target.closest('#add-wishlist-item-btn')) {
+                createWishlistRow();
+            }
+            if (e.target.closest('.remove-wishlist-item-btn')) {
+                e.target.closest('.wishlist-row').remove();
+            }
+            if (e.target.closest('#add-room-image-btn')) {
+                const url = document.getElementById('room-image-url').value;
+                if (url) {
+                    createImagePreview(url);
+                    document.getElementById('room-image-url').value = '';
+                }
+            }
+            if (e.target.closest('.remove-image-btn')) {
+                e.target.closest('.image-preview-item').remove();
+            }
+        });
+    }
+}
+
+// Handles listeners on the #room-details page
+export function initRoomDetails(state, elements) {
+    appState = state;
+    appElements = { // Cache elements specific to this module
+        ...elements,
+        logEntryModal: document.getElementById('log-entry-modal'),
+        logEntryForm: document.getElementById('log-entry-form'),
+        deleteLogEntryBtn: document.getElementById('delete-log-entry-btn'),
+    };
+
     if (appElements.editRoomBtn) {
         appElements.editRoomBtn.addEventListener('click', () => {
             if(appState.currentlyViewedRoomId) {
@@ -34,24 +69,25 @@ export function initRooms(state, elements) {
             }
         });
     }
-    if (appElements.roomForm) {
-        appElements.roomForm.addEventListener('submit', handleSaveRoom);
+    
+    const addLogBtn = document.getElementById('add-log-entry-btn');
+    if (addLogBtn) {
+        addLogBtn.addEventListener('click', () => openLogEntryModal());
     }
 
-    // Event listeners for dynamic rows in modal
-    if (appElements.roomEditModal) {
-        appElements.roomEditModal.addEventListener('click', e => {
-            if (e.target.closest('#add-room-inventory-btn')) {
-                createInventoryRow();
-            }
-            if (e.target.closest('#add-wishlist-item-btn')) {
-                createWishlistRow();
-            }
-            if (e.target.closest('.remove-room-inventory-btn')) {
-                e.target.closest('.room-inventory-row').remove();
-            }
-            if (e.target.closest('.remove-wishlist-item-btn')) {
-                e.target.closest('.wishlist-row').remove();
+    if (appElements.logEntryForm) {
+        appElements.logEntryForm.addEventListener('submit', handleSaveLogEntry);
+    }
+    if (appElements.deleteLogEntryBtn) {
+        appElements.deleteLogEntryBtn.addEventListener('click', handleDeleteLogEntry);
+    }
+
+    // Event delegation for clicking on log entries to edit them
+    if (appElements.roomDetailsContent) {
+        appElements.roomDetailsContent.addEventListener('click', e => {
+            const logItem = e.target.closest('.log-entry');
+            if (logItem && logItem.dataset.logId) {
+                openLogEntryModal(logItem.dataset.logId);
             }
         });
     }
@@ -87,12 +123,12 @@ export function renderRoomsListPage() {
     grid.appendChild(fragment);
 }
 
-function renderDetailCard(title, content) {
+function renderDetailCard(title, content, cardClass = '') {
     if (!content || (Array.isArray(content) && content.length === 0) || (typeof content === 'string' && content.trim() === '')) {
         return '';
     }
     return `
-        <div class="room-detail-card">
+        <div class="room-detail-card ${cardClass}">
             <h4>${title}</h4>
             <div class="info-list">
                 ${content}
@@ -119,35 +155,48 @@ export function renderRoomDetailsPage() {
         room.ceilingHeight ? `<div class="info-item"><span class="info-label">Lofthøjde:</span><span>${room.ceilingHeight} m</span></div>` : ''
     ].filter(Boolean).join('');
 
-    const notesContent = room.notes ? `<p>${room.notes.replace(/\n/g, '<br>')}</p>` : '';
-    const vvsContent = room.notesVVS ? `<p>${room.notesVVS.replace(/\n/g, '<br>')}</p>` : '';
-    const elContent = room.notesEl ? `<p>${room.notesEl.replace(/\n/g, '<br>')}</p>` : '';
-    const windowsContent = room.notesWindows ? `<p>${room.notesWindows.replace(/\n/g, '<br>')}</p>` : '';
-    const ventContent = room.notesVentilation ? `<p>${room.notesVentilation.replace(/\n/g, '<br>')}</p>` : '';
-    const surfacesContent = room.notesSurfaces ? `<p>${room.notesSurfaces.replace(/\n/g, '<br>')}</p>` : '';
-
-    const inventoryContent = (room.inventory && room.inventory.length > 0) 
-        ? room.inventory.map(i => `<div class="info-item"><span>${i.name}</span></div>`).join('') 
-        : '<p class="empty-state-small">Intet inventar registreret.</p>';
+    const galleryContent = (room.images && room.images.length > 0)
+        ? `<div class="room-gallery">` + room.images.map(url => `<img src="${url}" alt="Billede af ${room.name}">`).join('') + `</div>`
+        : '<p class="empty-state-small">Ingen billeder tilføjet.</p>';
 
     const wishlistContent = (room.wishlist && room.wishlist.length > 0) 
         ? room.wishlist.map(i => {
             const link = i.url ? `<a href="${i.url}" target="_blank" rel="noopener noreferrer">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
-            const price = i.price ? `<span>${i.price.toFixed(2)} kr.</span>` : '';
+            const price = i.price ? `<span>${i.price.toFixed(2).replace('.',',')} kr.</span>` : '';
             return `<div class="info-item"><span>${link}</span>${price}</div>`;
         }).join('') 
         : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>';
 
+    const logbookContent = (room.logbook && room.logbook.length > 0)
+        ? `<div class="logbook-container">` + room.logbook
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .map(entry => {
+                const icons = {
+                    'Projekt': '🔨',
+                    'Vedligehold': '🧹',
+                    'Note': '📝'
+                };
+                return `
+                    <div class="log-entry" data-log-id="${entry.id}">
+                        <div class="log-entry-header">
+                            <span class="log-entry-icon">${icons[entry.type] || '📌'}</span>
+                            <span class="log-entry-date">${formatDate(entry.date)}</span>
+                        </div>
+                        <p class="log-entry-desc">${entry.description.replace(/\n/g, '<br>')}</p>
+                    </div>
+                `;
+            }).join('') + `</div>`
+        : '<p class="empty-state-small">Logbogen er tom. Tilføj din første note!</p>';
+
     content.innerHTML = `
-        ${renderDetailCard('Nøgleinformation', keyInfoContent)}
-        ${renderDetailCard('Generelle Noter', notesContent)}
-        ${renderDetailCard('VVS & Sanitet', vvsContent)}
-        ${renderDetailCard('El-installationer', elContent)}
-        ${renderDetailCard('Vinduer & Døre', windowsContent)}
-        ${renderDetailCard('Ventilation', ventContent)}
-        ${renderDetailCard('Overflader', surfacesContent)}
-        ${renderDetailCard('Inventar', inventoryContent)}
-        ${renderDetailCard('Ønskeliste', wishlistContent)}
+        <div class="room-details-main-column">
+            ${renderDetailCard('Logbog', logbookContent, 'logbook-card')}
+        </div>
+        <div class="room-details-sidebar">
+            ${renderDetailCard('Nøgleinformation', keyInfoContent)}
+            ${renderDetailCard('Galleri', galleryContent)}
+            ${renderDetailCard('Ønskeliste', wishlistContent)}
+        </div>
     `;
 }
 
@@ -161,9 +210,8 @@ function openAddRoomModal() {
     roomNameSelect.classList.remove('hidden');
     roomNameSelect.required = true;
     document.getElementById('room-name-display').classList.add('hidden');
-
-    document.getElementById('room-inventory-list-container').innerHTML = '';
     document.getElementById('room-wishlist-container').innerHTML = '';
+    document.getElementById('room-images-preview-container').innerHTML = '';
 
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
@@ -184,27 +232,21 @@ function openEditRoomModal(roomId) {
 
     const roomNameSelect = document.getElementById('room-name-select');
     roomNameSelect.classList.add('hidden');
-    roomNameSelect.required = false; // **FIX: Disable requirement when editing**
+    roomNameSelect.required = false;
     const nameDisplay = document.getElementById('room-name-display');
     nameDisplay.classList.remove('hidden');
     nameDisplay.value = room.name;
 
     document.getElementById('room-area').value = room.area || '';
     document.getElementById('room-ceiling-height').value = room.ceilingHeight || '';
-    document.getElementById('room-notes').value = room.notes || '';
-    document.getElementById('room-notes-vvs').value = room.notesVVS || '';
-    document.getElementById('room-notes-el').value = room.notesEl || '';
-    document.getElementById('room-notes-windows').value = room.notesWindows || '';
-    document.getElementById('room-notes-ventilation').value = room.notesVentilation || '';
-    document.getElementById('room-notes-surfaces').value = room.notesSurfaces || '';
-
-    const inventoryContainer = document.getElementById('room-inventory-list-container');
-    inventoryContainer.innerHTML = '';
-    if (room.inventory) room.inventory.forEach(i => createInventoryRow(i));
 
     const wishlistContainer = document.getElementById('room-wishlist-container');
     wishlistContainer.innerHTML = '';
     if (room.wishlist) room.wishlist.forEach(i => createWishlistRow(i));
+    
+    const imagesContainer = document.getElementById('room-images-preview-container');
+    imagesContainer.innerHTML = '';
+    if (room.images) room.images.forEach(url => createImagePreview(url));
 
     modal.classList.remove('hidden');
 }
@@ -223,14 +265,6 @@ async function handleSaveRoom(e) {
         return;
     }
 
-    const inventory = [];
-    document.querySelectorAll('#room-inventory-list-container .room-inventory-row').forEach(row => {
-        const name = row.querySelector('.room-inventory-name').value.trim();
-        if (name) {
-            inventory.push({ name });
-        }
-    });
-
     const wishlist = [];
     document.querySelectorAll('#room-wishlist-container .wishlist-row').forEach(row => {
         const name = row.querySelector('.wishlist-item-name').value.trim();
@@ -241,19 +275,18 @@ async function handleSaveRoom(e) {
         }
     });
 
+    const images = [];
+    document.querySelectorAll('#room-images-preview-container .image-preview-item img').forEach(img => {
+        images.push(img.src);
+    });
+
     const roomData = {
         name: roomName,
         area: Number(document.getElementById('room-area').value) || null,
         ceilingHeight: Number(document.getElementById('room-ceiling-height').value) || null,
-        notes: document.getElementById('room-notes').value.trim() || null,
-        notesVVS: document.getElementById('room-notes-vvs').value.trim() || null,
-        notesEl: document.getElementById('room-notes-el').value.trim() || null,
-        notesWindows: document.getElementById('room-notes-windows').value.trim() || null,
-        notesVentilation: document.getElementById('room-notes-ventilation').value.trim() || null,
-        notesSurfaces: document.getElementById('room-notes-surfaces').value.trim() || null,
-        inventory: inventory,
         wishlist: wishlist,
-        images: appState.rooms.find(r => r.id === roomId)?.images || [],
+        images: images,
+        logbook: isEditing ? appState.rooms.find(r => r.id === roomId)?.logbook || [] : [],
         userId: appState.currentUser.uid
     };
 
@@ -270,30 +303,30 @@ async function handleSaveRoom(e) {
     }
 }
 
-function createInventoryRow(item = {}) {
-    const container = document.getElementById('room-inventory-list-container');
-    const row = document.createElement('div');
-    row.className = 'room-inventory-row';
-    row.innerHTML = `
-        <input type="text" class="room-inventory-name" placeholder="Navn på genstand" value="${item.name || ''}">
-        <button type="button" class="btn-icon remove-room-inventory-btn"><i class="fas fa-trash"></i></button>
-    `;
-    container.appendChild(row);
-}
-
 function createWishlistRow(item = {}) {
     const container = document.getElementById('room-wishlist-container');
     const row = document.createElement('div');
     row.className = 'wishlist-row';
     row.innerHTML = `
-        <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}">
+        <input type="text" class="wishlist-item-name" placeholder="Navn på ønske" value="${item.name || ''}" required>
         <input type="url" class="wishlist-item-url" placeholder="https://..." value="${item.url || ''}">
         <div class="price-input-wrapper">
-            <input type="number" class="wishlist-item-price" placeholder="Pris" value="${item.price || ''}">
+            <input type="number" step="0.01" class="wishlist-item-price" placeholder="Pris" value="${item.price || ''}">
         </div>
         <button type="button" class="btn-icon remove-wishlist-item-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
+}
+
+function createImagePreview(url) {
+    const container = document.getElementById('room-images-preview-container');
+    const item = document.createElement('div');
+    item.className = 'image-preview-item';
+    item.innerHTML = `
+        <img src="${url}" alt="Preview">
+        <button type="button" class="btn-icon remove-image-btn"><i class="fas fa-times-circle"></i></button>
+    `;
+    container.appendChild(item);
 }
 
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
@@ -301,4 +334,104 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
     (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
     selectElement.value = currentValue || "";
+}
+
+// --- LOGBOOK FUNCTIONS ---
+
+function openLogEntryModal(logId = null) {
+    const form = appElements.logEntryForm;
+    form.reset();
+    
+    const room = appState.rooms.find(r => r.id === appState.currentlyViewedRoomId);
+    if (!room) return;
+
+    document.getElementById('log-entry-room-id').value = room.id;
+    const modalTitle = document.getElementById('log-entry-modal-title');
+    const deleteBtn = appElements.deleteLogEntryBtn;
+
+    if (logId) {
+        const entry = room.logbook.find(e => e.id === logId);
+        if (entry) {
+            modalTitle.textContent = `Rediger Note i ${room.name}`;
+            document.getElementById('log-entry-id').value = entry.id;
+            document.getElementById('log-entry-date').value = entry.date;
+            document.getElementById('log-entry-type').value = entry.type;
+            document.getElementById('log-entry-description').value = entry.description;
+            deleteBtn.style.display = 'inline-flex';
+        }
+    } else {
+        modalTitle.textContent = `Tilføj til Logbog for ${room.name}`;
+        document.getElementById('log-entry-id').value = '';
+        document.getElementById('log-entry-date').value = formatDate(new Date());
+        deleteBtn.style.display = 'none';
+    }
+
+    appElements.logEntryModal.classList.remove('hidden');
+}
+
+async function handleSaveLogEntry(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('log-entry-room-id').value;
+    const logId = document.getElementById('log-entry-id').value;
+    
+    const room = appState.rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    const entryData = {
+        id: logId || crypto.randomUUID(),
+        date: document.getElementById('log-entry-date').value,
+        type: document.getElementById('log-entry-type').value,
+        description: document.getElementById('log-entry-description').value.trim()
+    };
+
+    if (!entryData.date || !entryData.type || !entryData.description) {
+        showNotification({title: "Udfyld alle felter", message: "Dato, type og beskrivelse skal være udfyldt."});
+        return;
+    }
+
+    const roomRef = doc(db, 'rooms', roomId);
+    try {
+        if (logId) {
+            // To edit, we must remove the old and add the new
+            const oldEntry = room.logbook.find(e => e.id === logId);
+            await updateDoc(roomRef, { logbook: arrayRemove(oldEntry) });
+            await updateDoc(roomRef, { logbook: arrayUnion(entryData) });
+        } else {
+            // Just add the new one
+            await updateDoc(roomRef, { logbook: arrayUnion(entryData) });
+        }
+        appElements.logEntryModal.classList.add('hidden');
+        showNotification({title: "Gemt!", message: "Noten er blevet gemt i logbogen."});
+    } catch(error) {
+        handleError(error, "Noten kunne ikke gemmes.", "saveLogEntry");
+    }
+}
+
+async function handleDeleteLogEntry() {
+    const roomId = document.getElementById('log-entry-room-id').value;
+    const logId = document.getElementById('log-entry-id').value;
+
+    if (!roomId || !logId) return;
+
+    const confirmed = await showNotification({
+        title: "Slet Note",
+        message: "Er du sikker på, du vil slette denne note fra logbogen?",
+        type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    const room = appState.rooms.find(r => r.id === roomId);
+    const entryToDelete = room.logbook.find(e => e.id === logId);
+    
+    if (entryToDelete) {
+        try {
+            const roomRef = doc(db, 'rooms', roomId);
+            await updateDoc(roomRef, { logbook: arrayRemove(entryToDelete) });
+            appElements.logEntryModal.classList.add('hidden');
+            showNotification({title: "Slettet", message: "Noten er blevet fjernet fra logbogen."});
+        } catch (error) {
+            handleError(error, "Noten kunne ikke slettes.", "deleteLogEntry");
+        }
+    }
 }
