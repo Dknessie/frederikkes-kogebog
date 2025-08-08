@@ -192,7 +192,12 @@
                 </div>
 
                 <div id="hjem-maintenance" class="hjem-subpage">
-                     <p class="empty-state">Vedligeholdsmodulet er under udvikling.</p>
+                     <div class="actions-bar">
+                        <button id="add-maintenance-log-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Log ny opgave</button>
+                    </div>
+                    <div id="maintenance-log-container">
+                        <!-- Maintenance logs will be rendered here by JS -->
+                    </div>
                 </div>
             </section>
 
@@ -279,6 +284,34 @@
     </div>
     
     <!-- MODALS -->
+    <div id="maintenance-log-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="maintenance-log-modal-title">Log vedligeholdelse</h3>
+            <form id="maintenance-log-form">
+                <input type="hidden" id="maintenance-log-id">
+                <div class="input-group">
+                    <label for="maintenance-log-date">Dato for udførelse</label>
+                    <input type="date" id="maintenance-log-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-room">Rum (valgfri)</label>
+                    <select id="maintenance-log-room"></select>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-task">Opgave</label>
+                    <select id="maintenance-log-task" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-note">Note (valgfri)</label>
+                    <textarea id="maintenance-log-note" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Log</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div id="day-details-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
