@@ -1357,6 +1357,31 @@ header {
     font-weight: 600;
 }
 
+/* NEW: Maintenance Page Styles */
+.maintenance-room-section {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    margin-bottom: var(--spacing-l);
+    box-shadow: var(--shadow);
+}
+.maintenance-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--spacing-m);
+}
+.maintenance-log-table th, .maintenance-log-table td {
+    padding: var(--spacing-m);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.maintenance-log-table th {
+    font-weight: 600;
+}
+.maintenance-log-table td:last-child {
+    text-align: right;
+}
+
 
 /* ===== 9. Modaler ===== */
 .modal-overlay {
@@ -1374,7 +1399,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1399,7 +1424,8 @@ header {
 #edit-budget-modal .modal-content,
 #reorder-assistant-modal .modal-content,
 #batch-edit-modal .modal-content,
-#impulse-purchase-modal .modal-content {
+#impulse-purchase-modal .modal-content,
+#maintenance-log-modal .modal-content {
     max-width: 550px;
 }
 #add-calendar-event-modal .modal-content {
