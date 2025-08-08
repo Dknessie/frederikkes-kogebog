@@ -5,7 +5,7 @@ import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemov
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, debounce } from './utils.js';
 import { confirmAndDeductIngredients } from './kitchenCounter.js';
-import { openEventModal } from './events.js'; // NEW: Import event modal
+import { openEventModal } from './events.js';
 
 let appState;
 let appElements;
@@ -15,7 +15,8 @@ let calendarEventState = {
 };
 let calendarViewState = {
     currentView: 'week', // 'week' or 'month'
-    draggedEventData: null
+    draggedEventData: null,
+    dayDetailsDate: null // NEW: To store the date for the day details modal
 };
 
 export function initMealPlanner(state, elements) {
@@ -26,7 +27,7 @@ export function initMealPlanner(state, elements) {
     appElements.weekViewBtn.addEventListener('click', () => switchCalendarView('week'));
     appElements.monthViewBtn.addEventListener('click', () => switchCalendarView('month'));
 
-    // UPDATED: Navigation now handles both week and month
+    // Navigation
     appElements.prevPeriodBtn.addEventListener('click', () => navigateCalendarPeriod(-1));
     appElements.nextPeriodBtn.addEventListener('click', () => navigateCalendarPeriod(1));
 
@@ -41,12 +42,6 @@ export function initMealPlanner(state, elements) {
     setupDragAndDrop();
     
     // Modals
-    appElements.mealTypeSelector.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-        appElements.mealTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
-        target.classList.add('active');
-    });
     appElements.planMealForm.addEventListener('submit', handlePlanMealSubmit);
     appElements.calendarEventViewChooser.addEventListener('click', handleCalendarEventViewChoice);
     appElements.calendarRecipeSearch.addEventListener('input', debounce(e => populateCalendarRecipeList(e.target.value), 300));
@@ -55,6 +50,22 @@ export function initMealPlanner(state, elements) {
     appElements.calendarTaskSearch.addEventListener('input', debounce(e => populateCalendarTaskList(e.target.value), 300));
     appElements.calendarTaskList.addEventListener('click', handleCalendarTaskSelect);
     appElements.calendarTaskForm.addEventListener('submit', handleCalendarTaskSubmit);
+
+    // NEW: Listeners for Day Details Modal
+    if (appElements.dayDetailsModal) {
+        appElements.dayDetailsModal.addEventListener('click', e => {
+            const eventDiv = e.target.closest('[data-event]');
+            if (eventDiv) {
+                const eventData = JSON.parse(eventDiv.dataset.event);
+                if (eventData.type === 'personal') {
+                    openEventModal(null, eventData);
+                }
+                // Future: Could add logic to open recipe read view for recipe clicks
+            } else if (e.target.closest('#day-details-add-event-btn')) {
+                openEventModal(calendarViewState.dayDetailsDate);
+            }
+        });
+    }
 }
 
 function switchCalendarView(view) {
@@ -66,7 +77,6 @@ function switchCalendarView(view) {
     renderMealPlanner();
 }
 
-// NEW: Combined navigation function for week and month
 function navigateCalendarPeriod(direction) {
     if (calendarViewState.currentView === 'week') {
         appState.currentDate.setDate(appState.currentDate.getDate() + (7 * direction));
@@ -148,12 +158,11 @@ function populateWeekViewWithData() {
             });
         }
 
-        // NEW: Populate personal events into the top slot
+        // Populate personal events into the top slot
         if (mealType === 'events') {
             const today = new Date();
             const currentYear = today.getFullYear();
             const personalEvents = appState.events.filter(event => {
-                // Filter out To-do's from calendar view
                 if (event.category === 'To-do') return false;
                 
                 if (event.isRecurring) {
@@ -195,7 +204,6 @@ function renderMonthView() {
     
     const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; // 0=Mandag, 6=Søndag
     
-    // Add spacer divs for days before the 1st of the month
     for (let i = 0; i < startDayOfWeek; i++) {
         grid.appendChild(document.createElement('div'));
     }
@@ -231,12 +239,12 @@ function createEventDiv(eventData) {
     const eventDiv = document.createElement('div');
     eventDiv.dataset.event = JSON.stringify(eventData);
     eventDiv.className = 'calendar-event';
-    eventDiv.draggable = true;
     let content = '';
     let icon = '';
 
     switch (eventData.type) {
         case 'recipe':
+            eventDiv.draggable = true;
             const recipe = appState.recipes.find(r => r.id === eventData.recipeId);
             eventDiv.classList.add('recipe');
             if (eventData.cooked) eventDiv.classList.add('is-cooked');
@@ -257,6 +265,7 @@ function createEventDiv(eventData) {
             break;
         
         case 'project':
+            eventDiv.draggable = true;
             const project = appState.projects.find(p => p.id === eventData.projectId);
             eventDiv.classList.add('project');
             content = project ? project.title : 'Slettet Projekt';
@@ -265,18 +274,19 @@ function createEventDiv(eventData) {
             break;
 
         case 'task':
+            eventDiv.draggable = true;
             eventDiv.classList.add('task');
             content = eventData.taskName;
             icon = `<i class="fas fa-broom"></i>`;
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
 
-        case 'personal': // NEW: Handle personal events
+        case 'personal':
+            eventDiv.draggable = false;
             eventDiv.classList.add(eventData.category.toLowerCase());
             content = eventData.title;
             icon = `<i class="fas ${getIconForCategory(eventData.category)}"></i>`;
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div>`;
-            eventDiv.draggable = false; // Personal events are not draggable for now
             break;
     }
     return eventDiv;
@@ -339,6 +349,13 @@ async function handleCalendarClick(e) {
     if (!eventDiv) return;
 
     const eventData = JSON.parse(eventDiv.dataset.event);
+    
+    // NEW: Handle clicks on personal events in week view
+    if (eventData.type === 'personal') {
+        openEventModal(null, eventData);
+        return;
+    }
+
     const slot = eventDiv.closest('.meal-slot');
     const date = slot.dataset.date;
     const mealType = slot.dataset.meal;
@@ -362,33 +379,21 @@ async function handleMonthGridClick(e) {
     if (!dayCell) return;
 
     const date = dayCell.dataset.date;
-    const eventsToday = Object.entries(appState.mealPlan[date] || {}).flat();
+    calendarViewState.dayDetailsDate = date; // Store date for the "add" button
+
+    const mealEventsToday = Object.values(appState.mealPlan[date] || {}).flat();
+    const personalEventsToday = appState.events.filter(event => event.date === date && event.category !== 'To-do');
+    const allEvents = [...mealEventsToday, ...personalEventsToday.map(e => ({...e, type: 'personal'}))];
 
     appElements.dayDetailsTitle.textContent = new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
     const contentDiv = appElements.dayDetailsContent;
     contentDiv.innerHTML = '';
 
-    if (eventsToday.length === 0) {
+    if (allEvents.length === 0) {
         contentDiv.innerHTML = '<p class="empty-state">Ingen begivenheder planlagt.</p>';
     } else {
-        const mealOrder = ['breakfast', 'lunch', 'dinner'];
-        const groupedEvents = { breakfast: [], lunch: [], dinner: [] };
-        
-        Object.entries(appState.mealPlan[date] || {}).forEach(([mealType, events]) => {
-            if (groupedEvents[mealType]) {
-                groupedEvents[mealType].push(...events);
-            }
-        });
-
-        mealOrder.forEach(mealType => {
-            if (groupedEvents[mealType].length > 0) {
-                const mealTitle = document.createElement('h4');
-                mealTitle.textContent = { breakfast: 'Morgenmad', lunch: 'Frokost', dinner: 'Aftensmad'}[mealType];
-                contentDiv.appendChild(mealTitle);
-                groupedEvents[mealType].forEach(event => {
-                    contentDiv.appendChild(createEventDiv(event));
-                });
-            }
+        allEvents.forEach(event => {
+            contentDiv.appendChild(createEventDiv(event));
         });
     }
 
@@ -432,7 +437,7 @@ async function handlePlanMealSubmit(e) {
     const recipeId = document.getElementById('plan-meal-recipe-id').value;
     const date = document.getElementById('plan-meal-date').value;
     const portions = Number(document.getElementById('plan-meal-portions').value);
-    const mealTypeBtn = appElements.mealTypeSelector.querySelector('.btn.active');
+    const mealTypeBtn = document.querySelector('#plan-meal-form .meal-type-selector .btn.active');
 
     if (!recipeId || !date || !portions || !mealTypeBtn) {
         handleError(new Error("Udfyld venligst alle felter."), "Udfyld venligst alle felter.", "planMealSubmit");
@@ -463,7 +468,7 @@ export function openPlanMealModal(recipeId) {
     document.getElementById('plan-meal-portions').value = recipe.portions || 1;
     document.getElementById('plan-meal-date').value = formatDate(new Date());
     
-    appElements.mealTypeSelector.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('#plan-meal-form .meal-type-selector .btn').forEach(btn => btn.classList.remove('active'));
     appElements.planMealModal.classList.remove('hidden');
 }
 
