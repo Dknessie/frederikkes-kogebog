@@ -25,7 +25,6 @@ export function initProjects(state, elements) {
         projectImagePreviewAfter: document.getElementById('project-image-preview-after'),
         projectImageUploadAfter: document.getElementById('project-image-upload-after'),
         projectImageUrlInputAfter: document.getElementById('project-imageUrl-after'),
-        addMissingMaterialsBtn: document.getElementById('add-missing-materials-btn'),
         projectLinksContainer: document.getElementById('project-links-container'),
         addProjectLinkBtn: document.getElementById('add-project-link-btn'),
     };
@@ -33,7 +32,7 @@ export function initProjects(state, elements) {
     appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
     appElements.projectForm.addEventListener('submit', handleSaveProject);
     appElements.projectsGrid.addEventListener('click', handleGridClick);
-    appElements.addMaterialBtn.addEventListener('click', () => createMaterialRow(appElements.projectMaterialsContainer));
+    appElements.addMaterialBtn.addEventListener('click', () => createMaterialRow());
     
     appElements.projectEditModal.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
@@ -50,8 +49,6 @@ export function initProjects(state, elements) {
     appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
     appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
     appElements.addProjectLinkBtn.addEventListener('click', () => createLinkRow());
-
-    appElements.addMissingMaterialsBtn.addEventListener('click', handleAddMissingMaterials);
 }
 
 /**
@@ -109,17 +106,19 @@ function createProjectCard(project) {
 
 /**
  * Creates a row for adding a material in the project modal.
- * @param {HTMLElement} container - The container to append the row to.
  * @param {object} [material={}] - Optional material data to pre-fill the row.
  */
-function createMaterialRow(container, material = {}) {
+function createMaterialRow(material = {}) {
+    const container = appElements.projectMaterialsContainer;
     const row = document.createElement('div');
     row.className = 'ingredient-row'; // Reusing recipe style
     row.innerHTML = `
         <input type="text" class="ingredient-name" placeholder="Materiale/Værktøj" value="${material.name || ''}" required>
         <input type="number" step="any" class="ingredient-quantity" placeholder="Antal" value="${material.quantity || ''}">
         <input type="text" class="ingredient-unit" placeholder="Enhed" value="${material.unit || ''}">
-        <input type="number" step="0.01" class="material-item-price" placeholder="Pris" value="${material.price || ''}">
+        <div class="price-input-wrapper">
+            <input type="number" step="0.01" class="material-item-price" placeholder="Pris" value="${material.price || ''}">
+        </div>
         <button type="button" class="btn-icon remove-ingredient-btn"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(row);
@@ -256,7 +255,7 @@ function openAddProjectModal() {
 
     populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...');
 
-    createMaterialRow(appElements.projectMaterialsContainer);
+    createMaterialRow();
     createLinkRow();
     appElements.projectEditModal.classList.remove('hidden');
 }
@@ -349,8 +348,4 @@ function handleImageUrlInput(e, type) {
         appElements.projectImagePreviewAfter.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
         appElements.projectImageUploadAfter.value = '';
     }
-}
-
-async function handleAddMissingMaterials() {
-    showNotification({title: "Kommer Snart", message: "Funktionen til at tilføje manglende materialer er under udvikling."});
 }
