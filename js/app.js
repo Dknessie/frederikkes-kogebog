@@ -144,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editBudgetModal: document.getElementById('edit-budget-modal'),
         editBudgetForm: document.getElementById('edit-budget-form'),
         monthlyBudgetInput: document.getElementById('monthly-budget-input'),
+        shoppingListModal: document.getElementById('shopping-list-modal'),
     };
 
     function computeDerivedShoppingLists() {
