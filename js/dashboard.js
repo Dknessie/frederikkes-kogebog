@@ -3,7 +3,7 @@ import { db } from './firebase.js';
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate, convertToGrams } from './utils.js';
-import { openShoppingListModal } from './shoppingList.js';
+import { openShoppingListModal, addSingleItemToGroceries } from './shoppingList.js';
 
 let appState;
 let appElements;
@@ -100,6 +100,17 @@ export function initDashboard(state, elements) {
             } else {
                 // For actions that navigate, let the default href work
                 window.location.hash = actionBtn.getAttribute('href');
+            }
+        });
+    }
+
+    // NEW: Event listener for adding items from notifications widget to shopping list
+    if (appElements.inventoryNotificationsContent) {
+        appElements.inventoryNotificationsContent.addEventListener('click', e => {
+            const addBtn = e.target.closest('.add-notification-to-list-btn');
+            if (addBtn) {
+                const itemId = addBtn.dataset.itemId;
+                addSingleItemToGroceries(itemId); 
             }
         });
     }
@@ -269,42 +280,80 @@ function renderBudgetWidget() {
 
 function renderInventoryNotificationsWidget() {
     const container = appElements.inventoryNotificationsContent;
+    container.innerHTML = '';
     const today = new Date();
-    today.setHours(0,0,0,0);
+    today.setHours(0, 0, 0, 0);
     const sevenDaysFromNow = new Date();
     sevenDaysFromNow.setDate(today.getDate() + 7);
 
+    // Get expiring items
     const expiringBatches = appState.inventoryBatches
         .filter(batch => {
             if (!batch.expiryDate) return false;
             const expiryDate = new Date(batch.expiryDate);
-            return expiryDate <= sevenDaysFromNow;
+            return expiryDate >= today && expiryDate <= sevenDaysFromNow;
         })
-        .map(b => ({...b, type: 'expiring'}));
+        .map(b => ({
+            ...b,
+            itemName: appState.inventoryItems.find(i => i.id === b.itemId)?.name || 'Ukendt vare',
+            daysLeft: Math.ceil((new Date(b.expiryDate) - today) / (1000 * 60 * 60 * 24))
+        }))
+        .sort((a, b) => a.daysLeft - b.daysLeft);
 
+    // Get low stock items
     const lowStockItems = appState.inventory
-        .filter(item => item.reorderPoint && item.totalStock > 0 && item.totalStock <= item.reorderPoint)
-        .map(i => ({...i, type: 'low_stock'}));
+        .filter(item => item.reorderPoint && item.totalStock > 0 && item.totalStock <= item.reorderPoint);
 
-    const notifications = [...expiringBatches, ...lowStockItems];
-    
-    if (notifications.length === 0) {
-        container.innerHTML = '<p class="empty-state">Alt er fyldt op, og intet udløber snart. Godt gået!</p>';
-        return;
+    // Get out of stock items
+    const outOfStockItems = appState.inventory
+        .filter(item => item.reorderPoint && item.totalStock <= 0);
+
+    let html = '';
+
+    if (expiringBatches.length > 0) {
+        html += `<h4>Udløber Snart</h4>`;
+        html += expiringBatches.map(item => `
+            <div class="notification-item expiring">
+                <span class="notification-text">
+                    <strong>${item.itemName}</strong> udløber om ${item.daysLeft} dag(e)
+                </span>
+                <button class="btn-icon add-notification-to-list-btn" data-item-id="${item.itemId}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button>
+            </div>
+        `).join('');
     }
 
-    container.innerHTML = notifications.slice(0, 5).map(item => {
-        let text = '';
-        let itemClass = `notification-item ${item.type}`;
-        if (item.type === 'expiring') {
-            const itemName = appState.inventoryItems.find(i => i.id === item.itemId)?.name || 'Ukendt vare';
-            text = `${itemName} udløber ${formatDate(item.expiryDate)}`;
-        } else {
-            text = `${item.name} er ved at løbe tør`;
-        }
-        return `<div class="${itemClass}"><span class="notification-text">${text}</span><button class="btn-icon" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`;
-    }).join('');
+    if (lowStockItems.length > 0) {
+        html += `<h4>Lav Beholdning</h4>`;
+        html += lowStockItems.map(item => `
+            <div class="notification-item low-stock">
+                <span class="notification-text">
+                    <strong>${item.name}</strong> <span class="stock-details">(${item.totalStock.toFixed(0)} / ${item.reorderPoint} ${item.defaultUnit})</span>
+                </span>
+                <button class="btn-icon add-notification-to-list-btn" data-item-id="${item.id}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button>
+            </div>
+        `).join('');
+    }
+    
+    if (outOfStockItems.length > 0) {
+        html += `<h4>Løbet Tør</h4>`;
+        html += outOfStockItems.map(item => `
+            <div class="notification-item out-of-stock">
+                <span class="notification-text">
+                    <strong>${item.name}</strong> <span class="stock-details">(0 / ${item.reorderPoint} ${item.defaultUnit})</span>
+                </span>
+                <button class="btn-icon add-notification-to-list-btn" data-item-id="${item.id}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button>
+            </div>
+        `).join('');
+    }
+
+
+    if (html === '') {
+        container.innerHTML = '<p class="empty-state">Alt er fyldt op, og intet udløber snart. Godt gået!</p>';
+    } else {
+        container.innerHTML = html;
+    }
 }
+
 
 function renderCategoryValuesWidget() {
     const container = appElements.categoryValuesContent;
