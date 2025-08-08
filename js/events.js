@@ -6,30 +6,24 @@ import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
 
 let appState;
-let appElements;
 
 /**
- * Initializes the personal events module.
+ * Initializes the personal events module by setting up permanent event listeners.
  * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
  */
-export function initEvents(state, elements) {
+export function initEvents(state) {
     appState = state;
-    appElements = {
-        ...elements,
-        eventModal: document.getElementById('event-modal'),
-        eventModalTitle: document.getElementById('event-modal-title'),
-        eventTypeSpecificFields: document.getElementById('event-type-specific-fields'),
-        eventTypeSelect: document.getElementById('event-type'),
-        eventTitleGroup: document.getElementById('event-title-group'),
-    };
-
-    // The eventForm is now passed directly from the central elements cache
-    if (appElements.eventForm) {
-        appElements.eventForm.addEventListener('submit', handleSaveEvent);
+    
+    // Find the form and attach the submit listener once.
+    const eventFormElement = document.getElementById('event-form');
+    if (eventFormElement) {
+        eventFormElement.addEventListener('submit', handleSaveEvent);
     }
-    if (appElements.eventTypeSelect) {
-        appElements.eventTypeSelect.addEventListener('change', toggleEventTypeFields);
+    
+    // Attach the change listener for the dropdown once.
+    const eventTypeSelect = document.getElementById('event-type');
+    if (eventTypeSelect) {
+        eventTypeSelect.addEventListener('change', toggleEventTypeFields);
     }
 }
 
@@ -39,19 +33,30 @@ export function initEvents(state, elements) {
  * @param {object} [eventData] - Optional event data for editing.
  */
 export function openEventModal(date, eventData = null) {
-    const modal = appElements.eventModal;
-    const form = appElements.eventForm;
+    // FIX: Look up elements directly when the function is called for robustness.
+    const modal = document.getElementById('event-modal');
+    const form = document.getElementById('event-form');
+    const modalTitle = document.getElementById('event-modal-title');
+
+    // Defensive check to ensure modal elements exist before proceeding.
+    if (!form || !modal || !modalTitle) {
+        console.error("Event modal elements not found in the DOM.");
+        return;
+    }
+    
     form.reset();
 
     if (eventData) {
-        // Editing existing event
-        appElements.eventModalTitle.textContent = 'Rediger Begivenhed';
+        // Editing an existing event
+        modalTitle.textContent = 'Rediger Begivenhed';
         document.getElementById('event-id').value = eventData.id;
         document.getElementById('event-title').value = eventData.title;
         document.getElementById('event-date').value = eventData.date;
         document.getElementById('event-type').value = eventData.category;
         
-        // Populate specific fields for editing
+        toggleEventTypeFields(); // Create the specific fields for the event type.
+        
+        // Use a timeout to ensure dynamic fields are in the DOM before populating them.
         setTimeout(() => {
             if (eventData.category === 'Fødselsdag') {
                 document.getElementById('event-birthday-name').value = eventData.name || '';
@@ -62,18 +67,19 @@ export function openEventModal(date, eventData = null) {
                 document.getElementById('event-release-subcategory').value = eventData.subCategory || '';
             }
             if (eventData.isComplete) {
-                document.getElementById('event-is-complete').checked = true;
+                const checkbox = document.getElementById('event-is-complete');
+                if (checkbox) checkbox.checked = true;
             }
         }, 0);
         
     } else {
-        // Adding new event
-        appElements.eventModalTitle.textContent = 'Tilføj Begivenhed';
+        // Adding a new event
+        modalTitle.textContent = 'Tilføj Begivenhed';
         document.getElementById('event-id').value = '';
         document.getElementById('event-date').value = date || formatDate(new Date());
+        toggleEventTypeFields(); // Set the initial state for a new event.
     }
 
-    toggleEventTypeFields();
     modal.classList.remove('hidden');
 }
 
@@ -81,9 +87,17 @@ export function openEventModal(date, eventData = null) {
  * Shows or hides specific form fields based on the selected event type.
  */
 function toggleEventTypeFields() {
-    const category = appElements.eventTypeSelect.value;
-    const specificFieldsContainer = appElements.eventTypeSpecificFields;
-    appElements.eventTitleGroup.classList.toggle('hidden', ['Fødselsdag', 'Udgivelse'].includes(category));
+    // FIX: Look up elements directly each time to handle dynamic content.
+    const eventTypeSelect = document.getElementById('event-type');
+    const specificFieldsContainer = document.getElementById('event-type-specific-fields');
+    const eventTitleGroup = document.getElementById('event-title-group');
+
+    if (!eventTypeSelect || !specificFieldsContainer || !eventTitleGroup) {
+        return;
+    }
+
+    const category = eventTypeSelect.value;
+    eventTitleGroup.classList.toggle('hidden', ['Fødselsdag', 'Udgivelse'].includes(category));
     
     let specificHTML = '';
     switch(category) {
@@ -181,7 +195,7 @@ async function handleSaveEvent(e) {
         } else {
             await addDoc(collection(db, 'events'), eventData);
         }
-        appElements.eventModal.classList.add('hidden');
+        document.getElementById('event-modal').classList.add('hidden');
         showNotification({ title: "Gemt!", message: "Din begivenhed er blevet gemt." });
     } catch (error) {
         handleError(error, "Begivenheden kunne ikke gemmes.", "saveEvent");
