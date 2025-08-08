@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
-        eventForm: document.getElementById('event-form'), // FIX: Added event form to central cache
     };
 
     function computeDerivedShoppingLists() {
