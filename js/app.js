@@ -15,7 +15,8 @@ import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initMaintenance, renderMaintenancePage } from './maintenance.js';
-import { initExpenses } from './expenses.js'; // NEW: Import expenses module
+import { initExpenses } from './expenses.js';
+import { initEvents } from './events.js'; // NEW: Import events module
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -28,7 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
         projects: [],
         rooms: [],
         maintenanceLogs: [],
-        expenses: [], // NEW: State for expenses
+        expenses: [],
+        events: [], // NEW: State for personal events
         references: {
             maintenanceTasks: []
         },
@@ -239,7 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
             projects: 'projects',
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
-            expenses: 'expenses' // NEW: Listener for expenses
+            expenses: 'expenses',
+            events: 'events' // NEW: Listener for personal events
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -386,7 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initProjects(state, elements);
         initRooms(state, elements);
         initMaintenance(state, elements);
-        initExpenses(state); // NEW: Initialize expenses module
+        initExpenses(state);
+        initEvents(state, elements); // NEW: Initialize events module
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
