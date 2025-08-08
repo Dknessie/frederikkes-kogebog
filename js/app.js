@@ -16,7 +16,7 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 import { initExpenses } from './expenses.js';
-import { initEvents } from './events.js'; // NEW: Import events module
+import { initEvents } from './events.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rooms: [],
         maintenanceLogs: [],
         expenses: [],
-        events: [], // NEW: State for personal events
+        events: [],
         references: {
             maintenanceTasks: []
         },
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
-        // UPDATED: Calendar Elements
+        // Calendar
         calendarGrid: document.getElementById('calendar-grid'),
         calendarTitle: document.getElementById('calendar-title'),
         prevPeriodBtn: document.getElementById('prev-period-btn'),
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
-        mealTypeSelector: document.querySelector('#plan-meal-modal .meal-type-selector'),
+        mealTypeSelector: document.querySelector('#plan-meal-form .meal-type-selector'),
         addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
         calendarEventModalTitle: document.getElementById('calendar-event-modal-title'),
         calendarEventViewChooser: document.getElementById('calendar-event-view-chooser'),
@@ -176,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
+        eventForm: document.getElementById('event-form'), // FIX: Added event form to central cache
     };
 
     function computeDerivedShoppingLists() {
@@ -242,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
             expenses: 'expenses',
-            events: 'events' // NEW: Listener for personal events
+            events: 'events'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -341,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    // NEW: Render maintenance page when its tab is active
                     const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
                     if (activeTab === 'hjem-maintenance') {
                         renderMaintenancePage();
@@ -390,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initRooms(state, elements);
         initMaintenance(state, elements);
         initExpenses(state);
-        initEvents(state, elements); // NEW: Initialize events module
+        initEvents(state, elements);
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
