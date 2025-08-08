@@ -545,85 +545,23 @@
             </form>
         </div>
     </div>
+    <!-- NEW: Simplified Impulse Purchase Modal -->
     <div id="impulse-purchase-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <h3>Hurtigt Køb</h3>
-            <p>Registrer et impulskøb direkte til dit varelager.</p>
+            <p>Søg efter en vare for at tilføje et nyt batch, eller opret en ny vare, hvis den ikke findes.</p>
             <form id="impulse-purchase-form">
                 <div class="input-group">
                     <label for="impulse-item-search">Søg eller opret vare</label>
-                    <input type="text" id="impulse-item-search" placeholder="Begynd at skrive..." required>
-                    <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
-                </div>
-                <input type="hidden" id="impulse-item-id">
-                <input type="hidden" id="impulse-is-new-item" value="false">
-                
-                <div id="impulse-details-section" class="hidden">
-                    <div id="impulse-new-item-fields" class="hidden">
-                         <div class="form-grid-2-col">
-                            <div class="input-group">
-                                <label for="impulse-main-category">Overkategori</label>
-                                <select id="impulse-main-category" required></select>
-                            </div>
-                            <div class="input-group">
-                                <label for="impulse-sub-category">Underkategori</label>
-                                <select id="impulse-sub-category" required></select>
-                            </div>
-                        </div>
-                        <div class="form-grid-2-col">
-                             <div class="input-group">
-                                <label for="impulse-location">Placering</label>
-                                <select id="impulse-location" required></select>
-                            </div>
-                            <div class="input-group">
-                                <label for="impulse-default-unit">Standard Måleenhed</label>
-                                <select id="impulse-default-unit" required>
-                                    <option value="g">Gram (g)</option>
-                                    <option value="ml">Milliliter (ml)</option>
-                                    <option value="stk">Styk (stk)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-grid-3-col">
-                        <div class="input-group">
-                            <label>Antal</label>
-                            <input type="number" id="impulse-quantity" min="1" value="1" required>
-                        </div>
-                        <div class="input-group">
-                            <label>Vægt/størrelse pr. enhed</label>
-                             <div class="unit-input-wrapper">
-                                <input type="number" id="impulse-size" min="0" step="any" required>
-                                <span id="impulse-size-unit"></span>
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label>Enhedstype</label>
-                            <input type="text" id="impulse-unit" required>
-                        </div>
-                    </div>
-                    <div class="form-grid-2-col">
-                        <div class="input-group">
-                            <label>Pris (total)</label>
-                            <div class="price-input-wrapper">
-                                <input type="number" id="impulse-price" min="0" step="0.01">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label>Butik</label>
-                            <select id="impulse-store" required></select>
-                        </div>
-                    </div>
-                     <div class="input-group">
-                        <label>Udløbsdato (valgfri)</label>
-                        <input type="date" id="impulse-expiry-date">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at søge..." autocomplete="off">
+                        <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                 </div>
-
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="save-impulse-purchase-btn" disabled>Tilføj til Lager</button>
+                    <button type="submit" class="btn btn-primary" id="impulse-action-btn" disabled>Vælg en handling</button>
                 </div>
             </form>
         </div>
@@ -781,6 +719,7 @@
             </form>
         </div>
     </div>
+    <!-- NEW: Add to Calendar Modal -->
     <div id="add-calendar-event-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -790,9 +729,10 @@
                 <div class="quick-actions-container">
                     <button class="quick-action-btn" data-view="recipe"><i class="fas fa-utensils"></i><span>Madplan</span></button>
                     <button class="quick-action-btn" data-view="project"><i class="fas fa-tasks"></i><span>Projektopgave</span></button>
-                    <button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Andet</span></button>
+                    <button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Vedligehold</span></button>
                 </div>
             </div>
+            <!-- Recipe Selection View -->
             <div id="calendar-event-view-recipe" class="calendar-event-view hidden">
                 <h4>Vælg Opskrift</h4>
                 <div class="search-bar">
@@ -801,16 +741,21 @@
                 </div>
                 <ul id="calendar-recipe-list" class="selection-list"></ul>
             </div>
+             <!-- Project Selection View -->
              <div id="calendar-event-view-project" class="calendar-event-view hidden">
                 <h4>Vælg Projekt</h4>
                 <ul id="calendar-project-list" class="selection-list"></ul>
             </div>
+             <!-- Task/Maintenance Selection View -->
              <div id="calendar-event-view-task" class="calendar-event-view hidden">
-                <h4>Beskriv Opgave</h4>
+                <h4>Vælg Opgave</h4>
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="calendar-task-search" placeholder="Søg eller skriv ny opgave...">
+                </div>
+                <ul id="calendar-task-list" class="selection-list"></ul>
                 <form id="calendar-task-form">
-                    <div class="input-group">
-                        <input type="text" id="calendar-task-name" placeholder="F.eks. Rengør ovn" required>
-                    </div>
+                    <input type="hidden" id="calendar-task-name-hidden">
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">Tilføj Opgave</button>
                     </div>
