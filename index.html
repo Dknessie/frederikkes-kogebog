@@ -139,22 +139,33 @@
                     </div>
                 </div>
             </section>
-
+            
+            <!-- NEW CALENDAR STRUCTURE -->
             <section id="calendar" class="page hidden">
-                <div class="meal-planner-main" style="height: calc(100vh - 65px - (var(--spacing-l) * 2));">
+                <div class="calendar-main-container">
                     <div class="calendar-header">
-                        <button id="prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                        <div class="calendar-title-container">
+                        <div class="calendar-nav">
+                            <button id="prev-month-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
                             <h2 id="calendar-title"></h2>
-                            <div id="weekly-price-display" class="weekly-price-display"></div>
+                            <button id="next-month-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <button id="next-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                        <div class="calendar-view-toggle">
+                            <button id="week-view-btn" class="btn btn-secondary active">Uge</button>
+                            <button id="month-view-btn" class="btn btn-secondary">Måned</button>
+                        </div>
+                        <div class="calendar-actions">
+                            <button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
+                            <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
+                        </div>
                     </div>
-                    <div class="calendar-actions">
-                        <button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
-                        <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
+                    <div id="calendar-week-view" class="calendar-view active">
+                        <div class="calendar-week-header"></div>
+                        <div id="calendar-grid" class="calendar-grid"></div>
                     </div>
-                    <div id="calendar-grid" class="calendar-grid"></div>
+                    <div id="calendar-month-view" class="calendar-view">
+                        <div class="calendar-month-header"></div>
+                        <div id="calendar-month-grid" class="calendar-month-grid"></div>
+                    </div>
                 </div>
             </section>
             
@@ -268,6 +279,13 @@
     </div>
     
     <!-- MODALS -->
+    <div id="day-details-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="day-details-title"></h3>
+            <div id="day-details-content"></div>
+        </div>
+    </div>
     <div id="shopping-list-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="shopping-list-header">
@@ -545,7 +563,7 @@
             </form>
         </div>
     </div>
-    <!-- NEW: Simplified Impulse Purchase Modal -->
+    <!-- Simplified Impulse Purchase Modal -->
     <div id="impulse-purchase-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -555,8 +573,8 @@
                 <div class="input-group">
                     <label for="impulse-item-search">Søg eller opret vare</label>
                     <div class="search-bar">
-                        <i class="fas fa-search"></i>
                         <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at søge..." autocomplete="off">
+                        <i class="fas fa-search"></i>
                         <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
                     </div>
                 </div>
@@ -719,9 +737,9 @@
             </form>
         </div>
     </div>
-    <!-- NEW: Add to Calendar Modal -->
+    <!-- Add to Calendar Modal -->
     <div id="add-calendar-event-modal" class="modal-overlay hidden">
-        <div class="modal-content">
+        <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
             <h3 id="calendar-event-modal-title">Tilføj til Kalender</h3>
             <div id="calendar-event-view-chooser">
@@ -736,8 +754,8 @@
             <div id="calendar-event-view-recipe" class="calendar-event-view hidden">
                 <h4>Vælg Opskrift</h4>
                 <div class="search-bar">
-                    <i class="fas fa-search"></i>
                     <input type="text" id="calendar-recipe-search" placeholder="Søg i dine opskrifter...">
+                    <i class="fas fa-search"></i>
                 </div>
                 <ul id="calendar-recipe-list" class="selection-list"></ul>
             </div>
@@ -750,8 +768,8 @@
              <div id="calendar-event-view-task" class="calendar-event-view hidden">
                 <h4>Vælg Opgave</h4>
                 <div class="search-bar">
-                    <i class="fas fa-search"></i>
                     <input type="text" id="calendar-task-search" placeholder="Søg eller skriv ny opgave...">
+                    <i class="fas fa-search"></i>
                 </div>
                 <ul id="calendar-task-list" class="selection-list"></ul>
                 <form id="calendar-task-form">
