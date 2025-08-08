@@ -21,6 +21,7 @@ export function initDashboard(state, elements) {
         budgetGaugeContainer: document.getElementById('budget-gauge-container'),
         inventoryNotificationsContent: document.getElementById('inventory-notifications-content'),
         quickActionsContainer: document.getElementById('quick-actions-widget'),
+        categoryValuesContent: document.getElementById('category-values-content'),
         
         // Shopping List Widget Items
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
@@ -76,7 +77,7 @@ export function initDashboard(state, elements) {
 }
 
 export function renderDashboardPage() {
-    if (!appState.currentUser || !appState.recipes || !appState.projects) return;
+    if (!appState.currentUser || !appState.recipes || !appState.projects || !appState.inventory) return;
     
     renderWelcomeWidget();
     renderTodayOverviewWidget();
@@ -84,6 +85,7 @@ export function renderDashboardPage() {
     renderBudgetWidget();
     renderInventoryNotificationsWidget();
     renderShoppingListWidgets();
+    renderCategoryValuesWidget();
 }
 
 function renderShoppingListWidgets() {
@@ -249,6 +251,42 @@ function renderInventoryNotificationsWidget() {
         return `<div class="${itemClass}"><span class="notification-text">${text}</span><button class="btn-icon" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`;
     }).join('');
 }
+
+function renderCategoryValuesWidget() {
+    const container = appElements.categoryValuesContent;
+    const categoryValues = {};
+
+    appState.inventory.forEach(item => {
+        const category = item.mainCategory || 'Ukategoriseret';
+        if (!categoryValues[category]) {
+            categoryValues[category] = 0;
+        }
+        item.batches.forEach(batch => {
+            categoryValues[category] += batch.price || 0;
+        });
+    });
+
+    const sortedCategories = Object.entries(categoryValues).sort(([,a],[,b]) => b-a);
+    const totalValue = sortedCategories.reduce((sum, [,value]) => sum + value, 0);
+
+    if (sortedCategories.length === 0) {
+        container.innerHTML = '<p class="empty-state">Ingen varer med pris på lager.</p>';
+        return;
+    }
+
+    container.innerHTML = sortedCategories.map(([name, value]) => {
+        const percentage = totalValue > 0 ? (value / totalValue) * 100 : 0;
+        return `
+            <div class="category-value-item">
+                <span class="category-name" title="${name}">${name}</span>
+                <div class="category-bar-container">
+                    <div class="category-bar" style="width: ${percentage}%">${value.toFixed(0)} kr.</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 
 function openEditBudgetModal() {
     if (appElements.monthlyBudgetInput) {
