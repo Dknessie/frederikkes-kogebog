@@ -15,6 +15,11 @@ let inventoryState = {
     selectedSubCategory: '',
     selectedStockStatus: ''
 };
+// NEW: State for impulse purchase modal
+let impulseState = {
+    selectedItem: null,
+    searchTerm: ''
+};
 
 export function initInventory(state, elements) {
     appState = state;
@@ -123,9 +128,19 @@ export function initInventory(state, elements) {
         });
     }
 
-    // Impulse Purchase
+    // REWRITTEN: Impulse Purchase
     appElements.impulsePurchaseBtn.addEventListener('click', openImpulsePurchaseModal);
-    appElements.impulsePurchaseForm.addEventListener('submit', handleSaveImpulsePurchase);
+    appElements.impulsePurchaseForm.addEventListener('submit', handleImpulseAction);
+    const impulseSearchInput = document.getElementById('impulse-item-search');
+    if (impulseSearchInput) {
+        impulseSearchInput.addEventListener('input', debounce(handleImpulseSearch, 200));
+        impulseSearchInput.addEventListener('blur', () => {
+            // Delay hiding suggestions to allow click event to register
+            setTimeout(() => {
+                document.getElementById('impulse-item-suggestions').innerHTML = '';
+            }, 150);
+        });
+    }
 }
 
 export function setReferencesLoaded(isLoaded) {
@@ -284,7 +299,7 @@ export function renderInventory() {
     container.appendChild(fragment);
 }
 
-function openInventoryItemModal(itemId) {
+function openInventoryItemModal(itemId, prefillName = '') {
     const form = appElements.inventoryItemForm;
     form.reset();
     document.getElementById('conversion-rules-container').innerHTML = '';
@@ -313,6 +328,7 @@ function openInventoryItemModal(itemId) {
     } else {
         appElements.inventoryModalTitle.textContent = 'Opret Ny Vare';
         document.getElementById('inventory-item-id').value = '';
+        document.getElementById('inventory-item-name').value = prefillName; // Prefill name for new items
         document.getElementById('delete-inventory-item-btn').style.display = 'none';
         document.getElementById('add-batch-btn').style.display = 'none';
         document.getElementById('batch-list-container').innerHTML = '<p class="empty-state-small">Gem varen for at kunne tilføje batches.</p>';
@@ -368,23 +384,27 @@ async function handleSaveInventoryItem(e) {
 
     if (!itemData.name || !itemData.mainCategory || !itemData.subCategory) {
         handleError(new Error("Udfyld venligst alle påkrævede felter for varen."), "Ufuldstændige data: Navn og kategorier er påkrævet.");
-        return;
+        return null; // Return null on failure
     }
 
     try {
+        let savedItemId = itemId;
         if (itemId) {
             await updateDoc(doc(db, 'inventory_items', itemId), itemData);
         } else {
             const newDocRef = await addDoc(collection(db, 'inventory_items'), itemData);
-            document.getElementById('inventory-item-id').value = newDocRef.id;
+            savedItemId = newDocRef.id;
+            document.getElementById('inventory-item-id').value = savedItemId;
             document.getElementById('add-batch-btn').style.display = 'inline-flex';
             document.getElementById('batch-list-container').innerHTML = '';
         }
         
         showNotification({ title: 'Gemt!', message: 'Varens generelle informationer er blevet gemt.' });
+        return savedItemId; // Return the ID of the saved item
 
     } catch (error) {
         handleError(error, "Der opstod en fejl under lagring af varen.", "handleSaveInventoryItem");
+        return null; // Return null on failure
     }
 }
 
@@ -559,86 +579,89 @@ function addConversionRuleRow(rule = { unit: '', value: '' }) {
     container.appendChild(row);
 }
 
-// Impulse Purchase Functions
+// REWRITTEN: Impulse Purchase Functions
 function openImpulsePurchaseModal() {
-    const form = appElements.impulsePurchaseForm;
-    form.reset();
-    document.getElementById('impulse-details-section').classList.add('hidden');
-    document.getElementById('save-impulse-purchase-btn').disabled = true;
-    document.getElementById('impulse-item-suggestions').innerHTML = '';
-    
-    const searchInput = document.getElementById('impulse-item-search');
-    searchInput.addEventListener('input', handleImpulseSearch);
-    searchInput.addEventListener('blur', () => {
-        setTimeout(() => document.getElementById('impulse-item-suggestions').innerHTML = '', 200);
-    });
-
+    impulseState = { selectedItem: null, searchTerm: '' };
+    appElements.impulsePurchaseForm.reset();
+    updateImpulseActionButton();
     appElements.impulsePurchaseModal.classList.remove('hidden');
+    document.getElementById('impulse-item-search').focus();
 }
 
 function handleImpulseSearch(e) {
     const searchTerm = e.target.value.toLowerCase();
+    impulseState.searchTerm = e.target.value;
+    impulseState.selectedItem = null; // Reset selection on new input
+    
     const suggestionsContainer = document.getElementById('impulse-item-suggestions');
     suggestionsContainer.innerHTML = '';
-    if (searchTerm.length < 2) return;
-
-    const suggestions = appState.inventoryItems
-        .filter(item => item.name.toLowerCase().includes(searchTerm))
-        .slice(0, 5);
-
-    suggestions.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'autocomplete-suggestion';
-        div.textContent = item.name;
-        div.addEventListener('click', () => selectImpulseItem(item));
-        suggestionsContainer.appendChild(div);
-    });
+    
+    if (searchTerm.length > 0) {
+        const matchingItems = appState.inventoryItems
+            .filter(item => item.name.toLowerCase().includes(searchTerm));
+        
+        matchingItems.slice(0, 5).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-suggestion';
+            div.textContent = item.name;
+            div.addEventListener('mousedown', () => selectImpulseItem(item));
+            suggestionsContainer.appendChild(div);
+        });
+    }
+    updateImpulseActionButton();
 }
 
 function selectImpulseItem(item) {
+    impulseState.selectedItem = item;
+    impulseState.searchTerm = item.name;
     document.getElementById('impulse-item-search').value = item.name;
-    document.getElementById('impulse-item-id').value = item.id;
     document.getElementById('impulse-item-suggestions').innerHTML = '';
-    
-    document.getElementById('impulse-size-unit').textContent = item.defaultUnit || 'stk';
-    document.getElementById('impulse-unit').value = item.defaultUnit || 'stk';
-
-    populateReferenceDropdown(document.getElementById('impulse-store'), appState.references.stores, 'Vælg butik...');
-
-    document.getElementById('impulse-details-section').classList.remove('hidden');
-    document.getElementById('save-impulse-purchase-btn').disabled = false;
+    updateImpulseActionButton();
 }
 
-async function handleSaveImpulsePurchase(e) {
+function updateImpulseActionButton() {
+    const btn = document.getElementById('impulse-action-btn');
+    if (impulseState.selectedItem) {
+        btn.textContent = 'Tilføj Batch til Lager';
+        btn.disabled = false;
+    } else if (impulseState.searchTerm.length > 1) {
+        btn.textContent = `Opret "${impulseState.searchTerm}" & Tilføj Batch`;
+        btn.disabled = false;
+    } else {
+        btn.textContent = 'Søg efter en vare';
+        btn.disabled = true;
+    }
+}
+
+async function handleImpulseAction(e) {
     e.preventDefault();
-    const itemId = document.getElementById('impulse-item-id').value;
-    if (!itemId) {
-        showNotification({title: "Ingen vare valgt", message: "Søg venligst og vælg en vare fra listen."});
-        return;
-    }
+    appElements.impulsePurchaseModal.classList.add('hidden');
 
-    const batchData = {
-        itemId: itemId,
-        userId: appState.currentUser.uid,
-        purchaseDate: formatDate(new Date()),
-        expiryDate: document.getElementById('impulse-expiry-date').value || null,
-        quantity: Number(document.getElementById('impulse-quantity').value),
-        size: Number(document.getElementById('impulse-size').value),
-        unit: document.getElementById('impulse-unit').value,
-        price: Number(document.getElementById('impulse-price').value) || null,
-        store: document.getElementById('impulse-store').value,
-    };
-
-    if (!batchData.purchaseDate || batchData.quantity <= 0 || batchData.size <= 0 || !batchData.store) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Sørg for at antal, størrelse og butik er udfyldt korrekt."});
-        return;
-    }
-
-    try {
-        await addDoc(collection(db, 'inventory_batches'), batchData);
-        appElements.impulsePurchaseModal.classList.add('hidden');
-        showNotification({title: "Køb Registreret", message: "Dit hurtige køb er blevet tilføjet til varelageret."});
-    } catch (error) {
-        handleError(error, "Kunne ikke gemme hurtigt køb.", "handleSaveImpulsePurchase");
+    if (impulseState.selectedItem) {
+        // Case 1: Existing item selected -> Open "Add Batch" modal
+        openBatchModal(impulseState.selectedItem.id, null);
+    } else if (impulseState.searchTerm) {
+        // Case 2: New item typed -> Open "Create Item" modal, then "Add Batch"
+        
+        // Temporarily override the inventory item form's submit handler
+        const originalOnSubmit = appElements.inventoryItemForm.onsubmit;
+        
+        const onSaveAndAddBatch = async (event) => {
+            event.preventDefault();
+            const newItemId = await handleSaveInventoryItem(event);
+            
+            // Restore original handler
+            appElements.inventoryItemForm.onsubmit = originalOnSubmit;
+            
+            if (newItemId) {
+                appElements.inventoryItemModal.classList.add('hidden');
+                openBatchModal(newItemId, null);
+            }
+        };
+        
+        appElements.inventoryItemForm.onsubmit = onSaveAndAddBatch;
+        
+        // Open the "Add Item" modal with the name pre-filled
+        openInventoryItemModal(null, impulseState.searchTerm);
     }
 }
