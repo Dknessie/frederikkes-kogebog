@@ -2,12 +2,41 @@
 import { db } from './firebase.js';
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { formatDate } from './utils.js';
+import { formatDate, convertToGrams } from './utils.js';
 import { openShoppingListModal } from './shoppingList.js';
 
 let appState;
 let appElements;
 let budgetGauge;
+
+// Helper function to calculate recipe price, needed for budget calculation
+function calculateRecipePrice(recipe, inventory, portionsOverride) {
+    let totalPrice = 0;
+    if (!recipe.ingredients) return 0;
+
+    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
+
+    recipe.ingredients.forEach(ing => {
+        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
+        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
+            const cheapestBatch = inventoryItem.batches
+                .filter(b => b.price && b.size > 0 && b.quantity > 0)
+                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
+            
+            if (cheapestBatch) {
+                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
+                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
+                
+                if (conversion.grams !== null) {
+                    const pricePerBaseUnit = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
+                    totalPrice += conversion.grams * pricePerBaseUnit;
+                }
+            }
+        }
+    });
+    return totalPrice;
+}
+
 
 export function initDashboard(state, elements) {
     appState = state;
@@ -181,10 +210,35 @@ function renderProjectsFocusWidget() {
     }).join('');
 }
 
+function calculateMonthlySpending() {
+    let totalCost = 0;
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    for (const dateString in appState.mealPlan) {
+        const date = new Date(dateString);
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+            const dayPlan = appState.mealPlan[dateString];
+            for (const mealType in dayPlan) {
+                const mealArray = dayPlan[mealType];
+                if (Array.isArray(mealArray)) {
+                    mealArray.forEach(meal => {
+                        const recipe = appState.recipes.find(r => r.id === meal.recipeId);
+                        if (recipe) {
+                            totalCost += calculateRecipePrice(recipe, appState.inventory, meal.portions);
+                        }
+                    });
+                }
+            }
+        }
+    }
+    return totalCost;
+}
+
 
 function renderBudgetWidget() {
     const monthlyBudget = appState.budget.monthlyAmount || 0;
-    const monthlySpent = 0; // Placeholder until calculation is implemented
+    const monthlySpent = calculateMonthlySpending();
 
     appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2).replace('.',',')} kr.`;
     appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2).replace('.',',')} kr.`;
