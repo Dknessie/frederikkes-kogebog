@@ -3,11 +3,16 @@
 import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, deleteField, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
+import { getWeekNumber, getStartOfWeek, formatDate, debounce } from './utils.js';
 import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
+// NEW: State for the "Add to Calendar" modal
+let calendarEventState = {
+    date: null,
+    meal: null
+};
 
 export function initMealPlanner(state, elements) {
     appState = state;
@@ -31,10 +36,18 @@ export function initMealPlanner(state, elements) {
         target.classList.add('active');
     });
     appElements.planMealForm.addEventListener('submit', handlePlanMealSubmit);
+
+    // NEW: Listeners for the "Add to Calendar" modal
+    appElements.calendarEventViewChooser.addEventListener('click', handleCalendarEventViewChoice);
+    appElements.calendarRecipeSearch.addEventListener('input', debounce(e => populateCalendarRecipeList(e.target.value), 300));
+    appElements.calendarRecipeList.addEventListener('click', handleCalendarRecipeSelect);
+    appElements.calendarProjectList.addEventListener('click', handleCalendarProjectSelect);
+    appElements.calendarTaskSearch.addEventListener('input', debounce(e => populateCalendarTaskList(e.target.value), 300));
+    appElements.calendarTaskList.addEventListener('click', handleCalendarTaskSelect);
+    appElements.calendarTaskForm.addEventListener('submit', handleCalendarTaskSubmit);
 }
 
 export function renderMealPlanner() {
-    // Guard clause to prevent rendering before data is ready
     if (!appState.recipes || !appState.inventory) {
         appElements.calendarGrid.innerHTML = '<p class="empty-state">Indlæser data...</p>';
         return;
@@ -63,6 +76,7 @@ export function renderMealPlanner() {
                 <div class="meal-slot" data-date="${dateString}" data-meal="lunch"></div>
                 <div class="meal-slot" data-date="${dateString}" data-meal="dinner"></div>
             </div>
+            <button class="add-event-to-day-btn" data-date="${dateString}"><i class="fas fa-plus"></i></button>
         `;
         fragment.appendChild(dayDiv);
     }
@@ -76,51 +90,63 @@ function populateCalendarWithData() {
         slot.innerHTML = ''; // Clear previous content
         const date = slot.dataset.date;
         const mealType = slot.dataset.meal;
-        const meals = appState.mealPlan[date]?.[mealType] || [];
+        const events = appState.mealPlan[date]?.[mealType] || [];
 
-        if (Array.isArray(meals)) {
-            meals.forEach(mealData => {
-                let recipeName = "Ukendt";
-                let isLeftovers = mealData.type === 'leftovers';
-                let recipeExists = true;
-
-                if (isLeftovers) {
-                    recipeName = "Rester";
-                } else if (mealData.recipeId) {
-                    const recipe = appState.recipes.find(r => r.id === mealData.recipeId);
-                    if (recipe) {
-                        recipeName = recipe.title;
-                    } else {
-                        recipeName = "Slettet Opskrift";
-                        recipeExists = false;
-                    }
-                }
-                
-                const recipeDiv = document.createElement('div');
-                recipeDiv.className = 'planned-recipe';
-                if (isLeftovers) recipeDiv.classList.add('leftovers');
-                if (!recipeExists) recipeDiv.classList.add('deleted');
-                if (mealData.cooked) recipeDiv.classList.add('is-cooked');
-
-                recipeDiv.draggable = recipeExists;
-                recipeDiv.dataset.meal = JSON.stringify(mealData);
-                
-                const cookBtnHTML = recipeExists && !isLeftovers && !mealData.cooked
-                    ? `<button class="btn-icon cook-meal-btn" title="Markér som lavet og træk fra lager"><i class="fas fa-hat-chef"></i></button>` 
-                    : '';
-
-                recipeDiv.innerHTML = `
-                    <span>${recipeName}</span>
-                    <div class="planned-recipe-actions">
-                        ${cookBtnHTML}
-                        <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
-                slot.appendChild(recipeDiv);
+        if (Array.isArray(events)) {
+            events.forEach(eventData => {
+                const eventDiv = createEventDiv(eventData);
+                slot.appendChild(eventDiv);
             });
         }
     });
 }
+
+// NEW: Create a div for any type of calendar event
+function createEventDiv(eventData) {
+    const eventDiv = document.createElement('div');
+    eventDiv.dataset.event = JSON.stringify(eventData);
+    let content = '';
+    let icon = '';
+
+    switch (eventData.type) {
+        case 'recipe':
+            const recipe = appState.recipes.find(r => r.id === eventData.recipeId);
+            eventDiv.className = 'planned-recipe';
+            if (eventData.cooked) eventDiv.classList.add('is-cooked');
+            if (!recipe) eventDiv.classList.add('deleted');
+            
+            const cookBtnHTML = recipe && !eventData.cooked
+                ? `<button class="btn-icon cook-meal-btn" title="Markér som lavet og træk fra lager"><i class="fas fa-hat-chef"></i></button>`
+                : '';
+            
+            content = recipe ? recipe.title : 'Slettet Opskrift';
+            icon = `<i class="fas fa-utensils"></i>`;
+            eventDiv.innerHTML = `
+                <span>${icon} ${content}</span>
+                <div class="planned-recipe-actions">
+                    ${cookBtnHTML}
+                    <button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>
+                </div>`;
+            break;
+        
+        case 'project':
+            const project = appState.projects.find(p => p.id === eventData.projectId);
+            eventDiv.className = 'planned-project';
+            content = project ? project.title : 'Slettet Projekt';
+            icon = `<i class="fas fa-tasks"></i>`;
+            eventDiv.innerHTML = `<span>${icon} ${content}</span><button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>`;
+            break;
+
+        case 'task':
+            eventDiv.className = 'planned-task';
+            content = eventData.taskName;
+            icon = `<i class="fas fa-broom"></i>`;
+            eventDiv.innerHTML = `<span>${icon} ${content}</span><button class="btn-icon remove-meal-btn" title="Fjern fra madplan"><i class="fas fa-trash"></i></button>`;
+            break;
+    }
+    return eventDiv;
+}
+
 
 async function handleClearMealPlan() {
     const confirmed = await showNotification({
@@ -153,32 +179,27 @@ async function handleClearMealPlan() {
 }
 
 async function handleCalendarClick(e) {
-    const plannedRecipeDiv = e.target.closest('.planned-recipe');
-    if (!plannedRecipeDiv) return;
+    const eventDiv = e.target.closest('[data-event]');
+    
+    // NEW: Handle click on "add event" button
+    const addBtn = e.target.closest('.add-event-to-day-btn');
+    if (addBtn) {
+        openAddCalendarEventModal(addBtn.dataset.date);
+        return;
+    }
 
-    const mealData = JSON.parse(plannedRecipeDiv.dataset.meal);
-    const slot = plannedRecipeDiv.closest('.meal-slot');
+    if (!eventDiv) return;
+
+    const eventData = JSON.parse(eventDiv.dataset.event);
+    const slot = eventDiv.closest('.meal-slot');
     const date = slot.dataset.date;
     const mealType = slot.dataset.meal;
 
     if (e.target.closest('.cook-meal-btn')) {
-        const wasDeducted = await confirmAndDeductIngredients(mealData.recipeId, mealData.portions);
+        const wasDeducted = await confirmAndDeductIngredients(eventData.recipeId, eventData.portions);
         if (wasDeducted) {
-            // Mark as cooked in Firestore
-            const year = new Date(date).getFullYear();
-            const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
-            const fieldPath = `${date}.${mealType}`;
-            
-            // Create a new meal object with the cooked flag
-            const updatedMealData = { ...mealData, cooked: true };
-            
-            // Atomically remove the old and add the new
-            await updateDoc(mealPlanRef, {
-                [fieldPath]: arrayRemove(mealData)
-            });
-             await updateDoc(mealPlanRef, {
-                [fieldPath]: arrayUnion(updatedMealData)
-            });
+            const updatedEventData = { ...eventData, cooked: true };
+            await updateCalendarEvent(date, mealType, eventData, updatedEventData);
         }
         return;
     }
@@ -189,15 +210,29 @@ async function handleCalendarClick(e) {
         const fieldPath = `${date}.${mealType}`;
         
         try {
-            // This will remove the specific meal object from the array.
-            await updateDoc(mealPlanRef, {
-                [fieldPath]: arrayRemove(mealData)
-            });
+            await updateDoc(mealPlanRef, { [fieldPath]: arrayRemove(eventData) });
         } catch (error) {
-            handleError(error, "Måltidet kunne ikke fjernes.", "removeMeal");
+            handleError(error, "Begivenheden kunne ikke fjernes.", "removeEvent");
         }
     }
 }
+
+async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
+    const year = new Date(date).getFullYear();
+    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    const fieldPath = `${date}.${mealType}`;
+
+    try {
+        const batch = writeBatch(db);
+        // Atomically remove the old and add the new
+        batch.update(mealPlanRef, { [fieldPath]: arrayRemove(oldEvent) });
+        batch.update(mealPlanRef, { [fieldPath]: arrayUnion(newEvent) });
+        await batch.commit();
+    } catch (error) {
+        handleError(error, "Kunne ikke opdatere begivenhed i kalenderen.", "updateCalendarEvent");
+    }
+}
+
 
 async function handlePlanMealSubmit(e) {
     e.preventDefault();
@@ -214,29 +249,16 @@ async function handlePlanMealSubmit(e) {
     
     const mealType = mealTypeBtn.dataset.meal;
     const mealData = {
-        mealId: crypto.randomUUID(), // Unique ID for this specific meal instance
+        id: crypto.randomUUID(),
         recipeId,
         type: 'recipe',
         portions,
-        cooked: false, // New field
+        cooked: false,
     };
 
-    const year = new Date(date).getFullYear();
-    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
-    const fieldPath = `${date}.${mealType}`;
-    
-    try {
-        await setDoc(mealPlanRef, {
-            [date]: {
-                [mealType]: arrayUnion(mealData)
-            }
-        }, { merge: true });
-
-        appElements.planMealModal.classList.add('hidden');
-        showNotification({title: "Planlagt!", message: "Retten er føjet til din madplan."});
-    } catch (error) {
-        handleError(error, "Kunne ikke tilføje måltidet.", "planMealSubmit");
-    }
+    await addEventToCalendar(date, mealType, mealData);
+    appElements.planMealModal.classList.add('hidden');
+    showNotification({title: "Planlagt!", message: "Retten er føjet til din madplan."});
 }
 
 export function openPlanMealModal(recipeId) {
@@ -266,10 +288,12 @@ function renderWeeklyPrice() {
         if (dayPlan) {
             Object.values(dayPlan).forEach(mealArray => {
                 if(Array.isArray(mealArray)) {
-                    mealArray.forEach(meal => {
-                        const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                        if (recipe) {
-                            weeklyTotal += calculateRecipePrice(recipe, appState.inventory, meal.portions);
+                    mealArray.forEach(event => {
+                        if (event.type === 'recipe') {
+                            const recipe = appState.recipes.find(r => r.id === event.recipeId);
+                            if (recipe) {
+                                weeklyTotal += calculateRecipePrice(recipe, appState.inventory, event.portions);
+                            }
                         }
                     });
                 }
@@ -277,7 +301,7 @@ function renderWeeklyPrice() {
         }
     }
     
-    appElements.weeklyPriceDisplay.textContent = `Estimeret Ugepris: ${weeklyTotal.toFixed(2)} kr.`;
+    appElements.weeklyPriceDisplay.textContent = `Estimeret Ugepris: ${weeklyTotal.toFixed(2).replace('.',',')} kr.`;
 }
 
 // Helper to calculate recipe price, moved from recipes.js to avoid circular dependencies if needed, but fine here for now.
@@ -306,4 +330,167 @@ function calculateRecipePrice(recipe, inventory, portionsOverride) {
         }
     });
     return totalPrice;
+}
+
+
+// NEW: Functions for the "Add to Calendar" Modal
+
+function openAddCalendarEventModal(date, meal = 'dinner') {
+    calendarEventState.date = date;
+    calendarEventState.meal = meal;
+
+    appElements.calendarEventModalTitle.textContent = `Tilføj til ${new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    
+    // Reset views
+    appElements.calendarEventViewChooser.classList.remove('hidden');
+    appElements.calendarEventViews.forEach(view => view.classList.add('hidden'));
+    
+    appElements.addCalendarEventModal.classList.remove('hidden');
+}
+
+function handleCalendarEventViewChoice(e) {
+    const choiceBtn = e.target.closest('.quick-action-btn');
+    if (!choiceBtn) return;
+
+    const viewName = choiceBtn.dataset.view;
+    appElements.calendarEventViewChooser.classList.add('hidden');
+    appElements.calendarEventViews.forEach(view => {
+        view.classList.toggle('hidden', !view.id.includes(viewName));
+    });
+
+    // Populate the chosen view
+    if (viewName === 'recipe') populateCalendarRecipeList();
+    if (viewName === 'project') populateCalendarProjectList();
+    if (viewName === 'task') populateCalendarTaskList();
+}
+
+function populateCalendarRecipeList(searchTerm = '') {
+    const list = appElements.calendarRecipeList;
+    list.innerHTML = '';
+    const filteredRecipes = appState.recipes
+        .filter(r => r.title.toLowerCase().includes(searchTerm.toLowerCase()))
+        .slice(0, 10); // Limit results for performance
+
+    if (filteredRecipes.length === 0) {
+        list.innerHTML = `<li class="selection-list-item-empty">Ingen opskrifter fundet.</li>`;
+        return;
+    }
+
+    filteredRecipes.forEach(recipe => {
+        const li = document.createElement('li');
+        li.className = 'selection-list-item';
+        li.dataset.id = recipe.id;
+        li.innerHTML = `<span>${recipe.title}</span><i class="fas fa-plus-circle"></i>`;
+        list.appendChild(li);
+    });
+}
+
+function populateCalendarProjectList() {
+    const list = appElements.calendarProjectList;
+    list.innerHTML = '';
+    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet');
+    
+    if (activeProjects.length === 0) {
+        list.innerHTML = `<li class="selection-list-item-empty">Ingen aktive projekter fundet.</li>`;
+        return;
+    }
+
+    activeProjects.forEach(project => {
+        const li = document.createElement('li');
+        li.className = 'selection-list-item';
+        li.dataset.id = project.id;
+        li.innerHTML = `<span>${project.title}</span><i class="fas fa-plus-circle"></i>`;
+        list.appendChild(li);
+    });
+}
+
+function populateCalendarTaskList(searchTerm = '') {
+    const list = appElements.calendarTaskList;
+    list.innerHTML = '';
+    const filteredTasks = (appState.references.maintenanceTasks || [])
+        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (filteredTasks.length === 0 && searchTerm) {
+        list.innerHTML = `<li class="selection-list-item" data-name="${searchTerm}">Opret ny opgave: "${searchTerm}"</li>`;
+    } else {
+        filteredTasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = 'selection-list-item';
+            li.dataset.name = task;
+            li.innerHTML = `<span>${task}</span><i class="fas fa-plus-circle"></i>`;
+            list.appendChild(li);
+        });
+    }
+}
+
+async function handleCalendarRecipeSelect(e) {
+    const item = e.target.closest('.selection-list-item');
+    if (!item) return;
+
+    const recipeId = item.dataset.id;
+    const recipe = appState.recipes.find(r => r.id === recipeId);
+    const eventData = {
+        id: crypto.randomUUID(),
+        type: 'recipe',
+        recipeId: recipeId,
+        portions: recipe.portions || 1,
+        cooked: false
+    };
+    await addEventToCalendar(calendarEventState.date, calendarEventState.meal, eventData);
+    appElements.addCalendarEventModal.classList.add('hidden');
+}
+
+async function handleCalendarProjectSelect(e) {
+    const item = e.target.closest('.selection-list-item');
+    if (!item) return;
+
+    const eventData = {
+        id: crypto.randomUUID(),
+        type: 'project',
+        projectId: item.dataset.id
+    };
+    await addEventToCalendar(calendarEventState.date, calendarEventState.meal, eventData);
+    appElements.addCalendarEventModal.classList.add('hidden');
+}
+
+function handleCalendarTaskSelect(e) {
+    const item = e.target.closest('.selection-list-item');
+    if (!item) return;
+
+    const taskName = item.dataset.name;
+    document.getElementById('calendar-task-search').value = taskName;
+    document.getElementById('calendar-task-name-hidden').value = taskName;
+    appElements.calendarTaskList.innerHTML = ''; // Clear suggestions
+}
+
+async function handleCalendarTaskSubmit(e) {
+    e.preventDefault();
+    const taskName = document.getElementById('calendar-task-name-hidden').value;
+    if (!taskName) {
+        showNotification({title: "Mangler opgave", message: "Vælg eller skriv en opgave."});
+        return;
+    }
+    const eventData = {
+        id: crypto.randomUUID(),
+        type: 'task',
+        taskName: taskName
+    };
+    await addEventToCalendar(calendarEventState.date, calendarEventState.meal, eventData);
+    appElements.addCalendarEventModal.classList.add('hidden');
+}
+
+async function addEventToCalendar(date, mealType, eventData) {
+    const year = new Date(date).getFullYear();
+    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    const fieldPath = `${date}.${mealType}`;
+    
+    try {
+        await setDoc(mealPlanRef, {
+            [date]: {
+                [mealType]: arrayUnion(eventData)
+            }
+        }, { merge: true });
+    } catch (error) {
+        handleError(error, "Kunne ikke tilføje begivenhed til kalenderen.", "addEventToCalendar");
+    }
 }
