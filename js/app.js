@@ -16,6 +16,9 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
+// FJERNET: Import af initMaintenance
+// import { initMaintenance, renderMaintenancePage } from './maintenance.js';
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -64,9 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
+        // Hjem (Opdateret)
+        hjemNavTabs: document.querySelector('.hjem-nav-tabs'), // Bliver fjernet, men bevares her for at undgå fejl i UI-initialisering
+        hjemSubpages: document.querySelectorAll('.hjem-subpage'), // Bliver fjernet, men bevares her for at undgå fejl i UI-initialisering
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -81,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         projectsGrid: document.getElementById('projects-grid'),
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
-
+        
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -341,13 +344,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
-                    if (activeTab === 'hjem-maintenance') {
-                        renderMaintenancePage();
-                    } else {
-                        renderRoomsListPage();
-                        renderProjects();
-                    }
+                    // Opdateret: Fjernet logik for tabs, render nu direkte de nye sektioner
+                    renderRoomsListPage(); // Render Rooms/Wishlist
+                    renderProjects();
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
@@ -391,11 +390,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        initMaintenance(state, elements);
+        // FJERNET: initMaintenance() kaldet
+        // initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
     }
 
     init();
 });
-
