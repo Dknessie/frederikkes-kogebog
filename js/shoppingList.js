@@ -1,10 +1,11 @@
 // js/shoppingList.js
 
 import { db } from './firebase.js';
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
 import { openBatchModal } from './inventory.js';
+import { logExpense } from './expenses.js';
 
 let appState;
 let appElements;
@@ -12,7 +13,12 @@ let currentListType = 'groceries'; // To track which list is open in the modal
 
 export function initShoppingList(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        bulkAddModal: document.getElementById('bulk-add-modal'),
+        bulkAddForm: document.getElementById('bulk-add-form'),
+        bulkAddListContainer: document.getElementById('bulk-add-list-container'),
+    };
 
     if (appElements.generateGroceriesBtn) {
         appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
@@ -45,6 +51,11 @@ export function initShoppingList(state, elements) {
                 }
             }
         });
+    }
+
+    // NEW: Listener for the bulk add form
+    if (appElements.bulkAddForm) {
+        appElements.bulkAddForm.addEventListener('submit', handleBulkSave);
     }
 }
 
@@ -196,7 +207,7 @@ function getModalFooter(isWishlist = false) {
     return `
         <div class="shopping-list-actions form-actions">
             <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
-            ${!isWishlist ? `<button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>` : ''}
+            <button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>
         </div>
         <form class="add-item-form">
             <input type="text" placeholder="Tilføj ${isWishlist ? 'ønske' : 'vare'}..." required>
@@ -377,6 +388,7 @@ async function handleRemoveShoppingItem(itemName) {
     }
 }
 
+// NEW: Refactored purchase confirmation to open the bulk add modal
 async function handleConfirmPurchase() {
     const checkedItems = [];
     document.querySelectorAll('.shopping-list-checkbox:checked').forEach(checkbox => {
@@ -389,45 +401,131 @@ async function handleConfirmPurchase() {
         await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt, ved at sætte flueben." });
         return;
     }
-    
-    // Process items one by one to handle modals correctly
-    processItemsSequentially(checkedItems);
+
+    // Open the new bulk add modal instead of the old flow
+    openBulkAddModal(checkedItems);
 }
 
-async function processItemsSequentially(items) {
-    for (const item of items) {
-        const wasHandled = await new Promise(async (resolve) => {
-            const onSaveSuccess = () => {
-                handleRemoveShoppingItem(item.name);
-                resolve(true); // Mark as handled
+// NEW: Function to open and populate the bulk add modal
+function openBulkAddModal(items) {
+    const container = appElements.bulkAddListContainer;
+    container.innerHTML = '';
+    appElements.bulkAddForm.reset();
+
+    items.forEach(item => {
+        const inventoryItem = appState.inventory.find(i => i.id === item.itemId);
+        const row = document.createElement('div');
+        row.className = 'bulk-add-item';
+        row.dataset.itemId = item.itemId;
+        row.dataset.itemName = item.name;
+
+        // Find the most recent batch for the item to pre-fill data
+        const lastBatch = inventoryItem?.batches?.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
+
+        row.innerHTML = `
+            <div class="bulk-add-item-header">${item.name}</div>
+            <div class="bulk-add-item-fields">
+                <div class="input-group">
+                    <label>Antal</label>
+                    <input type="number" class="bulk-quantity" value="1" min="1" required>
+                </div>
+                <div class="input-group">
+                    <label>Størrelse</label>
+                    <input type="number" class="bulk-size" placeholder="pr. stk" value="${lastBatch?.size || ''}" required>
+                </div>
+                <div class="input-group">
+                    <label>Enhed</label>
+                    <input type="text" class="bulk-unit" value="${inventoryItem?.defaultUnit || 'stk'}" required>
+                </div>
+                <div class="input-group">
+                    <label>Butik</label>
+                    <select class="bulk-store" required></select>
+                </div>
+                <div class="input-group">
+                    <label>Total Pris</label>
+                    <input type="number" class="bulk-price" placeholder="kr." step="0.01">
+                </div>
+                <div class="input-group">
+                    <label>Udløb</label>
+                    <input type="date" class="bulk-expiry">
+                </div>
+            </div>
+        `;
+        container.appendChild(row);
+        
+        // Populate the store dropdown for this row
+        const storeSelect = row.querySelector('.bulk-store');
+        populateReferenceDropdown(storeSelect, appState.references.stores, "Vælg butik...", lastBatch?.store || appState.preferences.favoriteStoreId);
+    });
+
+    appElements.shoppingListModal.classList.add('hidden');
+    appElements.bulkAddModal.classList.remove('hidden');
+}
+
+// NEW: Function to handle saving all items from the bulk add form
+async function handleBulkSave(e) {
+    e.preventDefault();
+    const rows = appElements.bulkAddListContainer.querySelectorAll('.bulk-add-item');
+    const batch = writeBatch(db);
+    const purchasedItems = [];
+    let totalExpense = 0;
+
+    rows.forEach(row => {
+        const quantity = Number(row.querySelector('.bulk-quantity').value);
+        const price = Number(row.querySelector('.bulk-price').value);
+
+        // Only process rows where a quantity has been entered
+        if (quantity > 0) {
+            const batchData = {
+                itemId: row.dataset.itemId,
+                userId: appState.currentUser.uid,
+                purchaseDate: formatDate(new Date()),
+                expiryDate: row.querySelector('.bulk-expiry').value || null,
+                quantity: quantity,
+                size: Number(row.querySelector('.bulk-size').value),
+                unit: row.querySelector('.bulk-unit').value,
+                price: price || null,
+                store: row.querySelector('.bulk-store').value,
             };
+
+            // Add a new document to the 'inventory_batches' collection for each valid row
+            const newBatchRef = doc(collection(db, 'inventory_batches'));
+            batch.set(newBatchRef, batchData);
             
-            const onCancel = () => {
-                resolve(false); // Mark as not handled
-            };
-
-            if (item.itemId) {
-                openBatchModal(item.itemId, null, onSaveSuccess, onCancel);
-            } else {
-                const createNew = await showNotification({
-                    title: "Ny Vare",
-                    message: `Varen "${item.name}" findes ikke i dit varelager. Vil du oprette den nu?`,
-                    type: 'confirm'
-                });
-                if (createNew) {
-                    appElements.shoppingListModal.classList.add('hidden');
-                    document.getElementById('add-inventory-item-btn').click();
-                }
-                resolve(false); 
+            purchasedItems.push(row.dataset.itemName);
+            if (price) {
+                totalExpense += price;
             }
-        });
-
-        if (!wasHandled) {
-            showNotification({ title: "Annulleret", message: "Processen blev afbrudt. Resterende varer er ikke blevet behandlet." });
-            return; // Exit the loop
         }
+    });
+
+    // Remove the purchased items from the shopping list
+    const list = appState.shoppingLists.groceries || {};
+    const updatedList = { ...list };
+    purchasedItems.forEach(itemName => {
+        const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
+        if (keyToDelete) {
+            delete updatedList[keyToDelete];
+        }
+    });
+    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+    batch.set(shoppingListRef, { groceries: updatedList }, { merge: true });
+
+    try {
+        await batch.commit();
+
+        // Log the total expense after the batch commit is successful
+        if (totalExpense > 0) {
+            await logExpense(totalExpense, 'Dagligvarer', `Indkøb af ${purchasedItems.length} vare(r)`);
+        }
+
+        appElements.bulkAddModal.classList.add('hidden');
+        showNotification({ title: "Lager Opdateret!", message: `${purchasedItems.length} vare(r) er blevet tilføjet til dit varelager.` });
+    } catch (error) {
+        handleError(error, "Kunne ikke gemme indkøb.", "handleBulkSave");
     }
 }
+
 
 /**
  * NEW: Adds a single item to the grocery list, typically from a notification.
@@ -476,4 +574,12 @@ export async function addSingleItemToGroceries(itemId) {
     } catch (error) {
         handleError(error, "Varen kunne ikke tilføjes til listen.", "addSingleItemToGroceries");
     }
+}
+
+// Helper to populate dropdowns
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
 }
