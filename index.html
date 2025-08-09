@@ -58,6 +58,7 @@
                             <p id="welcome-summary">Laster data...</p>
                         </div>
                         
+                        <!-- UPDATED: Timeline Widget with 3 sections -->
                         <div id="timeline-widget" class="dashboard-widget">
                             <div class="widget-header">
                                 <h3>Min Tidslinje</h3>
@@ -77,11 +78,6 @@
                                     <div id="timeline-tasks" class="timeline-section-content"></div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div id="projects-focus-widget" class="dashboard-widget">
-                            <h3>Projekter i Fokus</h3>
-                            <div id="projects-focus-content"></div>
                         </div>
 
                         <div id="category-values-widget" class="dashboard-widget">
@@ -187,6 +183,7 @@
                 </div>
             </section>
             
+            <!-- NEW: Projects Page -->
             <section id="projects" class="page hidden">
                 <h2>Projekter</h2>
                 <div class="actions-bar">
@@ -374,14 +371,8 @@
                     <div class="input-group">
                         <label>Estimeret Tid</label>
                         <div class="form-grid-2-col">
-                             <div class="unit-input-wrapper">
-                                <input type="number" id="project-time-days" placeholder="0">
-                                <span>dage</span>
-                             </div>
-                             <div class="unit-input-wrapper">
-                                <input type="number" id="project-time-hours" placeholder="0">
-                                <span>timer</span>
-                             </div>
+                             <input type="number" id="project-time-days" placeholder="Dage">
+                             <input type="number" id="project-time-hours" placeholder="Timer">
                         </div>
                     </div>
                 </div>
