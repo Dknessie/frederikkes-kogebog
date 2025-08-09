@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timelineBirthdays: document.getElementById('timeline-birthdays'),
         timelineEvents: document.getElementById('timeline-events'),
         timelineTasks: document.getElementById('timeline-tasks'),
+        projectsFocusContent: document.getElementById('projects-focus-content'),
 
         // Projects
         addProjectBtn: document.getElementById('add-project-btn'),
