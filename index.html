@@ -191,8 +191,7 @@
             
             <section id="hjem" class="page hidden">
                 <h2>Hjem Administration</h2>
-                <!-- FJERNET: hjem-nav-tabs, hjem-rooms og hjem-maintenance sektioner -->
-
+                <!-- OPDATERET: Hjem-siden er nu omstruktureret -->
                 <div id="hjem-projects" class="hjem-subpage active">
                     <div class="actions-bar">
                         <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Projekt</button>
@@ -200,18 +199,23 @@
                     <div id="projects-grid" class="recipe-grid"></div>
                 </div>
                 
-                <!-- NYT: Plads til Wishlist og Vanding -->
+                <!-- NYT: Plads til Wishlist og Vanding i et nyt grid-layout -->
                 <div id="hjem-overview-grid" class="hjem-overview-grid-layout">
                     <div id="hjem-wishlist-widget" class="dashboard-widget">
-                        <h3>Ønskeliste</h3>
-                        <div id="wishlist-grid" class="recipe-grid"></div>
+                        <div class="widget-header">
+                            <h3>Ønskeliste</h3>
+                            <button id="add-wishlist-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ønske</button>
+                        </div>
+                        <div id="wishlist-grid" class="wishlist-grid"></div>
                     </div>
                     <div id="hjem-plants-widget" class="dashboard-widget">
-                        <h3>Vandingsplan</h3>
+                        <div class="widget-header">
+                            <h3>Vandingsplan</h3>
+                            <button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button>
+                        </div>
                         <div id="plants-grid" class="plants-grid-layout"></div>
                     </div>
                 </div>
-                
             </section>
 
             <section id="room-details" class="page hidden">
@@ -349,34 +353,7 @@
             </form>
         </div>
     </div>
-    <div id="maintenance-log-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="maintenance-log-modal-title">Log vedligeholdelse</h3>
-            <form id="maintenance-log-form">
-                <input type="hidden" id="maintenance-log-id">
-                <div class="input-group">
-                    <label for="maintenance-log-date">Dato for udførelse</label>
-                    <input type="date" id="maintenance-log-date" required>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-room">Rum (valgfri)</label>
-                    <select id="maintenance-log-room"></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-task">Opgave</label>
-                    <select id="maintenance-log-task" required></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-note">Note (valgfri)</label>
-                    <textarea id="maintenance-log-note" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Log</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- FJERNET: maintenance-log-modal -->
     <div id="day-details-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -419,34 +396,13 @@
                         <input type="number" id="room-ceiling-height" step="0.01">
                     </div>
                 </div>
+                <!-- FJERNET: Vedligeholdelsesnoter -->
                 <div class="input-group">
                     <label for="room-notes">Generelle Noter</label>
                     <textarea id="room-notes" rows="3" placeholder="F.eks. malingskoder, gulvtype, info om skråvægge..."></textarea>
                 </div>
                 <hr>
-                <h4>Vedligeholdelsesnoter</h4>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="room-notes-vvs">VVS & Sanitet</label>
-                        <textarea id="room-notes-vvs" rows="3" placeholder="Modelnr. på armatur, sidste service..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-el">El-installationer</label>
-                        <textarea id="room-notes-el" rows="3" placeholder="Sikringsgruppe, pæretyper..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-windows">Vinduer & Døre</label>
-                        <textarea id="room-notes-windows" rows="3" placeholder="Sidste smøring af hængsler..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-ventilation">Ventilation</label>
-                        <textarea id="room-notes-ventilation" rows="3" placeholder="Filtertype, sidste rens..."></textarea>
-                    </div>
-                </div>
-                 <div class="input-group">
-                    <label for="room-notes-surfaces">Overflader</label>
-                    <textarea id="room-notes-surfaces" rows="3" placeholder="Pleje af bordplade, gulvbehandling..."></textarea>
-                </div>
+                <!-- FJERNET: Vedligeholdelsesnoter felter -->
                 <hr>
                 <h4>Inventar</h4>
                 <div id="room-inventory-list-container"></div>
@@ -914,13 +870,46 @@
             </form>
         </div>
     </div>
+    <!-- NYT: Modal til oprettelse og redigering af planter -->
+    <div id="plant-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="plant-edit-modal-title">Tilføj Plante</h3>
+            <form id="plant-form">
+                <input type="hidden" id="plant-id">
+                <div class="input-group">
+                    <label for="plant-name">Navn</label>
+                    <input type="text" id="plant-name" required>
+                </div>
+                <div class="input-group">
+                    <label for="plant-room">Rum</label>
+                    <select id="plant-room" required></select>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="plant-last-watered">Sidst vandet</label>
+                        <input type="date" id="plant-last-watered" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="plant-watering-interval">Vandingsinterval (dage)</label>
+                        <input type="number" id="plant-watering-interval" min="1" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-plant-btn" class="btn btn-danger hidden">Slet Plante</button>
+                    <button type="submit" class="btn btn-primary">Gem Plante</button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <!-- Third-party libraries -->
     <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/raphael-2.1.4.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
 
-    <!-- FJERNET: Link til maintenance.js, da modulet er fjernet -->
+    <!-- OPDATERET: Slettet maintenance.js, tilføjet plants.js -->
     <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/plants.js"></script>
 
 </body>
 </html>
