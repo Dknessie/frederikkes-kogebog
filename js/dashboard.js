@@ -82,7 +82,8 @@ function renderTimelineWidget() {
     const upcomingBirthdays = appState.events
         .filter(event => event.category === 'Fødselsdag')
         .map(event => {
-            const displayDate = new Date(event.date);
+            const eventDate = new Date(event.date);
+            const displayDate = new Date(eventDate.getTime());
             displayDate.setFullYear(today.getFullYear());
             if (displayDate < today) {
                 displayDate.setFullYear(today.getFullYear() + 1);
@@ -90,7 +91,7 @@ function renderTimelineWidget() {
             return { ...event, date: displayDate };
         })
         .sort((a, b) => a.date - b.date)
-        .slice(0, 5); // Show next 5
+        .slice(0, 5);
 
     // --- Andre Begivenheder ---
     const upcomingEvents = appState.events
@@ -100,17 +101,43 @@ function renderTimelineWidget() {
         .sort((a, b) => a.date - b.date)
         .slice(0, 5);
 
-    // --- Pligter & Projekter (To-dos) ---
-    const upcomingTasks = appState.events
+    // --- Pligter & Projekter (fra Events og Kalender) ---
+    let upcomingTasks = appState.events
         .filter(event => event.category === 'To-do' && !event.isComplete)
         .map(event => ({ ...event, date: new Date(event.date) }))
-        .filter(event => event.date >= today)
+        .filter(event => event.date >= today);
+
+    Object.entries(appState.mealPlan).forEach(([dateString, dayPlan]) => {
+        const date = new Date(dateString);
+        if (date >= today) {
+            Object.values(dayPlan).flat().forEach(item => {
+                if (item.type === 'project') {
+                    const project = appState.projects.find(p => p.id === item.projectId);
+                    if (project) {
+                        upcomingTasks.push({
+                            date: date,
+                            title: `Projekt: ${project.title}`,
+                            category: 'To-do',
+                        });
+                    }
+                } else if (item.type === 'task') {
+                     upcomingTasks.push({
+                            date: date,
+                            title: item.taskName,
+                            category: 'To-do',
+                        });
+                }
+            });
+        }
+    });
+
+    const sortedTasks = upcomingTasks
         .sort((a, b) => a.date - b.date)
         .slice(0, 5);
 
     renderTimelineSection(appElements.timelineBirthdays, upcomingBirthdays);
     renderTimelineSection(appElements.timelineEvents, upcomingEvents);
-    renderTimelineSection(appElements.timelineTasks, upcomingTasks);
+    renderTimelineSection(appElements.timelineTasks, sortedTasks);
 }
 
 function renderTimelineSection(container, items) {
@@ -171,6 +198,7 @@ function renderWelcomeWidget() {
 
 function renderProjectsFocusWidget() {
     const container = appElements.projectsFocusContent;
+    if (!container) return; // FIX: Add guard clause
     const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').slice(0, 3);
     if (activeProjects.length === 0) {
         container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Projekter" siden.</p>';
