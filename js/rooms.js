@@ -57,9 +57,7 @@ export function initRoomDetails(state, elements) {
     appState = state;
     appElements = { // Cache elements specific to this module
         ...elements,
-        logEntryModal: document.getElementById('log-entry-modal'),
-        logEntryForm: document.getElementById('log-entry-form'),
-        deleteLogEntryBtn: document.getElementById('delete-log-entry-btn'),
+        // FJERNET: log-entry-modal, log-entry-form, delete-log-entry-btn
     };
 
     if (appElements.editRoomBtn) {
@@ -70,18 +68,9 @@ export function initRoomDetails(state, elements) {
         });
     }
     
-    const addLogBtn = document.getElementById('add-log-entry-btn');
-    if (addLogBtn) {
-        addLogBtn.addEventListener('click', () => openLogEntryModal());
-    }
-
-    if (appElements.logEntryForm) {
-        appElements.logEntryForm.addEventListener('submit', handleSaveLogEntry);
-    }
-    if (appElements.deleteLogEntryBtn) {
-        appElements.deleteLogEntryBtn.addEventListener('click', handleDeleteLogEntry);
-    }
-
+    // FJERNET: Håndtering af add-log-entry-btn, logEntryForm og deleteLogEntryBtn
+    // Den funktionalitet er nu erstattet med den nye "Tilføj note" til kalenderen
+    
     // Event delegation for clicking on log entries to edit them
     if (appElements.roomDetailsContent) {
         appElements.roomDetailsContent.addEventListener('click', e => {
@@ -93,8 +82,10 @@ export function initRoomDetails(state, elements) {
     }
 }
 
-export function renderRoomsListPage() {
-    const grid = appElements.roomsGrid;
+// NY FUNKTION: Renderer den nye samlede Hjem-side
+export function renderHomeOverview() {
+    if (!appState.rooms) return;
+    const grid = appElements.roomsGrid; // Vi genbruger dette element til at vise rum som kort
     if (!grid) return;
     grid.innerHTML = '';
     const fragment = document.createDocumentFragment();
@@ -122,6 +113,7 @@ export function renderRoomsListPage() {
     });
     grid.appendChild(fragment);
 }
+
 
 function renderDetailCard(title, content, cardClass = '') {
     if (!content || (Array.isArray(content) && content.length === 0) || (typeof content === 'string' && content.trim() === '')) {
@@ -211,8 +203,8 @@ function openAddRoomModal() {
     roomNameSelect.required = true;
     document.getElementById('room-name-display').classList.add('hidden');
     document.getElementById('room-wishlist-container').innerHTML = '';
-    document.getElementById('room-images-preview-container').innerHTML = '';
-
+    
+    // FJERNET: room-images-preview-container
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
     
@@ -244,9 +236,9 @@ function openEditRoomModal(roomId) {
     wishlistContainer.innerHTML = '';
     if (room.wishlist) room.wishlist.forEach(i => createWishlistRow(i));
     
-    const imagesContainer = document.getElementById('room-images-preview-container');
-    imagesContainer.innerHTML = '';
-    if (room.images) room.images.forEach(url => createImagePreview(url));
+    // FJERNET: room.images
+    // imagesContainer.innerHTML = '';
+    // if (room.images) room.images.forEach(url => createImagePreview(url));
 
     modal.classList.remove('hidden');
 }
@@ -275,17 +267,12 @@ async function handleSaveRoom(e) {
         }
     });
 
-    const images = [];
-    document.querySelectorAll('#room-images-preview-container .image-preview-item img').forEach(img => {
-        images.push(img.src);
-    });
-
     const roomData = {
         name: roomName,
         area: Number(document.getElementById('room-area').value) || null,
         ceilingHeight: Number(document.getElementById('room-ceiling-height').value) || null,
         wishlist: wishlist,
-        images: images,
+        // FJERNET: images
         logbook: isEditing ? appState.rooms.find(r => r.id === roomId)?.logbook || [] : [],
         userId: appState.currentUser.uid
     };
@@ -317,17 +304,7 @@ function createWishlistRow(item = {}) {
     `;
     container.appendChild(row);
 }
-
-function createImagePreview(url) {
-    const container = document.getElementById('room-images-preview-container');
-    const item = document.createElement('div');
-    item.className = 'image-preview-item';
-    item.innerHTML = `
-        <img src="${url}" alt="Preview">
-        <button type="button" class="btn-icon remove-image-btn"><i class="fas fa-times-circle"></i></button>
-    `;
-    container.appendChild(item);
-}
+// FJERNET: createImagePreview()
 
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
     if (!selectElement) return;
@@ -336,7 +313,9 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.value = currentValue || "";
 }
 
-// --- LOGBOOK FUNCTIONS ---
+// --- LOGBOOK FUNCTIONS (OPDATERET) ---
+// Funktionen er bevaret, men knapperne til at tilgå den er fjernet fra UI'en
+// Den kan dog stadig bruges som en del af et rum.
 
 function openLogEntryModal(logId = null) {
     const form = appElements.logEntryForm;
@@ -366,9 +345,8 @@ function openLogEntryModal(logId = null) {
         deleteBtn.style.display = 'none';
     }
 
-    appElements.logEntryModal.classList.remove('hidden');
+    // appElements.logEntryModal.classList.remove('hidden'); // FJERNET, da modalen er slettet fra HTML
 }
-
 async function handleSaveLogEntry(e) {
     e.preventDefault();
     const roomId = document.getElementById('log-entry-room-id').value;
@@ -400,7 +378,7 @@ async function handleSaveLogEntry(e) {
             // Just add the new one
             await updateDoc(roomRef, { logbook: arrayUnion(entryData) });
         }
-        appElements.logEntryModal.classList.add('hidden');
+        // appElements.logEntryModal.classList.add('hidden'); // FJERNET, da modalen er slettet fra HTML
         showNotification({title: "Gemt!", message: "Noten er blevet gemt i logbogen."});
     } catch(error) {
         handleError(error, "Noten kunne ikke gemmes.", "saveLogEntry");
@@ -428,7 +406,7 @@ async function handleDeleteLogEntry() {
         try {
             const roomRef = doc(db, 'rooms', roomId);
             await updateDoc(roomRef, { logbook: arrayRemove(entryToDelete) });
-            appElements.logEntryModal.classList.add('hidden');
+            // appElements.logEntryModal.classList.add('hidden'); // FJERNET, da modalen er slettet fra HTML
             showNotification({title: "Slettet", message: "Noten er blevet fjernet fra logbogen."});
         } catch (error) {
             handleError(error, "Noten kunne ikke slettes.", "deleteLogEntry");
