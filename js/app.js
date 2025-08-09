@@ -12,11 +12,10 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage, renderHomeOverview } from './rooms.js';
+import { initRooms, renderHomeOverview } from './rooms.js'; // OPDATERET: Fjerner renderRoomsListPage og renderRoomDetailsPage
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-// NYT: Import af plants.js
 import { initPlants, renderPlants, renderWishlist } from './plants.js';
 
 
@@ -362,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
-                        renderRoomDetailsPage();
+                        // FJERNET: renderRoomDetailsPage() kaldet
                     } else {
                         window.location.hash = '#hjem';
                     }
