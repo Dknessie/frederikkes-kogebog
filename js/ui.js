@@ -16,6 +16,7 @@ export function initUI(state, elements) {
     initNavigationClicks();
     initModals();
     initMobileNav();
+    initHjemTabs();
 }
 
 /**
@@ -64,17 +65,47 @@ function initNavigationClicks() {
 }
 
 /**
- * Sets up event listeners for closing modals.
+ * NEW: Rewritten function to handle modal closing with more control.
+ * It checks for data-attributes to prevent accidental closing.
  */
 function initModals() {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay || e.target.closest('.close-modal-btn')) {
-                overlay.classList.add('hidden');
+            const isClosableOnOverlay = overlay.dataset.overlayClosable !== 'false';
+
+            // Close if the close button is clicked
+            if (e.target.closest('.close-modal-btn')) {
+                handleCloseAttempt(overlay);
+            }
+            // Close if the overlay is clicked AND it's allowed
+            else if (isClosableOnOverlay && e.target === overlay) {
+                handleCloseAttempt(overlay);
             }
         });
     });
 }
+
+/**
+ * NEW: Handles the attempt to close a modal, checking if confirmation is needed.
+ * @param {HTMLElement} overlay - The modal overlay element to potentially close.
+ */
+async function handleCloseAttempt(overlay) {
+    const needsConfirmation = overlay.dataset.confirmClose === 'true';
+
+    if (needsConfirmation) {
+        const confirmed = await showNotification({
+            title: "Er du sikker?",
+            message: "Hvis du lukker nu, vil dine ændringer ikke blive gemt. Vil du fortsætte?",
+            type: 'confirm'
+        });
+        if (confirmed) {
+            overlay.classList.add('hidden');
+        }
+    } else {
+        overlay.classList.add('hidden');
+    }
+}
+
 
 /**
  * Sets up mobile-specific UI event listeners (tab bar).
@@ -90,6 +121,27 @@ function initMobileNav() {
             if (page) {
                 window.location.hash = `#${page}`;
             }
+        });
+    }
+}
+
+
+/**
+ * Sets up the sub-navigation tabs on the "Hjem" page.
+ */
+function initHjemTabs() {
+    if (UIElements.hjemNavTabs) {
+        UIElements.hjemNavTabs.addEventListener('click', e => {
+            const targetTab = e.target.closest('.hjem-tab');
+            if (!targetTab) return;
+
+            UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
+            targetTab.classList.add('active');
+
+            const targetId = targetTab.dataset.target;
+            UIElements.hjemSubpages.forEach(page => {
+                page.classList.toggle('active', page.id === targetId);
+            });
         });
     }
 }
