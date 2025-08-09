@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -11,14 +11,17 @@ export function initReferences(state, elements) {
     appState = state;
     appElements = elements;
 
-    appElements.referencesContainer.addEventListener('click', handleListClick);
-    appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    if (appElements.referencesContainer) {
+        appElements.referencesContainer.addEventListener('click', handleListClick);
+        appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    }
 }
 
 export function renderReferencesPage() {
+    if (!appElements.referencesContainer) return;
     appElements.referencesContainer.innerHTML = '';
     
-    // Simplified reference data object, removing Rooms and Maintenance Tasks
+    // UPDATED: Removed 'rooms' and 'maintenanceTasks' from the data object
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier',
@@ -39,7 +42,7 @@ export function renderReferencesPage() {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
             isSimpleList: true,
-            isReadOnly: true
+            isReadOnly: true // Example of a read-only list
         }
     };
 
