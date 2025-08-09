@@ -17,7 +17,8 @@ export function initReferences(state, elements) {
 
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
-    // NEW: Added maintenanceTasks to the reference data object
+    
+    // Simplified reference data object, removing Rooms and Maintenance Tasks
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier',
@@ -29,26 +30,16 @@ export function renderReferencesPage() {
             items: appState.references.itemLocations || [],
             isSimpleList: true
         },
-        rooms: {
-            title: 'Rum',
-            items: appState.references.rooms || [],
-            isSimpleList: true
-        },
         stores: {
             title: 'Butikker',
             items: appState.references.stores || [],
-            isSimpleList: true
-        },
-        maintenanceTasks: {
-            title: 'Vedligeholdelsesopgaver',
-            items: appState.references.maintenanceTasks || [],
             isSimpleList: true
         },
         standardUnits: {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
             isSimpleList: true,
-            isReadOnly: true // Example of a read-only list
+            isReadOnly: true
         }
     };
 
