@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -11,17 +11,15 @@ export function initReferences(state, elements) {
     appState = state;
     appElements = elements;
 
-    if (appElements.referencesContainer) {
-        appElements.referencesContainer.addEventListener('click', handleListClick);
-        appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
-    }
+    appElements.referencesContainer.addEventListener('click', handleListClick);
+    appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
 }
 
 export function renderReferencesPage() {
-    if (!appElements.referencesContainer) return;
     appElements.referencesContainer.innerHTML = '';
     
-    // UPDATED: Removed 'rooms' and 'maintenanceTasks' from the data object
+    // UPDATED: Removed 'rooms' and 'maintenanceTasks' from direct display.
+    // They are now managed elsewhere or implicitly. 'rooms' is still in state for the ugeplan.
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier',
