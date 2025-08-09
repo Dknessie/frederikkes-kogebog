@@ -1139,11 +1139,13 @@ header {
 .widget-header h3 {
     margin: 0;
 }
-.timeline-section {
-    margin-bottom: var(--spacing-l);
+#timeline-content {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-l);
 }
-.timeline-section:last-child {
-    margin-bottom: 0;
+.timeline-section {
+    /* No margin needed with grid gap */
 }
 .timeline-section h4 {
     margin-top: 0;
@@ -1154,27 +1156,20 @@ header {
     display: flex;
     align-items: center;
     gap: var(--spacing-s);
+    padding-bottom: var(--spacing-s);
+    border-bottom: 2px solid var(--secondary-color);
 }
 .timeline-section-content {
-    border-left: 2px solid var(--border-color);
-    padding-left: var(--spacing-m);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
 }
 .timeline-item {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
-    padding: var(--spacing-s) 0;
     font-size: var(--small-font-size);
 }
-.timeline-item-icon {
-    width: 24px;
-    text-align: center;
-    color: #888;
-}
-.timeline-item-icon .fa-utensils { color: var(--primary-color); }
-.timeline-item-icon .fa-tasks { color: var(--accent-color); }
-.timeline-item-icon .fa-birthday-cake { color: #E91E63; }
-.timeline-item-icon .fa-calendar-check { color: #2196F3; }
 .timeline-item-text.is-complete {
     text-decoration: line-through;
     color: #999;
@@ -1182,7 +1177,8 @@ header {
 .timeline-date {
     font-weight: 600;
     color: var(--primary-color);
-    margin-right: var(--spacing-s);
+    flex-shrink: 0;
+    width: 50px;
 }
 
 #projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
@@ -1874,6 +1870,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     #inventory .actions-bar {
         display: flex;
+    }
+    #timeline-content {
+        grid-template-columns: 1fr;
     }
 }
 
