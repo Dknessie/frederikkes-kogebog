@@ -39,7 +39,7 @@
                 <nav class="desktop-nav">
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                     <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
-                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjem</a>
+                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Ugeplan</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
@@ -174,40 +174,30 @@
                 </div>
             </section>
             
+            <!-- NEW: Ugeplan Section -->
             <section id="hjem" class="page hidden">
-                <h2>Hjem Administration</h2>
-                <div class="hjem-nav-tabs">
-                    <button class="hjem-tab active" data-target="hjem-rooms"><i class="fas fa-door-open"></i> Rum</button>
-                    <button class="hjem-tab" data-target="hjem-projects"><i class="fas fa-tools"></i> Projekter</button>
+                <div class="ugeplan-header">
+                    <h2>Ugeplan</h2>
+                    <h3 id="ugeplan-title">Uge X, 2025</h3>
                 </div>
-
-                <div id="hjem-rooms" class="hjem-subpage active">
-                    <div class="actions-bar">
-                        <button id="add-room-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Rum Detaljer</button>
-                    </div>
-                    <div id="rooms-grid" class="recipe-grid"></div>
+                <p>Her er din personlige tjekliste for ugen. Tilføj opgaver under hvert rum og kryds dem af, når de er klaret.</p>
+                <div id="ugeplan-container" class="ugeplan-container">
+                    <!-- Ugeplanen vil blive renderet her af ugeplan.js -->
                 </div>
-
-                <div id="hjem-projects" class="hjem-subpage">
-                    <div class="actions-bar">
-                        <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Projekt</button>
-                    </div>
-                    <div id="projects-grid" class="recipe-grid"></div>
+                 <div class="actions-bar">
+                    <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Projekt</button>
                 </div>
+                <div id="projects-grid" class="recipe-grid"></div>
             </section>
 
+            <!-- OBSOLETE: This section is no longer used but kept for reference if needed -->
             <section id="room-details" class="page hidden">
                 <div class="room-details-header">
                     <a href="#hjem" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Tilbage til Hjem</a>
                     <h2 id="room-details-title"></h2>
-                    <div>
-                        <button id="edit-room-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger Rum Info</button>
-                        <button id="add-log-entry-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj til Logbog</button>
-                    </div>
+                    <button id="edit-room-btn" class="btn btn-primary"><i class="fas fa-edit"></i> Rediger Rum</button>
                 </div>
-                <div id="room-details-content" class="room-details-grid">
-                    <!-- Key info, gallery, wishlist, and logbook will be rendered here -->
-                </div>
+                <div id="room-details-content" class="room-details-grid"></div>
             </section>
 
             <section id="recipes" class="page hidden">
@@ -278,44 +268,12 @@
         <nav id="mobile-tab-bar" class="mobile-tab-bar">
             <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
-            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
+            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Ugeplan</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
         </nav>
     </div>
     
     <!-- MODALS -->
-    <div id="log-entry-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="log-entry-modal-title">Tilføj til Logbog</h3>
-            <form id="log-entry-form">
-                <input type="hidden" id="log-entry-id">
-                <input type="hidden" id="log-entry-room-id">
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="log-entry-date">Dato</label>
-                        <input type="date" id="log-entry-date" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="log-entry-type">Type</label>
-                        <select id="log-entry-type" required>
-                            <option value="Projekt">🔨 Projekt</option>
-                            <option value="Vedligehold">🧹 Vedligehold</option>
-                            <option value="Note">📝 Note & Info</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="log-entry-description">Beskrivelse</label>
-                    <textarea id="log-entry-description" rows="4" required></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="delete-log-entry-btn" class="btn btn-danger" style="display: none; margin-right: auto;">Slet</button>
-                    <button type="submit" class="btn btn-primary">Gem Note</button>
-                </div>
-            </form>
-        </div>
-    </div>
     <div id="event-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -348,6 +306,34 @@
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="maintenance-log-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="maintenance-log-modal-title">Log vedligeholdelse</h3>
+            <form id="maintenance-log-form">
+                <input type="hidden" id="maintenance-log-id">
+                <div class="input-group">
+                    <label for="maintenance-log-date">Dato for udførelse</label>
+                    <input type="date" id="maintenance-log-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-room">Rum (valgfri)</label>
+                    <select id="maintenance-log-room"></select>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-task">Opgave</label>
+                    <select id="maintenance-log-task" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-log-note">Note (valgfri)</label>
+                    <textarea id="maintenance-log-note" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Log</button>
                 </div>
             </form>
         </div>
@@ -394,14 +380,38 @@
                         <input type="number" id="room-ceiling-height" step="0.01">
                     </div>
                 </div>
-                <hr>
-                <h4>Billeder</h4>
                 <div class="input-group">
-                    <label for="room-image-url">Tilføj Billede URL</label>
-                    <input type="url" id="room-image-url" placeholder="https://...">
+                    <label for="room-notes">Generelle Noter</label>
+                    <textarea id="room-notes" rows="3" placeholder="F.eks. malingskoder, gulvtype, info om skråvægge..."></textarea>
                 </div>
-                <button type="button" id="add-room-image-btn" class="btn btn-secondary">Tilføj Billede</button>
-                <div id="room-images-preview-container" class="room-gallery"></div>
+                <hr>
+                <h4>Vedligeholdelsesnoter</h4>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="room-notes-vvs">VVS & Sanitet</label>
+                        <textarea id="room-notes-vvs" rows="3" placeholder="Modelnr. på armatur, sidste service..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="room-notes-el">El-installationer</label>
+                        <textarea id="room-notes-el" rows="3" placeholder="Sikringsgruppe, pæretyper..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="room-notes-windows">Vinduer & Døre</label>
+                        <textarea id="room-notes-windows" rows="3" placeholder="Sidste smøring af hængsler..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="room-notes-ventilation">Ventilation</label>
+                        <textarea id="room-notes-ventilation" rows="3" placeholder="Filtertype, sidste rens..."></textarea>
+                    </div>
+                </div>
+                 <div class="input-group">
+                    <label for="room-notes-surfaces">Overflader</label>
+                    <textarea id="room-notes-surfaces" rows="3" placeholder="Pleje af bordplade, gulvbehandling..."></textarea>
+                </div>
+                <hr>
+                <h4>Inventar</h4>
+                <div id="room-inventory-list-container"></div>
+                <button type="button" id="add-room-inventory-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Inventar</button>
                 <hr>
                 <h4>Ønskeliste</h4>
                 <div id="room-wishlist-container"></div>
@@ -457,9 +467,10 @@
                     </div>
                 </div>
                 <div class="form-grid-2-col">
+                    <!-- UPDATED: Room is now a text field -->
                     <div class="input-group">
-                        <label for="project-room">Rum</label>
-                        <select id="project-room"></select>
+                        <label for="project-room">Rum / Placering</label>
+                        <input type="text" id="project-room" placeholder="F.eks. Stue, Haven, Hele huset">
                     </div>
                     <div class="input-group">
                         <label>Estimeret Tid</label>
