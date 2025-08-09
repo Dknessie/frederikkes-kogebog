@@ -1343,51 +1343,136 @@ header {
     grid-template-columns: repeat(3, 1fr);
 }
 
-/* NEW: Weekly Plan Styles */
-.weekly-plan-controls {
+.hjem-nav-tabs {
     display: flex;
-    gap: var(--spacing-m);
-    align-items: flex-end;
+    gap: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
     margin-bottom: var(--spacing-l);
-    background-color: var(--white-color);
-    padding: var(--spacing-l);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
 }
-.weekly-plan-controls .input-group {
-    flex-grow: 1;
-    margin-bottom: 0;
-}
-.weekly-plan-controls .btn {
-    flex-shrink: 0;
-}
-.weekly-plan-container {
-    background-color: var(--white-color);
-    padding: var(--spacing-l);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-}
-.weekly-plan-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-.weekly-plan-table th, .weekly-plan-table td {
-    padding: var(--spacing-m);
-    text-align: left;
-    border: 1px solid var(--border-color);
-}
-.weekly-plan-table th {
-    background-color: var(--secondary-color);
-}
-.weekly-plan-table td:not(:first-child):not(:nth-child(2)) {
-    text-align: center;
-}
-.weekly-plan-table input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+.hjem-tab {
+    padding: var(--spacing-m) var(--spacing-l);
+    border: none;
+    background: none;
     cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.hjem-tab:hover {
+    color: var(--primary-color);
+}
+.hjem-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+.hjem-subpage {
+    display: none;
+}
+.hjem-subpage.active {
+    display: block;
 }
 
+/* NEW: Room Details Page Layout */
+.room-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-l);
+    flex-wrap: wrap;
+    gap: var(--spacing-m);
+}
+.room-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Main column for logbook, sidebar for details */
+    gap: var(--spacing-l);
+    align-items: start;
+}
+.room-details-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+.room-details-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+    position: sticky;
+    top: 85px; /* header height + padding */
+}
+.room-detail-card {
+    background: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    padding: var(--spacing-l);
+}
+.room-detail-card.logbook-card {
+    background-color: var(--light-bg-color);
+}
+.room-detail-card h4 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-m);
+}
+.room-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: var(--spacing-m);
+}
+.room-gallery img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+}
+.info-list .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-s) 0;
+}
+.info-list .info-item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+.info-list .info-label {
+    font-weight: 600;
+}
+
+/* NEW: Logbook Styles */
+.logbook-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+.log-entry {
+    background-color: var(--white-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+    border-left: 4px solid var(--primary-color);
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
+}
+.log-entry:hover {
+    box-shadow: var(--shadow);
+}
+.log-entry-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+}
+.log-entry-icon {
+    font-size: 1.2rem;
+}
+.log-entry-date {
+    font-weight: 600;
+    color: #555;
+    font-size: var(--small-font-size);
+}
+.log-entry-desc {
+    margin: 0;
+    color: #333;
+}
 
 /* ===== 9. Modaler ===== */
 .modal-overlay {
@@ -1405,7 +1490,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #log-entry-modal, #event-modal { z-index: 2010; }
 #notification-modal { z-index: 2020; }
 
 
@@ -1431,7 +1516,7 @@ header {
 #reorder-assistant-modal .modal-content,
 #batch-edit-modal .modal-content,
 #impulse-purchase-modal .modal-content,
-#maintenance-log-modal .modal-content,
+#log-entry-modal .modal-content,
 #event-modal .modal-content {
     max-width: 550px;
 }
@@ -1579,7 +1664,7 @@ header {
     margin-bottom: 1em;
 }
 
-#ingredients-container, #project-materials-container, #paint-list-container, #room-inventory-list-container, #room-wishlist-container, #project-links-container {
+#ingredients-container, #project-materials-container, #room-wishlist-container, #project-links-container {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
@@ -1589,15 +1674,12 @@ header {
     border-radius: var(--border-radius);
     margin: var(--spacing-m) 0;
 }
-.ingredient-row, .paint-row, .room-inventory-row, .wishlist-row, .project-link-row {
+.ingredient-row, .wishlist-row, .project-link-row {
     position: relative;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: var(--spacing-s);
     align-items: center;
-}
-.paint-row {
-    grid-template-columns: 1fr 1fr 1fr auto;
 }
 .ingredient-row {
     grid-template-columns: 1fr auto auto auto auto;
@@ -1608,7 +1690,7 @@ header {
 .project-link-row {
     grid-template-columns: 1fr 1fr auto;
 }
-.ingredient-row input, .paint-row input, .room-inventory-row input, .wishlist-row input, .project-link-row input {
+.ingredient-row input, .wishlist-row input, .project-link-row input {
     border: 1px solid var(--border-color);
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
@@ -1657,10 +1739,10 @@ header {
     width: 150px;
 }
 
-.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn, .wishlist-row .remove-wishlist-item-btn, .project-link-row .remove-project-link-btn { 
+.ingredient-row .remove-ingredient-btn, .wishlist-row .remove-wishlist-item-btn, .project-link-row .remove-project-link-btn { 
     color: #adb5bd; 
 }
-.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover, .project-link-row .remove-project-link-btn:hover { 
+.ingredient-row .remove-ingredient-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover, .project-link-row .remove-project-link-btn:hover { 
     color: var(--status-red); 
 }
 
@@ -1779,6 +1861,18 @@ input:checked + .slider:before { transform: translateX(22px); }
     content: 'kr.';
 }
 
+.image-preview-item {
+    position: relative;
+}
+.image-preview-item .remove-image-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    color: var(--status-red);
+}
+
 
 /* ===== Varelager Modal Specifikke Styles ===== */
 #inventory-item-form .form-section-box {
@@ -1889,8 +1983,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     .mobile-tab-bar {
         display: flex;
     }
-    .dashboard-layout {
+    .dashboard-layout, .room-details-grid {
         grid-template-columns: 1fr;
+    }
+    .room-details-sidebar {
+        position: static;
     }
     .page {
         padding: var(--spacing-m);
@@ -1906,10 +2003,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     #inventory .actions-bar {
         display: flex;
-    }
-    .weekly-plan-controls {
-        flex-direction: column;
-        align-items: stretch;
     }
 }
 
