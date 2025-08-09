@@ -93,7 +93,7 @@ function createProjectCard(project) {
     card.innerHTML = `
         <img src="${imageUrl}" alt="Før billede af ${project.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
         <div class="recipe-card-content">
-            <span class="recipe-card-category">${project.room || project.category || 'Ukategoriseret'}</span>
+            <span class="recipe-card-category">${project.room || 'Generelt'}</span>
             <h4>${project.title}</h4>
             <div class="recipe-card-tags">${tagsHTML}</div>
         </div>
@@ -172,9 +172,9 @@ async function handleSaveProject(e) {
 
     const projectData = {
         title: document.getElementById('project-title').value,
-        category: document.getElementById('project-category').value,
+        status: document.getElementById('project-status').value,
         tags: tags,
-        room: document.getElementById('project-room').value || null,
+        room: document.getElementById('project-room').value.trim() || null, // Free-text field
         time: {
             days: Number(document.getElementById('project-time-days').value) || null,
             hours: Number(document.getElementById('project-time-hours').value) || null,
@@ -230,13 +230,6 @@ async function handleGridClick(e) {
     }
 }
 
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
-}
-
 /**
  * Opens the modal to add a new project.
  */
@@ -252,8 +245,6 @@ function openAddProjectModal() {
     projectFormImageAfter = { type: null, data: null };
     appElements.projectImagePreviewBefore.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
     appElements.projectImagePreviewAfter.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
-
-    populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...');
 
     createMaterialRow();
     createLinkRow();
@@ -272,10 +263,9 @@ function openEditProjectModal(projectId) {
 
         document.getElementById('project-id').value = project.id;
         document.getElementById('project-title').value = project.title || '';
-        document.getElementById('project-category').value = project.category || '';
+        document.getElementById('project-status').value = project.status || 'Igangværende';
         document.getElementById('project-tags').value = (project.tags && project.tags.join(', ')) || '';
-        
-        populateReferenceDropdown(document.getElementById('project-room'), appState.references.rooms, 'Vælg et rum...', project.room);
+        document.getElementById('project-room').value = project.room || ''; // Set free-text value
         
         document.getElementById('project-time-days').value = project.time?.days || '';
         document.getElementById('project-time-hours').value = project.time?.hours || '';
