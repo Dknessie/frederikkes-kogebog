@@ -16,7 +16,6 @@ export function initUI(state, elements) {
     initNavigationClicks();
     initModals();
     initMobileNav();
-    initHjemTabs();
 }
 
 /**
@@ -91,27 +90,6 @@ function initMobileNav() {
             if (page) {
                 window.location.hash = `#${page}`;
             }
-        });
-    }
-}
-
-
-/**
- * Sets up the sub-navigation tabs on the "Hjem" page.
- */
-function initHjemTabs() {
-    if (UIElements.hjemNavTabs) {
-        UIElements.hjemNavTabs.addEventListener('click', e => {
-            const targetTab = e.target.closest('.hjem-tab');
-            if (!targetTab) return;
-
-            UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
-            targetTab.classList.add('active');
-
-            const targetId = targetTab.dataset.target;
-            UIElements.hjemSubpages.forEach(page => {
-                page.classList.toggle('active', page.id === targetId);
-            });
         });
     }
 }
