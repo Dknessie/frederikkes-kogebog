@@ -301,7 +301,7 @@ function createEventDiv(eventData) {
             eventDiv.draggable = true;
             eventDiv.classList.add('task');
             content = eventData.taskName;
-            icon = `<i class="fas fa-broom"></i>`;
+            icon = `<i class="fas fa-sticky-note"></i>`; // Updated icon
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
 
@@ -318,7 +318,7 @@ function createEventDiv(eventData) {
 
 function getIconForCategory(eventData) {
     switch (eventData.category) {
-        case 'To-do': return 'fa-check-square';
+        case 'To-do': return 'fa-sticky-note'; // Updated icon
         case 'Aftale': return 'fa-calendar-check';
         case 'Fødselsdag': return 'fa-birthday-cake';
         case 'Udgivelse':
@@ -580,7 +580,7 @@ function populateCalendarTaskList(searchTerm = '') {
         .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
     if (filteredTasks.length === 0 && searchTerm) {
-        list.innerHTML = `<li class="selection-list-item" data-name="${searchTerm}">Opret ny opgave: "${searchTerm}"</li>`;
+        list.innerHTML = `<li class="selection-list-item" data-name="${searchTerm}">Opret ny påmindelse: "${searchTerm}"</li>`;
     } else {
         filteredTasks.forEach(task => {
             const li = document.createElement('li');
@@ -636,7 +636,7 @@ async function handleCalendarTaskSubmit(e) {
     e.preventDefault();
     const taskName = document.getElementById('calendar-task-name-hidden').value;
     if (!taskName) {
-        showNotification({title: "Mangler opgave", message: "Vælg eller skriv en opgave."});
+        showNotification({title: "Mangler påmindelse", message: "Vælg eller skriv en påmindelse."});
         return;
     }
     const eventData = {
