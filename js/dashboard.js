@@ -75,131 +75,79 @@ function handleNotificationClick(e) {
 }
 
 function renderTimelineWidget() {
-    const container = appElements.timelineContent;
-    container.innerHTML = '';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    let allFutureEvents = [];
+    const timelineItems = [];
 
-    // 1. Aggregate Meals for the next 7 days
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const dateString = formatDate(date);
-        const dayPlan = appState.mealPlan[dateString];
-        if (dayPlan) {
-            Object.entries(dayPlan).forEach(([mealType, meals]) => {
-                meals.forEach(meal => {
-                    if (meal.type === 'recipe') {
-                        const recipe = appState.recipes.find(r => r.id === meal.recipeId);
-                        allFutureEvents.push({
-                            date: date,
-                            type: 'Madplan',
-                            icon: 'fa-utensils',
-                            text: `${mealType.charAt(0).toUpperCase() + mealType.slice(1)}: ${recipe ? recipe.title : 'Slettet opskrift'}`
-                        });
-                    }
-                });
-            });
-        }
-    }
-
-    // 2. Aggregate all future Personal Events
+    // Aggregate all events
     appState.events.forEach(event => {
-        let displayDate;
-        const eventDate = new Date(event.date);
-        
+        let displayDate = new Date(event.date);
         if (event.isRecurring) {
-            // Calculate next occurrence of recurring event
-            displayDate = new Date(event.date);
             displayDate.setFullYear(today.getFullYear());
             if (displayDate < today) {
                 displayDate.setFullYear(today.getFullYear() + 1);
             }
-        } else {
-            displayDate = eventDate;
         }
         
-        // Only include events from today onwards
-        if (displayDate >= today) {
-            let title = event.title;
-            if (event.category === 'Fødselsdag' && event.birthYear) {
-                const age = displayDate.getFullYear() - event.birthYear;
-                title = `${event.name}'s Fødselsdag (${age} år)`;
-            }
-
-            allFutureEvents.push({
+        const dayDiff = (displayDate - today) / (1000 * 60 * 60 * 24);
+        if (dayDiff >= 0 && dayDiff < 14) { // Look 14 days ahead
+            timelineItems.push({
                 date: displayDate,
-                type: event.category,
-                icon: getIconForCategory(event),
-                text: title,
-                isComplete: event.isComplete
+                ...event
             });
         }
     });
 
-    // 3. Sort all events by date and take the next 10
-    allFutureEvents.sort((a, b) => a.date - b.date);
-    const timelineItems = allFutureEvents.slice(0, 10);
+    // Sort all items by date
+    timelineItems.sort((a, b) => a.date - b.date);
 
-    // 4. Group and Render
-    const groupedByDate = {};
+    // Group by category
+    const grouped = {
+        birthdays: [],
+        events: [],
+        tasks: []
+    };
+
     timelineItems.forEach(item => {
-        const dateString = formatDate(item.date);
-        if (!groupedByDate[dateString]) {
-            groupedByDate[dateString] = [];
+        if (item.category === 'Fødselsdag') {
+            grouped.birthdays.push(item);
+        } else if (['Aftale', 'Udgivelse', 'Andet'].includes(item.category)) {
+            grouped.events.push(item);
+        } else if (item.category === 'To-do') {
+            grouped.tasks.push(item);
         }
-        groupedByDate[dateString].push(item);
     });
 
-    if (Object.keys(groupedByDate).length === 0) {
-        container.innerHTML = `<p class="empty-state">Der er intet planlagt i den nærmeste fremtid.</p>`;
+    // Render each section
+    renderTimelineSection(appElements.timelineBirthdays, grouped.birthdays);
+    renderTimelineSection(appElements.timelineEvents, grouped.events);
+    renderTimelineSection(appElements.timelineTasks, grouped.tasks);
+}
+
+function renderTimelineSection(container, items) {
+    if (!container) return;
+    if (items.length === 0) {
+        container.innerHTML = `<p class="empty-state-small">Intet planlagt.</p>`;
         return;
     }
+    container.innerHTML = items.map(item => {
+        let title = item.title;
+        if (item.category === 'Fødselsdag' && item.birthYear) {
+            const age = new Date(item.date).getFullYear() - item.birthYear;
+            title = `${item.name}'s Fødselsdag (${age} år)`;
+        }
+        const textClass = item.isComplete ? 'is-complete' : '';
+        const dateString = new Date(item.date).toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
 
-    let html = '';
-    Object.keys(groupedByDate).sort().forEach(dateString => {
-        const date = new Date(dateString);
-        // Set time to noon to avoid timezone issues with date comparison
-        date.setHours(12, 0, 0, 0);
-        const dayDiff = Math.ceil((date - today) / (1000 * 60 * 60 * 24));
-        
-        let dayLabel = date.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
-        if (dayDiff === 0) dayLabel = 'I dag';
-        if (dayDiff === 1) dayLabel = 'I morgen';
-        
-        html += `<div class="timeline-day-group"><h4>${dayLabel}</h4>`;
-        groupedByDate[dateString].forEach(item => {
-            const textClass = item.isComplete ? 'is-complete' : '';
-            html += `
-                <div class="timeline-item">
-                    <span class="timeline-item-icon"><i class="fas ${item.icon}"></i></span>
-                    <span class="timeline-item-text ${textClass}">${item.text}</span>
-                </div>
-            `;
-        });
-        html += `</div>`;
-    });
-    container.innerHTML = html;
+        return `
+            <div class="timeline-item">
+                <span class="timeline-date">${dateString}</span>
+                <span class="timeline-item-text ${textClass}">${title}</span>
+            </div>
+        `;
+    }).join('');
 }
 
-
-function getIconForCategory(eventData) {
-    switch (eventData.category) {
-        case 'To-do': return 'fa-check-square';
-        case 'Aftale': return 'fa-calendar-check';
-        case 'Fødselsdag': return 'fa-birthday-cake';
-        case 'Udgivelse':
-            switch(eventData.subCategory) {
-                case 'Film': return 'fa-film';
-                case 'Bog': return 'fa-book-open';
-                case 'Spil': return 'fa-gamepad';
-                case 'Produkt': return 'fa-box';
-                default: return 'fa-star';
-            }
-        default: return 'fa-info-circle';
-    }
-}
 
 function renderShoppingListWidgets() {
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
@@ -234,13 +182,13 @@ function renderWelcomeWidget() {
 
 function renderProjectsFocusWidget() {
     const container = appElements.projectsFocusContent;
-    const activeProjects = appState.projects.filter(p => p.status !== 'completed').slice(0, 2);
+    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').slice(0, 3);
     if (activeProjects.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Hjem" siden.</p>';
+        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Projekter" siden.</p>';
         return;
     }
     container.innerHTML = activeProjects.map(p => {
-        const progress = p.progress || 30;
+        const progress = p.progress || 30; // Placeholder progress
         return `<div class="project-focus-item"><span class="project-focus-title">${p.title}</span><div class="project-progress-bar"><div style="width: ${progress}%"></div></div></div>`;
     }).join('');
 }
