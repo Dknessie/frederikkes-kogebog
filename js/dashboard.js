@@ -16,7 +16,10 @@ export function initDashboard(state, elements) {
         ...elements,
         welcomeTitle: document.getElementById('welcome-title'),
         welcomeSummary: document.getElementById('welcome-summary'),
-        timelineContent: document.getElementById('timeline-content'),
+        // OPDATERET: Nyt ID for de tre kolonner
+        timelineBirthdaysContent: document.getElementById('timeline-birthdays-content'),
+        timelineEventsContent: document.getElementById('timeline-events-content'),
+        timelineTasksContent: document.getElementById('timeline-tasks-content'),
         addEventBtn: document.getElementById('add-event-btn'),
         projectsFocusContent: document.getElementById('projects-focus-content'),
         budgetGaugeContainer: document.getElementById('budget-gauge-container'),
@@ -61,11 +64,19 @@ function handleQuickActionClick(e) {
     
     e.preventDefault();
     const action = actionBtn.dataset.action;
+    
+    // NYT: Håndterer den nye 'add-note' knap
+    if (action === 'add-note') {
+        const today = formatDate(new Date());
+        openEventModal(today, { category: 'To-do' });
+        return;
+    }
+
     if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
     else if (action === 'add-project') document.getElementById('add-project-btn').click();
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
-    else if (action === 'add-note') openEventModal(null, { category: 'To-do' });
-    else window.location.hash = actionBtn.getAttribute('href');
+    else if (action === 'plan-meal') window.location.hash = actionBtn.getAttribute('href');
+    
 }
 
 function handleNotificationClick(e) {
@@ -75,6 +86,7 @@ function handleNotificationClick(e) {
     }
 }
 
+// OPDATERET: Funktionen til at rendere tidslinjen i 3 separate kolonner
 function renderTimelineWidget() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -136,12 +148,12 @@ function renderTimelineWidget() {
         .sort((a, b) => a.date - b.date)
         .slice(0, 5);
 
-    renderTimelineSection(appElements.timelineBirthdays, upcomingBirthdays);
-    renderTimelineSection(appElements.timelineEvents, upcomingEvents);
-    renderTimelineSection(appElements.timelineTasks, sortedTasks);
+    renderTimelineSection(appElements.timelineBirthdaysContent, upcomingBirthdays, 'Fødselsdag');
+    renderTimelineSection(appElements.timelineEventsContent, upcomingEvents, 'Begivenheder');
+    renderTimelineSection(appElements.timelineTasksContent, sortedTasks, 'To-do');
 }
 
-function renderTimelineSection(container, items) {
+function renderTimelineSection(container, items, sectionType) {
     if (!container) return;
     if (items.length === 0) {
         container.innerHTML = `<p class="empty-state-small">Intet planlagt.</p>`;
@@ -149,10 +161,23 @@ function renderTimelineSection(container, items) {
     }
     container.innerHTML = items.map(item => {
         let title = item.title;
-        if (item.category === 'Fødselsdag' && item.birthYear) {
-            const age = item.date.getFullYear() - item.birthYear;
-            title = `${item.name}'s Fødselsdag (${age} år)`;
+        let iconClass = 'fa-info-circle';
+        
+        // Vælg ikon baseret på kategori
+        if (item.category === 'Fødselsdag') {
+            iconClass = 'fa-birthday-cake';
+            if (item.birthYear) {
+                const age = item.date.getFullYear() - item.birthYear;
+                title = `${item.name}'s Fødselsdag (${age} år)`;
+            }
+        } else if (item.category === 'To-do') {
+            iconClass = 'fa-sticky-note'; // OPDATERET ICON
+        } else if (item.category === 'Aftale') {
+            iconClass = 'fa-calendar-check';
+        } else if (item.category === 'Udgivelse') {
+            iconClass = 'fa-star';
         }
+
         const textClass = item.isComplete ? 'is-complete' : '';
         const dateString = item.date.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
 
@@ -193,7 +218,7 @@ function renderWelcomeWidget() {
     appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
     const today = formatDate(new Date());
     const mealsToday = appState.mealPlan[today] ? Object.values(appState.mealPlan[today]).flat().length : 0;
-    const activeProjects = appState.projects.filter(p => p.status !== 'completed').length;
+    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').length;
     appElements.welcomeSummary.innerHTML = `Du har <strong>${mealsToday}</strong> måltid(er) planlagt i dag og <strong>${activeProjects}</strong> aktive projekter.`;
 }
 
