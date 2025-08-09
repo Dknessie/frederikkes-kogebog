@@ -14,7 +14,6 @@ import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
-// FIX: Corrected the file path to be relative.
 import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
@@ -376,6 +375,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
+        // FIX: Moved auth initialization to the top to ensure it always runs.
+        setupAuthEventListeners(elements);
+        initAuth(onLogin, onLogout);
+
         const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
@@ -392,9 +395,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
-        setupAuthEventListeners(elements);
-        
-        initAuth(onLogin, onLogout);
     }
 
     init();
