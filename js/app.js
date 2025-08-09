@@ -12,10 +12,12 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage, initRoomDetails } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
+// NEW: Import the new weekly plan module
+import { initWeeklyPlan, renderWeeklyPlan } from './weeklyPlan.js';
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -26,13 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         projects: [],
-        rooms: [],
+        // REMOVED: rooms and maintenanceLogs are no longer separate top-level states
         expenses: [],
         events: [],
         references: {
-            maintenanceTasks: []
+            // Initialize with empty arrays to prevent errors before data loads
+            maintenanceTasks: [],
+            rooms: []
         },
-        preferences: {},
+        preferences: {
+            // Initialize weeklyPlan to avoid errors
+            weeklyPlan: []
+        },
         mealPlan: {},
         shoppingLists: {
             groceries: {},
@@ -43,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        currentlyViewedRoomId: null,
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -62,25 +68,18 @@ document.addEventListener('DOMContentLoaded', () => {
         editBudgetBtn: document.getElementById('edit-budget-btn'),
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
+        widgetHeader: document.querySelector('.widget-header'), // Ensure this exists or handle null
 
-        // Hjem
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
-        roomsGrid: document.getElementById('rooms-grid'),
-        addRoomBtn: document.getElementById('add-room-btn'),
-        roomEditModal: document.getElementById('room-edit-modal'),
-        roomForm: document.getElementById('room-form'),
-        roomDetailsPage: document.getElementById('room-details'),
-        roomDetailsContent: document.getElementById('room-details-content'),
-        roomDetailsTitle: document.getElementById('room-details-title'),
-        editRoomBtn: document.getElementById('edit-room-btn'),
+        // Hjem (now Weekly Plan)
+        addProjectBtn: document.getElementById('add-project-btn'),
+
+        // Projects
+        projectsGrid: document.getElementById('projects-grid'),
         projectEditModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
-        addProjectBtn: document.getElementById('add-project-btn'),
-        projectsGrid: document.getElementById('projects-grid'),
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
-
+        
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -174,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
+        eventForm: document.getElementById('event-form'),
     };
 
     function computeDerivedShoppingLists() {
@@ -194,22 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         state.shoppingLists.materials = materialsList;
 
-        // Compute wishlist from rooms
-        const wishlist = {};
-        state.rooms.forEach(room => {
-            (room.wishlist || []).forEach(item => {
-                const key = item.name.toLowerCase();
-                wishlist[key] = {
-                    name: item.name,
-                    price: item.price || null,
-                    url: item.url || null,
-                    roomId: room.id,
-                    quantity_to_buy: 1,
-                    unit: 'stk'
-                };
-            });
-        });
-        state.shoppingLists.wishlist = wishlist;
+        // Wishlist is now managed via preferences/weeklyPlan, so this part is removed.
     }
 
 
@@ -237,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
             projects: 'projects',
-            rooms: 'rooms',
+            // REMOVED: rooms and maintenance_logs are no longer fetched as top-level collections
             expenses: 'expenses',
             events: 'events'
         };
@@ -250,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                if (stateKey === 'projects' || stateKey === 'rooms') {
+                if (stateKey === 'projects') { // Only projects needed for materials list now
                     computeDerivedShoppingLists();
                 }
 
@@ -291,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
                 handleNavigation(window.location.hash);
@@ -315,17 +300,16 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
         try {
-            const [mainHash, subId] = hash.split('/');
-            state.currentlyViewedRoomId = subId || null;
-
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
+            const mainHash = hash.split('/')[0] || '#dashboard';
+            
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#projects', '#recipes', '#inventory', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -338,15 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    renderRoomsListPage();
-                    renderProjects();
+                    renderWeeklyPlan();
                     break;
-                case '#room-details':
-                    if (state.currentlyViewedRoomId) {
-                        renderRoomDetailsPage();
-                    } else {
-                        window.location.hash = '#hjem';
-                    }
+                case '#projects':
+                    renderProjects();
                     break;
                 case '#recipes':
                     renderPageTagFilters();
@@ -366,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
         initUI(state, elements);
@@ -378,10 +357,10 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initProjects(state, elements);
-        initRooms(state, elements);
-        initRoomDetails(state, elements); // Initialize listeners for the room details page
         initExpenses(state);
-        initEvents(state);
+        initEvents(state, elements);
+        // NEW: Initialize the new weekly plan module
+        initWeeklyPlan(state, elements);
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
