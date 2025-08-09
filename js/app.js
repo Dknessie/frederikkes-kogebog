@@ -12,7 +12,7 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage, initRoomDetails } from './rooms.js';
+import { initUgeplan, renderUgeplan } from './ugeplan.js'; // NEW
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
@@ -26,10 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         projects: [],
-        rooms: [],
+        rooms: [], // Kept for project backward compatibility, but not actively used for a page
+        weeklyPlan: {}, // NEW: For the flexible weekly plan
         expenses: [],
         events: [],
         references: {
+            rooms: [], // Keep this for the ugeplan sections
             maintenanceTasks: []
         },
         preferences: {},
@@ -43,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        currentlyViewedRoomId: null,
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -63,21 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
-        roomsGrid: document.getElementById('rooms-grid'),
-        addRoomBtn: document.getElementById('add-room-btn'),
-        roomEditModal: document.getElementById('room-edit-modal'),
-        roomForm: document.getElementById('room-form'),
-        roomDetailsPage: document.getElementById('room-details'),
-        roomDetailsContent: document.getElementById('room-details-content'),
-        roomDetailsTitle: document.getElementById('room-details-title'),
-        editRoomBtn: document.getElementById('edit-room-btn'),
-        projectEditModal: document.getElementById('project-edit-modal'),
-        projectForm: document.getElementById('project-form'),
+        // Ugeplan (replaces Hjem)
+        ugeplanContainer: document.getElementById('ugeplan-container'),
+        ugeplanTitle: document.getElementById('ugeplan-title'),
         addProjectBtn: document.getElementById('add-project-btn'),
         projectsGrid: document.getElementById('projects-grid'),
+        projectEditModal: document.getElementById('project-edit-modal'),
+        projectForm: document.getElementById('project-form'),
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
 
@@ -155,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
         dayDetailsTitle: document.getElementById('day-details-title'),
         dayDetailsContent: document.getElementById('day-details-content'),
 
-
         // References
         referencesContainer: document.getElementById('references-container'),
 
@@ -174,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
+        eventForm: document.getElementById('event-form'),
     };
 
     function computeDerivedShoppingLists() {
@@ -194,22 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         state.shoppingLists.materials = materialsList;
 
-        // Compute wishlist from rooms
-        const wishlist = {};
-        state.rooms.forEach(room => {
-            (room.wishlist || []).forEach(item => {
-                const key = item.name.toLowerCase();
-                wishlist[key] = {
-                    name: item.name,
-                    price: item.price || null,
-                    url: item.url || null,
-                    roomId: room.id,
-                    quantity_to_buy: 1,
-                    unit: 'stk'
-                };
-            });
-        });
-        state.shoppingLists.wishlist = wishlist;
+        // Wishlist is no longer computed from rooms. It will be handled differently if needed in the future.
     }
 
 
@@ -237,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
             projects: 'projects',
-            rooms: 'rooms',
             expenses: 'expenses',
             events: 'events'
         };
@@ -250,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                if (stateKey === 'projects' || stateKey === 'rooms') {
+                if (stateKey === 'projects') { // Only projects now affect shopping lists
                     computeDerivedShoppingLists();
                 }
 
@@ -266,6 +243,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
+
+        // NEW: Listener for the weekly plan
+        const weekId = `${new Date().getFullYear()}-W${getWeekNumber(new Date())}`;
+        state.listeners.weeklyPlan = onSnapshot(doc(db, 'weekly_plans', weekId), (doc) => {
+            if (doc.exists() && doc.data().userId === userId) {
+                state.weeklyPlan = doc.data();
+            } else {
+                // If no plan for this week, initialize with empty rooms from references
+                const initialPlan = { userId, rooms: {} };
+                (state.references.rooms || []).forEach(roomName => {
+                    initialPlan.rooms[roomName] = { tasks: [] };
+                });
+                state.weeklyPlan = initialPlan;
+            }
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'ugeplan'));
 
 
         // Listener for the manually managed groceries list
@@ -291,7 +284,10 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+                // Ensure rooms are part of the state for the ugeplan
+                state.rooms = (state.references.rooms || []).map(r => ({ id: r, name: r }));
+                
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
                 handleNavigation(window.location.hash);
@@ -315,17 +311,15 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
         try {
-            const [mainHash, subId] = hash.split('/');
-            state.currentlyViewedRoomId = subId || null;
-
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
+            const [mainHash] = hash.split('/');
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -338,15 +332,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    renderRoomsListPage();
+                    renderUgeplan();
                     renderProjects();
-                    break;
-                case '#room-details':
-                    if (state.currentlyViewedRoomId) {
-                        renderRoomDetailsPage();
-                    } else {
-                        window.location.hash = '#hjem';
-                    }
                     break;
                 case '#recipes':
                     renderPageTagFilters();
@@ -364,9 +351,18 @@ document.addEventListener('DOMContentLoaded', () => {
             handleError(error, "Der opstod en fejl under navigation.");
         }
     }
+    
+    // Helper to get week number, moved from utils to be available for listener setup
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        var weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+        return weekNo;
+    }
 
     function init() {
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
         initUI(state, elements);
@@ -378,10 +374,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initProjects(state, elements);
-        initRooms(state, elements);
-        initRoomDetails(state, elements); // Initialize listeners for the room details page
+        initUgeplan(state, elements); // NEW
         initExpenses(state);
-        initEvents(state);
+        initEvents(state, elements);
         setupAuthEventListeners(elements);
         
         initAuth(onLogin, onLogout);
