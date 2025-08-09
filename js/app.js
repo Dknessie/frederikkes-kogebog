@@ -12,12 +12,12 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
+import { initRooms, renderRoomsListPage, renderRoomDetailsPage, renderHomeOverview } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-// FJERNET: Import af initMaintenance
-// import { initMaintenance, renderMaintenancePage } from './maintenance.js';
+// NYT: Import af plants.js
+import { initPlants, renderPlants, renderWishlist } from './plants.js';
 
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         maintenanceLogs: [],
         expenses: [],
         events: [],
+        plants: [], // NYT: State for planter
         references: {
             maintenanceTasks: []
         },
@@ -179,6 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
+
+        // NYE ELEMENTER til den nye Hjem-side
+        addWishlistBtn: document.getElementById('add-wishlist-btn'),
+        wishlistGrid: document.getElementById('wishlist-grid'),
+        addPlantBtn: document.getElementById('add-plant-btn'),
+        plantsGrid: document.getElementById('plants-grid'),
+        plantEditModal: document.getElementById('plant-edit-modal'),
+        plantForm: document.getElementById('plant-form'),
     };
 
     function computeDerivedShoppingLists() {
@@ -245,7 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
             expenses: 'expenses',
-            events: 'events'
+            events: 'events',
+            plants: 'plants', // NYT: Lytter på 'plants' collection
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -344,9 +354,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    // Opdateret: Fjernet logik for tabs, render nu direkte de nye sektioner
-                    renderRoomsListPage(); // Render Rooms/Wishlist
+                    // Opdateret: render nu den nye Home overview
+                    renderHomeOverview();
                     renderProjects();
+                    renderWishlist();
+                    renderPlants();
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
@@ -390,10 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        // FJERNET: initMaintenance() kaldet
-        // initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
+        initPlants(state, elements); // NYT: Initialiserer plants-modulet
     }
 
     init();
