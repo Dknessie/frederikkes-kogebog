@@ -77,51 +77,40 @@ function handleNotificationClick(e) {
 function renderTimelineWidget() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const timelineItems = [];
 
-    // Aggregate all events
-    appState.events.forEach(event => {
-        let displayDate = new Date(event.date);
-        if (event.isRecurring) {
+    // --- Fødselsdage ---
+    const upcomingBirthdays = appState.events
+        .filter(event => event.category === 'Fødselsdag')
+        .map(event => {
+            const displayDate = new Date(event.date);
             displayDate.setFullYear(today.getFullYear());
             if (displayDate < today) {
                 displayDate.setFullYear(today.getFullYear() + 1);
             }
-        }
-        
-        const dayDiff = (displayDate - today) / (1000 * 60 * 60 * 24);
-        if (dayDiff >= 0 && dayDiff < 14) { // Look 14 days ahead
-            timelineItems.push({
-                date: displayDate,
-                ...event
-            });
-        }
-    });
+            return { ...event, date: displayDate };
+        })
+        .sort((a, b) => a.date - b.date)
+        .slice(0, 5); // Show next 5
 
-    // Sort all items by date
-    timelineItems.sort((a, b) => a.date - b.date);
+    // --- Andre Begivenheder ---
+    const upcomingEvents = appState.events
+        .filter(event => ['Aftale', 'Udgivelse', 'Andet'].includes(event.category))
+        .map(event => ({ ...event, date: new Date(event.date) }))
+        .filter(event => event.date >= today)
+        .sort((a, b) => a.date - b.date)
+        .slice(0, 5);
 
-    // Group by category
-    const grouped = {
-        birthdays: [],
-        events: [],
-        tasks: []
-    };
+    // --- Pligter & Projekter (To-dos) ---
+    const upcomingTasks = appState.events
+        .filter(event => event.category === 'To-do' && !event.isComplete)
+        .map(event => ({ ...event, date: new Date(event.date) }))
+        .filter(event => event.date >= today)
+        .sort((a, b) => a.date - b.date)
+        .slice(0, 5);
 
-    timelineItems.forEach(item => {
-        if (item.category === 'Fødselsdag') {
-            grouped.birthdays.push(item);
-        } else if (['Aftale', 'Udgivelse', 'Andet'].includes(item.category)) {
-            grouped.events.push(item);
-        } else if (item.category === 'To-do') {
-            grouped.tasks.push(item);
-        }
-    });
-
-    // Render each section
-    renderTimelineSection(appElements.timelineBirthdays, grouped.birthdays);
-    renderTimelineSection(appElements.timelineEvents, grouped.events);
-    renderTimelineSection(appElements.timelineTasks, grouped.tasks);
+    renderTimelineSection(appElements.timelineBirthdays, upcomingBirthdays);
+    renderTimelineSection(appElements.timelineEvents, upcomingEvents);
+    renderTimelineSection(appElements.timelineTasks, upcomingTasks);
 }
 
 function renderTimelineSection(container, items) {
@@ -133,11 +122,11 @@ function renderTimelineSection(container, items) {
     container.innerHTML = items.map(item => {
         let title = item.title;
         if (item.category === 'Fødselsdag' && item.birthYear) {
-            const age = new Date(item.date).getFullYear() - item.birthYear;
+            const age = item.date.getFullYear() - item.birthYear;
             title = `${item.name}'s Fødselsdag (${age} år)`;
         }
         const textClass = item.isComplete ? 'is-complete' : '';
-        const dateString = new Date(item.date).toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
+        const dateString = item.date.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
 
         return `
             <div class="timeline-item">
