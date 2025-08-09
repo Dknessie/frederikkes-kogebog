@@ -64,6 +64,7 @@ function handleQuickActionClick(e) {
     if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
     else if (action === 'add-project') document.getElementById('add-project-btn').click();
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
+    else if (action === 'add-note') openEventModal(null, { category: 'To-do' });
     else window.location.hash = actionBtn.getAttribute('href');
 }
 
