@@ -14,7 +14,7 @@
     --white-color: #ffffff;
     
     /* NEW: Theme colors for calendar */
-    --theme-bg: #F5F5F1;
+    --theme-bg: #F5F51;
     --theme-light-blue: #E3F2FD;
     --theme-grey: #B0B0B0;
 
@@ -1139,13 +1139,14 @@ header {
 .widget-header h3 {
     margin: 0;
 }
-#timeline-content {
+.timeline-grid-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: var(--spacing-l);
 }
 .timeline-section {
-    /* No margin needed with grid gap */
+    display: flex;
+    flex-direction: column;
 }
 .timeline-section h4 {
     margin-top: 0;
@@ -1163,6 +1164,7 @@ header {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-s);
+    flex-grow: 1;
 }
 .timeline-item {
     display: flex;
@@ -1745,6 +1747,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 .price-input-wrapper::after {
     content: 'kr.';
 }
+.unit-input-wrapper input {
+    padding-right: 60px; /* Make space for the unit text */
+}
 
 
 /* ===== Varelager Modal Specifikke Styles ===== */
@@ -1871,7 +1876,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     #inventory .actions-bar {
         display: flex;
     }
-    #timeline-content {
+    .timeline-grid-container {
         grid-template-columns: 1fr;
     }
 }
