@@ -29,36 +29,26 @@ export function initProjects(state, elements) {
         addProjectLinkBtn: document.getElementById('add-project-link-btn'),
     };
 
-    if (appElements.addProjectBtn) {
-        appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
-    }
-    if (appElements.projectForm) {
-        appElements.projectForm.addEventListener('submit', handleSaveProject);
-    }
-    if (appElements.projectsGrid) {
-        appElements.projectsGrid.addEventListener('click', handleGridClick);
-    }
-    if (appElements.addMaterialBtn) {
-        appElements.addMaterialBtn.addEventListener('click', () => createMaterialRow());
-    }
+    appElements.addProjectBtn.addEventListener('click', openAddProjectModal);
+    appElements.projectForm.addEventListener('submit', handleSaveProject);
+    appElements.projectsGrid.addEventListener('click', handleGridClick);
+    appElements.addMaterialBtn.addEventListener('click', () => createMaterialRow());
     
-    if (appElements.projectEditModal) {
-        appElements.projectEditModal.addEventListener('click', (e) => {
-            if (e.target.closest('.remove-ingredient-btn')) {
-                e.target.closest('.ingredient-row').remove();
-            }
-            if (e.target.closest('.remove-project-link-btn')) {
-                e.target.closest('.project-link-row').remove();
-            }
-        });
-    }
+    appElements.projectEditModal.addEventListener('click', (e) => {
+        if (e.target.closest('.remove-ingredient-btn')) {
+            e.target.closest('.ingredient-row').remove();
+        }
+        if (e.target.closest('.remove-project-link-btn')) {
+            e.target.closest('.project-link-row').remove();
+        }
+    });
 
     // Event listeners for image handling
-    if (appElements.projectImageUploadBefore) appElements.projectImageUploadBefore.addEventListener('change', (e) => handleImageUpload(e, 'before'));
-    if (appElements.projectImageUrlInputBefore) appElements.projectImageUrlInputBefore.addEventListener('input', (e) => handleImageUrlInput(e, 'before'));
-    if (appElements.projectImageUploadAfter) appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
-    if (appElements.projectImageUrlInputAfter) appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
-    if (appElements.addProjectLinkBtn) appElements.addProjectLinkBtn.addEventListener('click', () => createLinkRow());
+    appElements.projectImageUploadBefore.addEventListener('change', (e) => handleImageUpload(e, 'before'));
+    appElements.projectImageUrlInputBefore.addEventListener('input', (e) => handleImageUrlInput(e, 'before'));
+    appElements.projectImageUploadAfter.addEventListener('change', (e) => handleImageUpload(e, 'after'));
+    appElements.projectImageUrlInputAfter.addEventListener('input', (e) => handleImageUrlInput(e, 'after'));
+    appElements.addProjectLinkBtn.addEventListener('click', () => createLinkRow());
 }
 
 /**
@@ -66,8 +56,6 @@ export function initProjects(state, elements) {
  */
 export function renderProjects() {
     const fragment = document.createDocumentFragment();
-    if (!appElements.projectsGrid) return;
-    
     appElements.projectsGrid.innerHTML = '';
     
     let projectsToRender = [...appState.projects];
@@ -105,7 +93,7 @@ function createProjectCard(project) {
     card.innerHTML = `
         <img src="${imageUrl}" alt="Før billede af ${project.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
         <div class="recipe-card-content">
-            <span class="recipe-card-category">${project.room || project.category || 'Ukategoriseret'}</span>
+            <span class="recipe-card-category">${project.room || 'Ukategoriseret'}</span>
             <h4>${project.title}</h4>
             <div class="recipe-card-tags">${tagsHTML}</div>
         </div>
@@ -184,11 +172,9 @@ async function handleSaveProject(e) {
 
     const projectData = {
         title: document.getElementById('project-title').value,
-        // REMOVED: category field is no longer relevant
-        status: document.getElementById('project-status').value,
+        status: document.getElementById('project-status').value, // Get status
         tags: tags,
-        // UPDATED: Read from a simple text input instead of a select dropdown
-        room: document.getElementById('project-room').value.trim() || null,
+        room: document.getElementById('project-room').value.trim() || null, // UPDATED: Get from text input
         time: {
             days: Number(document.getElementById('project-time-days').value) || null,
             hours: Number(document.getElementById('project-time-hours').value) || null,
@@ -280,7 +266,7 @@ function openEditProjectModal(projectId) {
         document.getElementById('project-status').value = project.status || 'Igangværende';
         document.getElementById('project-tags').value = (project.tags && project.tags.join(', ')) || '';
         
-        // UPDATED: Set value of text input instead of populating dropdown
+        // UPDATED: Set value of text input instead of dropdown
         document.getElementById('project-room').value = project.room || '';
         
         document.getElementById('project-time-days').value = project.time?.days || '';
@@ -348,10 +334,10 @@ function handleImageUrlInput(e, type) {
     if (type === 'before') {
         projectFormImageBefore = imageData;
         appElements.projectImagePreviewBefore.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
-        if (appElements.projectImageUploadBefore) appElements.projectImageUploadBefore.value = '';
+        appElements.projectImageUploadBefore.value = '';
     } else {
         projectFormImageAfter = imageData;
         appElements.projectImagePreviewAfter.src = url || 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
-        if (appElements.projectImageUploadAfter) appElements.projectImageUploadAfter.value = '';
+        appElements.projectImageUploadAfter.value = '';
     }
 }
