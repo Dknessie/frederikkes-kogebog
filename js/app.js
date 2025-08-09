@@ -14,7 +14,6 @@ import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
-import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
 
@@ -399,3 +398,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
