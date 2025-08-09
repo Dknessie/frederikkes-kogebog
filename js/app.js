@@ -12,7 +12,6 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initUgeplan, renderUgeplan } from './ugeplan.js'; // NEW
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
@@ -26,14 +25,9 @@ document.addEventListener('DOMContentLoaded', () => {
         inventory: [],
         recipes: [],
         projects: [],
-        rooms: [], // Kept for project backward compatibility, but not actively used for a page
-        weeklyPlan: {}, // NEW: For the flexible weekly plan
         expenses: [],
         events: [],
-        references: {
-            rooms: [], // Keep this for the ugeplan sections
-            maintenanceTasks: []
-        },
+        references: {},
         preferences: {},
         mealPlan: {},
         shoppingLists: {
@@ -63,10 +57,12 @@ document.addEventListener('DOMContentLoaded', () => {
         editBudgetBtn: document.getElementById('edit-budget-btn'),
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
+        timelineContent: document.getElementById('timeline-content'),
+        timelineBirthdays: document.getElementById('timeline-birthdays'),
+        timelineEvents: document.getElementById('timeline-events'),
+        timelineTasks: document.getElementById('timeline-tasks'),
 
-        // Ugeplan (replaces Hjem)
-        ugeplanContainer: document.getElementById('ugeplan-container'),
-        ugeplanTitle: document.getElementById('ugeplan-title'),
+        // Projects
         addProjectBtn: document.getElementById('add-project-btn'),
         projectsGrid: document.getElementById('projects-grid'),
         projectEditModal: document.getElementById('project-edit-modal'),
@@ -170,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // Compute materials list from projects
         const materialsList = {};
         state.projects.forEach(project => {
             (project.materials || []).forEach(material => {
@@ -186,8 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         state.shoppingLists.materials = materialsList;
-
-        // Wishlist is no longer computed from rooms. It will be handled differently if needed in the future.
     }
 
 
@@ -227,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                if (stateKey === 'projects') { // Only projects now affect shopping lists
+                if (stateKey === 'projects') {
                     computeDerivedShoppingLists();
                 }
 
@@ -244,24 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
 
-        // NEW: Listener for the weekly plan
-        const weekId = `${new Date().getFullYear()}-W${getWeekNumber(new Date())}`;
-        state.listeners.weeklyPlan = onSnapshot(doc(db, 'weekly_plans', weekId), (doc) => {
-            if (doc.exists() && doc.data().userId === userId) {
-                state.weeklyPlan = doc.data();
-            } else {
-                // If no plan for this week, initialize with empty rooms from references
-                const initialPlan = { userId, rooms: {} };
-                (state.references.rooms || []).forEach(roomName => {
-                    initialPlan.rooms[roomName] = { tasks: [] };
-                });
-                state.weeklyPlan = initialPlan;
-            }
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'ugeplan'));
-
-
-        // Listener for the manually managed groceries list
         state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
             const data = doc.exists() ? doc.data() : {};
             state.shoppingLists.groceries = data.groceries || {};
@@ -284,9 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                // Ensure rooms are part of the state for the ugeplan
-                state.rooms = (state.references.rooms || []).map(r => ({ id: r, name: r }));
-                
                 const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
@@ -319,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleNavigation(hash) {
         try {
             const [mainHash] = hash.split('/');
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#references'];
+            const validHashes = ['#dashboard', '#calendar', '#projects', '#recipes', '#inventory', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -331,8 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case '#calendar':
                     renderMealPlanner();
                     break;
-                case '#hjem':
-                    renderUgeplan();
+                case '#projects':
                     renderProjects();
                     break;
                 case '#recipes':
@@ -351,15 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
             handleError(error, "Der opstod en fejl under navigation.");
         }
     }
-    
-    // Helper to get week number, moved from utils to be available for listener setup
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        var weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-        return weekNo;
-    }
 
     function init() {
         const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn];
@@ -374,7 +336,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initProjects(state, elements);
-        initUgeplan(state, elements); // NEW
         initExpenses(state);
         initEvents(state, elements);
         setupAuthEventListeners(elements);
