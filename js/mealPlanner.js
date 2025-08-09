@@ -16,7 +16,8 @@ let calendarEventState = {
 let calendarViewState = {
     currentView: 'week', // 'week' or 'month'
     draggedEventData: null,
-    dayDetailsDate: null 
+    dayDetailsDate: null,
+    mobileCurrentDayIndex: 0 // 0 for Monday, 6 for Sunday
 };
 
 export function initMealPlanner(state, elements) {
@@ -79,8 +80,15 @@ function switchCalendarView(view) {
 }
 
 function navigateCalendarPeriod(direction) {
+    const isMobile = window.innerWidth <= 768;
     if (calendarViewState.currentView === 'week') {
-        appState.currentDate.setDate(appState.currentDate.getDate() + (7 * direction));
+        if (isMobile) {
+            // Navigate day by day on mobile
+            appState.currentDate.setDate(appState.currentDate.getDate() + direction);
+        } else {
+            // Navigate week by week on desktop
+            appState.currentDate.setDate(appState.currentDate.getDate() + (7 * direction));
+        }
     } else {
         appState.currentDate.setMonth(appState.currentDate.getMonth() + direction, 1);
     }
@@ -91,8 +99,16 @@ export function renderMealPlanner() {
     if (!appState.recipes || !appState.inventory) return;
     
     if (calendarViewState.currentView === 'week') {
-        const startOfWeek = getStartOfWeek(appState.currentDate);
-        appElements.calendarTitle.textContent = `Uge ${getWeekNumber(startOfWeek)}, ${startOfWeek.getFullYear()}`;
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // Mobile Day View
+            const today = new Date(appState.currentDate);
+            appElements.calendarTitle.textContent = today.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
+        } else {
+            // Desktop Week View
+            const startOfWeek = getStartOfWeek(appState.currentDate);
+            appElements.calendarTitle.textContent = `Uge ${getWeekNumber(startOfWeek)}, ${startOfWeek.getFullYear()}`;
+        }
         renderWeekView();
     } else {
         appElements.calendarTitle.textContent = appState.currentDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric' });
@@ -108,6 +124,9 @@ function renderWeekView() {
 
     const startOfWeek = getStartOfWeek(appState.currentDate);
     const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+    const isMobile = window.innerWidth <= 768;
+    const mobileCurrentDay = appState.currentDate.getDay(); // 0=Sun, 1=Mon
+    const mobileCurrentDayIndex = mobileCurrentDay === 0 ? 6 : mobileCurrentDay - 1;
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(startOfWeek);
@@ -122,6 +141,10 @@ function renderWeekView() {
         dayCard.className = 'calendar-day-card';
         if (formatDate(dayDate) === formatDate(new Date())) {
             dayCard.classList.add('is-today');
+        }
+        // On mobile, only show the current day
+        if (isMobile && i === mobileCurrentDayIndex) {
+            dayCard.classList.add('mobile-visible');
         }
 
         dayCard.innerHTML = `
