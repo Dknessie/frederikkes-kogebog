@@ -39,7 +39,7 @@
                 <nav class="desktop-nav">
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                     <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
-                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Ugeplan</a>
+                    <a href="#projects" class="nav-link"><i class="fas fa-tools"></i> Projekter</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
@@ -57,18 +57,29 @@
                             <h2 id="welcome-title">Velkommen</h2>
                             <p id="welcome-summary">Laster data...</p>
                         </div>
-                        <!-- NEW: Timeline Widget -->
+                        
+                        <!-- UPDATED: Timeline Widget with 3 sections -->
                         <div id="timeline-widget" class="dashboard-widget">
                             <div class="widget-header">
                                 <h3>Min Tidslinje</h3>
                                 <button id="add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
                             </div>
-                            <div id="timeline-content"></div>
+                            <div id="timeline-content">
+                                <div class="timeline-section">
+                                    <h4><i class="fas fa-birthday-cake"></i> Fødselsdage</h4>
+                                    <div id="timeline-birthdays" class="timeline-section-content"></div>
+                                </div>
+                                <div class="timeline-section">
+                                    <h4><i class="fas fa-calendar-check"></i> Begivenheder</h4>
+                                    <div id="timeline-events" class="timeline-section-content"></div>
+                                </div>
+                                <div class="timeline-section">
+                                    <h4><i class="fas fa-tasks"></i> Pligter & Projekter</h4>
+                                    <div id="timeline-tasks" class="timeline-section-content"></div>
+                                </div>
+                            </div>
                         </div>
-                        <div id="projects-focus-widget" class="dashboard-widget">
-                            <h3>Projekter i Fokus</h3>
-                            <div id="projects-focus-content"></div>
-                        </div>
+
                         <div id="category-values-widget" class="dashboard-widget">
                             <h3>Lagerværdi pr. Kategori</h3>
                             <div id="category-values-content"></div>
@@ -113,9 +124,7 @@
                                 <h3>Budget</h3>
                                 <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
                             </div>
-                            <div id="budget-gauge-container">
-                                <!-- Gauge vil blive renderet her af JS -->
-                            </div>
+                            <div id="budget-gauge-container"></div>
                             <div class="budget-summary">
                                 <div class="budget-item">
                                     <span class="budget-label">Forbrug (Måned)</span>
@@ -135,8 +144,8 @@
                             <h3>Hurtig Adgang</h3>
                             <div class="quick-actions-container">
                                 <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
-                                <a href="#hjem" data-action="add-project" class="quick-action-btn"><i class="fas fa-tools"></i><span>Nyt Projekt</span></a>
-                                <a href="#calendar" class="quick-action-btn"><i class="fas fa-calendar-plus"></i><span>Planlæg Måltid</span></a>
+                                <a href="#projects" data-action="add-project" class="quick-action-btn"><i class="fas fa-tools"></i><span>Nyt Projekt</span></a>
+                                <a href="#calendar" class="quick-action-btn"><i class="fas fa-calendar-plus"></i><span>Planlæg</span></a>
                                 <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
                             </div>
                         </div>
@@ -174,30 +183,13 @@
                 </div>
             </section>
             
-            <!-- NEW: Ugeplan Section -->
-            <section id="hjem" class="page hidden">
-                <div class="ugeplan-header">
-                    <h2>Ugeplan</h2>
-                    <h3 id="ugeplan-title">Uge X, 2025</h3>
-                </div>
-                <p>Her er din personlige tjekliste for ugen. Tilføj opgaver under hvert rum og kryds dem af, når de er klaret.</p>
-                <div id="ugeplan-container" class="ugeplan-container">
-                    <!-- Ugeplanen vil blive renderet her af ugeplan.js -->
-                </div>
-                 <div class="actions-bar">
+            <!-- NEW: Projects Page -->
+            <section id="projects" class="page hidden">
+                <h2>Projekter</h2>
+                <div class="actions-bar">
                     <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Projekt</button>
                 </div>
                 <div id="projects-grid" class="recipe-grid"></div>
-            </section>
-
-            <!-- OBSOLETE: This section is no longer used but kept for reference if needed -->
-            <section id="room-details" class="page hidden">
-                <div class="room-details-header">
-                    <a href="#hjem" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Tilbage til Hjem</a>
-                    <h2 id="room-details-title"></h2>
-                    <button id="edit-room-btn" class="btn btn-primary"><i class="fas fa-edit"></i> Rediger Rum</button>
-                </div>
-                <div id="room-details-content" class="room-details-grid"></div>
             </section>
 
             <section id="recipes" class="page hidden">
@@ -268,7 +260,7 @@
         <nav id="mobile-tab-bar" class="mobile-tab-bar">
             <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
-            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Ugeplan</span></a>
+            <a href="#projects" class="mobile-tab-link" data-page="projects"><i class="fas fa-tools"></i><span>Projekter</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
         </nav>
     </div>
@@ -301,39 +293,9 @@
                     <label for="event-title">Titel</label>
                     <input type="text" id="event-title" required>
                 </div>
-                <div id="event-type-specific-fields">
-                    <!-- Dynamic fields based on type will be inserted here -->
-                </div>
+                <div id="event-type-specific-fields"></div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="maintenance-log-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="maintenance-log-modal-title">Log vedligeholdelse</h3>
-            <form id="maintenance-log-form">
-                <input type="hidden" id="maintenance-log-id">
-                <div class="input-group">
-                    <label for="maintenance-log-date">Dato for udførelse</label>
-                    <input type="date" id="maintenance-log-date" required>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-room">Rum (valgfri)</label>
-                    <select id="maintenance-log-room"></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-task">Opgave</label>
-                    <select id="maintenance-log-task" required></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-note">Note (valgfri)</label>
-                    <textarea id="maintenance-log-note" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Log</button>
                 </div>
             </form>
         </div>
@@ -354,72 +316,7 @@
                 <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
                 <button class="close-modal-btn">&times;</button>
             </div>
-            <div id="shopping-list-modal-content-wrapper">
-                <!-- Tematiseret indhold indsættes her af JS -->
-            </div>
-        </div>
-    </div>
-    <div id="room-edit-modal" class="modal-overlay hidden">
-        <div class="modal-content large">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="room-edit-modal-title">Rediger Rum</h3>
-            <form id="room-form">
-                <input type="hidden" id="room-id">
-                <div class="input-group">
-                    <label for="room-name-select">Vælg Rum</label>
-                    <select id="room-name-select" required></select>
-                    <input type="text" id="room-name-display" disabled class="hidden">
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="room-area">Størrelse (m²)</label>
-                        <input type="number" id="room-area" step="0.1">
-                    </div>
-                    <div class="input-group">
-                        <label for="room-ceiling-height">Lofthøjde (m)</label>
-                        <input type="number" id="room-ceiling-height" step="0.01">
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="room-notes">Generelle Noter</label>
-                    <textarea id="room-notes" rows="3" placeholder="F.eks. malingskoder, gulvtype, info om skråvægge..."></textarea>
-                </div>
-                <hr>
-                <h4>Vedligeholdelsesnoter</h4>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="room-notes-vvs">VVS & Sanitet</label>
-                        <textarea id="room-notes-vvs" rows="3" placeholder="Modelnr. på armatur, sidste service..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-el">El-installationer</label>
-                        <textarea id="room-notes-el" rows="3" placeholder="Sikringsgruppe, pæretyper..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-windows">Vinduer & Døre</label>
-                        <textarea id="room-notes-windows" rows="3" placeholder="Sidste smøring af hængsler..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-ventilation">Ventilation</label>
-                        <textarea id="room-notes-ventilation" rows="3" placeholder="Filtertype, sidste rens..."></textarea>
-                    </div>
-                </div>
-                 <div class="input-group">
-                    <label for="room-notes-surfaces">Overflader</label>
-                    <textarea id="room-notes-surfaces" rows="3" placeholder="Pleje af bordplade, gulvbehandling..."></textarea>
-                </div>
-                <hr>
-                <h4>Inventar</h4>
-                <div id="room-inventory-list-container"></div>
-                <button type="button" id="add-room-inventory-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Inventar</button>
-                <hr>
-                <h4>Ønskeliste</h4>
-                <div id="room-wishlist-container"></div>
-                <button type="button" id="add-wishlist-item-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Ønske</button>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Rum</button>
-                </div>
-            </form>
+            <div id="shopping-list-modal-content-wrapper"></div>
         </div>
     </div>
     <div id="project-edit-modal" class="modal-overlay hidden">
@@ -467,7 +364,6 @@
                     </div>
                 </div>
                 <div class="form-grid-2-col">
-                    <!-- UPDATED: Room is now a text field -->
                     <div class="input-group">
                         <label for="project-room">Rum / Placering</label>
                         <input type="text" id="project-room" placeholder="F.eks. Stue, Haven, Hele huset">
@@ -626,7 +522,6 @@
             </form>
         </div>
     </div>
-    <!-- Simplified Impulse Purchase Modal -->
     <div id="impulse-purchase-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -800,7 +695,6 @@
             </form>
         </div>
     </div>
-    <!-- Add to Calendar Modal -->
     <div id="add-calendar-event-modal" class="modal-overlay hidden">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
@@ -813,7 +707,6 @@
                     <button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Vedligehold</span></button>
                 </div>
             </div>
-            <!-- Recipe Selection View -->
             <div id="calendar-event-view-recipe" class="calendar-event-view hidden">
                 <h4>Vælg Opskrift</h4>
                 <div class="search-bar">
@@ -822,12 +715,10 @@
                 </div>
                 <ul id="calendar-recipe-list" class="selection-list"></ul>
             </div>
-             <!-- Project Selection View -->
              <div id="calendar-event-view-project" class="calendar-event-view hidden">
                 <h4>Vælg Projekt</h4>
                 <ul id="calendar-project-list" class="selection-list"></ul>
             </div>
-             <!-- Task/Maintenance Selection View -->
              <div id="calendar-event-view-task" class="calendar-event-view hidden">
                 <h4>Vælg Opgave</h4>
                 <div class="search-bar">
