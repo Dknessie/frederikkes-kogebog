@@ -88,7 +88,7 @@ function populateDropdowns() {
     const monthSelect = document.getElementById('fixed-expense-start-month-new');
     const userSelector = appElements.budgetUserSelector;
 
-    // Populate user/owner dropdowns
+    // Populate user/owner dropdowns from the new householdMembers reference list
     const householdMembers = appState.references.householdMembers || [];
     const currentUser = appState.currentUser?.displayName || appState.currentUser?.email.split('@')[0];
     
@@ -105,9 +105,9 @@ function populateDropdowns() {
         
         if (currentValue && householdMembers.includes(currentValue)) {
             select.value = currentValue;
-        } else if (select === ownerSelect) {
+        } else if (select === ownerSelect && householdMembers.includes(currentUser)) {
             select.value = currentUser;
-        } else {
+        } else if (select === userSelector) {
             select.value = 'all';
         }
     });
@@ -128,9 +128,14 @@ function populateDropdowns() {
 function resetFixedExpenseForm() {
     appElements.addFixedExpenseForm.reset();
     document.getElementById('fixed-expense-id').value = '';
-    document.getElementById('fixed-expense-owner-new').value = appState.currentUser?.displayName || '';
+    const ownerSelect = document.getElementById('fixed-expense-owner-new');
+    const currentUser = appState.currentUser?.displayName || appState.currentUser?.email.split('@')[0];
+    if (Array.from(ownerSelect.options).some(opt => opt.value === currentUser)) {
+        ownerSelect.value = currentUser;
+    }
     appElements.addFixedExpenseForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Gem Udgift';
 }
+
 
 /**
  * Populates the form with data from an existing expense for editing.
@@ -169,7 +174,7 @@ async function handleSaveFixedExpense(e) {
         userId: appState.currentUser.uid,
     };
 
-    if (!expenseData.category || isNaN(expenseData.amount) || expenseData.amount <= 0 || isNaN(expenseData.startMonth)) {
+    if (!expenseData.category || isNaN(expenseData.amount) || expenseData.amount <= 0 || isNaN(expenseData.startMonth) || !expenseData.owner) {
         showNotification({ title: "Fejl", message: "Udfyld venligst alle påkrævede felter korrekt." });
         return;
     }
@@ -223,8 +228,9 @@ function calculateAndRenderBudgetGrid() {
     appState.fixedExpenses
         .filter(exp => selectedOwner === 'all' || exp.owner === selectedOwner)
         .forEach(exp => {
-            if (!budgetData[exp.category]) {
-                budgetData[exp.category] = { id: exp.id, monthlyAmounts: Array(12).fill(0), owner: exp.owner };
+            const key = `${exp.category}-${exp.owner}`; // Unique key per category and owner
+            if (!budgetData[key]) {
+                budgetData[key] = { id: exp.id, category: exp.category, monthlyAmounts: Array(12).fill(0), owner: exp.owner };
             }
             
             for (let i = 0; i < 12; i++) {
@@ -241,7 +247,7 @@ function calculateAndRenderBudgetGrid() {
                     }
                 }
                 if (shouldApply) {
-                    budgetData[exp.category].monthlyAmounts[i] += exp.amount;
+                    budgetData[key].monthlyAmounts[i] += exp.amount;
                 }
             }
         });
@@ -255,11 +261,12 @@ function calculateAndRenderBudgetGrid() {
         })
         .forEach(exp => {
             const owner = appState.users.find(u => u.id === exp.userId)?.name || 'Ukendt';
-            if (!budgetData[exp.category]) {
-                budgetData[exp.category] = { id: null, monthlyAmounts: Array(12).fill(0), owner: owner };
+            const key = `${exp.category}-${owner}`;
+            if (!budgetData[key]) {
+                budgetData[key] = { id: null, category: exp.category, monthlyAmounts: Array(12).fill(0), owner: owner };
             }
             const monthIndex = exp.date.toDate().getMonth();
-            budgetData[exp.category].monthlyAmounts[monthIndex] += exp.amount;
+            budgetData[key].monthlyAmounts[monthIndex] += exp.amount;
         });
 
     // 3. Render Grid
@@ -273,9 +280,9 @@ function calculateAndRenderBudgetGrid() {
         </div>
     `;
 
-    const sortedCategories = Object.keys(budgetData).sort((a, b) => a.localeCompare(b));
-    const bodyHtml = sortedCategories.map(category => {
-        const data = budgetData[category];
+    const sortedKeys = Object.keys(budgetData).sort((a, b) => a.localeCompare(b));
+    const bodyHtml = sortedKeys.map(key => {
+        const data = budgetData[key];
         const yearlyTotal = data.monthlyAmounts.reduce((sum, amount) => sum + amount, 0);
         
         data.monthlyAmounts.forEach((amount, index) => {
@@ -291,7 +298,7 @@ function calculateAndRenderBudgetGrid() {
 
         return `
             <div class="budget-grid-row">
-                <div class="budget-grid-cell category-cell">${category} <span class="owner-tag">(${data.owner})</span></div>
+                <div class="budget-grid-cell category-cell">${data.category} <span class="owner-tag">(${data.owner})</span></div>
                 ${data.monthlyAmounts.map(amount => `<div class="budget-grid-cell">${amount > 0 ? amount.toFixed(2).replace('.', ',') : '-'}</div>`).join('')}
                 <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
                 <div class="budget-grid-cell actions-cell">${actionsHtml}</div>
