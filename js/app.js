@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listeners.references = onSnapshot(referencesRef, (doc) => {
                 if (doc.exists()) {
                     state.references = doc.data();
-                    const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
+                    const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
                     buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                     setReferencesLoaded(true);
                     handleNavigation(window.location.hash);
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
@@ -415,8 +415,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAuthEventListeners(elements);
         initAuth(onLogin, onLogout);
 
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
-        buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
+        // NEW: Fjernelse af den oprindelige deaktivering
+        // Knapper vil nu kun være deaktiverede, indtil de aktiveres af `onSnapshot`
+        // når de nødvendige data er indlæst.
 
         initUI(state, elements);
         initInventory(state, elements);
