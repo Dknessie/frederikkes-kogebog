@@ -79,35 +79,25 @@ function renderTimelineWidget() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // --- Fødselsdage ---
-    const upcomingBirthdays = appState.events
-        .filter(event => event.category === 'Fødselsdag')
+    const upcomingEvents = [...appState.events]
         .map(event => {
-            const eventDate = new Date(event.date);
-            const displayDate = new Date(eventDate.getTime());
-            displayDate.setFullYear(today.getFullYear());
-            if (displayDate < today) {
-                displayDate.setFullYear(today.getFullYear() + 1);
+            // Håndter tilbagevendende fødselsdage
+            if (event.category === 'Fødselsdag' && event.date) {
+                const eventDateThisYear = new Date(event.date);
+                eventDateThisYear.setFullYear(today.getFullYear());
+                // Hvis fødselsdagen for i år er passeret, vis den næste år
+                if (eventDateThisYear < today) {
+                    eventDateThisYear.setFullYear(today.getFullYear() + 1);
+                }
+                return { ...event, displayDate: eventDateThisYear, title: event.name + "'s Fødselsdag" };
             }
-            return { ...event, date: displayDate };
+            return { ...event, displayDate: new Date(event.date) };
         })
-        .sort((a, b) => a.date - b.date)
-        .slice(0, 5);
+        .filter(event => event.displayDate >= today)
+        .sort((a, b) => a.displayDate - b.displayDate)
+        .slice(0, 7); // Vis de næste 7 begivenheder
 
-    // --- Andre Begivenheder ---
-    const upcomingEvents = appState.events
-        .filter(event => ['Aftale', 'Udgivelse', 'Andet'].includes(event.category))
-        .map(event => ({ ...event, date: new Date(event.date) }))
-        .filter(event => event.date >= today)
-        .sort((a, b) => a.date - b.date)
-        .slice(0, 5);
-
-    // --- Pligter & Projekter (fra Events og Kalender) ---
-    let upcomingTasks = appState.events
-        .filter(event => event.category === 'To-do' && !event.isComplete)
-        .map(event => ({ ...event, date: new Date(event.date) }))
-        .filter(event => event.date >= today);
-
+    // Hent projekter og opgaver fra kalenderen for at vise på tidslinjen
     Object.entries(appState.mealPlan).forEach(([dateString, dayPlan]) => {
         const date = new Date(dateString);
         if (date >= today) {
@@ -115,15 +105,17 @@ function renderTimelineWidget() {
                 if (item.type === 'project') {
                     const project = appState.projects.find(p => p.id === item.projectId);
                     if (project) {
-                        upcomingTasks.push({
+                        upcomingEvents.push({
                             date: date,
+                            displayDate: date,
                             title: `Projekt: ${project.title}`,
-                            category: 'To-do',
+                            category: 'Projekt',
                         });
                     }
                 } else if (item.type === 'task') {
-                     upcomingTasks.push({
+                     upcomingEvents.push({
                             date: date,
+                            displayDate: date,
                             title: item.taskName,
                             category: 'To-do',
                         });
@@ -132,37 +124,55 @@ function renderTimelineWidget() {
         }
     });
 
-    const sortedTasks = upcomingTasks
-        .sort((a, b) => a.date - b.date)
-        .slice(0, 5);
+    const sortedEvents = upcomingEvents
+        .sort((a, b) => a.displayDate - b.displayDate)
+        .slice(0, 10); // Begræns til de 10 øverste
 
-    renderTimelineSection(appElements.timelineBirthdays, upcomingBirthdays);
-    renderTimelineSection(appElements.timelineEvents, upcomingEvents);
-    renderTimelineSection(appElements.timelineTasks, sortedTasks);
-}
-
-function renderTimelineSection(container, items) {
-    if (!container) return;
-    if (items.length === 0) {
-        container.innerHTML = `<p class="empty-state-small">Intet planlagt.</p>`;
+    const container = appElements.timelineContent;
+    container.innerHTML = '';
+    if (sortedEvents.length === 0) {
+        container.innerHTML = '<p class="empty-state">Ingen kommende begivenheder planlagt.</p>';
         return;
     }
-    container.innerHTML = items.map(item => {
-        let title = item.title;
-        if (item.category === 'Fødselsdag' && item.birthYear) {
-            const age = item.date.getFullYear() - item.birthYear;
-            title = `${item.name}'s Fødselsdag (${age} år)`;
-        }
-        const textClass = item.isComplete ? 'is-complete' : '';
-        const dateString = item.date.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
 
-        return `
+    let lastDate = null;
+    let html = '';
+
+    sortedEvents.forEach(item => {
+        const itemDate = item.displayDate;
+        const dateString = itemDate.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
+        
+        if (dateString !== lastDate) {
+            if (lastDate !== null) {
+                html += '</div>'; // Luk den forrige dags gruppe
+            }
+            html += `<div class="timeline-day-group"><h4>${dateString}</h4>`;
+            lastDate = dateString;
+        }
+
+        const iconClass = getIconForCategory(item);
+
+        html += `
             <div class="timeline-item">
-                <span class="timeline-date">${dateString}</span>
-                <span class="timeline-item-text ${textClass}">${title}</span>
+                <span class="timeline-item-icon"><i class="fas ${iconClass}"></i></span>
+                <span class="timeline-item-text">${item.title}</span>
             </div>
         `;
-    }).join('');
+    });
+    
+    html += '</div>'; // Luk den sidste dags gruppe
+    container.innerHTML = html;
+}
+
+function getIconForCategory(eventData) {
+    switch (eventData.category) {
+        case 'To-do': return 'fa-sticky-note';
+        case 'Aftale': return 'fa-calendar-check';
+        case 'Fødselsdag': return 'fa-birthday-cake';
+        case 'Udgivelse': return 'fa-book';
+        case 'Projekt': return 'fa-tasks';
+        default: return 'fa-info-circle';
+    }
 }
 
 
@@ -214,13 +224,26 @@ function renderProjectsFocusWidget() {
 function calculateMonthlySpending() {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    return appState.expenses
+    let totalFixed = 0;
+    appState.fixedExpenses.forEach(exp => {
+        if (exp.interval === 'månedligt') {
+            totalFixed += exp.amount;
+        } else if (exp.interval === 'kvartalsvist') {
+            totalFixed += exp.amount / 3;
+        } else if (exp.interval === 'årligt') {
+            totalFixed += exp.amount / 12;
+        }
+    });
+
+    const totalVariable = appState.expenses
         .filter(expense => {
             if (!expense.date || !expense.date.toDate) return false;
             const expenseDate = expense.date.toDate();
             return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
         })
         .reduce((total, expense) => total + expense.amount, 0);
+    
+    return totalFixed + totalVariable;
 }
 
 function renderBudgetWidget() {
