@@ -217,24 +217,11 @@ function renderBudgetGrid(data) {
     const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
     const itemKeys = Object.keys(data);
     
-    // OPDATERET: Nu bruger vi navne i stedet for ID'er til at beregne totaler
-    const householdMembers = appState.references.householdMembers || [];
-
-    // Calculate totals for the entire household and for each member
+    // Beregn totaler for hele husstanden og for hver post
     const monthlyTotals = months.map(month => 
         itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
     );
     const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
-
-    const userTotals = {};
-    householdMembers.forEach(name => {
-        userTotals[name] = { name: name, months: {} };
-        months.forEach(month => {
-            userTotals[name].months[month] = itemKeys
-                .filter(key => data[key].userName === name)
-                .reduce((sum, key) => sum + (data[key].months[month] || 0), 0);
-        });
-    });
 
     const headerHtml = `
         <div class="budget-grid-row budget-grid-header">
@@ -244,29 +231,7 @@ function renderBudgetGrid(data) {
         </div>
     `;
 
-    const totalRowHtml = `
-        <div class="budget-grid-row">
-            <div class="budget-grid-cell total-cell">Hele Husstanden</div>
-            ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
-            <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
-        </div>
-    `;
-
-    // Rows for individual users' totals
-    const userRowsHtml = Object.keys(userTotals).map(userName => {
-        const user = userTotals[userName];
-        const userMonthlyTotals = months.map(month => user.months[month] || 0);
-        const userYearlyTotal = userMonthlyTotals.reduce((sum, amount) => sum + amount, 0);
-        return `
-            <div class="budget-grid-row">
-                <div class="budget-grid-cell user-cell">${user.name} Total</div>
-                ${userMonthlyTotals.map(amount => `<div class="budget-grid-cell user-cell">${amount.toFixed(2).replace('.', ',')}</div>`).join('')}
-                <div class="budget-grid-cell user-cell">${userYearlyTotal.toFixed(2).replace('.', ',')}</div>
-            </div>
-        `;
-    }).join('');
-
-    // Rows for individual expense items
+    // Rækker for individuelle udgiftsposter
     const bodyHtml = itemKeys.map(key => {
         const item = data[key];
         const itemMonthlyTotals = months.map(month => item.months[month] || 0);
@@ -279,12 +244,21 @@ function renderBudgetGrid(data) {
             <div class="budget-grid-row">
                 <div class="budget-grid-cell category-cell">${item.name} (${item.userName})</div>
                 ${rowHtml}
-                <div class="budget-grid-cell">${itemYearlyTotal.toFixed(2).replace('.', ',')}</div>
+                <div class="budget-grid-cell total-cell">${itemYearlyTotal.toFixed(2).replace('.', ',')}</div>
             </div>
         `;
     }).join('');
 
-    container.innerHTML = `<div class="budget-grid">` + headerHtml + totalRowHtml + userRowsHtml + bodyHtml + `</div>`;
+    // Række for den samlede total
+    const totalRowHtml = `
+        <div class="budget-grid-row">
+            <div class="budget-grid-cell total-cell">Husstand Total</div>
+            ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
+            <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
+        </div>
+    `;
+
+    container.innerHTML = `<div class="budget-grid">` + headerHtml + bodyHtml + totalRowHtml + `</div>`;
 }
 
 /**
