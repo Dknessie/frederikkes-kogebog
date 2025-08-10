@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             wishlist: {}
         },
         budget: { monthlyAmount: 4000 },
+        fixedExpenses: [], // NEW: Tilføjer et array til faste udgifter
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
@@ -181,6 +182,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // NEW: Budget Page
         monthlyExpensesChart: document.getElementById('monthly-expenses-chart'),
         expenseCategoryList: document.getElementById('expense-category-list'),
+        budgetFixedExpensesContainer: document.getElementById('budget-fixed-expenses'),
+        addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
+        fixedExpenseForm: document.getElementById('fixed-expense-form'),
+        addFixedExpenseModal: document.getElementById('add-fixed-expense-modal'),
     };
 
     function computeDerivedShoppingLists() {
@@ -247,7 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
             expenses: 'expenses',
-            events: 'events'
+            events: 'events',
+            fixed_expenses: 'fixedExpenses'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
