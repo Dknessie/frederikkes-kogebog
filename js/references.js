@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -13,13 +13,33 @@ export function initReferences(state, elements) {
 
     appElements.referencesContainer.addEventListener('click', handleListClick);
     appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    
+    // NEW: Household member listeners
+    if (appElements.addHouseholdMemberBtn) {
+        appElements.addHouseholdMemberBtn.addEventListener('click', e => {
+            e.preventDefault();
+            const form = e.target.closest('form');
+            const emailInput = form.querySelector('#new-member-email');
+            const email = emailInput.value.trim();
+            if (email) {
+                addHouseholdMember(email);
+                emailInput.value = '';
+            }
+        });
+    }
+    if (appElements.householdMembersList) {
+        appElements.householdMembersList.addEventListener('click', e => {
+            if (e.target.closest('.delete-member-btn')) {
+                const memberId = e.target.closest('[data-member-id]').dataset.memberId;
+                deleteHouseholdMember(memberId);
+            }
+        });
+    }
 }
 
 export function renderReferencesPage() {
     appElements.referencesContainer.innerHTML = '';
     
-    // UPDATED: Removed 'rooms' and 'maintenanceTasks' from direct display.
-    // They are now managed elsewhere or implicitly. 'rooms' is still in state for the ugeplan.
     const referenceData = {
         itemCategories: {
             title: 'Varekategorier',
@@ -115,6 +135,66 @@ export function renderReferencesPage() {
         }
         
         appElements.referencesContainer.appendChild(card);
+    }
+    
+    renderHouseholdMembers();
+}
+
+
+function renderHouseholdMembers() {
+    const list = appElements.householdMembersList;
+    if (!list) return;
+
+    list.innerHTML = '';
+    const myId = appState.currentUser.uid;
+    
+    appState.users.forEach(user => {
+        const isCurrentUser = user.id === myId;
+        const name = isCurrentUser ? `${user.name || 'Dig selv'} (mig)` : user.name || 'Ukendt bruger';
+        
+        const memberRow = document.createElement('div');
+        memberRow.className = 'member-row';
+        memberRow.dataset.memberId = user.id;
+
+        memberRow.innerHTML = `
+            <span>${name}</span>
+            <div class="actions">
+                ${!isCurrentUser ? `<button class="btn-icon delete-member-btn" title="Fjern medlem"><i class="fas fa-trash"></i></button>` : ''}
+            </div>
+        `;
+        list.appendChild(memberRow);
+    });
+}
+
+async function addHouseholdMember(email) {
+    const existingMember = appState.users.find(user => user.email === email);
+    if (existingMember) {
+        showNotification({title: "Medlem findes allerede", message: "Denne email er allerede en del af husstanden."});
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'users'), { email: email, name: email.split('@')[0], householdId: "your-household-id", userId: appState.currentUser.uid });
+        showNotification({title: "Tilføjet!", message: `Brugeren med email "${email}" er nu tilføjet til husstanden.`});
+    } catch (error) {
+        handleError(error, "Kunne ikke tilføje medlem.", "addHouseholdMember");
+    }
+}
+
+async function deleteHouseholdMember(memberId) {
+    const confirmed = await showNotification({
+        title: "Slet Husstandsmedlem",
+        message: "Er du sikker på, at du vil slette dette medlem? Alle vedkommendes data vil blive slettet.",
+        type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    try {
+        await deleteDoc(doc(db, 'users', memberId));
+        showNotification({title: "Slettet", message: "Medlemmet er blevet slettet."});
+    } catch (error) {
+        handleError(error, "Kunne ikke slette medlem.", "deleteHouseholdMember");
     }
 }
 
@@ -239,10 +319,12 @@ async function deleteReferenceItem(key, value) {
             await updateDoc(ref, { itemCategories: arrayRemove(categoryToDelete) });
         }
     } else {
-        await updateDoc(ref, { [key]: arrayRemove(value) });
+        const batch = writeBatch(db);
+        batch.update(ref, { [key]: arrayRemove(value) });
+        // Add logic to update documents that use this reference...
+        await batch.commit();
+        showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
     }
-    
-    showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
 }
 
 function toggleEditMode(itemElement, isEditing) {
