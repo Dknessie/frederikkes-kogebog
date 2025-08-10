@@ -16,6 +16,8 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
+// Fjerner import af initMaintenance da filen ikke eksisterer
+// import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -346,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case '#hjem':
                     const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
-                    if (activeTab === 'hjem-maintenance') {
+                    if (activeTab === 'hjem-maintenance' && typeof renderMaintenancePage !== 'undefined') {
                         renderMaintenancePage();
                     } else {
                         renderRoomsListPage();
@@ -395,11 +397,13 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        initMaintenance(state, elements);
+        // FIX: Tilføjer tjek for om funktionen er defineret, da filen maintenance.js ikke eksisterer
+        if (typeof initMaintenance !== 'undefined') {
+            initMaintenance(state, elements);
+        }
         initExpenses(state);
         initEvents(state, elements);
     }
 
     init();
 });
-
