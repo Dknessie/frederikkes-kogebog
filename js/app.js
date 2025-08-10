@@ -12,12 +12,11 @@ import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderHomeOverview } from './rooms.js'; // OPDATERET: Fjerner renderRoomsListPage og renderRoomDetailsPage
+import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-import { initPlants, renderPlants, renderWishlist } from './plants.js';
-
+import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
         maintenanceLogs: [],
         expenses: [],
         events: [],
-        plants: [], // NYT: State for planter
         references: {
             maintenanceTasks: []
         },
@@ -67,9 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem (Opdateret)
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'), // Bliver fjernet, men bevares her for at undgå fejl i UI-initialisering
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'), // Bliver fjernet, men bevares her for at undgå fejl i UI-initialisering
+        // Hjem
+        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
+        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -84,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
         projectsGrid: document.getElementById('projects-grid'),
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
-        
+        addMaintenanceLogBtn: document.getElementById('add-maintenance-log-btn'),
+
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -179,14 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
-
-        // NYE ELEMENTER til den nye Hjem-side
-        addWishlistBtn: document.getElementById('add-wishlist-btn'),
-        wishlistGrid: document.getElementById('wishlist-grid'),
-        addPlantBtn: document.getElementById('add-plant-btn'),
-        plantsGrid: document.getElementById('plants-grid'),
-        plantEditModal: document.getElementById('plant-edit-modal'),
-        plantForm: document.getElementById('plant-form'),
     };
 
     function computeDerivedShoppingLists() {
@@ -253,8 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
             expenses: 'expenses',
-            events: 'events',
-            plants: 'plants', // NYT: Lytter på 'plants' collection
+            events: 'events'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -306,10 +296,13 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
                 handleNavigation(window.location.hash);
+            } else {
+                handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
+                window.location.hash = '#references';
             }
         }, (error) => commonErrorHandler(error, 'referencer'));
     }
@@ -330,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
@@ -353,15 +346,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    // Opdateret: render nu den nye Home overview
-                    renderHomeOverview();
-                    renderProjects();
-                    renderWishlist();
-                    renderPlants();
+                    const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
+                    if (activeTab === 'hjem-maintenance') {
+                        renderMaintenancePage();
+                    } else {
+                        renderRoomsListPage();
+                        renderProjects();
+                    }
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
-                        // FJERNET: renderRoomDetailsPage() kaldet
+                        renderRoomDetailsPage();
                     } else {
                         window.location.hash = '#hjem';
                     }
@@ -388,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAuthEventListeners(elements);
         initAuth(onLogin, onLogout);
 
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
         initUI(state, elements);
@@ -401,9 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
+        initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
-        initPlants(state, elements); // NYT: Initialiserer plants-modulet
     }
 
     init();
