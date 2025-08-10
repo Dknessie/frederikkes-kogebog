@@ -158,6 +158,8 @@ export function showNotification({ title, message, type = 'alert' }) {
     UIElements.notificationTitle.textContent = title;
     UIElements.notificationMessage.innerHTML = message;
     UIElements.notificationActions.innerHTML = ''; 
+    const modal = document.getElementById('notification-modal');
+    modal.classList.remove('hidden');
 
     return new Promise((resolve) => {
         if (type === 'confirm') {
@@ -165,7 +167,7 @@ export function showNotification({ title, message, type = 'alert' }) {
             confirmBtn.className = 'btn btn-primary';
             confirmBtn.textContent = 'Bekræft';
             confirmBtn.onclick = () => {
-                UIElements.notificationModal.classList.add('hidden');
+                modal.classList.add('hidden');
                 resolve(true);
             };
 
@@ -173,7 +175,7 @@ export function showNotification({ title, message, type = 'alert' }) {
             cancelBtn.className = 'btn btn-secondary';
             cancelBtn.textContent = 'Annuller';
             cancelBtn.onclick = () => {
-                UIElements.notificationModal.classList.add('hidden');
+                modal.classList.add('hidden');
                 resolve(false);
             };
             UIElements.notificationActions.append(cancelBtn, confirmBtn);
@@ -182,12 +184,11 @@ export function showNotification({ title, message, type = 'alert' }) {
             okBtn.className = 'btn btn-primary';
             okBtn.textContent = 'OK';
             okBtn.onclick = () => {
-                UIElements.notificationModal.classList.add('hidden');
+                modal.classList.add('hidden');
                 resolve(true);
             };
             UIElements.notificationActions.append(okBtn);
         }
-        UIElements.notificationModal.classList.remove('hidden');
     });
 }
 
