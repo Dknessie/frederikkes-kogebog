@@ -277,39 +277,40 @@
                 </div>
             </section>
             
-            <!-- NEW: Budget Page -->
+            <!-- UPDATED: Budget Page -->
             <section id="budget" class="page hidden">
                 <div class="budget-dashboard">
-                    <h2>Månedligt Budget</h2>
-                    <div class="budget-chart-container">
-                        <div class="budget-chart-header">
-                            <h3>Udgifter i denne måned</h3>
-                            <div class="budget-chart-period-selector">
-                                <button class="btn btn-secondary active">Denne Måned</button>
-                                <select id="budgetUserSelector"></select>
-                            </div>
+                    <div class="budget-header">
+                        <div class="budget-year-nav">
+                            <button id="prev-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
+                            <h2 id="budget-year-display"></h2>
+                            <button id="next-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <div id="monthly-expenses-chart"></div>
+                        <div class="budget-controls">
+                            <select id="budgetUserSelector" class="budget-user-selector"></select>
+                        </div>
                     </div>
-                    <div class="budget-categories">
-                        <h3>Oversigt over udgifter</h3>
-                        <div id="expense-category-list"></div>
+
+                    <div id="budget-grid-container" class="budget-grid-container">
+                        <!-- Budget gitter renderes her af JS -->
                     </div>
+
                     <div id="budget-fixed-expenses">
-                         <p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>
+                         <h3>Faste Udgifter</h3>
+                         <div id="fixed-expenses-list">
+                            <p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>
+                         </div>
                          <hr>
                          <h4>Tilføj ny fast udgift</h4>
                          <form id="add-fixed-expense-form" class="add-fixed-expense-form">
-                            <div class="form-grid-3-col">
+                            <div class="form-grid-2-col">
                                 <div class="input-group">
                                     <label for="fixed-expense-name-new">Navn</label>
                                     <input type="text" id="fixed-expense-name-new" required>
                                 </div>
                                 <div class="input-group">
-                                    <label for="fixed-expense-amount-new">Beløb</label>
-                                    <div class="price-input-wrapper">
-                                        <input type="number" id="fixed-expense-amount-new" step="0.01" required>
-                                    </div>
+                                    <label for="fixed-expense-amount-new">Beløb (kr.)</label>
+                                    <input type="number" id="fixed-expense-amount-new" step="0.01" required>
                                 </div>
                                 <div class="input-group">
                                     <label for="fixed-expense-interval-new">Interval</label>
@@ -350,6 +351,34 @@
     </div>
     
     <!-- MODALS -->
+    <div id="add-expense-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="add-expense-modal-title">Tilføj Udgift</h3>
+            <form id="add-expense-form">
+                <div class="input-group">
+                    <label for="add-expense-amount">Beløb (kr.)</label>
+                    <input type="number" id="add-expense-amount" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="add-expense-date">Dato</label>
+                    <input type="date" id="add-expense-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="add-expense-category">Kategori</label>
+                    <input type="text" id="add-expense-category" required>
+                </div>
+                <div class="input-group">
+                    <label for="add-expense-description">Beskrivelse</label>
+                    <textarea id="add-expense-description" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Udgift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
