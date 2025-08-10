@@ -1161,6 +1161,9 @@ header {
 .widget-header h3 {
     margin: 0;
 }
+.timeline-day-group {
+    margin-bottom: var(--spacing-m);
+}
 .timeline-day-group h4 {
     margin-top: var(--spacing-m);
     margin-bottom: var(--spacing-s);
@@ -1189,6 +1192,12 @@ header {
 .timeline-item-text.is-complete {
     text-decoration: line-through;
     color: #999;
+}
+.timeline-item-date {
+    font-weight: 600;
+    white-space: nowrap;
+    width: 65px;
+    color: #888;
 }
 
 #projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
@@ -1899,100 +1908,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
-/* ===== 11. Mobil-specifikke Styles ===== */
-.mobile-tab-bar {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--mobile-tab-bar-height);
-    background-color: var(--white-color);
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
-    z-index: 1001;
-}
-.mobile-tab-link {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-    text-decoration: none;
-    color: #999;
-    font-size: 0.7rem;
-    transition: color 0.2s ease;
-}
-.mobile-tab-link.active {
-    color: var(--primary-color);
-}
-.mobile-tab-link i {
-    font-size: 1.4rem;
-    margin-bottom: 4px;
-}
-
-/* Styles for Add to Calendar Modal */
-.selection-list {
-    list-style: none;
-    padding: 0;
-    margin: var(--spacing-m) 0;
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-.selection-list-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-m);
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-.selection-list-item:not(:last-child) {
-    border-bottom: 1px solid var(--border-color);
-}
-.selection-list-item:hover {
-    background-color: var(--secondary-color);
-}
-.selection-list-item i {
-    color: var(--accent-color);
-}
-.selection-list-item-empty {
-    padding: var(--spacing-m);
-    color: #888;
-    font-style: italic;
-}
-
-/* NEW: Bulk Add Modal Styles */
-#bulk-add-list-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-.bulk-add-item {
-    background-color: var(--light-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-m);
-}
-.bulk-add-item-header {
-    font-weight: 600;
-    margin-bottom: var(--spacing-m);
-}
-.bulk-add-item-fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--spacing-s);
-    align-items: end;
-}
-.bulk-add-item-fields .input-group {
-    margin-bottom: 0;
-}
-.bulk-add-item-fields input, .bulk-add-item-fields select {
-    font-size: var(--small-font-size);
-    padding: var(--spacing-s);
-}
-
 /* NEW: Budget page styles */
 .budget-dashboard {
     background: var(--white-color);
@@ -2032,6 +1947,49 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 #expense-category-list .category-item .category-name {
     font-weight: 600;
+}
+#budget-fixed-expenses {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-l);
+}
+.fixed-expense-card {
+    background-color: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+    box-shadow: var(--shadow);
+    position: relative;
+    transition: transform 0.2s ease;
+}
+.fixed-expense-card:hover {
+    transform: translateY(-2px);
+}
+.fixed-expense-card h4 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-s);
+}
+.fixed-expense-card .interval {
+    font-style: italic;
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.fixed-expense-card .amount {
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-top: var(--spacing-s);
+}
+.fixed-expense-card .actions {
+    position: absolute;
+    top: var(--spacing-s);
+    right: var(--spacing-s);
+    display: none;
+}
+.fixed-expense-card:hover .actions {
+    display: flex;
+}
+.add-fixed-expense-form .form-grid-3-col {
+    grid-template-columns: 2fr 1fr 1fr;
 }
 
 
@@ -2097,5 +2055,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     #add-calendar-event-modal .quick-actions-container {
         grid-template-columns: 1fr;
     }
+    #budget-fixed-expenses {
+        grid-template-columns: 1fr;
+    }
 }
-
