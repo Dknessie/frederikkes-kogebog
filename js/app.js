@@ -297,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
+                // FIX: Aktiverer kun de relevante knapper, som brugeren har brug for.
                 const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
@@ -348,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case '#hjem':
                     const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
+                    // FIX: Tilføjer tjek for om funktionen eksisterer, før den kaldes
                     if (activeTab === 'hjem-maintenance' && typeof renderMaintenancePage !== 'undefined') {
                         renderMaintenancePage();
                     } else {
@@ -380,7 +382,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function init() {
-        // FIX: Moved auth initialization to the top to ensure it always runs.
         setupAuthEventListeners(elements);
         initAuth(onLogin, onLogout);
 
@@ -397,10 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        // FIX: Tilføjer tjek for om funktionen er defineret, da filen maintenance.js ikke eksisterer
-        if (typeof initMaintenance !== 'undefined') {
-            initMaintenance(state, elements);
-        }
+        // FIX: Fjerner kald til initMaintenance da modulet ikke eksisterer
+        // initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
     }
