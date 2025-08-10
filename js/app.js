@@ -251,96 +251,94 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
-        const collections = {
-            inventory_items: 'inventoryItems',
-            inventory_batches: 'inventoryBatches',
-            recipes: 'recipes',
-            projects: 'projects',
-            rooms: 'rooms',
-            maintenance_logs: 'maintenanceLogs',
-            events: 'events'
-        };
-
-        for (const [coll, stateKey] of Object.entries(collections)) {
-            const q = query(collection(db, coll), where("userId", "==", userId));
-            state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
-                state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
-                    combineInventoryData();
-                }
-                if (stateKey === 'projects' || stateKey === 'rooms') {
-                    computeDerivedShoppingLists();
-                }
-
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, coll));
-        }
-
-        // NEW: Listen to expenses and fixed_expenses for the entire household
-        // Dette kræver, at du har sat dine Firestore sikkerhedsregler til at tillade `list` læsninger
-        const householdMembers = appState.users.length > 0 ? appState.users.map(u => u.id) : [userId];
-        const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
-        state.listeners.expenses = onSnapshot(expensesQuery, (snapshot) => {
-            state.expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'expenses'));
-        
-        const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "in", householdMembers));
-        state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (snapshot) => {
-            state.fixedExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'fixed_expenses'));
-        
-        // NEW: Listener for household users
+        // NEW: Separate listener for users to ensure it loads first.
         const usersQuery = query(collection(db, 'users'));
         state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
             state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'users'));
-        
-        const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
-        state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
-            state.mealPlan = {};
-            snapshot.forEach(doc => {
-                state.mealPlan = { ...state.mealPlan, ...doc.data() };
-            });
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'madplan'));
-
-
-        // Listener for the manually managed groceries list
-        state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
-            const data = doc.exists() ? doc.data() : {};
-            state.shoppingLists.groceries = data.groceries || {};
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'indkøbslister'));
-        
-        const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
-        state.listeners.budget = onSnapshot(settingsRef, (doc) => {
-            state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'budget'));
-
-        const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
-        state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
-            state.preferences = doc.exists() ? doc.data() : {};
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'præferencer'));
-
-        const referencesRef = doc(db, 'references', userId);
-        state.listeners.references = onSnapshot(referencesRef, (doc) => {
-            if (doc.exists()) {
-                state.references = doc.data();
-                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
-                buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
-                setReferencesLoaded(true);
+            
+            // Call the remaining listeners after users are loaded
+            const householdMembers = state.users.length > 0 ? state.users.map(u => u.id) : [userId];
+            const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
+            state.listeners.expenses = onSnapshot(expensesQuery, (expensesSnapshot) => {
+                state.expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 handleNavigation(window.location.hash);
-            } else {
-                handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
-                window.location.hash = '#references';
+            }, (error) => commonErrorHandler(error, 'expenses'));
+            
+            const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "in", householdMembers));
+            state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (fixedExpensesSnapshot) => {
+                state.fixedExpenses = fixedExpensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, 'fixed_expenses'));
+
+            const collections = {
+                inventory_items: 'inventoryItems',
+                inventory_batches: 'inventoryBatches',
+                recipes: 'recipes',
+                projects: 'projects',
+                rooms: 'rooms',
+                maintenance_logs: 'maintenanceLogs',
+                events: 'events'
+            };
+
+            for (const [coll, stateKey] of Object.entries(collections)) {
+                const q = query(collection(db, coll), where("userId", "==", userId));
+                state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
+                    state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    
+                    if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
+                        combineInventoryData();
+                    }
+                    if (stateKey === 'projects' || stateKey === 'rooms') {
+                        computeDerivedShoppingLists();
+                    }
+
+                    handleNavigation(window.location.hash);
+                }, (error) => commonErrorHandler(error, coll));
             }
-        }, (error) => commonErrorHandler(error, 'referencer'));
+
+            const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
+            state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
+                state.mealPlan = {};
+                snapshot.forEach(doc => {
+                    state.mealPlan = { ...state.mealPlan, ...doc.data() };
+                });
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, 'madplan'));
+
+            // Listener for the manually managed groceries list
+            state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
+                const data = doc.exists() ? doc.data() : {};
+                state.shoppingLists.groceries = data.groceries || {};
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, 'indkøbslister'));
+            
+            const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
+            state.listeners.budget = onSnapshot(settingsRef, (doc) => {
+                state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, 'budget'));
+
+            const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
+            state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
+                state.preferences = doc.exists() ? doc.data() : {};
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, 'præferencer'));
+
+            const referencesRef = doc(db, 'references', userId);
+            state.listeners.references = onSnapshot(referencesRef, (doc) => {
+                if (doc.exists()) {
+                    state.references = doc.data();
+                    const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
+                    buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
+                    setReferencesLoaded(true);
+                    handleNavigation(window.location.hash);
+                } else {
+                    handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
+                    window.location.hash = '#references';
+                }
+            }, (error) => commonErrorHandler(error, 'referencer'));
+
+        }, (error) => commonErrorHandler(error, 'users'));
     }
 
     function onLogin(user) {
