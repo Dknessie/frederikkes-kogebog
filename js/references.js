@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -29,8 +29,9 @@ export function initReferences(state, elements) {
             }
         });
     }
-    if (appElements.householdMembersList) {
-        appElements.householdMembersList.addEventListener('click', e => {
+    // Event delegation for deleting members
+    if (appElements.referencesContainer) {
+        appElements.referencesContainer.addEventListener('click', e => {
             if (e.target.closest('.delete-member-btn')) {
                 const memberName = e.target.closest('[data-member-name]').dataset.memberName;
                 deleteHouseholdMember(memberName);
@@ -68,7 +69,7 @@ export function renderReferencesPage() {
 
     // Household members card
     const householdCard = document.createElement('div');
-    householdCard.className = 'reference-card';
+    householdCard.className = 'reference-card household-members-card'; // Added class for specific targeting if needed
     householdCard.innerHTML = `
         <h4>Husstandsmedlemmer</h4>
         <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
@@ -160,24 +161,26 @@ export function renderReferencesPage() {
     renderHouseholdMembers();
 }
 
-
-export function renderHouseholdMembers() {
+function renderHouseholdMembers() {
     const list = appElements.householdMembersList;
     if (!list) return;
 
     list.innerHTML = '';
-    
-    // OPDATERET: Henter medlemmer fra den nye "householdMembers"-liste i references
     const members = appState.references.householdMembers || [];
     
-    members.forEach(name => {
+    if (members.length === 0) {
+        list.innerHTML = `<li class="empty-state-small">Ingen medlemmer tilføjet.</li>`;
+        return;
+    }
+
+    members.sort().forEach(name => {
         const memberRow = document.createElement('li');
-        memberRow.className = 'reference-item';
+        memberRow.className = 'reference-item'; // Re-using class for consistent styling
         memberRow.dataset.memberName = name;
 
         memberRow.innerHTML = `
-            <span>${name}</span>
-            <div class="actions">
+            <span class="reference-name">${name}</span>
+            <div class="reference-actions">
                 <button class="btn-icon delete-member-btn" title="Fjern medlem"><i class="fas fa-trash"></i></button>
             </div>
         `;
@@ -185,10 +188,9 @@ export function renderHouseholdMembers() {
     });
 }
 
-// OPDATERET: Oprettet nye funktioner til at håndtere den enkle liste af navne
 async function addHouseholdMember(name) {
     const members = appState.references.householdMembers || [];
-    if (members.includes(name)) {
+    if (members.map(m => m.toLowerCase()).includes(name.toLowerCase())) {
         showNotification({title: "Navn findes allerede", message: `"${name}" er allerede på listen.`});
         return;
     }
@@ -276,7 +278,7 @@ async function handleFormSubmit(e) {
 }
 
 async function addSimpleReference(key, value) {
-    if (appState.references[key] && appState.references[key].includes(value)) {
+    if (appState.references[key] && appState.references[key].map(v => v.toLowerCase()).includes(value.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `"${value}" findes allerede.`});
         return;
     }
