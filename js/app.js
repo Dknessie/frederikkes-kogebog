@@ -9,7 +9,7 @@ import { initInventory, renderInventory, setReferencesLoaded } from './inventory
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
-import { initReferences, renderReferencesPage } from './references.js';
+import { initReferences, renderReferencesPage, renderHouseholdMembers } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
             wishlist: {}
         },
         budget: { monthlyAmount: 4000 },
-        fixedExpenses: [], // NEW: Array to hold fixed expenses
+        fixedExpenses: [],
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
@@ -162,6 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // References
         referencesContainer: document.getElementById('references-container'),
+        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
+        householdMembersList: document.getElementById('household-members-list'),
 
         // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
@@ -193,10 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nextYearBtn: document.getElementById('next-year-btn'),
         addExpenseModal: document.getElementById('add-expense-modal'),
         addExpenseForm: document.getElementById('add-expense-form'),
-        
-        // NEW: References page elements
-        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
-        householdMembersList: document.getElementById('household-members-list'),
     };
 
     function computeDerivedShoppingLists() {
@@ -282,6 +280,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleNavigation(window.location.hash);
             }, (error) => commonErrorHandler(error, coll));
         }
+
+        // NEW: Listener for household users
+        const usersQuery = query(collection(db, 'users'));
+        state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
+            state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'users'));
         
         const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
         state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
