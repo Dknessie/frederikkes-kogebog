@@ -16,7 +16,6 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-import { initMaintenance, renderMaintenancePage } from './maintenance.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -403,3 +402,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
