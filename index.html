@@ -291,44 +291,48 @@
                         </div>
                     </div>
 
+                    <div class="add-fixed-expense-container">
+                        <h3>Tilføj Fast Udgift</h3>
+                        <form id="add-fixed-expense-form" class="add-fixed-expense-form">
+                            <input type="hidden" id="fixed-expense-id">
+                            <div class="input-group">
+                                <label for="fixed-expense-category-new">Kategori</label>
+                                <input type="text" id="fixed-expense-category-new" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="fixed-expense-amount-new">Beløb (kr.)</label>
+                                <input type="number" id="fixed-expense-amount-new" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="fixed-expense-interval-new">Interval</label>
+                                <select id="fixed-expense-interval-new" required>
+                                    <option value="månedligt">Månedligt</option>
+                                    <option value="kvartalsvist">Kvartalsvist</option>
+                                    <option value="årligt">Årligt</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="fixed-expense-start-month-new">Start Måned</label>
+                                <select id="fixed-expense-start-month-new" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="fixed-expense-owner-new">Ejer</label>
+                                <select id="fixed-expense-owner-new" required></select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" id="clear-fixed-expense-form-btn" class="btn btn-secondary">Ryd</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Gem Udgift</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <hr>
+                    <h3>Budget Oversigt</h3>
                     <div id="budget-grid-container" class="budget-grid-container">
                         <!-- Budget gitter renderes her af JS -->
                     </div>
-
-                    <div id="budget-fixed-expenses">
-                         <h3>Faste Udgifter</h3>
-                         <div id="fixed-expenses-list">
-                            <p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>
-                         </div>
-                         <hr>
-                         <h4>Tilføj ny fast udgift</h4>
-                         <form id="add-fixed-expense-form" class="add-fixed-expense-form">
-                            <div class="form-grid-2-col">
-                                <div class="input-group">
-                                    <label for="fixed-expense-name-new">Navn</label>
-                                    <input type="text" id="fixed-expense-name-new" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="fixed-expense-amount-new">Beløb (kr.)</label>
-                                    <input type="number" id="fixed-expense-amount-new" step="0.01" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="fixed-expense-interval-new">Interval</label>
-                                    <select id="fixed-expense-interval-new" required>
-                                        <option value="månedligt">Månedligt</option>
-                                        <option value="kvartalsvist">Kvartalsvist</option>
-                                        <option value="årligt">Årligt</option>
-                                    </select>
-                                </div>
-                                 <div class="input-group">
-                                    <label for="fixed-expense-category-new">Kategori</label>
-                                    <input type="text" id="fixed-expense-category-new" required>
-                                </div>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
-                            </div>
-                        </form>
+                    <div id="budget-totals-bar" class="budget-totals-bar">
+                         <!-- Månedstotaler renderes her af JS -->
                     </div>
                 </div>
             </section>
