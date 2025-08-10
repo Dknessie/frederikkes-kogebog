@@ -370,8 +370,14 @@
             <h3 id="add-expense-modal-title">Tilføj Udgift</h3>
             <form id="add-expense-form">
                 <div class="input-group">
+                    <label for="add-expense-user">Bruger</label>
+                    <select id="add-expense-user" required></select>
+                </div>
+                <div class="input-group">
                     <label for="add-expense-amount">Beløb (kr.)</label>
-                    <input type="number" id="add-expense-amount" step="0.01" required>
+                    <div class="price-input-wrapper">
+                        <input type="number" id="add-expense-amount" step="0.01" required>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="add-expense-date">Dato</label>
@@ -600,7 +606,7 @@
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="project-room">Rum</label>
-                        <select id="project-room"></select>
+                        <input type="text" id="project-room" placeholder="F.eks. Køkken, Stue">
                     </div>
                     <div class="input-group">
                         <label>Estimeret Tid</label>
