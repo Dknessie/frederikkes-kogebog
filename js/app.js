@@ -9,7 +9,7 @@ import { initInventory, renderInventory, setReferencesLoaded } from './inventory
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
-import { initReferences, renderReferencesPage, renderHouseholdMembers } from './references.js';
+import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initProjects, renderProjects } from './projects.js';
 import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
@@ -189,10 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nextYearBtn: document.getElementById('next-year-btn'),
         addExpenseModal: document.getElementById('add-expense-modal'),
         addExpenseForm: document.getElementById('add-expense-form'),
-        
-        // NEW: References page elements
-        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
-        householdMembersList: document.getElementById('household-members-list'),
     };
 
     function computeDerivedShoppingLists() {
