@@ -9,6 +9,7 @@ import { formatDate } from './utils.js';
 let appState;
 let appElements;
 let currentBudgetViewUserId = null;
+let currentBudgetYear = new Date().getFullYear();
 let userListeners = {};
 
 // D3.js farveskala til diagrammet
@@ -28,13 +29,18 @@ export function initBudget(state, elements) {
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
         budgetFixedExpensesContainer: document.getElementById('budget-fixed-expenses'),
         budgetUserSelector: document.getElementById('budget-user-selector'),
+        budgetGridContainer: document.getElementById('budget-grid-container'),
+        budgetYearDisplay: document.getElementById('budget-year-display'),
+        prevYearBtn: document.getElementById('prev-year-btn'),
+        nextYearBtn: document.getElementById('next-year-btn'),
+        addExpenseModal: document.getElementById('add-expense-modal'),
+        addExpenseForm: document.getElementById('add-expense-form'),
     };
     
     // Sæt lytter på knapper
     if (appElements.addFixedExpenseBtn) {
         appElements.addFixedExpenseBtn.addEventListener('click', () => openFixedExpenseModal());
     }
-
     if (appElements.fixedExpenseForm) {
         appElements.fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
     }
@@ -66,6 +72,35 @@ export function initBudget(state, elements) {
         });
     }
 
+    // Lytter på årsnavigation
+    if (appElements.prevYearBtn) {
+        appElements.prevYearBtn.addEventListener('click', () => {
+            currentBudgetYear--;
+            renderBudgetPage();
+        });
+    }
+    if (appElements.nextYearBtn) {
+        appElements.nextYearBtn.addEventListener('click', () => {
+            currentBudgetYear++;
+            renderBudgetPage();
+        });
+    }
+
+    // Event delegation for at åbne modal fra gitteret
+    if (appElements.budgetGridContainer) {
+        appElements.budgetGridContainer.addEventListener('click', e => {
+            const cell = e.target.closest('.budget-grid-cell');
+            if (cell && cell.dataset.month && cell.dataset.expenseId) {
+                openAddExpenseModal(cell.dataset.month, cell.dataset.expenseId);
+            }
+        });
+    }
+    
+    // Lytter på gem-knappen i udgifts-modalen
+    if (appElements.addExpenseForm) {
+        appElements.addExpenseForm.addEventListener('submit', handleSaveExpense);
+    }
+
     // Lytter til Firestore-ændringer for faste udgifter
     const fixedExpensesQuery = query(collection(db, 'fixed_expenses'));
     userListeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (snapshot) => {
@@ -78,16 +113,17 @@ export function initBudget(state, elements) {
  * Renders the entire budget page.
  */
 export function renderBudgetPage() {
-    if (!appState.expenses || !appElements.monthlyExpensesChart) {
+    if (!appState.expenses || !appElements.budgetGridContainer) {
         return;
     }
 
     // Opdater brugerselector og sæt initial bruger
     renderUserSelector();
     
+    appElements.budgetYearDisplay.textContent = currentBudgetYear;
+
     const monthlyExpenses = calculateMonthlyExpensesByCategory();
-    renderPieChart(monthlyExpenses);
-    renderCategoryList(monthlyExpenses);
+    renderBudgetGrid(monthlyExpenses);
     renderFixedExpensesList();
 }
 
@@ -132,27 +168,32 @@ function renderUserSelector() {
  * @returns {Array<{category: string, amount: number}>} An array of expense objects.
  */
 function calculateMonthlyExpensesByCategory() {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    const expensesByCategory = {};
+    const expensesByMonthAndCategory = {};
     const userIdToFilter = currentBudgetViewUserId;
+    const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
+    months.forEach(month => {
+        expensesByMonthAndCategory[month] = {};
+    });
 
     // Inkluderer faste udgifter
     appState.fixedExpenses.forEach(exp => {
         if (userIdToFilter && exp.userId !== userIdToFilter) return;
 
         const category = exp.category || 'Faste udgifter';
-        let amount = exp.amount;
+        let monthlyAmount = exp.amount;
         if (exp.interval === 'kvartalsvist') {
-            amount = exp.amount / 3;
+            monthlyAmount = exp.amount / 3;
         } else if (exp.interval === 'årligt') {
-            amount = exp.amount / 12;
+            monthlyAmount = exp.amount / 12;
         }
 
-        if (!expensesByCategory[category]) {
-            expensesByCategory[category] = 0;
-        }
-        expensesByCategory[category] += amount;
+        months.forEach(month => {
+            if (!expensesByMonthAndCategory[month][category]) {
+                expensesByMonthAndCategory[month][category] = 0;
+            }
+            expensesByMonthAndCategory[month][category] += monthlyAmount;
+        });
     });
 
     // Inkluderer variable udgifter
@@ -161,113 +202,51 @@ function calculateMonthlyExpensesByCategory() {
 
         if (!expense.date || !expense.date.toDate) return;
         const expenseDate = expense.date.toDate();
-        if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
+        if (expenseDate.getFullYear() === currentBudgetYear) {
+            const month = months[expenseDate.getMonth()];
             const category = expense.category || 'Andet';
-            if (!expensesByCategory[category]) {
-                expensesByCategory[category] = 0;
+
+            if (!expensesByMonthAndCategory[month][category]) {
+                expensesByMonthAndCategory[month][category] = 0;
             }
-            expensesByCategory[category] += expense.amount;
+            expensesByMonthAndCategory[month][category] += expense.amount;
         }
     });
 
-    return Object.entries(expensesByCategory).map(([category, amount]) => ({
-        category,
-        amount
-    }));
+    return expensesByMonthAndCategory;
 }
 
 /**
- * Renders a pie chart of the monthly expenses using D3.js.
- * @param {Array<{category: string, amount: number}>} data - The expense data.
+ * Renders the budget grid.
  */
-function renderPieChart(data) {
-    const container = appElements.monthlyExpensesChart;
-    if (!container) return;
-    
-    // Clear previous chart
+function renderBudgetGrid(data) {
+    const container = appElements.budgetGridContainer;
     container.innerHTML = '';
     
-    if (data.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen udgifter registreret for denne måned.</p>';
-        return;
-    }
+    const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    const allCategories = [...new Set(Object.values(data).flatMap(monthData => Object.keys(monthData)))].sort();
 
-    const width = container.clientWidth;
-    const height = 400;
-    const radius = Math.min(width, height) / 2;
+    const headerHtml = `
+        <div class="budget-grid-header">
+            <div class="budget-grid-cell header-cell">Post</div>
+            ${months.map(month => `<div class="budget-grid-cell header-cell">${month}</div>`).join('')}
+        </div>
+    `;
 
-    const svg = d3.select(container)
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        .append("g")
-        .attr("transform", `translate(${width / 2}, ${height / 2})`);
-
-    const pie = d3.pie()
-        .sort(null)
-        .value(d => d.amount);
-
-    const arc = d3.arc()
-        .innerRadius(radius * 0.6)
-        .outerRadius(radius * 0.9);
-
-    const outerArc = d3.arc()
-        .innerRadius(radius * 0.9)
-        .outerRadius(radius * 0.9);
-
-    const arcs = svg.selectAll("arc")
-        .data(pie(data))
-        .enter()
-        .append("g")
-        .attr("class", "arc");
-
-    // Pie chart slices
-    arcs.append("path")
-        .attr("d", arc)
-        .attr("fill", d => colorScale(d.data.category))
-        .transition()
-        .duration(750)
-        .attrTween("d", function(d) {
-            const i = d3.interpolate({ startAngle: 0, endAngle: 0 }, d);
-            return function(t) {
-                return arc(i(t));
-            };
-        });
-
-    // Add labels
-    arcs.append("text")
-        .attr("transform", d => `translate(${arc.centroid(d)})`)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "12px")
-        .text(d => d.data.category);
-}
-
-/**
- * Renders the list of expense categories and their amounts.
- * @param {Array<{category: string, amount: number}>} data - The expense data.
- */
-function renderCategoryList(data) {
-    const container = appElements.expenseCategoryList;
-    if (!container) return;
-
-    if (data.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen udgifter at vise.</p>';
-        return;
-    }
-
-    const total = data.reduce((sum, item) => sum + item.amount, 0);
-
-    const listHtml = data.map(item => {
-        const percentage = total > 0 ? (item.amount / total) * 100 : 0;
+    const bodyHtml = allCategories.map(category => {
+        const rowHtml = months.map(month => {
+            const amount = data[month][category] || 0;
+            return `<div class="budget-grid-cell" data-month="${month}" data-expense-id="${category}">${amount.toFixed(2).replace('.', ',')}</div>`;
+        }).join('');
         return `
-            <div class="category-item">
-                <span class="category-name">${item.category}</span>
-                <span>${item.amount.toFixed(2).replace('.', ',')} kr. (${percentage.toFixed(0)}%)</span>
+            <div class="budget-grid-row">
+                <div class="budget-grid-cell category-cell">${category}</div>
+                ${rowHtml}
             </div>
         `;
     }).join('');
 
-    container.innerHTML = listHtml;
+    container.innerHTML = headerHtml + bodyHtml;
 }
 
 /**
@@ -442,3 +421,44 @@ async function handleDeleteFixedExpense(expenseId) {
         handleError(error, "Den faste udgift kunne ikke slettes.", "deleteFixedExpense");
     }
 }
+
+function openAddExpenseModal(month, category) {
+    appElements.addExpenseModal.classList.remove('hidden');
+    appElements.addExpenseModal.querySelector('h3').textContent = `Tilføj udgift for ${month}`;
+    appElements.addExpenseForm.reset();
+    document.getElementById('add-expense-category').value = category;
+    document.getElementById('add-expense-date').value = formatDate(new Date(currentBudgetYear, getMonthIndex(month), 1));
+}
+
+async function handleSaveExpense(e) {
+    e.preventDefault();
+    const amount = parseFloat(document.getElementById('add-expense-amount').value);
+    const date = document.getElementById('add-expense-date').value;
+    const category = document.getElementById('add-expense-category').value;
+    const description = document.getElementById('add-expense-description').value || `Manuel udgift for ${category}`;
+
+    if (isNaN(amount) || amount <= 0 || !date || !category) {
+        showNotification({title: "Udfyld alle felter", message: "Alle felter skal være udfyldt korrekt."});
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'expenses'), {
+            userId: appState.currentUser.uid,
+            amount: amount,
+            category: category,
+            description: description,
+            date: new Date(date)
+        });
+        appElements.addExpenseModal.classList.add('hidden');
+        showNotification({title: "Gemt!", message: "Din udgift er blevet tilføjet."});
+    } catch (error) {
+        handleError(error, "Udgiften kunne ikke gemmes.", "saveExpense");
+    }
+}
+
+function getMonthIndex(month) {
+    const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    return months.indexOf(month);
+}
+
