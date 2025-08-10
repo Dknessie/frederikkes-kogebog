@@ -8,7 +8,7 @@ import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
-let currentBudgetViewUserId = null;
+let currentBudgetViewUserName = null;
 let currentBudgetYear = new Date().getFullYear();
 let userListeners = {};
 
@@ -32,6 +32,8 @@ export function initBudget(state, elements) {
         nextYearBtn: document.getElementById('next-year-btn'),
         addExpenseModal: document.getElementById('add-expense-modal'),
         addExpenseForm: document.getElementById('add-expense-form'),
+        addFixedExpenseOwnerSelect: document.getElementById('fixed-expense-owner-new'),
+        addFixedExpenseStartMonthSelect: document.getElementById('fixed-expense-start-month-new'),
     };
     
     // Set listeners for buttons
@@ -64,7 +66,7 @@ export function initBudget(state, elements) {
     // Listener for user change
     if (appElements.budgetUserSelector) {
         appElements.budgetUserSelector.addEventListener('change', (e) => {
-            currentBudgetViewUserId = e.target.value === 'all' ? null : e.target.value;
+            currentBudgetViewUserName = e.target.value === 'all' ? null : e.target.value;
             renderBudgetPage();
         });
     }
@@ -131,8 +133,6 @@ function renderUserSelector() {
     allOption.textContent = 'Hele Husstanden';
     selector.appendChild(allOption);
 
-    // Get all users from the appState and add them to the dropdown
-    // OPDATERET: Nu bruger vi appState.references.householdMembers
     const householdMembers = appState.references.householdMembers || [];
     householdMembers.forEach(member => {
         const option = document.createElement('option');
@@ -141,7 +141,6 @@ function renderUserSelector() {
         selector.appendChild(option);
     });
 
-    // Sætter den valgte bruger baseret på bruger-navnet, ikke ID
     const currentUserName = appState.currentUser.name;
     const isMember = householdMembers.includes(currentUserName);
     if (isMember) {
@@ -157,7 +156,7 @@ function renderUserSelector() {
  */
 function calculateExpensesByItem() {
     const expensesByItem = {};
-    const userNameToFilter = currentBudgetViewUserId;
+    const userNameToFilter = currentBudgetViewUserName;
     const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
     const allExpenses = [
@@ -165,7 +164,6 @@ function calculateExpensesByItem() {
         ...appState.expenses.map(exp => ({ ...exp, isFixed: false, date: exp.date.toDate() }))
     ];
 
-    // OPDATERET: Filterer på userName i stedet for userId
     const filteredExpenses = allExpenses.filter(exp => {
         if (userNameToFilter) {
             return exp.userName === userNameToFilter;
@@ -173,7 +171,6 @@ function calculateExpensesByItem() {
         return true;
     });
 
-    // Group expenses by item name and user
     filteredExpenses.forEach(exp => {
         const user = exp.userName || 'Ukendt';
         const itemKey = `${exp.name}-${user}`;
@@ -193,9 +190,21 @@ function calculateExpensesByItem() {
             } else if (exp.interval === 'årligt') {
                 monthlyAmount = exp.amount / 12;
             }
-            months.forEach(month => {
-                expensesByItem[itemKey].months[month] = (expensesByItem[itemKey].months[month] || 0) + monthlyAmount;
-            });
+            // Sætter startmåneden for faste udgifter
+            const startMonthIndex = exp.startMonth ? months.indexOf(exp.startMonth) : 0;
+            
+            // Fordeler udgiften baseret på interval
+            if (exp.interval === 'månedligt') {
+                 for(let i = 0; i < 12; i++) {
+                     expensesByItem[itemKey].months[months[i]] = (expensesByItem[itemKey].months[months[i]] || 0) + exp.amount;
+                 }
+            } else if (exp.interval === 'kvartalsvist') {
+                for(let i = startMonthIndex; i < 12; i += 3) {
+                    expensesByItem[itemKey].months[months[i]] = (expensesByItem[itemKey].months[months[i]] || 0) + exp.amount;
+                }
+            } else if (exp.interval === 'årligt') {
+                expensesByItem[itemKey].months[months[startMonthIndex]] = (expensesByItem[itemKey].months[months[startMonthIndex]] || 0) + exp.amount;
+            }
         } else {
             if (exp.date.getFullYear() === currentBudgetYear) {
                 const month = months[exp.date.getMonth()];
@@ -217,22 +226,18 @@ function renderBudgetGrid(data) {
     const months = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
     const itemKeys = Object.keys(data);
     
-    // OPDATERET: Beregner totaler for hele husstanden for at bevare funktionen, selvom visningen er fjernet.
-    const monthlyTotals = months.map(month => 
-        itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
-    );
-    const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
-
     const headerHtml = `
         <div class="budget-grid-row budget-grid-header">
             <div class="budget-grid-cell header-cell">Kategori</div>
             ${months.map(month => `<div class="budget-grid-cell header-cell">${month}</div>`).join('')}
+            <div class="budget-grid-cell header-cell">Total</div>
         </div>
     `;
 
-    // Rækker for individuelle udgiftsposter
     const bodyHtml = itemKeys.map(key => {
         const item = data[key];
+        const itemMonthlyTotals = months.map(month => item.months[month] || 0);
+        const itemYearlyTotal = itemMonthlyTotals.reduce((sum, amount) => sum + amount, 0);
         const rowHtml = months.map(month => {
             const amount = item.months[month] || 0;
             return `<div class="budget-grid-cell">${amount.toFixed(2).replace('.', ',')}</div>`;
@@ -241,20 +246,25 @@ function renderBudgetGrid(data) {
             <div class="budget-grid-row">
                 <div class="budget-grid-cell category-cell">${item.name} (${item.userName})</div>
                 ${rowHtml}
+                <div class="budget-grid-cell total-cell">${itemYearlyTotal.toFixed(2).replace('.', ',')}</div>
             </div>
         `;
     }).join('');
 
-    // Række for den samlede total - fjernet fra visning, men logikken beholdes, hvis den skal bruges senere.
-    // const totalRowHtml = `
-    //     <div class="budget-grid-row">
-    //         <div class="budget-grid-cell total-cell">Husstand Total</div>
-    //         ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
-    //         <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
-    //     </div>
-    // `;
+    const monthlyTotals = months.map(month =>
+        itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
+    );
+    const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
 
-    container.innerHTML = `<div class="budget-grid">` + headerHtml + bodyHtml + `</div>`;
+    const totalRowHtml = `
+        <div class="budget-grid-row">
+            <div class="budget-grid-cell total-cell">Husstand Total</div>
+            ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
+            <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
+        </div>
+    `;
+
+    container.innerHTML = `<div class="budget-grid">` + headerHtml + bodyHtml + totalRowHtml + `</div>`;
 }
 
 /**
@@ -262,7 +272,7 @@ function renderBudgetGrid(data) {
  */
 function renderFixedExpensesList() {
     const container = appElements.budgetFixedExpensesContainer;
-    const userNameToFilter = currentBudgetViewUserId;
+    const userNameToFilter = currentBudgetViewUserName;
     
     // Filter expenses based on the selected user
     const filteredFixedExpenses = appState.fixedExpenses.filter(exp => {
@@ -334,11 +344,65 @@ function renderFixedExpensesList() {
 }
 
 function openFixedExpenseModal(expenseId = null) {
-    // ... (unchanged)
+    const modal = appElements.addFixedExpenseModal;
+    const form = appElements.fixedExpenseForm;
+    form.reset();
+    
+    populateFixedExpenseDropdowns();
+    
+    if (expenseId) {
+        modal.querySelector('h3').textContent = 'Rediger Fast Udgift';
+        const expense = appState.fixedExpenses.find(exp => exp.id === expenseId);
+        if (expense) {
+            document.getElementById('fixed-expense-id').value = expense.id;
+            document.getElementById('fixed-expense-name').value = expense.name;
+            document.getElementById('fixed-expense-amount').value = expense.amount;
+            document.getElementById('fixed-expense-interval').value = expense.interval;
+            document.getElementById('fixed-expense-category').value = expense.category;
+            document.getElementById('fixed-expense-owner').value = expense.owner;
+            document.getElementById('fixed-expense-start-month').value = expense.startMonth;
+            document.getElementById('delete-fixed-expense-btn').style.display = 'inline-flex';
+        }
+    } else {
+        modal.querySelector('h3').textContent = 'Tilføj Ny Fast Udgift';
+        document.getElementById('fixed-expense-id').value = '';
+        document.getElementById('delete-fixed-expense-btn').style.display = 'none';
+    }
+
+    modal.classList.remove('hidden');
 }
 
 async function handleSaveFixedExpense(e) {
-    // ... (unchanged)
+    e.preventDefault();
+    const expenseId = document.getElementById('fixed-expense-id').value;
+    const isEditing = !!expenseId;
+
+    const expenseData = {
+        name: document.getElementById('fixed-expense-name').value.trim(),
+        amount: parseFloat(document.getElementById('fixed-expense-amount').value),
+        interval: document.getElementById('fixed-expense-interval').value,
+        category: document.getElementById('fixed-expense-category').value.trim(),
+        owner: document.getElementById('fixed-expense-owner').value,
+        startMonth: document.getElementById('fixed-expense-start-month').value,
+        userId: appState.currentUser.uid,
+    };
+
+    if (!expenseData.name || isNaN(expenseData.amount) || expenseData.amount <= 0 || !expenseData.interval || !expenseData.owner || !expenseData.startMonth) {
+        showNotification({ title: "Fejl", message: "Udfyld venligst alle påkrævede felter." });
+        return;
+    }
+
+    try {
+        if (isEditing) {
+            await updateDoc(doc(db, 'fixed_expenses', expenseId), expenseData);
+        } else {
+            await addDoc(collection(db, 'fixed_expenses'), expenseData);
+        }
+        appElements.addFixedExpenseModal.classList.add('hidden');
+        showNotification({ title: "Gemt!", message: "Fast udgift er blevet gemt." });
+    } catch (error) {
+        handleError(error, "Den faste udgift kunne ikke gemmes.", "handleSaveFixedExpense");
+    }
 }
 
 
