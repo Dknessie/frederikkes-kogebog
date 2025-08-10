@@ -16,21 +16,20 @@ export function initReferences(state, elements) {
         appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
     }
     
-    // NEW: Household member listeners
-    const addMemberForm = document.getElementById('add-member-form');
-    if (addMemberForm) {
-        addMemberForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const nameInput = addMemberForm.querySelector('#new-member-name');
-            const name = nameInput.value.trim();
-            if (name) {
-                addHouseholdMember(name);
-                nameInput.value = '';
+    // Event delegation for adding/deleting members
+    if (appElements.referencesContainer) {
+        appElements.referencesContainer.addEventListener('submit', e => {
+            if (e.target.matches('#add-member-form')) {
+                e.preventDefault();
+                const nameInput = e.target.querySelector('#new-member-name');
+                const name = nameInput.value.trim();
+                if (name) {
+                    addHouseholdMember(name);
+                    nameInput.value = '';
+                }
             }
         });
-    }
-    // Event delegation for deleting members
-    if (appElements.referencesContainer) {
+
         appElements.referencesContainer.addEventListener('click', e => {
             if (e.target.closest('.delete-member-btn')) {
                 const memberName = e.target.closest('[data-member-name]').dataset.memberName;
@@ -69,7 +68,7 @@ export function renderReferencesPage() {
 
     // Household members card
     const householdCard = document.createElement('div');
-    householdCard.className = 'reference-card household-members-card'; // Added class for specific targeting if needed
+    householdCard.className = 'reference-card household-members-card';
     householdCard.innerHTML = `
         <h4>Husstandsmedlemmer</h4>
         <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
