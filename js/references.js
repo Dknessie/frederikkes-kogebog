@@ -12,28 +12,32 @@ export function initReferences(state, elements) {
     appElements = elements;
 
     if (appElements.referencesContainer) {
-        appElements.referencesContainer.addEventListener('click', handleListClick);
-        appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
-    }
-    
-    // Event delegation for adding/deleting members
-    if (appElements.referencesContainer) {
-        appElements.referencesContainer.addEventListener('submit', e => {
+        // A single, consolidated event listener for all clicks
+        appElements.referencesContainer.addEventListener('click', (e) => {
+            // Handle member deletion
+            if (e.target.closest('.delete-member-btn')) {
+                const memberName = e.target.closest('[data-member-name]').dataset.memberName;
+                deleteHouseholdMember(memberName);
+            } else {
+                // Handle all other clicks for other reference lists
+                handleListClick(e);
+            }
+        });
+
+        // A single, consolidated event listener for all form submissions
+        appElements.referencesContainer.addEventListener('submit', (e) => {
+            e.preventDefault();
+            // Handle household member form submission specifically
             if (e.target.matches('#add-member-form')) {
-                e.preventDefault();
                 const nameInput = e.target.querySelector('#new-member-name');
                 const name = nameInput.value.trim();
                 if (name) {
                     addHouseholdMember(name);
                     nameInput.value = '';
                 }
-            }
-        });
-
-        appElements.referencesContainer.addEventListener('click', e => {
-            if (e.target.closest('.delete-member-btn')) {
-                const memberName = e.target.closest('[data-member-name]').dataset.memberName;
-                deleteHouseholdMember(memberName);
+            } else {
+                // Handle all other form submissions
+                handleFormSubmit(e);
             }
         });
     }
@@ -114,7 +118,7 @@ export function renderReferencesPage() {
             `;
         } else if (data.isHierarchical) {
             const listItemsHTML = (data.items || [])
-                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat)) // Handle old string format
+                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
                 .sort((a,b) => a.name.localeCompare(b.name))
                 .map(cat => `
                 <li class="category-item" data-value="${cat.name}">
@@ -174,7 +178,7 @@ function renderHouseholdMembers() {
 
     members.sort().forEach(name => {
         const memberRow = document.createElement('li');
-        memberRow.className = 'reference-item'; // Re-using class for consistent styling
+        memberRow.className = 'reference-item';
         memberRow.dataset.memberName = name;
 
         memberRow.innerHTML = `
@@ -221,7 +225,6 @@ async function deleteHouseholdMember(name) {
     }
 }
 
-
 async function handleListClick(e) {
     const target = e.target;
     const key = e.target.closest('.reference-card')?.dataset.key;
@@ -252,8 +255,8 @@ async function handleListClick(e) {
 }
 
 async function handleFormSubmit(e) {
-    e.preventDefault();
     const key = e.target.closest('.reference-card')?.dataset.key;
+    if (!key) return;
 
     if (e.target.classList.contains('add-reference-form')) {
         const input = e.target.querySelector('input');
@@ -345,7 +348,6 @@ async function deleteReferenceItem(key, value) {
     } else {
         const batch = writeBatch(db);
         batch.update(ref, { [key]: arrayRemove(value) });
-        // Add logic to update documents that use this reference...
         await batch.commit();
         showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
     }
@@ -404,7 +406,6 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
         const batch = writeBatch(db);
         batch.update(ref, { [key]: arrayRemove(oldValue) });
         batch.update(ref, { [key]: arrayUnion(newValue) });
-        // Add logic to update documents that use this reference...
         await batch.commit();
         showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
     }
