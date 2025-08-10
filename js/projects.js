@@ -174,7 +174,8 @@ async function handleSaveProject(e) {
         title: document.getElementById('project-title').value,
         status: document.getElementById('project-status').value, // Get status
         tags: tags,
-        room: document.getElementById('project-room').value.trim() || null, // UPDATED: Get from text input
+        // OPDATERET: Henter nu fra et input-felt i stedet for en dropdown.
+        room: document.getElementById('project-room').value.trim() || null, 
         time: {
             days: Number(document.getElementById('project-time-days').value) || null,
             hours: Number(document.getElementById('project-time-hours').value) || null,
@@ -245,6 +246,10 @@ function openAddProjectModal() {
     projectFormImageAfter = { type: null, data: null };
     appElements.projectImagePreviewBefore.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
     appElements.projectImagePreviewAfter.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
+    
+    // OPDATERET: Nyt fritekstfelt til rum.
+    const roomInput = document.getElementById('project-room');
+    roomInput.value = '';
 
     createMaterialRow();
     createLinkRow();
@@ -266,7 +271,7 @@ function openEditProjectModal(projectId) {
         document.getElementById('project-status').value = project.status || 'Igangværende';
         document.getElementById('project-tags').value = (project.tags && project.tags.join(', ')) || '';
         
-        // UPDATED: Set value of text input instead of dropdown
+        // OPDATERET: Nu sætter vi værdien på et input-felt.
         document.getElementById('project-room').value = project.room || '';
         
         document.getElementById('project-time-days').value = project.time?.days || '';
