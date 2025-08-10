@@ -251,21 +251,19 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
-        // NEW: Separate listener for users to ensure it loads first.
         const usersQuery = query(collection(db, 'users'));
         state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
             state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Call the remaining listeners after users are loaded
             const householdMembers = state.users.length > 0 ? state.users.map(u => u.id) : [userId];
             
-            const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
+            const expensesQuery = query(collection(db, 'expenses'), where("userId", "==", userId));
             state.listeners.expenses = onSnapshot(expensesQuery, (expensesSnapshot) => {
                 state.expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 handleNavigation(window.location.hash);
             }, (error) => commonErrorHandler(error, 'expenses'));
             
-            const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "in", householdMembers));
+            const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "==", userId));
             state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (fixedExpensesSnapshot) => {
                 state.fixedExpenses = fixedExpensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 handleNavigation(window.location.hash);
@@ -381,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    // OPPDATERET: Kalder begge rendering-funktioner direkte
                     renderRoomsListPage();
                     renderProjects();
                     break;
@@ -415,10 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         setupAuthEventListeners(elements);
         initAuth(onLogin, onLogout);
-
-        // NEW: Fjernelse af den oprindelige deaktivering
-        // Knapper vil nu kun være deaktiverede, indtil de aktiveres af `onSnapshot`
-        // når de nødvendige data er indlæst.
 
         initUI(state, elements);
         initInventory(state, elements);
