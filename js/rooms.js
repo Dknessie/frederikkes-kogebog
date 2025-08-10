@@ -172,7 +172,7 @@ export function renderRoomDetailsPage() {
             .sort((a, b) => new Date(b.date) - new Date(a.date))
             .map(entry => {
                 const icons = {
-                    'Projekt': '�',
+                    'Projekt': '',
                     'Vedligehold': '🧹',
                     'Note': '📝'
                 };
@@ -216,6 +216,7 @@ function openAddRoomModal() {
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
     
+    // NYT: Populer dropdown med tilgængelige rum fra referencelisten
     populateReferenceDropdown(roomNameSelect, availableRooms, 'Vælg et rum...');
 
     modal.classList.remove('hidden');
@@ -434,4 +435,11 @@ async function handleDeleteLogEntry() {
             handleError(error, "Noten kunne ikke slettes.", "deleteLogEntry");
         }
     }
+}
+
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
 }
