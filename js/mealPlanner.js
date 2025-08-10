@@ -123,6 +123,7 @@ function renderWeekView() {
     header.innerHTML = '';
 
     const startOfWeek = getStartOfWeek(appState.currentDate);
+    const today = new Date();
     const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
     const isMobile = window.innerWidth <= 768;
     const mobileCurrentDay = appState.currentDate.getDay(); // 0=Sun, 1=Mon
@@ -139,7 +140,7 @@ function renderWeekView() {
 
         const dayCard = document.createElement('div');
         dayCard.className = 'calendar-day-card';
-        if (formatDate(dayDate) === formatDate(new Date())) {
+        if (formatDate(dayDate) === formatDate(today)) {
             dayCard.classList.add('is-today');
         }
         // On mobile, only show the current day
@@ -187,8 +188,8 @@ function populateWeekViewWithData() {
             const today = new Date();
             const currentYear = today.getFullYear();
             const personalEvents = appState.events.filter(event => {
-                // RETTET: Viser nu To-do events her.
-                // Fjernet "event.category !== 'To-do'" fra filteret
+                if (event.category === 'To-do') return false;
+                
                 if (event.isRecurring) {
                     const eventDateThisYear = new Date(event.date);
                     eventDateThisYear.setFullYear(new Date(date).getFullYear());
@@ -243,12 +244,12 @@ function renderMonthView() {
         }
 
         const mealEventsToday = Object.values(appState.mealPlan[dateString] || {}).flat();
-        const personalEventsToday = appState.events.filter(event => event.date === dateString); // Rettet til at vise alle events
-        const allEvents = [...mealEventsToday, ...personalEventsToday.map(e => ({...e, type: 'personal'}))];
+        const personalEventsToday = appState.events.filter(event => event.date === dateString && event.category !== 'To-do');
 
-        const eventDots = allEvents
-            .map(event => `<div class="event-dot ${event.type === 'personal' ? event.category.toLowerCase() : event.type}"></div>`)
-            .join('');
+        const eventDots = [
+            ...mealEventsToday.map(event => `<div class="event-dot recipe"></div>`),
+            ...personalEventsToday.map(event => `<div class="event-dot ${event.category.toLowerCase()}"></div>`)
+        ].join('');
 
         dayCell.innerHTML = `
             <div class="month-day-number">${day}</div>
@@ -412,7 +413,7 @@ async function handleMonthGridClick(e) {
     calendarViewState.dayDetailsDate = date; 
 
     const mealEventsToday = Object.values(appState.mealPlan[date] || {}).flat();
-    const personalEventsToday = appState.events.filter(event => event.date === date); // Rettet til at vise alle events
+    const personalEventsToday = appState.events.filter(event => event.date === date && event.category !== 'To-do');
     const allEvents = [...mealEventsToday, ...personalEventsToday.map(e => ({...e, type: 'personal'}))];
 
     appElements.dayDetailsTitle.textContent = new Date(date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -576,17 +577,13 @@ function populateCalendarProjectList() {
 function populateCalendarTaskList(searchTerm = '') {
     const list = appElements.calendarTaskList;
     list.innerHTML = '';
-    // FJERNET: Maintenance tasks fra referencer, da modulet er fjernet.
-    const filteredTasks = appState.events
-        .filter(t => t.category === 'To-do' && t.title.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(t => t.title);
-        
-    const uniqueTasks = [...new Set(filteredTasks)];
+    const filteredTasks = (appState.references.maintenanceTasks || [])
+        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (uniqueTasks.length === 0 && searchTerm) {
-        list.innerHTML = `<li class="selection-list-item" data-name="${searchTerm}">Opret ny note: "${searchTerm}"</li>`;
+    if (filteredTasks.length === 0 && searchTerm) {
+        list.innerHTML = `<li class="selection-list-item" data-name="${searchTerm}">Opret ny påmindelse: "${searchTerm}"</li>`;
     } else {
-        uniqueTasks.forEach(task => {
+        filteredTasks.forEach(task => {
             const li = document.createElement('li');
             li.className = 'selection-list-item';
             li.dataset.name = task;
