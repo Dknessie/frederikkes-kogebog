@@ -217,24 +217,16 @@ function renderBudgetGrid(data) {
     const months = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
     const itemKeys = Object.keys(data);
     
-    // Beregn totaler for hver post
-    const postTotals = {};
-    itemKeys.forEach(key => {
-        const item = data[key];
-        postTotals[key] = months.reduce((sum, month) => sum + (item.months[month] || 0), 0);
-    });
-
-    // Beregn totaler for hele husstanden
+    // OPDATERET: Beregner totaler for hele husstanden for at bevare funktionen, selvom visningen er fjernet.
     const monthlyTotals = months.map(month => 
         itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
     );
-    const yearlyTotal = itemKeys.reduce((sum, key) => sum + postTotals[key], 0);
+    const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
 
     const headerHtml = `
         <div class="budget-grid-row budget-grid-header">
-            <div class="budget-grid-cell header-cell">Post</div>
+            <div class="budget-grid-cell header-cell">Kategori</div>
             ${months.map(month => `<div class="budget-grid-cell header-cell">${month}</div>`).join('')}
-            <div class="budget-grid-cell header-cell">Total</div>
         </div>
     `;
 
@@ -249,21 +241,20 @@ function renderBudgetGrid(data) {
             <div class="budget-grid-row">
                 <div class="budget-grid-cell category-cell">${item.name} (${item.userName})</div>
                 ${rowHtml}
-                <div class="budget-grid-cell total-cell">${postTotals[key].toFixed(2).replace('.', ',')}</div>
             </div>
         `;
     }).join('');
 
-    // Række for den samlede total
-    const totalRowHtml = `
-        <div class="budget-grid-row">
-            <div class="budget-grid-cell total-cell">Husstand Total</div>
-            ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
-            <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
-        </div>
-    `;
+    // Række for den samlede total - fjernet fra visning, men logikken beholdes, hvis den skal bruges senere.
+    // const totalRowHtml = `
+    //     <div class="budget-grid-row">
+    //         <div class="budget-grid-cell total-cell">Husstand Total</div>
+    //         ${months.map((month, index) => `<div class="budget-grid-cell total-cell">${monthlyTotals[index].toFixed(2).replace('.', ',')}</div>`).join('')}
+    //         <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
+    //     </div>
+    // `;
 
-    container.innerHTML = `<div class="budget-grid">` + headerHtml + bodyHtml + totalRowHtml + `</div>`;
+    container.innerHTML = `<div class="budget-grid">` + headerHtml + bodyHtml + `</div>`;
 }
 
 /**
