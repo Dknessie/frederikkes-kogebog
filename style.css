@@ -1975,7 +1975,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .budget-grid {
     display: grid;
-    grid-template-columns: minmax(150px, 1fr) repeat(12, 100px) 100px;
+    grid-template-columns: minmax(150px, 1fr) repeat(12, 100px);
     border-collapse: collapse;
     width: fit-content;
     border: 1px solid var(--border-color);
@@ -2018,13 +2018,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .budget-grid-cell.user-cell {
     background-color: #f0f0f0;
-}
-.budget-grid-cell:not(.header-cell):not(.category-cell):not(.total-cell):not(.user-cell) {
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-.budget-grid-cell:not(.header-cell):not(.category-cell):not(.total-cell):not(.user-cell):hover {
-    background-color: #e9e5dc;
 }
 
 #budget-fixed-expenses {
@@ -2081,6 +2074,7 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: none;
     }
     .mobile-tab-bar {
+        /* UPDATED: display flex to show on smaller screens */
         display: flex;
     }
     .dashboard-layout {
