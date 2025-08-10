@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
-        users: [], // NEW: Array to hold all household users
+        users: [],
         inventoryItems: [],
         inventoryBatches: [],
         inventory: [],
@@ -258,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Call the remaining listeners after users are loaded
             const householdMembers = state.users.length > 0 ? state.users.map(u => u.id) : [userId];
+            
             const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
             state.listeners.expenses = onSnapshot(expensesQuery, (expensesSnapshot) => {
                 state.expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -269,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 state.fixedExpenses = fixedExpensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 handleNavigation(window.location.hash);
             }, (error) => commonErrorHandler(error, 'fixed_expenses'));
-
+            
             const collections = {
                 inventory_items: 'inventoryItems',
                 inventory_batches: 'inventoryBatches',
