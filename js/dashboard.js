@@ -31,6 +31,9 @@ export function initDashboard(state, elements) {
         materialsPrice: document.getElementById('materials-price'),
         wishlistCount: document.getElementById('wishlist-count'),
         wishlistPrice: document.getElementById('wishlist-price'),
+        timelineBirthdays: document.getElementById('timeline-birthdays'),
+        timelineEvents: document.getElementById('timeline-events'),
+        timelineTodos: document.getElementById('timeline-todos'),
     };
 
     if (appElements.editBudgetBtn) appElements.editBudgetBtn.addEventListener('click', openEditBudgetModal);
@@ -79,13 +82,15 @@ function renderTimelineWidget() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingEvents = [...appState.events]
+    const birthdays = [];
+    const events = [];
+    const todos = [];
+    
+    const allEvents = [...appState.events]
         .map(event => {
-            // Håndter tilbagevendende fødselsdage
             if (event.category === 'Fødselsdag' && event.date) {
                 const eventDateThisYear = new Date(event.date);
                 eventDateThisYear.setFullYear(today.getFullYear());
-                // Hvis fødselsdagen for i år er passeret, vis den næste år
                 if (eventDateThisYear < today) {
                     eventDateThisYear.setFullYear(today.getFullYear() + 1);
                 }
@@ -94,8 +99,7 @@ function renderTimelineWidget() {
             return { ...event, displayDate: new Date(event.date) };
         })
         .filter(event => event.displayDate >= today)
-        .sort((a, b) => a.displayDate - b.displayDate)
-        .slice(0, 7); // Vis de næste 7 begivenheder
+        .sort((a, b) => a.displayDate - b.displayDate);
 
     // Hent projekter og opgaver fra kalenderen for at vise på tidslinjen
     Object.entries(appState.mealPlan).forEach(([dateString, dayPlan]) => {
@@ -105,7 +109,7 @@ function renderTimelineWidget() {
                 if (item.type === 'project') {
                     const project = appState.projects.find(p => p.id === item.projectId);
                     if (project) {
-                        upcomingEvents.push({
+                        allEvents.push({
                             date: date,
                             displayDate: date,
                             title: `Projekt: ${project.title}`,
@@ -113,7 +117,7 @@ function renderTimelineWidget() {
                         });
                     }
                 } else if (item.type === 'task') {
-                     upcomingEvents.push({
+                     allEvents.push({
                             date: date,
                             displayDate: date,
                             title: item.taskName,
@@ -124,45 +128,59 @@ function renderTimelineWidget() {
         }
     });
 
-    const sortedEvents = upcomingEvents
-        .sort((a, b) => a.displayDate - b.displayDate)
-        .slice(0, 10); // Begræns til de 10 øverste
+    allEvents.forEach(item => {
+        if (item.category === 'Fødselsdag') {
+            birthdays.push(item);
+        } else if (item.category === 'To-do' || item.category === 'Projekt') {
+            todos.push(item);
+        } else {
+            events.push(item);
+        }
+    });
 
-    const container = appElements.timelineContent;
-    container.innerHTML = '';
-    if (sortedEvents.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen kommende begivenheder planlagt.</p>';
+    renderTimelineColumn(appElements.timelineBirthdays, birthdays.slice(0, 5));
+    renderTimelineColumn(appElements.timelineEvents, events.slice(0, 5));
+    renderTimelineColumn(appElements.timelineTodos, todos.slice(0, 5));
+}
+
+function renderTimelineColumn(container, items) {
+    if (!container) return;
+    container.innerHTML = ''; // Ryd indholdet
+
+    if (items.length === 0) {
+        container.innerHTML = `<h4 class="empty-state-small">Ingen kommende begivenheder.</h4>`;
         return;
     }
-
-    let lastDate = null;
-    let html = '';
-
-    sortedEvents.forEach(item => {
-        const itemDate = item.displayDate;
-        const dateString = itemDate.toLocaleDateString('da-DK', { day: '2-digit', month: 'short' });
-        
-        if (dateString !== lastDate) {
-            if (lastDate !== null) {
-                html += '</div>'; // Luk den forrige dags gruppe
-            }
-            html += `<div class="timeline-day-group"><h4>${dateString}</h4>`;
-            lastDate = dateString;
-        }
-
+    
+    const listHtml = items.map(item => {
+        const daysLeft = Math.ceil((item.displayDate - new Date()) / (1000 * 60 * 60 * 24));
+        const countdownText = daysLeft > 0 ? `${daysLeft} dage` : 'I dag';
+        const countdownClass = daysLeft <= 1 ? 'countdown soon' : 'countdown';
         const iconClass = getIconForCategory(item);
-
-        html += `
+        
+        return `
             <div class="timeline-item">
                 <span class="timeline-item-icon"><i class="fas ${iconClass}"></i></span>
                 <span class="timeline-item-text">${item.title}</span>
+                <span class="${countdownClass}">${countdownText}</span>
             </div>
         `;
-    });
+    }).join('');
     
-    html += '</div>'; // Luk den sidste dags gruppe
-    container.innerHTML = html;
+    container.innerHTML = `
+        <h4 class="timeline-column-title">${getTimelineTitle(items[0]?.category)}</h4>
+        ${listHtml}
+    `;
 }
+
+function getTimelineTitle(category) {
+    switch(category) {
+        case 'Fødselsdag': return 'Fødselsdage';
+        case 'To-do': return 'To-do';
+        default: return 'Begivenheder';
+    }
+}
+
 
 function getIconForCategory(eventData) {
     switch (eventData.category) {
