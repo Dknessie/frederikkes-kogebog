@@ -1161,17 +1161,21 @@ header {
 .widget-header h3 {
     margin: 0;
 }
-.timeline-day-group {
-    margin-bottom: var(--spacing-m);
+.timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-l);
 }
-.timeline-day-group h4 {
-    margin-top: var(--spacing-m);
-    margin-bottom: var(--spacing-s);
+.timeline-column {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+}
+.timeline-column h4 {
+    margin-top: 0;
     padding-bottom: var(--spacing-s);
     border-bottom: 1px solid var(--border-color);
-    font-family: var(--body-font);
     font-size: 1rem;
-    color: var(--text-color);
 }
 .timeline-item {
     display: flex;
@@ -1189,15 +1193,21 @@ header {
 .timeline-item-icon .fa-tasks { color: var(--accent-color); }
 .timeline-item-icon .fa-birthday-cake { color: #E91E63; }
 .timeline-item-icon .fa-calendar-check { color: #2196F3; }
+.timeline-item-icon .fa-sticky-note { color: #FFA000; }
 .timeline-item-text.is-complete {
     text-decoration: line-through;
     color: #999;
 }
-.timeline-item-date {
-    font-weight: 600;
-    white-space: nowrap;
-    width: 65px;
-    color: #888;
+.timeline-item .countdown {
+    margin-left: auto;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+.timeline-item .countdown.soon {
+    color: var(--status-red);
+}
+.timeline-item-text {
+    flex-grow: 1;
 }
 
 #projects-focus-content .project-focus-item, #inventory-notifications-content .notification-item {
