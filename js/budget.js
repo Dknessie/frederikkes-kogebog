@@ -97,9 +97,6 @@ export function initBudget(state, elements) {
     if (appElements.addExpenseForm) {
         appElements.addExpenseForm.addEventListener('submit', handleSaveExpense);
     }
-
-    // OPDATERET: Denne lytter er flyttet til app.js, hvor den er filtreret efter den nuværende bruger
-    // for at undgå permissions-fejl.
 }
 
 /**
@@ -161,6 +158,7 @@ function calculateExpensesByItem() {
 
     const allExpenses = [
         ...appState.fixedExpenses.map(exp => ({ ...exp, isFixed: true })),
+        // OPDATERET: Vi behøver ikke længere at filtrere her, da `onSnapshot` allerede har filtreret for os.
         ...appState.expenses.map(exp => ({ ...exp, isFixed: false, date: exp.date.toDate() }))
     ];
 
@@ -173,7 +171,6 @@ function calculateExpensesByItem() {
 
     // Group expenses by item name and user
     filteredExpenses.forEach(exp => {
-        // Vi bruger userId til at gruppere, så vi kan se udgifter pr. bruger, selvom vi kun filtrerer på én bruger.
         const user = appState.users.find(u => u.id === exp.userId) || { name: 'Ukendt' };
         const itemKey = `${exp.name}-${exp.userId}`;
         if (!expensesByItem[itemKey]) {
@@ -380,7 +377,32 @@ function openAddExpenseModal(month, category) {
 }
 
 async function handleSaveExpense(e) {
-    // ... (unchanged)
+    e.preventDefault();
+    const amount = parseFloat(appElements.addExpenseForm.querySelector('#add-expense-amount').value);
+    const date = appElements.addExpenseForm.querySelector('#add-expense-date').value;
+    const category = appElements.addExpenseForm.querySelector('#add-expense-category').value;
+    const description = appElements.addExpenseForm.querySelector('#add-expense-description').value;
+    // OPDATERET: Tilføjet bruger-dropdown
+    const userId = appElements.addExpenseForm.querySelector('#add-expense-user').value;
+
+    if (!amount || !date || !category || !userId) {
+        showNotification({ title: "Fejl", message: "Udfyld venligst alle felter." });
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, 'expenses'), {
+            userId: userId,
+            amount: amount,
+            category: category,
+            description: description,
+            date: new Date(date),
+        });
+        appElements.addExpenseModal.classList.add('hidden');
+        showNotification({ title: "Gemt!", message: "Udgiften er blevet tilføjet." });
+    } catch (error) {
+        handleError(error, "Udgiften kunne ikke gemmes.", "handleSaveExpense");
+    }
 }
 
 function getMonthIndex(month) {
