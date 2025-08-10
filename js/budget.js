@@ -25,7 +25,7 @@ export function initBudget(state, elements) {
         fixedExpenseForm: document.getElementById('fixed-expense-form'),
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
         budgetFixedExpensesContainer: document.getElementById('budget-fixed-expenses'),
-        budgetUserSelector: document.getElementById('budget-user-selector'),
+        budgetUserSelector: document.getElementById('budgetUserSelector'),
         budgetGridContainer: document.getElementById('budget-grid-container'),
         budgetYearDisplay: document.getElementById('budget-year-display'),
         prevYearBtn: document.getElementById('prev-year-btn'),
@@ -98,12 +98,8 @@ export function initBudget(state, elements) {
         appElements.addExpenseForm.addEventListener('submit', handleSaveExpense);
     }
 
-    // Listener for Firestore changes for fixed expenses
-    const fixedExpensesQuery = query(collection(db, 'fixed_expenses'));
-    userListeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (snapshot) => {
-        appState.fixedExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderBudgetPage();
-    }, (error) => handleError(error, "Kunne ikke hente faste udgifter.", "onSnapshot(fixed_expenses)"));
+    // OPDATERET: Denne lytter er flyttet til app.js, hvor den er filtreret efter den nuværende bruger
+    // for at undgå permissions-fejl.
 }
 
 /**
@@ -177,12 +173,15 @@ function calculateExpensesByItem() {
 
     // Group expenses by item name and user
     filteredExpenses.forEach(exp => {
+        // Vi bruger userId til at gruppere, så vi kan se udgifter pr. bruger, selvom vi kun filtrerer på én bruger.
+        const user = appState.users.find(u => u.id === exp.userId) || { name: 'Ukendt' };
         const itemKey = `${exp.name}-${exp.userId}`;
         if (!expensesByItem[itemKey]) {
             expensesByItem[itemKey] = {
                 name: exp.name,
                 userId: exp.userId,
                 category: exp.category,
+                userName: user.name,
                 months: {}
             };
         }
@@ -277,7 +276,7 @@ function renderBudgetGrid(data) {
         }).join('');
         return `
             <div class="budget-grid-row">
-                <div class="budget-grid-cell category-cell">${item.name}</div>
+                <div class="budget-grid-cell category-cell">${item.name} (${item.userName})</div>
                 ${rowHtml}
                 <div class="budget-grid-cell">${itemYearlyTotal.toFixed(2).replace('.', ',')}</div>
             </div>
