@@ -214,19 +214,26 @@ function renderBudgetGrid(data) {
     const container = appElements.budgetGridContainer;
     container.innerHTML = '';
     
-    const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
     const itemKeys = Object.keys(data);
     
-    // Beregn totaler for hele husstanden og for hver post
+    // Beregn totaler for hver post
+    const postTotals = {};
+    itemKeys.forEach(key => {
+        const item = data[key];
+        postTotals[key] = months.reduce((sum, month) => sum + (item.months[month] || 0), 0);
+    });
+
+    // Beregn totaler for hele husstanden
     const monthlyTotals = months.map(month => 
         itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
     );
-    const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
+    const yearlyTotal = itemKeys.reduce((sum, key) => sum + postTotals[key], 0);
 
     const headerHtml = `
         <div class="budget-grid-row budget-grid-header">
             <div class="budget-grid-cell header-cell">Post</div>
-            ${months.map(month => `<div class="budget-grid-cell header-cell">${month.charAt(0).toUpperCase() + month.slice(1)}</div>`).join('')}
+            ${months.map(month => `<div class="budget-grid-cell header-cell">${month}</div>`).join('')}
             <div class="budget-grid-cell header-cell">Total</div>
         </div>
     `;
@@ -234,17 +241,15 @@ function renderBudgetGrid(data) {
     // Rækker for individuelle udgiftsposter
     const bodyHtml = itemKeys.map(key => {
         const item = data[key];
-        const itemMonthlyTotals = months.map(month => item.months[month] || 0);
-        const itemYearlyTotal = itemMonthlyTotals.reduce((sum, amount) => sum + amount, 0);
         const rowHtml = months.map(month => {
             const amount = item.months[month] || 0;
-            return `<div class="budget-grid-cell" data-month="${month}" data-expense-id="${item.name}">${amount.toFixed(2).replace('.', ',')}</div>`;
+            return `<div class="budget-grid-cell">${amount.toFixed(2).replace('.', ',')}</div>`;
         }).join('');
         return `
             <div class="budget-grid-row">
                 <div class="budget-grid-cell category-cell">${item.name} (${item.userName})</div>
                 ${rowHtml}
-                <div class="budget-grid-cell total-cell">${itemYearlyTotal.toFixed(2).replace('.', ',')}</div>
+                <div class="budget-grid-cell total-cell">${postTotals[key].toFixed(2).replace('.', ',')}</div>
             </div>
         `;
     }).join('');
