@@ -16,8 +16,7 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-// Fjerner import af initMaintenance da filen ikke eksisterer
-// import { initMaintenance, renderMaintenancePage } from './maintenance.js';
+import { initBudget, renderBudgetPage } from './budget.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -83,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         projectsGrid: document.getElementById('projects-grid'),
         projectMaterialsContainer: document.getElementById('project-materials-container'),
         addMaterialBtn: document.getElementById('add-material-btn'),
-        addMaintenanceLogBtn: document.getElementById('add-maintenance-log-btn'),
 
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
@@ -179,6 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
+        
+        // NEW: Budget Page
+        monthlyExpensesChart: document.getElementById('monthly-expenses-chart'),
+        expenseCategoryList: document.getElementById('expense-category-list'),
     };
 
     function computeDerivedShoppingLists() {
@@ -297,8 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.listeners.references = onSnapshot(referencesRef, (doc) => {
             if (doc.exists()) {
                 state.references = doc.data();
-                // FIX: Aktiverer kun de relevante knapper, som brugeren har brug for.
-                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
                 buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 setReferencesLoaded(true);
                 handleNavigation(window.location.hash);
@@ -325,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
@@ -335,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [mainHash, subId] = hash.split('/');
             state.currentlyViewedRoomId = subId || null;
 
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#references'];
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#budget', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -348,14 +349,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
-                    const activeTab = elements.hjemNavTabs.querySelector('.active')?.dataset.target;
-                    // FIX: Tilføjer tjek for om funktionen eksisterer, før den kaldes
-                    if (activeTab === 'hjem-maintenance' && typeof renderMaintenancePage !== 'undefined') {
-                        renderMaintenancePage();
-                    } else {
-                        renderRoomsListPage();
-                        renderProjects();
-                    }
+                    renderRoomsListPage();
+                    renderProjects();
                     break;
                 case '#room-details':
                     if (state.currentlyViewedRoomId) {
@@ -371,6 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 case '#inventory':
                     renderInventory();
                     break;
+                case '#budget':
+                    renderBudgetPage();
+                    break;
                 case '#references':
                     renderReferencesPage();
                     break;
@@ -385,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupAuthEventListeners(elements);
         initAuth(onLogin, onLogout);
 
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.addMaintenanceLogBtn, elements.editRoomBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
 
         initUI(state, elements);
@@ -398,10 +396,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        // FIX: Fjerner kald til initMaintenance da modulet ikke eksisterer
-        // initMaintenance(state, elements);
         initExpenses(state);
         initEvents(state, elements);
+        initBudget(state, elements);
     }
 
     init();
