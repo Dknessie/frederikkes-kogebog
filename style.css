@@ -1930,7 +1930,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
-/* NEW: Budget page styles */
+/* ===== 11. NEW Budget Page Styles ===== */
 .budget-dashboard {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
@@ -1946,6 +1946,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     align-items: center;
     margin-bottom: var(--spacing-l);
     flex-wrap: wrap;
+    gap: var(--spacing-m);
 }
 .budget-year-nav {
     display: flex;
@@ -1969,26 +1970,40 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: var(--small-font-size);
 }
 
+.add-fixed-expense-container {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-l);
+    margin-bottom: var(--spacing-l);
+}
+.add-fixed-expense-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-m) var(--spacing-l);
+    align-items: end;
+}
+.add-fixed-expense-form .form-actions {
+    grid-column: 1 / -1; /* Make actions span all columns */
+    margin-top: 0;
+}
+
 .budget-grid-container {
     overflow-x: auto;
     width: 100%;
+    margin-bottom: var(--spacing-s);
 }
 .budget-grid {
     display: grid;
-    grid-template-columns: minmax(150px, 1fr) repeat(12, 100px);
+    grid-template-columns: minmax(200px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
     border-collapse: collapse;
-    width: fit-content;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-.budget-grid-header {
-    display: contents; /* Gør at børnene fungerer som gitter-elementer */
+    width: fit-content; /* Allow grid to expand beyond container width */
+    min-width: 100%;
 }
 .budget-grid-row {
     display: contents;
 }
 .budget-grid-cell {
-    padding: var(--spacing-s);
+    padding: var(--spacing-s) var(--spacing-m);
     text-align: right;
     border: 1px solid var(--border-color);
     background-color: var(--light-bg-color);
@@ -2000,71 +2015,76 @@ input:checked + .slider:before { transform: translateX(22px); }
     justify-content: flex-end;
     font-size: var(--small-font-size);
 }
+.budget-grid-row:hover .budget-grid-cell {
+    background-color: var(--secondary-color);
+}
 .budget-grid-cell.header-cell {
     background-color: var(--primary-color);
     color: var(--white-color);
     font-weight: 600;
     text-align: center;
     justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
-.budget-grid-cell.category-cell, .budget-grid-cell.total-cell {
-    background-color: var(--secondary-color);
+.budget-grid-cell.category-cell {
+    background-color: var(--light-bg-color);
     font-weight: 600;
     text-align: left;
     justify-content: flex-start;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+.budget-grid-row:hover .budget-grid-cell.category-cell {
+    background-color: #e9e5dc;
+}
+.budget-grid-cell .owner-tag {
+    font-size: 0.8em;
+    color: #777;
+    margin-left: var(--spacing-s);
 }
 .budget-grid-cell.total-cell {
     font-weight: 700;
 }
-.budget-grid-cell.user-cell {
-    background-color: #f0f0f0;
+.budget-grid-cell.actions-cell {
+    background-color: var(--light-bg-color);
+}
+.budget-grid-cell.actions-cell .actions {
+    display: flex;
+    justify-content: center;
+    width: 100%;
 }
 
-#budget-fixed-expenses {
-    margin-top: var(--spacing-xl);
-}
-#fixed-expenses-list {
+.budget-totals-bar {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-l);
+    grid-template-columns: minmax(200px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
+    width: fit-content;
+    min-width: 100%;
+    position: sticky;
+    bottom: 0;
+    background-color: var(--white-color);
+    box-shadow: 0 -4px 8px rgba(0,0,0,0.05);
 }
-.fixed-expense-card {
-    background-color: var(--light-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+.budget-totals-cell {
     padding: var(--spacing-m);
-    box-shadow: var(--shadow);
-    position: relative;
-    transition: transform 0.2s ease;
-}
-.fixed-expense-card:hover {
-    transform: translateY(-2px);
-}
-.fixed-expense-card h4 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-s);
-}
-.fixed-expense-card .interval {
-    font-style: italic;
-    font-size: var(--small-font-size);
-    color: #666;
-}
-.fixed-expense-card .amount {
+    text-align: right;
     font-weight: 700;
-    color: var(--primary-color);
-    margin-top: var(--spacing-s);
+    border: 1px solid var(--border-color);
+    border-top: 2px solid var(--text-color);
+    background-color: var(--secondary-color);
 }
-.fixed-expense-card .actions {
-    position: absolute;
-    top: var(--spacing-s);
-    right: var(--spacing-s);
-    display: none;
+.budget-totals-cell.header-cell {
+    text-align: left;
+    background-color: var(--text-color);
+    color: var(--white-color);
+    position: sticky;
+    left: 0;
 }
-.fixed-expense-card:hover .actions {
-    display: flex;
-}
-.add-fixed-expense-form .form-grid-3-col {
-    grid-template-columns: 2fr 1fr 1fr;
+.budget-totals-cell.grand-total-cell {
+    background-color: var(--primary-color);
+    color: var(--white-color);
 }
 
 
@@ -2095,11 +2115,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     #inventory .actions-bar {
         display: flex;
     }
-    .budget-grid-cell {
-        font-size: 0.7rem;
-    }
-    .budget-grid-cell.category-cell, .budget-grid-cell.total-cell {
-        font-size: 0.8rem;
+    .add-fixed-expense-form {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
 }
 
@@ -2135,9 +2152,6 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     #add-calendar-event-modal .quick-actions-container {
-        grid-template-columns: 1fr;
-    }
-    #budget-fixed-expenses {
         grid-template-columns: 1fr;
     }
 }
