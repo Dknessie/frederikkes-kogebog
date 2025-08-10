@@ -1119,6 +1119,17 @@ header {
     margin-top: var(--spacing-s);
     padding-left: var(--spacing-l);
 }
+.household-members-card {
+    grid-column: 1 / -1;
+}
+.member-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
 
 /* ===== 8. Nyt Dashboard Layout ===== */
 .dashboard-layout {
