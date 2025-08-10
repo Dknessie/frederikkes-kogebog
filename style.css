@@ -5,9 +5,9 @@
 /* ===== 1. Generel Styling & Variabler ===== */
 :root {
     /* Farvepalette */
-    --primary-color: #d1603d; 
-    --secondary-color: #f3f0e9; 
-    --accent-color: #5d8a66; 
+    --primary-color: #d1603d;
+    --secondary-color: #f3f0e9;
+    --accent-color: #5d8a66;
     --text-color: #3d3d3d;
     --border-color: #e0e0e0;
     --light-bg-color: #fdfdfd;
@@ -17,6 +17,10 @@
     --theme-bg: #F5F5F1;
     --theme-light-blue: #E3F2FD;
     --theme-grey: #B0B0B0;
+
+    /* NEW: Bosch-inspirerede farver til Materialer */
+    --bosch-green: #007bc0;
+    --bosch-red: #c4002f;
 
     /* Statusfarver */
     --status-green: #4CAF50;
@@ -56,7 +60,7 @@ body {
 
 .page {
     padding: var(--spacing-l);
-    max-width: 1600px; 
+    max-width: 1600px;
     margin: 0 auto;
     animation: fadeIn 0.5s ease-in-out;
 }
@@ -292,12 +296,12 @@ header {
     color: var(--primary-color);
 }
 
-#app-main-content { 
-    flex-grow: 1; 
+#app-main-content {
+    flex-grow: 1;
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-/* ===== 5. NYT CALENDAR DESIGN ===== */
+/* ===== 5. NEW CALENDAR DESIGN ===== */
 #calendar .page {
     padding: 0;
 }
@@ -385,9 +389,14 @@ header {
     display: flex;
     flex-direction: column;
     min-height: 400px;
+    position: relative;
+    transition: all 0.2s ease-in-out;
 }
+
+/* NEW: Style for current day ring */
 .calendar-day-card.is-today {
-    border: 2px solid var(--theme-light-blue);
+    box-shadow: 0 0 0 4px var(--accent-color);
+    border: 2px solid var(--accent-color);
 }
 .meal-slot {
     flex: 1;
@@ -469,8 +478,6 @@ header {
 .calendar-event.fødselsdag { border-color: #E91E63; }
 .calendar-event.aftale { border-color: #2196F3; }
 .calendar-event.udgivelse { border-color: #9C27B0; }
-.calendar-event.to-do { border-color: #B0B0B0; }
-
 
 .calendar-event.is-cooked {
     opacity: 0.6;
@@ -539,7 +546,6 @@ header {
 .event-dot.fødselsdag { background-color: #E91E63; }
 .event-dot.aftale { background-color: #2196F3; }
 .event-dot.udgivelse { background-color: #9C27B0; }
-.event-dot.to-do { background-color: #B0B0B0; }
 
 
 /* ===== 6. Indkøbsliste Modal & Temaer ===== */
@@ -568,16 +574,16 @@ header {
     gap: var(--spacing-s);
     margin-top: var(--spacing-m);
 }
-.add-item-form input { 
-    flex-grow: 1; 
+.add-item-form input {
+    flex-grow: 1;
     padding: var(--spacing-m);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
 }
-.add-item-form button { 
-    flex-shrink: 0; 
-    font-size: 1.4rem; 
-    color: var(--accent-color); 
+.add-item-form button {
+    flex-shrink: 0;
+    font-size: 1.4rem;
+    color: var(--accent-color);
     background-color: var(--secondary-color);
     border-radius: var(--border-radius);
     width: 44px;
@@ -621,41 +627,55 @@ header {
     padding: 0;
 }
 
-/* Tema 2: Materialer (Værktøjskasse) */
+/* Tema 2: Materialer (Værktøjskasse - nu Bosch) */
 .shopping-list-theme-materials {
-    background-color: #2c3e50;
-    color: #ecf0f1;
+    background-color: var(--bosch-green);
+    color: var(--white-color);
+    padding: var(--spacing-l);
 }
 .shopping-list-theme-materials .shopping-list-header h3,
 .shopping-list-theme-materials h4 {
-    color: #f1c40f;
+    color: var(--white-color);
 }
 .shopping-list-theme-materials .close-modal-btn {
-    color: #bdc3c7;
+    color: var(--white-color);
 }
 .shopping-list-theme-materials .project-group h4 {
     font-family: var(--body-font);
     font-weight: 700;
     font-size: 1.1rem;
     padding-bottom: var(--spacing-s);
-    border-bottom: 1px solid #34495e;
+    border-bottom: 1px solid var(--white-color);
 }
 .shopping-list-theme-materials .material-row {
     display: grid;
     grid-template-columns: 1fr 80px 80px 100px;
     gap: var(--spacing-l);
     padding: var(--spacing-m) 0;
-    border-bottom: 1px solid #34495e;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
     align-items: center;
 }
-.shopping-list-theme-materials .material-name {
+.shopping-list-theme-materials .material-row span {
+    color: var(--white-color); /* Sørger for at teksten er læselig */
+}
+.shopping-list-theme-materials .material-header {
     font-weight: 600;
+    text-transform: uppercase;
+}
+.shopping-list-theme-materials .material-name {
+    font-weight: 700;
+    color: var(--white-color);
 }
 .shopping-list-theme-materials .add-item-form input {
-    background-color: #34495e;
-    color: #ecf0f1;
-    border-color: #7f8c8d;
+    background-color: var(--white-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
 }
+.shopping-list-theme-materials .add-item-form button {
+    background-color: var(--bosch-red);
+    color: var(--white-color);
+}
+
 
 /* Tema 3: Ønskeliste (Opslagstavle) */
 .shopping-list-theme-wishlist .wishlist-grid {
@@ -701,8 +721,8 @@ header {
 }
 
 /* ===== 7. Kogebog, Hjem & Referencer Sider ===== */
-.actions-bar { 
-    margin-bottom: var(--spacing-l); 
+.actions-bar {
+    margin-bottom: var(--spacing-l);
     display: flex;
     gap: var(--spacing-m);
     flex-wrap: wrap;
@@ -747,7 +767,7 @@ header {
     flex-direction: column;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative; 
+    position: relative;
 }
 .recipe-card:hover { transform: translateY(-5px); }
 
@@ -801,7 +821,7 @@ header {
     display: flex;
     justify-content: space-between;
     gap: var(--spacing-l);
-    margin-bottom: var(--spacing-m); 
+    margin-bottom: var(--spacing-m);
     align-items: center;
     flex-wrap: wrap;
 }
@@ -975,7 +995,7 @@ header {
     gap: var(--spacing-m);
     padding: var(--spacing-s) 0;
     border-bottom: 1px solid #f0f0f0;
-    font-size: var(--small-font-size); 
+    font-size: var(--small-font-size);
     flex-wrap: wrap;
 }
 .batch-item:last-child {
@@ -983,7 +1003,7 @@ header {
 }
 .batch-info {
     color: #333;
-    white-space: nowrap; 
+    white-space: nowrap;
 }
 .batch-info.status-red { color: var(--status-red); font-weight: 600; }
 .batch-info.status-yellow { color: var(--status-yellow); font-weight: 600; }
@@ -1131,7 +1151,7 @@ header {
     font-size: 1.1rem;
     color: #555;
 }
-/* OPDATERET: Timeline Widget Styles */
+/* NEW: Timeline Widget Styles */
 .widget-header {
     display: flex;
     justify-content: space-between;
@@ -1141,20 +1161,14 @@ header {
 .widget-header h3 {
     margin: 0;
 }
-/* NYT: Grid for tidslinjen */
-.timeline-grid-3-col {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-l);
-}
-.timeline-column h4 {
+.timeline-day-group h4 {
+    margin-top: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+    padding-bottom: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
     font-family: var(--body-font);
     font-size: 1rem;
     color: var(--text-color);
-    margin-top: 0;
-    margin-bottom: var(--spacing-m);
-    padding-bottom: var(--spacing-s);
-    border-bottom: 1px solid var(--border-color);
 }
 .timeline-item {
     display: flex;
@@ -1275,11 +1289,11 @@ header {
     border: 1px solid #fadf98;
 }
 .shopping-widget-item.materials {
-    background-color: #34495e;
-    color: #ecf0f1;
+    background-color: var(--bosch-red);
+    color: var(--white-color);
 }
 .shopping-widget-item.materials .widget-price {
-    color: #f1c40f;
+    color: var(--white-color);
 }
 .shopping-widget-item.wishlist {
     background-color: #f4f4f4;
@@ -1352,18 +1366,36 @@ header {
     grid-template-columns: repeat(3, 1fr);
 }
 
-/* OPDATERET: Ny layout for Hjem sektionen */
-.hjem-overview-grid-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: var(--spacing-l);
-    margin-top: var(--spacing-l);
+.hjem-nav-tabs {
+    display: flex;
+    gap: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-l);
 }
-.hjem-overview-grid-layout .dashboard-widget {
-    margin-top: 0;
+.hjem-tab {
+    padding: var(--spacing-m) var(--spacing-l);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
 }
-
-/* Fjernet: `.hjem-nav-tabs`, `.hjem-tab`, `.hjem-subpage` */
+.hjem-tab:hover {
+    color: var(--primary-color);
+}
+.hjem-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+.hjem-subpage {
+    display: none;
+}
+.hjem-subpage.active {
+    display: block;
+}
 
 .room-details-header {
     display: flex;
@@ -1377,52 +1409,13 @@ header {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: var(--spacing-l);
 }
-.room-details-main-column {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-.room-details-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-.logbook-card h4 {
-    margin: 0;
-    border-bottom: none;
-    padding-bottom: 0;
-}
-.logbook-container {
-    padding-top: var(--spacing-m);
-}
-.log-entry {
-    background-color: var(--light-bg-color);
-    border-left: 4px solid var(--accent-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-m);
-    margin-bottom: var(--spacing-s);
-    cursor: pointer;
-}
-.log-entry:hover {
-    background-color: var(--secondary-color);
-}
-.log-entry-header {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-s);
-    font-weight: 600;
-    font-size: var(--small-font-size);
-}
-.log-entry-desc {
-    font-size: var(--small-font-size);
-    margin: var(--spacing-s) 0 0 0;
-}
-
 .room-detail-card {
     background: var(--white-color);
     border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
+    box-shadow: var(--shadow);
     padding: var(--spacing-l);
+    display: flex;
+    flex-direction: column;
 }
 .room-detail-card h4 {
     margin-top: 0;
@@ -1452,7 +1445,31 @@ header {
     font-weight: 600;
 }
 
-/* FJERNEDE: maintenance styles, da modulet er fjernet */
+/* NEW: Maintenance Page Styles */
+.maintenance-room-section {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    margin-bottom: var(--spacing-l);
+    box-shadow: var(--shadow);
+}
+.maintenance-log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--spacing-m);
+}
+.maintenance-log-table th, .maintenance-log-table td {
+    padding: var(--spacing-m);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.maintenance-log-table th {
+    font-weight: 600;
+}
+.maintenance-log-table td:last-child {
+    text-align: right;
+}
+
 
 /* ===== 9. Modaler ===== */
 .modal-overlay {
@@ -1579,7 +1596,7 @@ header {
     width: 100%;
     height: 250px;
     max-height: 250px;
-    object-fit: cover; 
+    object-fit: cover;
     border-radius: var(--border-radius);
     margin-bottom: var(--spacing-l);
     background-color: #f0f0f0;
@@ -1712,7 +1729,7 @@ header {
 .ingredient-row .ingredient-name {
     flex-grow: 1;
 }
-.ingredient-row .ingredient-quantity { 
+.ingredient-row .ingredient-quantity {
     width: 70px;
     text-align: right;
 }
@@ -1723,11 +1740,11 @@ header {
     width: 150px;
 }
 
-.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn, .wishlist-row .remove-wishlist-item-btn, .project-link-row .remove-project-link-btn { 
-    color: #adb5bd; 
+.ingredient-row .remove-ingredient-btn, .paint-row .remove-paint-btn, .room-inventory-row .remove-room-inventory-btn, .wishlist-row .remove-wishlist-item-btn, .project-link-row .remove-project-link-btn {
+    color: #adb5bd;
 }
-.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover, .project-link-row .remove-project-link-btn:hover { 
-    color: var(--status-red); 
+.ingredient-row .remove-ingredient-btn:hover, .paint-row .remove-paint-btn:hover, .room-inventory-row .remove-room-inventory-btn:hover, .wishlist-row .remove-wishlist-item-btn:hover, .project-link-row .remove-project-link-btn:hover {
+    color: var(--status-red);
 }
 
 .switch-group {
@@ -1985,7 +2002,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     .mobile-tab-bar {
         display: flex;
     }
-    .dashboard-layout, .hjem-overview-grid-layout {
+    .dashboard-layout {
         grid-template-columns: 1fr;
     }
     .page {
@@ -2002,9 +2019,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     #inventory .actions-bar {
         display: flex;
-    }
-    .room-details-grid {
-        grid-template-columns: 1fr;
     }
 }
 
@@ -2043,3 +2057,4 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
 }
+
