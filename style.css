@@ -1170,6 +1170,7 @@ header {
     background-color: var(--secondary-color);
     border-radius: var(--border-radius);
     padding: var(--spacing-m);
+    min-height: 200px;
 }
 .timeline-column h4 {
     margin-top: 0;
