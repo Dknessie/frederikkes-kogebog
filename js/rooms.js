@@ -435,4 +435,3 @@ async function handleDeleteLogEntry() {
         }
     }
 }
-�
