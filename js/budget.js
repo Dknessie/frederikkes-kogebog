@@ -132,18 +132,22 @@ function renderUserSelector() {
     selector.appendChild(allOption);
 
     // Get all users from the appState and add them to the dropdown
-    appState.users.forEach(user => {
+    // OPDATERET: Nu bruger vi appState.references.householdMembers
+    const householdMembers = appState.references.householdMembers || [];
+    householdMembers.forEach(member => {
         const option = document.createElement('option');
-        option.value = user.id;
-        option.textContent = user.name || 'Ukendt bruger';
+        option.value = member;
+        option.textContent = member;
         selector.appendChild(option);
     });
-    
-    // Set the selected user
-    if (currentBudgetViewUserId === null) {
-        selector.value = 'all';
+
+    // Sætter den valgte bruger baseret på bruger-navnet, ikke ID
+    const currentUserName = appState.currentUser.name;
+    const isMember = householdMembers.includes(currentUserName);
+    if (isMember) {
+        selector.value = currentUserName;
     } else {
-        selector.value = currentBudgetViewUserId;
+        selector.value = 'all';
     }
 }
 
@@ -153,32 +157,31 @@ function renderUserSelector() {
  */
 function calculateExpensesByItem() {
     const expensesByItem = {};
-    const userIdToFilter = currentBudgetViewUserId;
+    const userNameToFilter = currentBudgetViewUserId;
     const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 
     const allExpenses = [
         ...appState.fixedExpenses.map(exp => ({ ...exp, isFixed: true })),
-        // OPDATERET: Vi behøver ikke længere at filtrere her, da `onSnapshot` allerede har filtreret for os.
         ...appState.expenses.map(exp => ({ ...exp, isFixed: false, date: exp.date.toDate() }))
     ];
 
+    // OPDATERET: Filterer på userName i stedet for userId
     const filteredExpenses = allExpenses.filter(exp => {
-        if (userIdToFilter) {
-            return exp.userId === userIdToFilter;
+        if (userNameToFilter) {
+            return exp.userName === userNameToFilter;
         }
         return true;
     });
 
     // Group expenses by item name and user
     filteredExpenses.forEach(exp => {
-        const user = appState.users.find(u => u.id === exp.userId) || { name: 'Ukendt' };
-        const itemKey = `${exp.name}-${exp.userId}`;
+        const user = exp.userName || 'Ukendt';
+        const itemKey = `${exp.name}-${user}`;
         if (!expensesByItem[itemKey]) {
             expensesByItem[itemKey] = {
                 name: exp.name,
-                userId: exp.userId,
+                userName: user,
                 category: exp.category,
-                userName: user.name,
                 months: {}
             };
         }
@@ -213,20 +216,22 @@ function renderBudgetGrid(data) {
     
     const months = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
     const itemKeys = Object.keys(data);
-    const users = appState.users;
+    
+    // OPDATERET: Nu bruger vi navne i stedet for ID'er til at beregne totaler
+    const householdMembers = appState.references.householdMembers || [];
 
-    // Calculate totals for the entire household and for each user
+    // Calculate totals for the entire household and for each member
     const monthlyTotals = months.map(month => 
         itemKeys.reduce((sum, key) => sum + (data[key].months[month] || 0), 0)
     );
     const yearlyTotal = monthlyTotals.reduce((sum, amount) => sum + amount, 0);
 
     const userTotals = {};
-    users.forEach(user => {
-        userTotals[user.id] = { name: user.name || 'Ukendt', months: {} };
+    householdMembers.forEach(name => {
+        userTotals[name] = { name: name, months: {} };
         months.forEach(month => {
-            userTotals[user.id].months[month] = itemKeys
-                .filter(key => data[key].userId === user.id)
+            userTotals[name].months[month] = itemKeys
+                .filter(key => data[key].userName === name)
                 .reduce((sum, key) => sum + (data[key].months[month] || 0), 0);
         });
     });
@@ -239,7 +244,6 @@ function renderBudgetGrid(data) {
         </div>
     `;
 
-    // Row for the entire household's total
     const totalRowHtml = `
         <div class="budget-grid-row">
             <div class="budget-grid-cell total-cell">Hele Husstanden</div>
@@ -249,8 +253,8 @@ function renderBudgetGrid(data) {
     `;
 
     // Rows for individual users' totals
-    const userRowsHtml = Object.keys(userTotals).map(userId => {
-        const user = userTotals[userId];
+    const userRowsHtml = Object.keys(userTotals).map(userName => {
+        const user = userTotals[userName];
         const userMonthlyTotals = months.map(month => user.months[month] || 0);
         const userYearlyTotal = userMonthlyTotals.reduce((sum, amount) => sum + amount, 0);
         return `
@@ -288,12 +292,12 @@ function renderBudgetGrid(data) {
  */
 function renderFixedExpensesList() {
     const container = appElements.budgetFixedExpensesContainer;
-    const userIdToFilter = currentBudgetViewUserId;
+    const userNameToFilter = currentBudgetViewUserId;
     
     // Filter expenses based on the selected user
     const filteredFixedExpenses = appState.fixedExpenses.filter(exp => {
-        if (userIdToFilter) {
-            return exp.userId === userIdToFilter;
+        if (userNameToFilter) {
+            return exp.userName === userNameToFilter;
         }
         return true; // Show all for "Hele Husstanden"
     });
@@ -373,7 +377,23 @@ async function handleDeleteFixedExpense(expenseId) {
 }
 
 function openAddExpenseModal(month, category) {
-    // ... (unchanged)
+    // Populer bruger-dropdown i modalen
+    const userSelect = appElements.addExpenseForm.querySelector('#add-expense-user');
+    userSelect.innerHTML = ''; // Ryd eksisterende options
+    
+    // Tilføj en option for hver bruger i husstanden
+    appState.users.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = user.name;
+        userSelect.appendChild(option);
+    });
+
+    // Vælg den nuværende bruger som standard
+    userSelect.value = appState.currentUser.uid;
+    
+    // Åbn modalen
+    appElements.addExpenseModal.classList.remove('hidden');
 }
 
 async function handleSaveExpense(e) {
@@ -382,7 +402,6 @@ async function handleSaveExpense(e) {
     const date = appElements.addExpenseForm.querySelector('#add-expense-date').value;
     const category = appElements.addExpenseForm.querySelector('#add-expense-category').value;
     const description = appElements.addExpenseForm.querySelector('#add-expense-description').value;
-    // OPDATERET: Tilføjet bruger-dropdown
     const userId = appElements.addExpenseForm.querySelector('#add-expense-user').value;
 
     if (!amount || !date || !category || !userId) {
