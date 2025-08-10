@@ -67,9 +67,9 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'),
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'),
+        // Hjem - OPPDATERET for at afspejle den nye, samlede side
+        hjemNavTabs: document.querySelector('.hjem-nav-tabs'), // Dette element fjernes i HTML
+        hjemSubpages: document.querySelectorAll('.hjem-subpage'), // Disse elementer er nu bare sektioner
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -381,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderMealPlanner();
                     break;
                 case '#hjem':
+                    // OPPDATERET: Kalder begge rendering-funktioner direkte
                     renderRoomsListPage();
                     renderProjects();
                     break;
