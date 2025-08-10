@@ -236,7 +236,7 @@ function renderBudgetGrid(data) {
     });
 
     const headerHtml = `
-        <div class="budget-grid-header">
+        <div class="budget-grid-row budget-grid-header">
             <div class="budget-grid-cell header-cell">Post</div>
             ${months.map(month => `<div class="budget-grid-cell header-cell">${month.charAt(0).toUpperCase() + month.slice(1)}</div>`).join('')}
             <div class="budget-grid-cell header-cell">Total</div>
@@ -291,7 +291,76 @@ function renderBudgetGrid(data) {
  * Renders the list of fixed expenses.
  */
 function renderFixedExpensesList() {
-    // ... (unchanged)
+    const container = appElements.budgetFixedExpensesContainer;
+    const userIdToFilter = currentBudgetViewUserId;
+    
+    // Filter expenses based on the selected user
+    const filteredFixedExpenses = appState.fixedExpenses.filter(exp => {
+        if (userIdToFilter) {
+            return exp.userId === userIdToFilter;
+        }
+        return true; // Show all for "Hele Husstanden"
+    });
+
+    if (filteredFixedExpenses.length === 0) {
+        container.innerHTML = `<p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>`;
+    } else {
+        const cardsHtml = filteredFixedExpenses.map(exp => `
+            <div class="fixed-expense-card" data-id="${exp.id}">
+                <h4>${exp.name}</h4>
+                <div class="actions">
+                    <button class="btn-icon edit-fixed-expense-btn"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete-fixed-expense-btn"><i class="fas fa-trash"></i></button>
+                </div>
+                <span class="amount">${exp.amount.toFixed(2).replace('.', ',')} kr.</span>
+                <span class="interval">${exp.interval}</span>
+                <span class="category">${exp.category}</span>
+            </div>
+        `).join('');
+        
+        container.innerHTML = `
+            <h3>Faste Udgifter</h3>
+            <p class="small-text">Dette er gentagne udgifter, der automatisk medregnes i dit budget.</p>
+            <div id="fixed-expenses-list">
+                ${cardsHtml}
+            </div>
+        `;
+    }
+    
+    // Always add the form for creating new expenses
+    const formHtml = `
+        <hr>
+        <h4>Tilføj ny fast udgift</h4>
+        <form id="add-fixed-expense-form" class="add-fixed-expense-form">
+            <div class="form-grid-2-col">
+                <div class="input-group">
+                    <label for="fixed-expense-name-new">Navn</label>
+                    <input type="text" id="fixed-expense-name-new" required>
+                </div>
+                <div class="input-group">
+                    <label for="fixed-expense-amount-new">Beløb (kr.)</label>
+                    <input type="number" id="fixed-expense-amount-new" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="fixed-expense-interval-new">Interval</label>
+                    <select id="fixed-expense-interval-new" required>
+                        <option value="månedligt">Månedligt</option>
+                        <option value="kvartalsvist">Kvartalsvist</option>
+                        <option value="årligt">Årligt</option>
+                    </select>
+                </div>
+                 <div class="input-group">
+                    <label for="fixed-expense-category-new">Kategori</label>
+                    <input type="text" id="fixed-expense-category-new" required>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
+            </div>
+        </form>
+    `;
+    container.innerHTML += formHtml;
+    document.getElementById('add-fixed-expense-form').addEventListener('submit', handleSaveFixedExpense);
 }
 
 function openFixedExpenseModal(expenseId = null) {
