@@ -1,7 +1,7 @@
 // js/references.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteField, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, collection, query, where, getDocs, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -11,15 +11,17 @@ export function initReferences(state, elements) {
     appState = state;
     appElements = elements;
 
-    appElements.referencesContainer.addEventListener('click', handleListClick);
-    appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    if (appElements.referencesContainer) {
+        appElements.referencesContainer.addEventListener('click', handleListClick);
+        appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    }
     
     // NEW: Household member listeners
-    if (appElements.addHouseholdMemberBtn) {
-        appElements.addHouseholdMemberBtn.addEventListener('click', e => {
+    const addMemberForm = document.getElementById('add-member-form');
+    if (addMemberForm) {
+        addMemberForm.addEventListener('submit', e => {
             e.preventDefault();
-            const form = e.target.closest('form');
-            const emailInput = form.querySelector('#new-member-email');
+            const emailInput = addMemberForm.querySelector('#new-member-email');
             const email = emailInput.value.trim();
             if (email) {
                 addHouseholdMember(email);
