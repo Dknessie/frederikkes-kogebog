@@ -260,9 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
             projects: 'projects',
             rooms: 'rooms',
             maintenance_logs: 'maintenanceLogs',
-            expenses: 'expenses',
-            events: 'events',
-            fixed_expenses: 'fixedExpenses'
+            events: 'events'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -281,6 +279,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
 
+        // NEW: Listen to expenses and fixed_expenses for the entire household
+        const householdMembers = appState.users.map(u => u.id);
+        const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
+        state.listeners.expenses = onSnapshot(expensesQuery, (snapshot) => {
+            state.expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'expenses'));
+        
+        const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "in", householdMembers));
+        state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (snapshot) => {
+            state.fixedExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'fixed_expenses'));
+        
         // NEW: Listener for household users
         const usersQuery = query(collection(db, 'users'));
         state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
