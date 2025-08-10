@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         weekViewBtn: document.getElementById('week-view-btn'),
         monthViewBtn: document.getElementById('month-view-btn'),
         calendarWeekView: document.getElementById('calendar-week-view'),
-        calendarMonthView: document.getElementById('calendar-month-view'),
+        calendarMonthView: document.getElementById('calendar-month-grid'),
         calendarWeekHeader: document.querySelector('.calendar-week-header'),
         calendarMonthGrid: document.getElementById('calendar-month-grid'),
         clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
@@ -183,18 +183,16 @@ document.addEventListener('DOMContentLoaded', () => {
         eventForm: document.getElementById('event-form'),
         
         // NEW: Budget Page
-        monthlyExpensesChart: document.getElementById('monthly-expenses-chart'),
-        expenseCategoryList: document.getElementById('expense-category-list'),
-        budgetFixedExpensesContainer: document.getElementById('budget-fixed-expenses'),
-        addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
-        fixedExpenseForm: document.getElementById('fixed-expense-form'),
-        addFixedExpenseModal: document.getElementById('add-fixed-expense-modal'),
         budgetGridContainer: document.getElementById('budget-grid-container'),
         budgetYearDisplay: document.getElementById('budget-year-display'),
         prevYearBtn: document.getElementById('prev-year-btn'),
         nextYearBtn: document.getElementById('next-year-btn'),
         addExpenseModal: document.getElementById('add-expense-modal'),
         addExpenseForm: document.getElementById('add-expense-form'),
+        
+        // NEW: References page elements
+        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
+        householdMembersList: document.getElementById('household-members-list'),
     };
 
     function computeDerivedShoppingLists() {
@@ -280,7 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // NEW: Listen to expenses and fixed_expenses for the entire household
-        const householdMembers = appState.users.map(u => u.id);
+        // Dette kræver, at du har sat dine Firestore sikkerhedsregler til at tillade `list` læsninger
+        const householdMembers = appState.users.length > 0 ? appState.users.map(u => u.id) : [userId];
         const expensesQuery = query(collection(db, 'expenses'), where("userId", "in", householdMembers));
         state.listeners.expenses = onSnapshot(expensesQuery, (snapshot) => {
             state.expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
