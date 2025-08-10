@@ -188,25 +188,26 @@
                 </div>
             </section>
             
+            <!-- Opdateret Hjem-sektion: Fjerner tabs og samler indholdet -->
             <section id="hjem" class="page hidden">
                 <h2>Hjem Administration</h2>
-                <div class="hjem-nav-tabs">
-                    <button class="hjem-tab active" data-target="hjem-rooms"><i class="fas fa-door-open"></i> Rum</button>
-                    <button class="hjem-tab" data-target="hjem-projects"><i class="fas fa-tools"></i> Projekter</button>
+                <div class="actions-bar">
+                    <button id="add-room-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tilføj Rum Detaljer
+                    </button>
+                    <button id="add-project-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tilføj Nyt Projekt
+                    </button>
                 </div>
-
-                <div id="hjem-rooms" class="hjem-subpage active">
-                    <div class="actions-bar">
-                        <button id="add-room-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Rum Detaljer</button>
+                <div class="hjem-content-container">
+                    <div id="hjem-rooms" class="hjem-subpage">
+                        <h3>Rum</h3>
+                        <div id="rooms-grid" class="recipe-grid"></div>
                     </div>
-                    <div id="rooms-grid" class="recipe-grid"></div>
-                </div>
-
-                <div id="hjem-projects" class="hjem-subpage hidden">
-                    <div class="actions-bar">
-                        <button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Nyt Projekt</button>
+                    <div id="hjem-projects" class="hjem-subpage">
+                        <h3>Projekter</h3>
+                        <div id="projects-grid" class="recipe-grid"></div>
                     </div>
-                    <div id="projects-grid" class="recipe-grid"></div>
                 </div>
             </section>
 
@@ -547,7 +548,7 @@
                 <div id="room-wishlist-container"></div>
                 <button type="button" id="add-wishlist-item-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Ønske</button>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Rum</sætte
+                    <button type="submit" class="btn btn-primary">Gem Rum</button>
                 </div>
             </form>
         </div>
