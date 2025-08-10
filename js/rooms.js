@@ -93,6 +93,9 @@ export function initRoomDetails(state, elements) {
     }
 }
 
+/**
+ * Renders the rooms list for the new, combined 'Hjem' side.
+ */
 export function renderRoomsListPage() {
     const grid = appElements.roomsGrid;
     if (!grid) return;
@@ -435,11 +438,4 @@ async function handleDeleteLogEntry() {
             handleError(error, "Noten kunne ikke slettes.", "deleteLogEntry");
         }
     }
-}
-
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
 }
