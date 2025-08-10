@@ -21,19 +21,19 @@ export function initReferences(state, elements) {
     if (addMemberForm) {
         addMemberForm.addEventListener('submit', e => {
             e.preventDefault();
-            const emailInput = addMemberForm.querySelector('#new-member-email');
-            const email = emailInput.value.trim();
-            if (email) {
-                addHouseholdMember(email);
-                emailInput.value = '';
+            const nameInput = addMemberForm.querySelector('#new-member-name');
+            const name = nameInput.value.trim();
+            if (name) {
+                addHouseholdMember(name);
+                nameInput.value = '';
             }
         });
     }
     if (appElements.householdMembersList) {
         appElements.householdMembersList.addEventListener('click', e => {
             if (e.target.closest('.delete-member-btn')) {
-                const memberId = e.target.closest('[data-member-id]').dataset.memberId;
-                deleteHouseholdMember(memberId);
+                const memberName = e.target.closest('[data-member-name]').dataset.memberName;
+                deleteHouseholdMember(memberName);
             }
         });
     }
@@ -62,10 +62,28 @@ export function renderReferencesPage() {
             title: 'Standardenheder',
             items: appState.references.standardUnits || [],
             isSimpleList: true,
-            isReadOnly: true // Example of a read-only list
+            isReadOnly: true
         }
     };
 
+    // Household members card
+    const householdCard = document.createElement('div');
+    householdCard.className = 'reference-card';
+    householdCard.innerHTML = `
+        <h4>Husstandsmedlemmer</h4>
+        <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
+        <ul id="household-members-list" class="reference-list"></ul>
+        <form id="add-member-form" class="add-reference-form">
+            <div class="input-group">
+                <input type="text" id="new-member-name" placeholder="Tilføj nyt navn..." required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i></button>
+        </form>
+    `;
+    appElements.referencesContainer.appendChild(householdCard);
+    appElements.householdMembersList = householdCard.querySelector('#household-members-list');
+    
+    // Render other reference cards
     for (const key in referenceData) {
         const data = referenceData[key];
         const card = document.createElement('div');
@@ -148,55 +166,57 @@ export function renderHouseholdMembers() {
     if (!list) return;
 
     list.innerHTML = '';
-    const myId = appState.currentUser.uid;
     
-    appState.users.forEach(user => {
-        const isCurrentUser = user.id === myId;
-        const name = isCurrentUser ? `${user.name || 'Dig selv'} (mig)` : user.name || 'Ukendt bruger';
-        
-        const memberRow = document.createElement('div');
-        memberRow.className = 'member-row';
-        memberRow.dataset.memberId = user.id;
+    // OPDATERET: Henter medlemmer fra den nye "householdMembers"-liste i references
+    const members = appState.references.householdMembers || [];
+    
+    members.forEach(name => {
+        const memberRow = document.createElement('li');
+        memberRow.className = 'reference-item';
+        memberRow.dataset.memberName = name;
 
         memberRow.innerHTML = `
             <span>${name}</span>
             <div class="actions">
-                ${!isCurrentUser ? `<button class="btn-icon delete-member-btn" title="Fjern medlem"><i class="fas fa-trash"></i></button>` : ''}
+                <button class="btn-icon delete-member-btn" title="Fjern medlem"><i class="fas fa-trash"></i></button>
             </div>
         `;
         list.appendChild(memberRow);
     });
 }
 
-async function addHouseholdMember(email) {
-    const existingMember = appState.users.find(user => user.email === email);
-    if (existingMember) {
-        showNotification({title: "Medlem findes allerede", message: "Denne email er allerede en del af husstanden."});
+// OPDATERET: Oprettet nye funktioner til at håndtere den enkle liste af navne
+async function addHouseholdMember(name) {
+    const members = appState.references.householdMembers || [];
+    if (members.includes(name)) {
+        showNotification({title: "Navn findes allerede", message: `"${name}" er allerede på listen.`});
         return;
     }
 
     try {
-        await addDoc(collection(db, 'users'), { email: email, name: email.split('@')[0], householdId: "your-household-id", userId: appState.currentUser.uid });
-        showNotification({title: "Tilføjet!", message: `Brugeren med email "${email}" er nu tilføjet til husstanden.`});
+        const ref = doc(db, 'references', appState.currentUser.uid);
+        await setDoc(ref, { householdMembers: arrayUnion(name) }, { merge: true });
+        showNotification({title: "Tilføjet!", message: `"${name}" er nu tilføjet til listen.`});
     } catch (error) {
-        handleError(error, "Kunne ikke tilføje medlem.", "addHouseholdMember");
+        handleError(error, "Kunne ikke tilføje navn.", "addHouseholdMember");
     }
 }
 
-async function deleteHouseholdMember(memberId) {
+async function deleteHouseholdMember(name) {
     const confirmed = await showNotification({
         title: "Slet Husstandsmedlem",
-        message: "Er du sikker på, at du vil slette dette medlem? Alle vedkommendes data vil blive slettet.",
+        message: `Er du sikker på, at du vil slette "${name}"? Det vil fjerne navnet fra budget-dropdowns.`,
         type: 'confirm'
     });
 
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, 'users', memberId));
-        showNotification({title: "Slettet", message: "Medlemmet er blevet slettet."});
+        const ref = doc(db, 'references', appState.currentUser.uid);
+        await updateDoc(ref, { householdMembers: arrayRemove(name) });
+        showNotification({title: "Slettet", message: "Navnet er blevet slettet."});
     } catch (error) {
-        handleError(error, "Kunne ikke slette medlem.", "deleteHouseholdMember");
+        handleError(error, "Kunne ikke slette navn.", "deleteHouseholdMember");
     }
 }
 
@@ -204,6 +224,7 @@ async function deleteHouseholdMember(memberId) {
 async function handleListClick(e) {
     const target = e.target;
     const key = e.target.closest('.reference-card')?.dataset.key;
+    if (!key) return;
 
     if (target.closest('.delete-reference-item')) {
         const itemElement = target.closest('.reference-item, .category-item');
@@ -231,7 +252,7 @@ async function handleListClick(e) {
 
 async function handleFormSubmit(e) {
     e.preventDefault();
-    const key = e.target.closest('.reference-card').dataset.key;
+    const key = e.target.closest('.reference-card')?.dataset.key;
 
     if (e.target.classList.contains('add-reference-form')) {
         const input = e.target.querySelector('input');
