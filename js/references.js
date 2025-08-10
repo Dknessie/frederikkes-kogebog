@@ -141,7 +141,7 @@ export function renderReferencesPage() {
 }
 
 
-function renderHouseholdMembers() {
+export function renderHouseholdMembers() {
     const list = appElements.householdMembersList;
     if (!list) return;
 
