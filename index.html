@@ -64,10 +64,23 @@
                                 <h3>Min Tidslinje</h3>
                                 <button id="add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
                             </div>
-                            <div id="timeline-content"></div>
+                            <div class="timeline-grid">
+                                <div id="timeline-birthdays" class="timeline-column">
+                                    <h4>Fødselsdage</h4>
+                                    <p class="empty-state-small">Ingen fødselsdage fundet.</p>
+                                </div>
+                                <div id="timeline-events" class="timeline-column">
+                                    <h4>Begivenheder</h4>
+                                    <p class="empty-state-small">Ingen begivenheder fundet.</p>
+                                </div>
+                                <div id="timeline-todos" class="timeline-column">
+                                    <h4>To-do</h4>
+                                    <p class="empty-state-small">Ingen to-do's fundet.</p>
+                                </div>
+                            </div>
                         </div>
                         <div id="projects-focus-widget" class="dashboard-widget">
-                            <h3>To-do</h3>
+                            <h3>Projektoversigt</h3>
                             <div id="projects-focus-content"></div>
                         </div>
                         <div id="category-values-widget" class="dashboard-widget">
@@ -273,14 +286,48 @@
                             <h3>Udgifter i denne måned</h3>
                             <div class="budget-chart-period-selector">
                                 <button class="btn btn-secondary active">Denne Måned</button>
+                                <select id="budgetUserSelector"></select>
                             </div>
                         </div>
                         <div id="monthly-expenses-chart"></div>
                     </div>
-
                     <div class="budget-categories">
                         <h3>Oversigt over udgifter</h3>
                         <div id="expense-category-list"></div>
+                    </div>
+                    <div id="budget-fixed-expenses">
+                         <p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>
+                         <hr>
+                         <h4>Tilføj ny fast udgift</h4>
+                         <form id="add-fixed-expense-form" class="add-fixed-expense-form">
+                            <div class="form-grid-3-col">
+                                <div class="input-group">
+                                    <label for="fixed-expense-name-new">Navn</label>
+                                    <input type="text" id="fixed-expense-name-new" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fixed-expense-amount-new">Beløb</label>
+                                    <div class="price-input-wrapper">
+                                        <input type="number" id="fixed-expense-amount-new" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fixed-expense-interval-new">Interval</label>
+                                    <select id="fixed-expense-interval-new" required>
+                                        <option value="månedligt">Månedligt</option>
+                                        <option value="kvartalsvist">Kvartalsvist</option>
+                                        <option value="årligt">Årligt</option>
+                                    </select>
+                                </div>
+                                 <div class="input-group">
+                                    <label for="fixed-expense-category-new">Kategori</label>
+                                    <input type="text" id="fixed-expense-category-new" required>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </section>
