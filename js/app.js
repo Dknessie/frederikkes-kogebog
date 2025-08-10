@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
+        users: [], // NEW: Array to hold all household users
         inventoryItems: [],
         inventoryBatches: [],
         inventory: [],
@@ -42,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
             wishlist: {}
         },
         budget: { monthlyAmount: 4000 },
-        fixedExpenses: [], // NEW: Tilføjer et array til faste udgifter
+        fixedExpenses: [], // NEW: Array to hold fixed expenses
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
@@ -186,6 +187,16 @@ document.addEventListener('DOMContentLoaded', () => {
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
         fixedExpenseForm: document.getElementById('fixed-expense-form'),
         addFixedExpenseModal: document.getElementById('add-fixed-expense-modal'),
+        budgetGridContainer: document.getElementById('budget-grid-container'),
+        budgetYearDisplay: document.getElementById('budget-year-display'),
+        prevYearBtn: document.getElementById('prev-year-btn'),
+        nextYearBtn: document.getElementById('next-year-btn'),
+        addExpenseModal: document.getElementById('add-expense-modal'),
+        addExpenseForm: document.getElementById('add-expense-form'),
+        
+        // NEW: References page elements
+        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
+        householdMembersList: document.getElementById('household-members-list'),
     };
 
     function computeDerivedShoppingLists() {
