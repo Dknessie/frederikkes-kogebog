@@ -2,12 +2,14 @@
 // Dette modul håndterer logikken og visningen for den nye Budget-side.
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { initUI, handleError, showNotification } from './ui.js';
 import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
+let currentBudgetViewUserId = null;
+let userListeners = {};
 
 // D3.js farveskala til diagrammet
 const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -25,8 +27,10 @@ export function initBudget(state, elements) {
         fixedExpenseForm: document.getElementById('fixed-expense-form'),
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
         budgetFixedExpensesContainer: document.getElementById('budget-fixed-expenses'),
+        budgetUserSelector: document.getElementById('budget-user-selector'),
     };
-
+    
+    // Sæt lytter på knapper
     if (appElements.addFixedExpenseBtn) {
         appElements.addFixedExpenseBtn.addEventListener('click', () => openFixedExpenseModal());
     }
@@ -54,6 +58,20 @@ export function initBudget(state, elements) {
         });
     }
 
+    // Lytter på skift i bruger
+    if (appElements.budgetUserSelector) {
+        appElements.budgetUserSelector.addEventListener('change', (e) => {
+            currentBudgetViewUserId = e.target.value === 'all' ? null : e.target.value;
+            renderBudgetPage();
+        });
+    }
+
+    // Lytter til Firestore-ændringer for faste udgifter
+    const fixedExpensesQuery = query(collection(db, 'fixed_expenses'));
+    userListeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (snapshot) => {
+        appState.fixedExpenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderBudgetPage();
+    }, (error) => handleError(error, "Kunne ikke hente faste udgifter.", "onSnapshot(fixed_expenses)"));
 }
 
 /**
@@ -64,10 +82,49 @@ export function renderBudgetPage() {
         return;
     }
 
+    // Opdater brugerselector og sæt initial bruger
+    renderUserSelector();
+    
     const monthlyExpenses = calculateMonthlyExpensesByCategory();
     renderPieChart(monthlyExpenses);
     renderCategoryList(monthlyExpenses);
     renderFixedExpensesList();
+}
+
+/**
+ * Renders the user selector dropdown.
+ */
+function renderUserSelector() {
+    const selector = appElements.budgetUserSelector;
+    if (!selector) return;
+
+    selector.innerHTML = '';
+    
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Hele Husstanden';
+    selector.appendChild(allOption);
+
+    // Antag at appState.currentUser og en "partner" findes
+    const myId = appState.currentUser?.uid;
+    const partnerId = "some_partner_id_here"; // Skal erstattes med dynamisk partner-ID
+    
+    const myOption = document.createElement('option');
+    myOption.value = myId;
+    myOption.textContent = 'Mine udgifter';
+    selector.appendChild(myOption);
+
+    const partnerOption = document.createElement('option');
+    partnerOption.value = partnerId;
+    partnerOption.textContent = 'Frederikkes udgifter';
+    selector.appendChild(partnerOption);
+    
+    // Sæt den valgte bruger
+    if (currentBudgetViewUserId === null) {
+        selector.value = 'all';
+    } else {
+        selector.value = currentBudgetViewUserId;
+    }
 }
 
 /**
@@ -78,9 +135,12 @@ function calculateMonthlyExpensesByCategory() {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     const expensesByCategory = {};
+    const userIdToFilter = currentBudgetViewUserId;
 
     // Inkluderer faste udgifter
     appState.fixedExpenses.forEach(exp => {
+        if (userIdToFilter && exp.userId !== userIdToFilter) return;
+
         const category = exp.category || 'Faste udgifter';
         let amount = exp.amount;
         if (exp.interval === 'kvartalsvist') {
@@ -97,6 +157,8 @@ function calculateMonthlyExpensesByCategory() {
 
     // Inkluderer variable udgifter
     appState.expenses.forEach(expense => {
+        if (userIdToFilter && expense.userId !== userIdToFilter) return;
+
         if (!expense.date || !expense.date.toDate) return;
         const expenseDate = expense.date.toDate();
         if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
@@ -214,47 +276,46 @@ function renderCategoryList(data) {
 function renderFixedExpensesList() {
     const container = appElements.budgetFixedExpensesContainer;
     container.innerHTML = '';
+    const userIdToFilter = currentBudgetViewUserId;
+    
+    // Filtrer udgifter baseret på den valgte bruger
+    const filteredFixedExpenses = appState.fixedExpenses.filter(exp => {
+        if (userIdToFilter) {
+            return exp.userId === userIdToFilter;
+        }
+        return true; // Vis alle for "Hele Husstanden"
+    });
 
-    if (appState.fixedExpenses.length === 0) {
+    if (filteredFixedExpenses.length === 0) {
+        container.innerHTML = `<p class="empty-state">Ingen faste udgifter er registreret for denne bruger.</p>`;
+    } else {
+        const cardsHtml = filteredFixedExpenses.map(exp => `
+            <div class="fixed-expense-card" data-id="${exp.id}">
+                <h4>${exp.name}</h4>
+                <div class="actions">
+                    <button class="btn-icon edit-fixed-expense-btn"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete-fixed-expense-btn"><i class="fas fa-trash"></i></button>
+                </div>
+                <span class="amount">${exp.amount.toFixed(2).replace('.', ',')} kr.</span>
+                <span class="interval">${exp.interval}</span>
+                <span class="category">${exp.category}</span>
+            </div>
+        `).join('');
+        
         container.innerHTML = `
-            <p class="empty-state">Ingen faste udgifter er registreret.</p>
-            <form id="add-fixed-expense-form" class="add-fixed-expense-form">
-                <div class="input-group">
-                    <label for="fixed-expense-name-new">Navn</label>
-                    <input type="text" id="fixed-expense-name-new" required>
-                </div>
-                <div class="form-grid-3-col">
-                    <div class="input-group">
-                        <label for="fixed-expense-amount-new">Beløb</label>
-                        <div class="price-input-wrapper">
-                            <input type="number" id="fixed-expense-amount-new" step="0.01" required>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="fixed-expense-interval-new">Interval</label>
-                        <select id="fixed-expense-interval-new" required>
-                            <option value="månedligt">Månedligt</option>
-                            <option value="kvartalsvist">Kvartalsvist</option>
-                            <option value="årligt">Årligt</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="fixed-expense-category-new">Kategori</label>
-                        <input type="text" id="fixed-expense-category-new" required>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
-                </div>
-            </form>
+            <h3>Faste Udgifter</h3>
+            <p class="small-text">Dette er gentagne udgifter, der automatisk medregnes i dit budget.</p>
+            <div id="fixed-expenses-list">
+                ${cardsHtml}
+            </div>
         `;
-        // Re-attach listener to the new form
-        document.getElementById('add-fixed-expense-form').addEventListener('submit', handleSaveFixedExpense);
-        return;
     }
-
+    
+    // Tilføj altid formularen, så man kan oprette nye
     const formHtml = `
-        <form class="add-fixed-expense-form">
+        <hr>
+        <h4>Tilføj ny fast udgift</h4>
+        <form id="add-fixed-expense-form" class="add-fixed-expense-form">
             <div class="form-grid-3-col">
                 <div class="input-group">
                     <label for="fixed-expense-name-new">Navn</label>
@@ -284,32 +345,8 @@ function renderFixedExpensesList() {
             </div>
         </form>
     `;
-
-    const cardsHtml = appState.fixedExpenses.map(exp => `
-        <div class="fixed-expense-card" data-id="${exp.id}">
-            <h4>${exp.name}</h4>
-            <div class="actions">
-                <button class="btn-icon edit-fixed-expense-btn"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon delete-fixed-expense-btn"><i class="fas fa-trash"></i></button>
-            </div>
-            <span class="amount">${exp.amount.toFixed(2).replace('.', ',')} kr.</span>
-            <span class="interval">${exp.interval}</span>
-        </div>
-    `).join('');
-
-    container.innerHTML = `
-        <h3>Faste Udgifter</h3>
-        <p class="small-text">Dette er gentagne udgifter, der automatisk medregnes i dit budget.</p>
-        <div id="fixed-expenses-list">
-            ${cardsHtml}
-        </div>
-        <hr>
-        <h4>Tilføj ny fast udgift</h4>
-        ${formHtml}
-    `;
-    
-    // Re-attach listener to the form inside the rendered list
-    document.querySelector('.add-fixed-expense-form').addEventListener('submit', handleSaveFixedExpense);
+    container.innerHTML += formHtml;
+    document.getElementById('add-fixed-expense-form').addEventListener('submit', handleSaveFixedExpense);
 }
 
 function openFixedExpenseModal(expenseId = null) {
@@ -405,4 +442,3 @@ async function handleDeleteFixedExpense(expenseId) {
         handleError(error, "Den faste udgift kunne ikke slettes.", "deleteFixedExpense");
     }
 }
-
