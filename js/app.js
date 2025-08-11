@@ -6,7 +6,7 @@ import { setupLogin, setupLogout } from './auth.js';
 import { showSection, setupNavigation } from './ui.js';
 import { initDashboard } from './dashboard.js';
 import { initRecipes } from './recipes.js';
-// ... importer andre moduler efter behov
+import { initReferences } from './references.js'; // Importer den nye fil
 
 const state = {
     user: null,
@@ -15,6 +15,7 @@ const state = {
     shoppingList: {},
     mealPlan: {},
     projects: [],
+    references: {}, // Tilføjet references til state
     isInitialized: false,
     unsubscribe: () => {}
 };
@@ -30,6 +31,9 @@ function updateActivePage() {
             break;
         case 'recipes-section':
             initRecipes(state);
+            break;
+        case 'references-section': // Tilføjet case for referencer
+            initReferences(state);
             break;
         // Tilføj andre sider her
     }
@@ -60,8 +64,6 @@ async function initializeApp(user) {
 
         showSection(initialSectionId);
         
-        // DEN ENDELIGE RETTELSE:
-        // Vi giver browseren et mikrosekund til at rendere sektionen, før vi fylder den.
         setTimeout(updateActivePage, 0);
     });
 }
