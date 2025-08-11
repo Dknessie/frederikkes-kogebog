@@ -1,13 +1,10 @@
 // js/recipes.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleError } from './utils.js';
 import { showModal, hideModal } from './ui.js';
-// Korrekt import for lagerstyring
 import { confirmAndDeductIngredients } from './inventory.js';
-// Import for "Køkkenbord" funktionalitet
-import { addToKitchenCounter } from './kitchenCounter.js';
 
 let state;
 
@@ -15,17 +12,18 @@ let state;
 export function initRecipes(appState) {
     state = appState;
     
-    // Find elementer første gang modulet initialiseres
+    // Find og opsæt event listeners for elementer på opskriftssiden
     const addRecipeBtn = document.getElementById('add-recipe-btn');
     const recipeForm = document.getElementById('recipe-form');
-    const recipeGrid = document.querySelector('#recipes .recipe-grid');
+    const recipeGrid = document.getElementById('recipe-grid');
+    const recipeEditModal = document.getElementById('recipe-edit-modal');
+    const closeBtn = recipeEditModal ? recipeEditModal.querySelector('.close-modal-btn') : null;
 
     if (addRecipeBtn) {
         addRecipeBtn.addEventListener('click', () => {
-            // Nulstil formularen før den vises
             recipeForm.reset();
             document.getElementById('recipe-edit-modal-title').textContent = 'Tilføj Ny Opskrift';
-            document.getElementById('recipe-form').dataset.id = '';
+            form.dataset.id = ''; // Slet ID for at sikre, at det er en ny opskrift
             showModal('recipe-edit-modal');
         });
     }
@@ -38,12 +36,16 @@ export function initRecipes(appState) {
         recipeGrid.addEventListener('click', handleRecipeGridClick);
     }
 
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => hideModal('recipe-edit-modal'));
+    }
+
     renderRecipes();
 }
 
 // Funktion til at rendere alle opskrifter
 export function renderRecipes() {
-    const recipeGrid = document.querySelector('#recipes .recipe-grid');
+    const recipeGrid = document.getElementById('recipe-grid');
     if (!recipeGrid) return;
 
     recipeGrid.innerHTML = ''; // Ryd eksisterende indhold
@@ -57,12 +59,13 @@ export function renderRecipes() {
         card.className = 'recipe-card';
         card.dataset.id = recipe.id;
         card.innerHTML = `
-            <img src="${recipe.imageUrl || 'https://placehold.co/300x200/e2e8f0/64748b?text=Billede+mangler'}" alt="${recipe.name}" onerror="this.onerror=null;this.src='https://placehold.co/300x200/e2e8f0/64748b?text=Billede+mangler';">
+            <img src="${recipe.imageUrl || 'https://placehold.co/300x200/e2e8f0/64748b?text=Billede'}" alt="${recipe.name}" onerror="this.onerror=null;this.src='https://placehold.co/300x200/e2e8f0/64748b?text=Billede';">
             <div class="recipe-card-content">
                 <h3>${recipe.name}</h3>
-                <p>${recipe.tags ? recipe.tags.join(', ') : ''}</p>
+                <p class="recipe-tags">${recipe.tags ? recipe.tags.join(', ') : 'Ingen tags'}</p>
                 <div class="recipe-card-actions">
-                    <button class="cook-now-btn">Lav nu</button>
+                    <button class="cook-now-btn" data-id="${recipe.id}">Lav nu</button>
+                    <button class="edit-recipe-btn" data-id="${recipe.id}">Rediger</button>
                 </div>
             </div>
         `;
@@ -72,19 +75,36 @@ export function renderRecipes() {
 
 // Funktion til at håndtere klik på opskriftskort
 function handleRecipeGridClick(event) {
-    const card = event.target.closest('.recipe-card');
-    if (!card) return;
-
-    const recipeId = card.dataset.id;
+    const recipeId = event.target.dataset.id;
+    if (!recipeId) return;
 
     if (event.target.classList.contains('cook-now-btn')) {
-        // Her kalder vi den korrekt importerede funktion
         confirmAndDeductIngredients(recipeId);
-        handleError(null, `Ingredienser for opskriften er nu fratrukket lageret (simuleret).`, "Success");
-    } else {
-        // Logik til at åbne "læs opskrift"-modalen
-        console.log(`Viser detaljer for opskrift: ${recipeId}`);
+        // Midlertidig succes-besked
+        alert(`Ingredienser for opskriften er nu fratrukket lageret (simuleret).`);
+    } else if (event.target.classList.contains('edit-recipe-btn')) {
+        handleEditRecipe(recipeId);
     }
+}
+
+// Funktion til at åbne redigerings-modalen med den valgte opskrifts data
+function handleEditRecipe(recipeId) {
+    const recipe = state.recipes.find(r => r.id === recipeId);
+    if (!recipe) {
+        handleError(new Error("Opskrift ikke fundet"), "Kunne ikke finde den valgte opskrift.");
+        return;
+    }
+
+    const form = document.getElementById('recipe-form');
+    document.getElementById('recipe-edit-modal-title').textContent = 'Rediger Opskrift';
+    
+    form.dataset.id = recipe.id;
+    form.name.value = recipe.name || '';
+    form.description.value = recipe.description || '';
+    form.imageUrl.value = recipe.imageUrl || '';
+    form.tags.value = (recipe.tags || []).join(', ');
+
+    showModal('recipe-edit-modal');
 }
 
 // Funktion til at gemme en ny eller eksisterende opskrift
@@ -99,28 +119,20 @@ async function handleSaveRecipe(event) {
         name: form.name.value,
         description: form.description.value,
         imageUrl: form.imageUrl.value,
-        tags: form.tags.value.split(',').map(tag => tag.trim()),
-        // Her ville man normalt også hente ingredienser og fremgangsmåde
+        tags: form.tags.value.split(',').map(tag => tag.trim()).filter(tag => tag), // Fjern tomme tags
     };
 
     try {
         if (recipeId) {
-            // Opdater eksisterende opskrift
             const recipeRef = doc(db, 'recipes', recipeId);
             await updateDoc(recipeRef, recipeData);
         } else {
-            // Opret ny opskrift
             recipeData.createdAt = serverTimestamp();
             await addDoc(collection(db, 'recipes'), recipeData);
         }
         hideModal('recipe-edit-modal');
-        renderRecipes(); // Re-render for at vise ændringer
+        // Da vi bruger realtime listeners, vil siden opdatere sig selv.
     } catch (error) {
         handleError(error, "Kunne ikke gemme opskriften.", "handleSaveRecipe");
     }
-}
-
-// Funktion til at rendere filter-tags (kan udvides)
-export function renderPageTagFilters() {
-    // Logik til at vise filter-tags på siden
 }
