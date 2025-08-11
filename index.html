@@ -187,6 +187,7 @@
                 </div>
             </section>
 
+            <!-- FIX: Simplified Hjem section by removing subpage wrappers -->
             <section id="hjem" class="page hidden">
                 <h2>Hjem Administration</h2>
                 <div class="actions-bar">
@@ -198,11 +199,11 @@
                     </button>
                 </div>
                 <div class="hjem-content-container">
-                    <div id="hjem-rooms" class="hjem-subpage">
+                    <div>
                         <h3>Rum</h3>
                         <div id="rooms-grid" class="recipe-grid"></div>
                     </div>
-                    <div id="hjem-projects" class="hjem-subpage">
+                    <div>
                         <h3>Projekter</h3>
                         <div id="projects-grid" class="recipe-grid"></div>
                     </div>
@@ -540,7 +541,6 @@
                 <div id="room-inventory-list-container"></div>
                 <button id="add-room-inventory-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Inventar</button>
                 <hr>
-                <!-- FIX: Added missing container and controls for room images -->
                 <h4>Billedgalleri</h4>
                 <div id="room-images-preview-container" class="room-gallery"></div>
                 <div class="input-group" style="display: flex; gap: 8px; align-items: center;">
