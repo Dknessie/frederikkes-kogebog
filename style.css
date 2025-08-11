@@ -1943,27 +1943,37 @@ input:checked + .slider:before { transform: translateX(22px); }
     padding: var(--spacing-l);
     margin-bottom: var(--spacing-l);
 }
-.add-fixed-expense-form {
+#add-fixed-expense-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--spacing-m) var(--spacing-l);
     align-items: end;
 }
-.add-fixed-expense-form .form-actions {
-    grid-column: 1 / -1; /* Make actions span all columns */
-    margin-top: 0;
+.expense-split-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 120px auto;
+    gap: var(--spacing-s);
+    align-items: center;
 }
+.split-sum-indicator {
+    font-size: var(--small-font-size);
+    font-weight: 600;
+}
+.split-sum-indicator.status-green { color: var(--status-green); }
+.split-sum-indicator.status-red { color: var(--status-red); }
 
+.budget-group {
+    margin-bottom: var(--spacing-xl);
+}
 .budget-grid-container {
     overflow-x: auto;
     width: 100%;
-    margin-bottom: var(--spacing-s);
 }
 .budget-grid {
     display: grid;
-    grid-template-columns: minmax(200px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
+    grid-template-columns: minmax(250px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
     border-collapse: collapse;
-    width: fit-content; /* Allow grid to expand beyond container width */
+    width: fit-content;
     min-width: 100%;
 }
 .budget-grid-row {
@@ -1982,7 +1992,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     justify-content: flex-end;
     font-size: var(--small-font-size);
 }
-/* FIX: Removed hover effects for budget grid */
+
 .budget-grid-cell.header-cell {
     background-color: var(--primary-color);
     color: var(--white-color);
@@ -2001,12 +2011,12 @@ input:checked + .slider:before { transform: translateX(22px); }
     position: sticky;
     left: 0;
     z-index: 5;
-}
-/* FIX: Added rule to ensure category header text is visible */
-.budget-grid-cell.header-cell.category-cell {
     color: var(--text-color);
 }
-
+.budget-grid-cell.sub-category-cell {
+    padding-left: var(--spacing-l);
+    font-weight: normal;
+}
 .budget-grid-cell .owner-tag {
     font-size: 0.8em;
     color: #777;
@@ -2026,7 +2036,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .budget-totals-bar {
     display: grid;
-    grid-template-columns: minmax(200px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
+    grid-template-columns: minmax(250px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
     width: fit-content;
     min-width: 100%;
     position: sticky;
@@ -2061,7 +2071,6 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: none;
     }
     .mobile-tab-bar {
-        /* UPDATED: display flex to show on smaller screens */
         display: flex;
     }
     .dashboard-layout {
@@ -2082,8 +2091,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     #inventory .actions-bar {
         display: flex;
     }
-    .add-fixed-expense-form {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    #add-fixed-expense-form {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -2119,6 +2128,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     #add-calendar-event-modal .quick-actions-container {
+        grid-template-columns: 1fr;
+    }
+    .expense-split-row {
         grid-template-columns: 1fr;
     }
 }
