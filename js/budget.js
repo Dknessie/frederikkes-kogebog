@@ -1,288 +1,197 @@
 // js/budget.js
-
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { handleError, showNotification } from './ui.js';
 import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
-let currentYear;
-let currentMonth;
+let currentBudgetYear = new Date().getFullYear();
 
-/**
- * Initializes the new budget module.
- * @param {object} state - The global app state.
- * @param {object} elements - The cached DOM elements.
- */
 export function initBudget(state, elements) {
     appState = state;
     appElements = {
         ...elements,
-        budgetPage: document.getElementById('budget'),
+        addFixedExpenseForm: document.getElementById('add-fixed-expense-form'),
+        budgetGridContainer: document.getElementById('budget-grid-container'),
+        budgetTotalsBar: document.getElementById('budget-totals-bar'),
+        budgetUserSelector: document.getElementById('budgetUserSelector'),
+        budgetYearDisplay: document.getElementById('budget-year-display'),
+        prevYearBtn: document.getElementById('prev-year-btn'),
+        nextYearBtn: document.getElementById('next-year-btn'),
+        clearFixedExpenseFormBtn: document.getElementById('clear-fixed-expense-form-btn'),
     };
     
-    const today = new Date();
-    currentYear = today.getFullYear();
-    currentMonth = today.getMonth();
+    if (appElements.addFixedExpenseForm) appElements.addFixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
+    if (appElements.clearFixedExpenseFormBtn) appElements.clearFixedExpenseFormBtn.addEventListener('click', resetFixedExpenseForm);
+    if (appElements.budgetUserSelector) appElements.budgetUserSelector.addEventListener('change', renderBudgetPage);
+    if (appElements.prevYearBtn) appElements.prevYearBtn.addEventListener('click', () => { currentBudgetYear--; renderBudgetPage(); });
+    if (appElements.nextYearBtn) appElements.nextYearBtn.addEventListener('click', () => { currentBudgetYear++; renderBudgetPage(); });
 
-    // Event delegation for the entire budget page
-    if (appElements.budgetPage) {
-        appElements.budgetPage.addEventListener('submit', handleFormSubmit);
-        appElements.budgetPage.addEventListener('click', handleButtonClick);
+    if (appElements.budgetGridContainer) {
+        appElements.budgetGridContainer.addEventListener('click', e => {
+            const editBtn = e.target.closest('.edit-fixed-expense-btn');
+            const deleteBtn = e.target.closest('.delete-fixed-expense-btn');
+            if (editBtn) populateFormForEdit(editBtn.dataset.id);
+            if (deleteBtn) handleDeleteFixedExpense(deleteBtn.dataset.id);
+        });
     }
 }
 
-/**
- * Renders the entire budget page from scratch based on the new vision.
- */
 export function renderBudgetPage() {
-    if (!appElements.budgetPage) return;
-
-    const pageContent = `
-        <div class="budget-container">
-            <div class="budget-form-container">
-                <h3 id="budget-form-title">Tilføj ny post</h3>
-                <form id="budget-entry-form">
-                    <input type="hidden" id="budget-entry-id">
-                    <div class="form-grid-3-col">
-                        <div class="input-group">
-                            <label for="budget-entry-type">Type</label>
-                            <select id="budget-entry-type" required>
-                                <option value="udgift">Udgift</option>
-                                <option value="indtægt">Indtægt</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="budget-entry-category">Kategori</label>
-                            <input type="text" id="budget-entry-category" required>
-                        </div>
-                        <div class="input-group">
-                            <label for="budget-entry-amount">Beløb (kr.)</label>
-                            <input type="number" id="budget-entry-amount" step="0.01" required>
-                        </div>
-                        <div class="input-group">
-                            <label for="budget-entry-interval">Interval</label>
-                            <select id="budget-entry-interval" required>
-                                <option value="monthly">Månedligt</option>
-                                <option value="quarterly">Kvartalsvist</option>
-                                <option value="yearly">Årligt</option>
-                                <option value="once">Én gang</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="budget-entry-start-date">Start / Betalingsdato</label>
-                            <input type="date" id="budget-entry-start-date" required>
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" id="clear-budget-form-btn" class="btn btn-secondary">Ryd</button>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Gem Post</button>
-                    </div>
-                </form>
-            </div>
-            <hr>
-            <div class="budget-grid-header">
-                <h2>Budgetoversigt</h2>
-                <div class="budget-nav">
-                    <button id="prev-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                    <span id="budget-year-display">${currentYear}</span>
-                    <button id="next-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
-                </div>
-            </div>
-            <div id="budget-grid-container" class="budget-grid-container">
-                <!-- Grid will be rendered here by JS -->
-            </div>
-        </div>
-    `;
-    appElements.budgetPage.innerHTML = pageContent;
-    renderBudgetGrid();
+    if (!appState.fixedExpenses || !appState.expenses) return;
+    appElements.budgetYearDisplay.textContent = currentBudgetYear;
+    populateDropdowns();
+    calculateAndRenderBudgetGrid();
 }
 
-/**
- * Calculates and renders the main budget grid.
- */
-function renderBudgetGrid() {
-    const container = document.getElementById('budget-grid-container');
-    if (!container) return;
-
-    const months = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
-    const monthlyTotals = Array(12).fill(0);
-    const budgetEntries = appState.budgetEntries || [];
-
-    // --- Grid Header ---
-    const headerHtml = `
-        <div class="budget-grid-cell header-cell category-header">Kategori</div>
-        ${months.map(m => `<div class="budget-grid-cell header-cell">${m}</div>`).join('')}
-        <div class="budget-grid-cell header-cell"></div> <!-- Actions column -->
-    `;
-
-    // --- Grid Body (Entries) ---
-    const bodyHtml = budgetEntries
-        .sort((a, b) => a.category.localeCompare(b.category))
-        .map(entry => {
-            const rowCells = Array(12).fill(0);
-            const startDate = new Date(entry.startDate);
-            const startMonth = startDate.getMonth();
-            const startYear = startDate.getFullYear();
-            const amount = entry.type === 'indtægt' ? entry.amount : -entry.amount;
-
-            for (let i = 0; i < 12; i++) {
-                const currentCellDate = new Date(currentYear, i, 1);
-                
-                if (currentYear > startYear || (currentYear === startYear && i >= startMonth)) {
-                    if (entry.interval === 'monthly') {
-                        rowCells[i] = amount;
-                    } else if (entry.interval === 'quarterly' && (i - startMonth) % 3 === 0) {
-                        rowCells[i] = amount;
-                    } else if (entry.interval === 'yearly' && i === startMonth) {
-                        rowCells[i] = amount;
-                    } else if (entry.interval === 'once' && currentYear === startYear && i === startMonth) {
-                        rowCells[i] = amount;
-                    }
-                }
-            }
-            
-            // Add this row's values to the monthly totals
-            rowCells.forEach((val, index) => monthlyTotals[index] += val);
-
-            const rowClass = entry.type === 'indtægt' ? 'income-row' : 'expense-row';
-            return `
-                <div class="budget-grid-cell category-cell ${rowClass}">${entry.category}</div>
-                ${rowCells.map(val => `<div class="budget-grid-cell ${val >= 0 ? 'income' : 'expense'}">${val !== 0 ? val.toLocaleString('da-DK') : '-'}</div>`).join('')}
-                <div class="budget-grid-cell actions-cell">
-                    <button class="btn-icon edit-entry-btn" data-id="${entry.id}"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon delete-entry-btn" data-id="${entry.id}"><i class="fas fa-trash"></i></button>
-                </div>
-            `;
-        }).join('');
-
-    // --- Grid Footer (Totals) ---
-    const footerHtml = `
-        <div class="budget-grid-cell total-header-cell">Total</div>
-        ${monthlyTotals.map(total => `<div class="budget-grid-cell total-cell ${total >= 0 ? 'income' : 'expense'}">${total.toLocaleString('da-DK')} kr.</div>`).join('')}
-        <div class="budget-grid-cell"></div>
-    `;
-
-    container.innerHTML = `<div class="budget-grid">${headerHtml}${bodyHtml}${footerHtml}</div>`;
+function populateDropdowns() {
+    const ownerSelect = document.getElementById('fixed-expense-owner-new');
+    const userSelector = appElements.budgetUserSelector;
+    const householdMembers = appState.references.householdMembers || [];
+    const currentUser = appState.currentUser?.displayName || appState.currentUser?.email.split('@')[0];
+    
+    [ownerSelect, userSelector].forEach(select => {
+        if (!select) return;
+        const currentValue = select.value;
+        select.innerHTML = '';
+        if (select === userSelector) select.add(new Option('Hele Husstanden', 'all'));
+        householdMembers.forEach(member => select.add(new Option(member, member)));
+        select.value = currentValue && householdMembers.includes(currentValue) ? currentValue : (select === ownerSelect ? (householdMembers.includes(currentUser) ? currentUser : '') : 'all');
+    });
 }
 
-/**
- * Handles all form submissions on the budget page.
- * @param {Event} e - The submit event.
- */
-function handleFormSubmit(e) {
-    if (e.target.id === 'budget-entry-form') {
-        e.preventDefault();
-        handleSaveBudgetEntry();
-    }
+function resetFixedExpenseForm() {
+    appElements.addFixedExpenseForm.reset();
+    document.getElementById('fixed-expense-id').value = '';
+    document.getElementById('fixed-expense-start-date-new').value = formatDate(new Date());
+    populateDropdowns();
+    appElements.addFixedExpenseForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Gem Udgift';
 }
 
-/**
- * Handles all button clicks on the budget page.
- * @param {Event} e - The click event.
- */
-function handleButtonClick(e) {
-    const target = e.target.closest('button');
-    if (!target) return;
-
-    if (target.id === 'clear-budget-form-btn') {
-        resetFixedExpenseForm();
-    } else if (target.id === 'prev-year-btn') {
-        currentYear--;
-        renderBudgetPage();
-    } else if (target.id === 'next-year-btn') {
-        currentYear++;
-        renderBudgetPage();
-    } else if (target.classList.contains('edit-entry-btn')) {
-        populateFormForEdit(target.dataset.id);
-    } else if (target.classList.contains('delete-entry-btn')) {
-        handleDeleteBudgetEntry(target.dataset.id);
-    }
+function populateFormForEdit(expenseId) {
+    const expense = appState.fixedExpenses.find(exp => exp.id === expenseId);
+    if (!expense) return;
+    document.getElementById('fixed-expense-id').value = expense.id;
+    document.getElementById('fixed-expense-name-new').value = expense.name;
+    document.getElementById('fixed-expense-category-new').value = expense.category;
+    document.getElementById('fixed-expense-amount-new').value = expense.amount;
+    document.getElementById('fixed-expense-interval-new').value = expense.interval;
+    document.getElementById('fixed-expense-start-date-new').value = expense.startDate;
+    document.getElementById('fixed-expense-owner-new').value = expense.owner;
+    appElements.addFixedExpenseForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Opdater Udgift';
+    window.scrollTo({ top: appElements.addFixedExpenseForm.offsetTop, behavior: 'smooth' });
 }
 
-/**
- * Saves a new or updated budget entry to Firestore.
- */
-async function handleSaveBudgetEntry() {
-    const entryId = document.getElementById('budget-entry-id').value;
-    const entryData = {
-        type: document.getElementById('budget-entry-type').value,
-        category: document.getElementById('budget-entry-category').value.trim(),
-        amount: parseFloat(document.getElementById('budget-entry-amount').value),
-        interval: document.getElementById('budget-entry-interval').value,
-        startDate: document.getElementById('budget-entry-start-date').value,
+async function handleSaveFixedExpense(e) {
+    e.preventDefault();
+    const expenseId = document.getElementById('fixed-expense-id').value;
+    const expenseData = {
+        name: document.getElementById('fixed-expense-name-new').value.trim(),
+        category: document.getElementById('fixed-expense-category-new').value.trim(),
+        amount: parseFloat(document.getElementById('fixed-expense-amount-new').value),
+        interval: document.getElementById('fixed-expense-interval-new').value,
+        startDate: document.getElementById('fixed-expense-start-date-new').value,
+        owner: document.getElementById('fixed-expense-owner-new').value,
         userId: appState.currentUser.uid,
-        lastUpdated: serverTimestamp()
     };
 
-    if (!entryData.category || isNaN(entryData.amount) || !entryData.startDate) {
-        showNotification({ title: "Udfyld alle felter", message: "Kategori, beløb og startdato er påkrævet." });
+    if (!expenseData.name || !expenseData.category || isNaN(expenseData.amount) || !expenseData.startDate || !expenseData.owner) {
+        showNotification({ title: "Fejl", message: "Udfyld venligst alle påkrævede felter." });
         return;
     }
 
     try {
-        if (entryId) {
-            await updateDoc(doc(db, 'budget_entries', entryId), entryData);
-            showNotification({ title: "Opdateret", message: "Budgetposten er blevet opdateret." });
+        if (expenseId) {
+            await updateDoc(doc(db, 'fixed_expenses', expenseId), expenseData);
+            showNotification({ title: "Opdateret!", message: "Fast udgift er blevet opdateret." });
         } else {
-            await addDoc(collection(db, 'budget_entries'), entryData);
-            showNotification({ title: "Gemt", message: "Den nye budgetpost er blevet tilføjet." });
+            await addDoc(collection(db, 'fixed_expenses'), expenseData);
+            showNotification({ title: "Gemt!", message: "Ny fast udgift er blevet tilføjet." });
         }
         resetFixedExpenseForm();
     } catch (error) {
-        handleError(error, "Budgetposten kunne ikke gemmes.", "saveBudgetEntry");
+        handleError(error, "Den faste udgift kunne ikke gemmes.", "handleSaveFixedExpense");
     }
 }
 
-/**
- * Deletes a budget entry from Firestore.
- * @param {string} entryId - The ID of the entry to delete.
- */
-async function handleDeleteBudgetEntry(entryId) {
-    const confirmed = await showNotification({
-        title: "Slet Post",
-        message: "Er du sikker på, du vil slette denne budgetpost permanent?",
-        type: 'confirm'
-    });
-
+async function handleDeleteFixedExpense(expenseId) {
+    const confirmed = await showNotification({ title: "Slet Udgift", message: "Er du sikker på?", type: 'confirm' });
     if (confirmed) {
         try {
-            await deleteDoc(doc(db, 'budget_entries', entryId));
-            showNotification({ title: "Slettet", message: "Budgetposten er blevet fjernet." });
+            await deleteDoc(doc(db, 'fixed_expenses', expenseId));
+            showNotification({ title: "Slettet", message: "Den faste udgift er blevet slettet." });
+            resetFixedExpenseForm();
         } catch (error) {
-            handleError(error, "Posten kunne ikke slettes.", "deleteBudgetEntry");
+            handleError(error, "Udgiften kunne ikke slettes.", "handleDeleteFixedExpense");
         }
     }
 }
 
-/**
- * Populates the form with data from an existing entry for editing.
- * @param {string} entryId - The ID of the entry to edit.
- */
-function populateFormForEdit(entryId) {
-    const entry = appState.budgetEntries.find(e => e.id === entryId);
-    if (!entry) return;
+function calculateAndRenderBudgetGrid() {
+    const selectedOwner = appElements.budgetUserSelector.value;
+    const months = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
+    const monthlyTotals = Array(12).fill(0);
+    const budgetData = {};
 
-    document.getElementById('budget-entry-id').value = entry.id;
-    document.getElementById('budget-entry-type').value = entry.type;
-    document.getElementById('budget-entry-category').value = entry.category;
-    document.getElementById('budget-entry-amount').value = entry.amount;
-    document.getElementById('budget-entry-interval').value = entry.interval;
-    document.getElementById('budget-entry-start-date').value = entry.startDate;
-    
-    document.getElementById('budget-form-title').textContent = 'Rediger Post';
-    document.querySelector('#budget-entry-form button[type="submit"]').innerHTML = '<i class="fas fa-save"></i> Opdater Post';
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+    appState.fixedExpenses
+        .filter(exp => selectedOwner === 'all' || exp.owner === selectedOwner)
+        .forEach(exp => {
+            const key = `${exp.category}-${exp.name}-${exp.owner}`;
+            if (!budgetData[key]) {
+                budgetData[key] = { id: exp.id, category: exp.category, name: exp.name, monthlyAmounts: Array(12).fill(0), owner: exp.owner };
+            }
+            const startDate = new Date(exp.startDate);
+            const startMonth = startDate.getMonth();
+            const startYear = startDate.getFullYear();
 
-/**
- * Resets the budget entry form to its default state.
- */
-function resetFixedExpenseForm() {
-    document.getElementById('budget-entry-form').reset();
-    document.getElementById('budget-entry-id').value = '';
-    document.getElementById('budget-form-title').textContent = 'Tilføj ny post';
-    document.querySelector('#budget-entry-form button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Gem Post';
+            for (let i = 0; i < 12; i++) {
+                const currentMonthDate = new Date(currentBudgetYear, i, startDate.getDate());
+                if (currentMonthDate < startDate) continue;
+
+                let shouldApply = false;
+                if (exp.interval === 'månedligt') {
+                    shouldApply = true;
+                } else if (exp.interval === 'kvartalsvist' && (i - startMonth) % 3 === 0) {
+                    shouldApply = true;
+                } else if (exp.interval === 'årligt' && i === startMonth) {
+                    shouldApply = true;
+                }
+                if (shouldApply) budgetData[key].monthlyAmounts[i] += exp.amount;
+            }
+        });
+
+    const container = appElements.budgetGridContainer;
+    const headerHtml = `
+        <div class="budget-grid-row budget-grid-header">
+            <div class="budget-grid-cell header-cell category-cell">Kategori / Navn</div>
+            ${months.map(month => `<div class="budget-grid-cell header-cell">${month}</div>`).join('')}
+            <div class="budget-grid-cell header-cell">Årstotal</div>
+            <div class="budget-grid-cell header-cell actions-cell"></div>
+        </div>`;
+
+    const sortedKeys = Object.keys(budgetData).sort((a, b) => a.localeCompare(b));
+    const bodyHtml = sortedKeys.map(key => {
+        const data = budgetData[key];
+        const yearlyTotal = data.monthlyAmounts.reduce((sum, amount) => sum + amount, 0);
+        data.monthlyAmounts.forEach((amount, index) => monthlyTotals[index] += amount);
+        const actionsHtml = `<div class="actions"><button class="btn-icon edit-fixed-expense-btn" data-id="${data.id}"><i class="fas fa-edit"></i></button><button class="btn-icon delete-fixed-expense-btn" data-id="${data.id}"><i class="fas fa-trash"></i></button></div>`;
+        return `
+            <div class="budget-grid-row">
+                <div class="budget-grid-cell category-cell">${data.category} - ${data.name} <span class="owner-tag">(${data.owner})</span></div>
+                ${data.monthlyAmounts.map(amount => `<div class="budget-grid-cell">${amount > 0 ? amount.toFixed(2).replace('.', ',') : '-'}</div>`).join('')}
+                <div class="budget-grid-cell total-cell">${yearlyTotal.toFixed(2).replace('.', ',')}</div>
+                <div class="budget-grid-cell actions-cell">${actionsHtml}</div>
+            </div>`;
+    }).join('');
+
+    container.innerHTML = `<div class="budget-grid">${headerHtml}${bodyHtml || `<div class="empty-grid-row"><div class="budget-grid-cell empty-state">Ingen faste udgifter fundet for i år.</div></div>`}</div>`;
+    
+    const totalsBar = appElements.budgetTotalsBar;
+    const grandTotal = monthlyTotals.reduce((sum, total) => sum + total, 0);
+    totalsBar.innerHTML = `
+        <div class="budget-totals-cell header-cell">Månedstotal</div>
+        ${monthlyTotals.map(total => `<div class="budget-totals-cell">${total.toFixed(2).replace('.', ',')}</div>`).join('')}
+        <div class="budget-totals-cell grand-total-cell">${grandTotal.toFixed(2).replace('.', ',')}</div>
+        <div class="budget-totals-cell"></div>`;
 }
