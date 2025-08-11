@@ -32,6 +32,11 @@ function updateActivePage() {
             initRecipes(state);
             break;
     }
+    
+    // --- DEBUGGING ---
+    // Koden vil pause her, lige efter den har forsøgt at tegne sidens indhold.
+    console.log("updateActivePage er færdig. Pauser eksekvering for inspektion.");
+    debugger; 
 }
 
 async function initializeApp(user) {
@@ -42,12 +47,11 @@ async function initializeApp(user) {
     document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('login-page').classList.add('hidden');
     
-    // Opsæt listeners og vent på, at de første data er klar
     state.unsubscribe = setupRealtimeListeners(user.uid, state, () => {
         console.log("App er fuldt initialiseret med realtids-data:", state);
 
         setupNavigation(updateActivePage); 
-        setupLogout(state.unsubscribe); // Giv unsubscribe-funktionen med til logud
+        setupLogout(state.unsubscribe);
         
         const initialHash = window.location.hash || '#dashboard';
         const initialSectionId = initialHash.substring(1) + '-section';
@@ -64,7 +68,7 @@ async function initializeApp(user) {
 }
 
 function handleLoggedOutUser() {
-    state.unsubscribe(); // Kør unsubscribe-funktionen for at stoppe alle listeners
+    state.unsubscribe();
     state.isInitialized = false;
     state.user = null;
     document.getElementById('app-container').classList.add('hidden');
