@@ -5,7 +5,6 @@
  * @param {object} state - Hele applikationens state-objekt.
  */
 export function initDashboard(state) {
-    // Sørg for at vi kun kører, hvis dashboardet er den aktive side.
     const dashboardSection = document.getElementById('dashboard-section');
     if (!dashboardSection || dashboardSection.style.display === 'none') {
         return;
@@ -14,8 +13,7 @@ export function initDashboard(state) {
     console.log("Dashboard initialiseres med state:", state);
     renderWelcomeMessage(state);
     renderInventoryNotifications(state);
-    // Fremtidige widgets til dashboardet kan kaldes herfra
-    // renderProjectOverview(state);
+    renderProjectOverview(state); // Tilføjet kald til den nye funktion
 }
 
 /**
@@ -27,23 +25,21 @@ function renderWelcomeMessage(state) {
     if (!welcomeElement) return;
 
     const today = new Date().toISOString().split('T')[0];
-    // Find måltider for i dag i state.mealPlan
     const todaysMeals = Object.entries(state.mealPlan || {})
         .filter(([key, _]) => key.startsWith(today))
         .map(([key, value]) => ({
-            type: key.split('_')[1], // 'breakfast', 'lunch', 'dinner'
+            type: key.split('_')[1],
             ...value
         }));
 
-    const activeProjects = state.projects?.filter(p => p.status === 'aktiv').length || 0;
-    let message = `<p>Du har ${todaysMeals.length} måltid(er) planlagt i dag og ${activeProjects} aktive projekter.</p>`;
+    const activeProjectsCount = state.projects?.filter(p => p.status === 'aktiv').length || 0;
+    let message = `<p>Du har ${todaysMeals.length} måltid(er) planlagt i dag og ${activeProjectsCount} aktive projekter.</p>`;
 
     if (todaysMeals.length > 0) {
         let mealDetails = '<ul class="dashboard-meal-list">';
         todaysMeals.forEach(meal => {
             const recipe = state.recipes.find(r => r.id === meal.recipeId);
             const recipeName = recipe ? recipe.name : 'Ukendt ret';
-            // Linket er sat op til fremtidig navigation til opskriften
             mealDetails += `<li><b>${capitalize(meal.type)}:</b> <a href="#recipes/${meal.recipeId}" class="recipe-link">${recipeName}</a></li>`;
         });
         mealDetails += '</ul>';
@@ -63,7 +59,6 @@ function renderInventoryNotifications(state) {
 
     const inventory = state.inventory || [];
     
-    // Find varer med lav beholdning
     const lowStockItems = inventory.filter(item => {
         const totalStock = (item.batches || []).reduce((sum, batch) => sum + (batch.quantity || 0), 0);
         return totalStock > 0 && totalStock <= (item.lowStockThreshold || 1);
@@ -72,19 +67,17 @@ function renderInventoryNotifications(state) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Find varer, der snart udløber
     const soonToExpireItems = inventory
-        .flatMap(item => item.batches.map(batch => ({ ...batch, itemName: item.name }))) // Flad listen af batches ud
+        .flatMap(item => (item.batches || []).map(batch => ({ ...batch, itemName: item.name })))
         .filter(batch => {
             if (!batch.expiryDate) return false;
             try {
-                // Håndter både Date-objekter og Timestamps fra Firebase
                 const expiryDate = batch.expiryDate.toDate ? batch.expiryDate.toDate() : new Date(batch.expiryDate);
                 const diffTime = expiryDate - today;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                return diffDays >= 0 && diffDays <= 3; // Notificer 3 dage før
+                return diffDays >= 0 && diffDays <= 3;
             } catch (e) {
-                return false; // Ignorer ugyldige datoformater
+                return false;
             }
         });
 
@@ -107,6 +100,36 @@ function renderInventoryNotifications(state) {
 
     notificationsElement.innerHTML = notificationsHTML;
 }
+
+/**
+ * Viser en oversigt over aktive projekter.
+ * @param {object} state - Applikationens state.
+ */
+function renderProjectOverview(state) {
+    const container = document.querySelector('.projects-overview-widget');
+    if (!container) return;
+
+    const activeProjects = state.projects?.filter(p => p.status === 'aktiv') || [];
+
+    if (activeProjects.length === 0) {
+        container.innerHTML = '<h3>Projektoversigt</h3><p>Ingen aktive projekter i øjeblikket.</p>';
+        return;
+    }
+
+    let content = '<h3>Projektoversigt</h3>';
+    activeProjects.forEach(project => {
+        content += `
+            <div class="project-summary">
+                <label>${project.name}</label>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" style="width: ${project.progress || 0}%;"></div>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = content;
+}
+
 
 /**
  * Hjælpefunktion til at gøre første bogstav i en streng stort.
