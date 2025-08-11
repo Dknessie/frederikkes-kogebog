@@ -1,54 +1,58 @@
 // js/auth.js
 
-import { signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// This module handles all authentication logic.
+
+import { 
+    onAuthStateChanged, 
+    signInWithEmailAndPassword, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from './firebase.js';
-import { handleError } from './utils.js';
+import { handleError } from './ui.js';
 
 /**
- * Opsætter event listener for login-formularen.
+ * Initializes authentication and listens for state changes.
+ * @param {Function} onLogin - Callback function to execute on user login.
+ * @param {Function} onLogout - Callback function to execute on user logout.
  */
-export function setupLogin() {
-    const loginForm = document.getElementById('login-form');
-    if (!loginForm) return;
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = loginForm.email.value;
-        const password = loginForm.password.value;
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // onAuthStateChanged i app.js tager over herfra.
-        } catch (error) {
-            handleError(error, "Login fejlede. Tjek venligst din email og kodeord.");
+export function initAuth(onLogin, onLogout) {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            onLogin(user);
+        } else {
+            onLogout();
         }
     });
 }
 
 /**
- * Opsætter event listener for logud-knappen.
- * @param {function} unsubscribeAll - En funktion der stopper alle Firestore listeners.
+ * Sets up the login form and logout button event listeners.
+ * @param {object} elements - The cached DOM elements from app.js.
  */
-export function setupLogout(unsubscribeAll) {
-    const logoutBtn = document.getElementById('logout-btn-header');
-    if (!logoutBtn) return;
-    
-    // Sørg for at fjerne gamle listeners for at undgå dobbelt-logud
-    const newBtn = logoutBtn.cloneNode(true);
-    logoutBtn.parentNode.replaceChild(newBtn, logoutBtn);
+export function setupAuthEventListeners(elements) {
+    if (elements.loginForm) {
+        elements.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const loginError = elements.loginForm.querySelector('#login-error');
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    console.error("Login Fejl:", error.code);
+                    if (loginError) {
+                        loginError.textContent = 'Login fejlede. Tjek email og adgangskode.';
+                    }
+                });
+        });
+    }
 
-    newBtn.addEventListener('click', async () => {
-        try {
-            // Frakobl Firestore listeners FØR logud for at undgå fejl
-            if (typeof unsubscribeAll === 'function') {
-                unsubscribeAll();
-            }
-            await signOut(auth);
-            // onAuthStateChanged i app.js tager over og genindlæser siden.
-            window.location.hash = '';
-            window.location.reload();
-        } catch (error) {
-            handleError(error, "Kunne ikke logge ud.");
-        }
+    // Filter out any null elements before adding listeners to make it more robust
+    const validLogoutButtons = elements.logoutButtons.filter(btn => btn !== null);
+    
+    validLogoutButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            signOut(auth).catch(error => handleError(error, "Logout fejlede.", "signOut"));
+        });
     });
 }
