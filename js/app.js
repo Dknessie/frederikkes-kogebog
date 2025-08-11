@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
-        users: [],
+        users: [], // Bemærk: Denne vil ikke længere blive udfyldt globalt af sikkerhedsårsager.
         inventoryItems: [],
         inventoryBatches: [],
         inventory: [],
@@ -67,9 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem - OPPDATERET for at afspejle den nye, samlede side
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'), // Dette element fjernes i HTML
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'), // Disse elementer er nu bare sektioner
+        // Hjem
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -182,17 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
         
-        // NEW: Budget Page
+        // Budget Page
         budgetGridContainer: document.getElementById('budget-grid-container'),
         budgetYearDisplay: document.getElementById('budget-year-display'),
         prevYearBtn: document.getElementById('prev-year-btn'),
         nextYearBtn: document.getElementById('next-year-btn'),
         addExpenseModal: document.getElementById('add-expense-modal'),
         addExpenseForm: document.getElementById('add-expense-form'),
-        
-        // NEW: References page elements
-        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
-        householdMembersList: document.getElementById('household-members-list'),
     };
 
     function computeDerivedShoppingLists() {
@@ -246,98 +240,92 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // REWRITTEN: Listeners are now independent and not nested.
     function setupRealtimeListeners(userId) {
         if (!userId) return;
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
-        const usersQuery = query(collection(db, 'users'));
-        state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
-            state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            const householdMembers = state.users.length > 0 ? state.users.map(u => u.id) : [userId];
-            
-            const expensesQuery = query(collection(db, 'expenses'), where("userId", "==", userId));
-            state.listeners.expenses = onSnapshot(expensesQuery, (expensesSnapshot) => {
-                state.expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'expenses'));
-            
-            const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "==", userId));
-            state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (fixedExpensesSnapshot) => {
-                state.fixedExpenses = fixedExpensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'fixed_expenses'));
-            
-            const collections = {
-                inventory_items: 'inventoryItems',
-                inventory_batches: 'inventoryBatches',
-                recipes: 'recipes',
-                projects: 'projects',
-                rooms: 'rooms',
-                maintenance_logs: 'maintenanceLogs',
-                events: 'events'
-            };
+        // Collections that are filtered by the current user's ID
+        const collections = {
+            inventory_items: 'inventoryItems',
+            inventory_batches: 'inventoryBatches',
+            recipes: 'recipes',
+            projects: 'projects',
+            rooms: 'rooms',
+            maintenance_logs: 'maintenanceLogs',
+            events: 'events',
+            expenses: 'expenses',
+            fixed_expenses: 'fixedExpenses'
+        };
 
-            for (const [coll, stateKey] of Object.entries(collections)) {
-                const q = query(collection(db, coll), where("userId", "==", userId));
-                state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
-                    state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
-                    if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
-                        combineInventoryData();
-                    }
-                    if (stateKey === 'projects' || stateKey === 'rooms') {
-                        computeDerivedShoppingLists();
-                    }
-
-                    handleNavigation(window.location.hash);
-                }, (error) => commonErrorHandler(error, coll));
-            }
-
-            const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
-            state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
-                state.mealPlan = {};
-                snapshot.forEach(doc => {
-                    state.mealPlan = { ...state.mealPlan, ...doc.data() };
-                });
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'madplan'));
-
-            // Listener for the manually managed groceries list
-            state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
-                const data = doc.exists() ? doc.data() : {};
-                state.shoppingLists.groceries = data.groceries || {};
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'indkøbslister'));
-            
-            const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
-            state.listeners.budget = onSnapshot(settingsRef, (doc) => {
-                state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'budget'));
-
-            const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
-            state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
-                state.preferences = doc.exists() ? doc.data() : {};
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'præferencer'));
-
-            const referencesRef = doc(db, 'references', userId);
-            state.listeners.references = onSnapshot(referencesRef, (doc) => {
-                if (doc.exists()) {
-                    state.references = doc.data();
-                    const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
-                    buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
-                    setReferencesLoaded(true);
-                    handleNavigation(window.location.hash);
-                } else {
-                    handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
-                    window.location.hash = '#references';
+        for (const [coll, stateKey] of Object.entries(collections)) {
+            const q = query(collection(db, coll), where("userId", "==", userId));
+            state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
+                state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Handle derived data after a relevant collection updates
+                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
+                    combineInventoryData();
                 }
-            }, (error) => commonErrorHandler(error, 'referencer'));
+                if (stateKey === 'projects' || stateKey === 'rooms') {
+                    computeDerivedShoppingLists();
+                }
 
-        }, (error) => commonErrorHandler(error, 'users'));
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, coll));
+        }
+
+        // Listeners for documents where the ID is the userId
+        const userSpecificDocs = {
+            shopping_lists: 'shoppingLists',
+            references: 'references'
+        };
+
+        for (const [coll, stateKey] of Object.entries(userSpecificDocs)) {
+            state.listeners[stateKey] = onSnapshot(doc(db, coll, userId), (doc) => {
+                const data = doc.exists() ? doc.data() : {};
+                if (stateKey === 'shoppingLists') {
+                    state.shoppingLists.groceries = data.groceries || {};
+                } else {
+                    state[stateKey] = data;
+                }
+                
+                if (stateKey === 'references') {
+                     const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn];
+                     buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
+                     setReferencesLoaded(true);
+                }
+
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, coll));
+        }
+        
+        // Listeners for nested documents (settings)
+        const settings = {
+            budget: 'budget',
+            preferences: 'preferences'
+        };
+
+        for (const [setting, stateKey] of Object.entries(settings)) {
+            const settingRef = doc(db, 'users', userId, 'settings', setting);
+            state.listeners[stateKey] = onSnapshot(settingRef, (doc) => {
+                state[stateKey] = doc.exists() ? doc.data() : (setting === 'budget' ? { monthlyAmount: 4000 } : {});
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, setting));
+        }
+        
+        // Listener for meal plans (special case)
+        const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
+        state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
+            state.mealPlan = {};
+            snapshot.forEach(doc => {
+                // Remove the userId field before merging
+                const { userId, ...planData } = doc.data();
+                state.mealPlan = { ...state.mealPlan, ...planData };
+            });
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'madplan'));
     }
 
     function onLogin(user) {
@@ -356,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
+        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
@@ -424,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initProjects(state, elements);
         initRooms(state, elements);
         initExpenses(state);
-        initEvents(state, elements);
+        initEvents(state); // Bemærk: elements er ikke nødvendige her
         initBudget(state, elements);
     }
 
