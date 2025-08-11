@@ -61,22 +61,31 @@ function updateActivePage() {
 async function initializeApp(user) {
     state.user = user;
     
-    // Vis app-container og skjul login-side
     document.getElementById('app-container').classList.remove('hidden');
     document.getElementById('login-page').classList.add('hidden');
     
-    // Hent alle data fra Firestore og opdater state
     const allData = await getAllData(user.uid);
-    Object.assign(state, allData); // Opdater state med de hentede data
+    Object.assign(state, allData);
     
     console.log("State er initialiseret:", state);
 
-    // Opsæt navigation og logud-knap
     setupNavigation(updateActivePage); 
     setupLogout();
     
-    // Vis dashboard som standard og kald updateActivePage for at rendere den
-    showSection('dashboard-section');
+    // --- NY OG FORBEDRET STARTLOGIK ---
+    // Bestem den initielle sektion, der skal vises, baseret på URL'en
+    const initialHash = window.location.hash || '#dashboard';
+    const initialSectionId = initialHash.substring(1) + '-section';
+
+    // Sæt den korrekte fane til 'active' i navigationen
+    const initialLink = document.querySelector(`.nav-link[href="${initialHash}"]`);
+    if (initialLink) {
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        initialLink.classList.add('active');
+    }
+
+    // Vis den korrekte sektion og kald funktionen til at opdatere dens indhold
+    showSection(initialSectionId);
     updateActivePage();
 }
 
@@ -85,7 +94,6 @@ async function initializeApp(user) {
  */
 function handleLoggedOutUser() {
     state.user = null;
-    // Vis login-side og skjul app-container
     document.getElementById('app-container').classList.add('hidden');
     document.getElementById('login-page').classList.remove('hidden');
 }
@@ -93,10 +101,8 @@ function handleLoggedOutUser() {
 // Lytter efter ændringer i brugerens login-status
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        // Bruger er logget ind
         initializeApp(user);
     } else {
-        // Bruger er logget ud
         handleLoggedOutUser();
     }
 });
