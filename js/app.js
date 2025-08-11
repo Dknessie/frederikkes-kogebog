@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
-        users: [], // Bemærk: Denne vil ikke længere blive udfyldt globalt af sikkerhedsårsager.
+        users: [],
         inventoryItems: [],
         inventoryBatches: [],
         inventory: [],
@@ -190,21 +190,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // Compute materials list from projects
         const materialsList = {};
-        state.projects.forEach(project => {
-            (project.materials || []).forEach(material => {
-                const key = material.name.toLowerCase();
-                materialsList[key] = {
-                    name: material.name,
-                    quantity_to_buy: material.quantity || 1,
-                    unit: material.unit || 'stk',
-                    price: material.price || null,
-                    projectId: project.id,
-                    storeId: 'Byggemarked'
-                };
+        // FIX: Filter out completed projects before calculating the materials list.
+        state.projects
+            .filter(project => project.status !== 'Afsluttet')
+            .forEach(project => {
+                (project.materials || []).forEach(material => {
+                    const key = material.name.toLowerCase();
+                    materialsList[key] = {
+                        name: material.name,
+                        quantity_to_buy: material.quantity || 1,
+                        unit: material.unit || 'stk',
+                        price: material.price || null,
+                        projectId: project.id,
+                        storeId: 'Byggemarked'
+                    };
+                });
             });
-        });
         state.shoppingLists.materials = materialsList;
 
         // Compute wishlist from rooms
@@ -310,17 +312,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, setting));
         }
         
-        // FIX: Listen to a specific document for the current year instead of querying the collection.
-        // This avoids the permission error. We can expand this later to listen to more years if needed.
         const currentYear = new Date().getFullYear();
         const mealPlanRef = doc(db, 'meal_plans', `plan_${currentYear}`);
         state.listeners.mealPlan = onSnapshot(mealPlanRef, (docSnap) => {
-            // Check if the document exists and belongs to the current user before processing
             if (docSnap.exists() && docSnap.data().userId === userId) {
                 const { userId, ...planData } = docSnap.data();
                 state.mealPlan = planData;
             } else {
-                // If the doc doesn't exist or doesn't belong to the user, ensure the plan is empty
                 state.mealPlan = {};
             }
             handleNavigation(window.location.hash);
@@ -411,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initProjects(state, elements);
         initRooms(state, elements);
         initExpenses(state);
-        initEvents(state); // Bemærk: elements er ikke nødvendige her
+        initEvents(state);
         initBudget(state, elements);
     }
 
