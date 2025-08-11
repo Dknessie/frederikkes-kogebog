@@ -58,14 +58,13 @@ export function renderProjects() {
     const fragment = document.createDocumentFragment();
     appElements.projectsGrid.innerHTML = '';
     
-    // FIX: Reverting to the more lenient filter that matches the dashboard logic.
-    // This will show all projects that are not explicitly marked as 'Afsluttet'.
-    let projectsToRender = appState.projects.filter(p => p.status !== 'Afsluttet');
+    // FIX: Removed all status filtering to show every project.
+    let projectsToRender = [...appState.projects];
 
     projectsToRender.sort((a,b) => a.title.localeCompare(b.title));
 
     if (projectsToRender.length === 0) {
-        appElements.projectsGrid.innerHTML = `<p class="empty-state">Du har ingen aktive projekter. Klik på knappen for at tilføje et nyt.</p>`;
+        appElements.projectsGrid.innerHTML = `<p class="empty-state">Du har ingen projekter endnu. Klik på knappen for at tilføje dit første.</p>`;
         return;
     }
 
