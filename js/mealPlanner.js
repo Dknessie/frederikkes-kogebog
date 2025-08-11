@@ -302,7 +302,7 @@ function createEventDiv(eventData) {
             eventDiv.draggable = true;
             eventDiv.classList.add('task');
             content = eventData.taskName;
-            icon = `<i class="fas fa-sticky-note"></i>`; // Updated icon
+            icon = `<i class="fas fa-sticky-note"></i>`;
             eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
             break;
 
@@ -319,7 +319,7 @@ function createEventDiv(eventData) {
 
 function getIconForCategory(eventData) {
     switch (eventData.category) {
-        case 'To-do': return 'fa-sticky-note'; // Updated icon
+        case 'To-do': return 'fa-sticky-note';
         case 'Aftale': return 'fa-calendar-check';
         case 'Fødselsdag': return 'fa-birthday-cake';
         case 'Udgivelse':
@@ -345,13 +345,14 @@ async function handleClearMealPlan() {
     
     const start = getStartOfWeek(appState.currentDate);
     const batch = writeBatch(db);
+    // FINAL FIX: Use the correct document reference (userId)
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(start);
         dayDate.setDate(start.getDate() + i);
         const dateString = formatDate(dayDate);
         if (appState.mealPlan[dateString]) {
-            const mealPlanRef = doc(db, 'meal_plans', `plan_${dayDate.getFullYear()}`);
             batch.update(mealPlanRef, { [dateString]: deleteField() });
         }
     }
@@ -432,8 +433,8 @@ async function handleMonthGridClick(e) {
 }
 
 async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
-    const year = new Date(date).getFullYear();
-    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    // FINAL FIX: Use the correct document reference (userId)
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
 
     try {
@@ -450,8 +451,8 @@ async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
 }
 
 async function removeEventFromCalendar(date, mealType, eventData) {
-    const year = new Date(date).getFullYear();
-    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    // FINAL FIX: Use the correct document reference (userId)
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
     
     try {
@@ -650,8 +651,8 @@ async function handleCalendarTaskSubmit(e) {
 }
 
 async function addEventToCalendar(date, mealType, eventData) {
-    const year = new Date(date).getFullYear();
-    const mealPlanRef = doc(db, 'meal_plans', `plan_${year}`);
+    // FINAL FIX: Use the correct document reference (userId)
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
     
     try {
