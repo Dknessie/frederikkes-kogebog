@@ -7,11 +7,7 @@
 export function showSection(sectionId) {
     const sections = document.querySelectorAll('main > section');
     sections.forEach(section => {
-        if (section.id === sectionId) {
-            section.style.display = 'block';
-        } else {
-            section.style.display = 'none';
-        }
+        section.style.display = (section.id === sectionId) ? 'block' : 'none';
     });
 }
 
@@ -27,14 +23,11 @@ export function setupNavigation(onNavigate) {
             event.preventDefault();
             const sectionId = link.getAttribute('href').substring(1) + '-section';
             
-            // Fjern 'active' klasse fra alle links
             navLinks.forEach(l => l.classList.remove('active'));
-            // Tilføj 'active' til det klikkede link
             link.classList.add('active');
 
             showSection(sectionId);
             
-            // Kør callback-funktionen efter navigationen
             if (typeof onNavigate === 'function') {
                 onNavigate();
             }
@@ -42,4 +35,24 @@ export function setupNavigation(onNavigate) {
     });
 }
 
-// Yderligere UI-hjælpefunktioner kan tilføjes her, f.eks. til at vise notifikationer eller modaler.
+/**
+ * Viser en modal.
+ * @param {string} modalId - ID'et på den modal, der skal vises.
+ */
+export function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+/**
+ * Skjuler en modal.
+ * @param {string} modalId - ID'et på den modal, der skal skjules.
+ */
+export function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
