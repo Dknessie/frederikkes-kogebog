@@ -1,41 +1,28 @@
-// js/expenses.js
+// js/firebase.js
 
-import { db } from './firebase.js';
-import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { handleError } from './ui.js';
+// This module initializes Firebase and exports the necessary services.
+// This centralizes the Firebase setup.
 
-let appState;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-/**
- * Initializes the expenses module.
- * @param {object} state - The global app state.
- */
-export function initExpenses(state) {
-    appState = state;
-}
+// WARNING: It is strongly recommended to use environment variables or a secure key management system
+// instead of hardcoding your Firebase configuration in a client-side script.
+// Consider using Firebase Hosting's reserved URLs to load this configuration securely.
+const firebaseConfig = {
+  apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
+  authDomain: "frederikkes-kogebog.firebaseapp.com",
+  projectId: "frederikkes-kogebog",
+  storageBucket: "frederikkes-kogebog.firebasestorage.app",
+  messagingSenderId: "557087234453",
+  appId: "1:557087234453:web:9abec4eb124bc08583be9c"
+};
 
-/**
- * Logs a new expense to the Firestore 'expenses' collection.
- * @param {number} amount - The total amount of the expense.
- * @param {string} category - The category of the expense (e.g., 'Dagligvarer', 'Projekter').
- * @param {string} description - A brief description of the expense.
- * @param {string} [relatedId=null] - The ID of the related document (e.g., itemId, projectId).
- */
-export async function logExpense(amount, category, description, relatedId = null) {
-    if (!appState.currentUser || typeof amount !== 'number' || amount <= 0) {
-        return; // Do not log invalid or zero-amount expenses
-    }
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-    try {
-        await addDoc(collection(db, 'expenses'), {
-            userId: appState.currentUser.uid,
-            amount: amount,
-            category: category,
-            description: description,
-            date: serverTimestamp(), // Use server timestamp for accuracy
-            relatedId: relatedId
-        });
-    } catch (error) {
-        handleError(error, "Udgiften kunne ikke logges.", "logExpense");
-    }
-}
+// Export the initialized services for other modules to use
+export { app, auth, db };
