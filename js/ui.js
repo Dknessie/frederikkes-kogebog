@@ -25,17 +25,22 @@ export function initUI(state, elements) {
  */
 export function navigateTo(hash) {
     const effectiveHash = hash || '#dashboard';
-    UIElements.pages.forEach(page => page.classList.add('hidden'));
+
+    // Hide all pages by removing the .active class
+    UIElements.pages.forEach(page => page.classList.remove('active'));
+    
+    // Find the target page by its ID (which matches the hash) and show it by adding the .active class
     const targetPage = document.querySelector(effectiveHash);
     if (targetPage) {
-        targetPage.classList.remove('hidden');
+        targetPage.classList.add('active');
     } else {
-        document.getElementById('dashboard').classList.remove('hidden'); // Fallback to dashboard
+        document.getElementById('dashboard').classList.add('active'); // Fallback to dashboard
     }
     
     // Update active link in navigations
     UIElements.navLinks.forEach(link => {
-        link.classList.toggle('active', link.getAttribute('href') === effectiveHash);
+        // The parent <li> gets the .active class for styling
+        link.parentElement.classList.toggle('active', link.getAttribute('href') === effectiveHash);
     });
     UIElements.mobileTabLinks.forEach(link => {
         const page = link.dataset.page;
@@ -44,6 +49,7 @@ export function navigateTo(hash) {
         }
     });
 }
+
 
 /**
  * Sets up the main navigation event listeners that only change the URL hash.
