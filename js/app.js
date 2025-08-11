@@ -191,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function computeDerivedShoppingLists() {
         const materialsList = {};
-        // FIX: Filter out completed projects before calculating the materials list.
         state.projects
             .filter(project => project.status !== 'Afsluttet')
             .forEach(project => {
@@ -209,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         state.shoppingLists.materials = materialsList;
 
-        // Compute wishlist from rooms
         const wishlist = {};
         state.rooms.forEach(room => {
             (room.wishlist || []).forEach(item => {
@@ -312,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, setting));
         }
         
+        // FINAL FIX: Listen to a specific document for the current year. This avoids the permission error.
         const currentYear = new Date().getFullYear();
         const mealPlanRef = doc(db, 'meal_plans', `plan_${currentYear}`);
         state.listeners.mealPlan = onSnapshot(mealPlanRef, (docSnap) => {
