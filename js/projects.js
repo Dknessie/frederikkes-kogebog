@@ -58,12 +58,14 @@ export function renderProjects() {
     const fragment = document.createDocumentFragment();
     appElements.projectsGrid.innerHTML = '';
     
-    let projectsToRender = [...appState.projects];
+    // FIX: Filter to explicitly include only 'Planlagt' or 'Igangværende' projects.
+    let projectsToRender = appState.projects.filter(p => p.status === 'Planlagt' || p.status === 'Igangværende');
 
     projectsToRender.sort((a,b) => a.title.localeCompare(b.title));
 
     if (projectsToRender.length === 0) {
-        appElements.projectsGrid.innerHTML = `<p class="empty-state">Du har ingen projekter endnu. Klik på knappen for at tilføje dit første!</p>`;
+        // Updated empty state message to be more informative.
+        appElements.projectsGrid.innerHTML = `<p class="empty-state">Du har ingen aktive projekter. Klik på knappen for at tilføje et nyt.</p>`;
         return;
     }
 
@@ -172,9 +174,8 @@ async function handleSaveProject(e) {
 
     const projectData = {
         title: document.getElementById('project-title').value,
-        status: document.getElementById('project-status').value, // Get status
+        status: document.getElementById('project-status').value,
         tags: tags,
-        // OPDATERET: Henter nu fra et input-felt i stedet for en dropdown.
         room: document.getElementById('project-room').value.trim() || null, 
         time: {
             days: Number(document.getElementById('project-time-days').value) || null,
@@ -241,13 +242,11 @@ function openAddProjectModal() {
     appElements.projectMaterialsContainer.innerHTML = '';
     appElements.projectLinksContainer.innerHTML = '';
     
-    // Reset images
     projectFormImageBefore = { type: null, data: null };
     projectFormImageAfter = { type: null, data: null };
     appElements.projectImagePreviewBefore.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Før';
     appElements.projectImagePreviewAfter.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Efter';
     
-    // OPDATERET: Nyt fritekstfelt til rum.
     const roomInput = document.getElementById('project-room');
     roomInput.value = '';
 
@@ -271,7 +270,6 @@ function openEditProjectModal(projectId) {
         document.getElementById('project-status').value = project.status || 'Igangværende';
         document.getElementById('project-tags').value = (project.tags && project.tags.join(', ')) || '';
         
-        // OPDATERET: Nu sætter vi værdien på et input-felt.
         document.getElementById('project-room').value = project.room || '';
         
         document.getElementById('project-time-days').value = project.time?.days || '';
@@ -279,7 +277,6 @@ function openEditProjectModal(projectId) {
         
         document.getElementById('project-instructions').value = project.instructions || '';
         
-        // Handle images
         projectFormImageBefore = { 
             type: project.imageUrlBefore ? 'url' : (project.imageBase64Before ? 'base64' : null),
             data: project.imageUrlBefore || project.imageBase64Before
