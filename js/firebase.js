@@ -3,7 +3,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { handleError } from './utils.js';
+// Fjernet import af 'handleError' for at bryde cirkulær afhængighed.
 
 // Korrekt Firebase-konfiguration fra din originale fil.
 const firebaseConfig = {
@@ -59,7 +59,10 @@ export function setupRealtimeListeners(userId, state, onInitialDataLoaded) {
                     batches: (state.inventoryBatches || []).filter(batch => batch.itemId === item.id)
                 }));
             }
-        }, err => handleError(err, `Kunne ikke hente ${collectionName}.`));
+        }, err => {
+            // Log fejlen direkte i stedet for at bruge en ekstern UI-funktion.
+            console.error(`Fejl ved hentning af ${collectionName}:`, err);
+        });
         
         // Sørg for at tælle ned, første gang data modtages
         const firstTimeListener = onSnapshot(q, () => {
@@ -74,7 +77,9 @@ export function setupRealtimeListeners(userId, state, onInitialDataLoaded) {
     const mealPlanRef = doc(db, 'meal_plans', userId);
     const unsubMealPlan = onSnapshot(mealPlanRef, (doc) => {
         state.mealPlan = doc.exists() ? doc.data() : {};
-    }, err => handleError(err, "Kunne ikke hente madplan."));
+    }, err => {
+        console.error("Fejl ved hentning af madplan:", err);
+    });
     const firstTimeMealPlan = onSnapshot(mealPlanRef, () => { checkInitialLoad(); firstTimeMealPlan(); });
     listeners.push(unsubMealPlan);
 
@@ -82,7 +87,9 @@ export function setupRealtimeListeners(userId, state, onInitialDataLoaded) {
     const shoppingListRef = doc(db, 'shopping_lists', userId);
     const unsubShoppingList = onSnapshot(shoppingListRef, (doc) => {
         state.shoppingList = doc.exists() ? doc.data() : {};
-    }, err => handleError(err, "Kunne ikke hente indkøbsliste."));
+    }, err => {
+        console.error("Fejl ved hentning af indkøbsliste:", err);
+    });
     const firstTimeShoppingList = onSnapshot(shoppingListRef, () => { checkInitialLoad(); firstTimeShoppingList(); });
     listeners.push(unsubShoppingList);
 
