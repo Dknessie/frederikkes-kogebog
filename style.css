@@ -627,7 +627,7 @@ header {
     padding: 0;
 }
 
-/* FIX: Updated rules for material list theme to be more specific */
+/* Tema 2: Materialer (Værktøjskasse - nu Bosch) */
 .modal-content.shopping-list-theme-materials {
     background-color: var(--bosch-green);
     color: var(--white-color);
@@ -651,7 +651,7 @@ header {
     padding: var(--spacing-m) 0;
     border-bottom: 1px solid rgba(255,255,255,0.2);
     align-items: center;
-    color: var(--white-color); /* Ensure text is white */
+    color: var(--white-color);
 }
 .modal-content.shopping-list-theme-materials .material-header {
     font-weight: 600;
@@ -1391,7 +1391,6 @@ header {
     grid-template-columns: repeat(3, 1fr);
 }
 
-/* FIX: Removed obsolete tab styling for Hjem page */
 .hjem-content-container > div {
     margin-bottom: var(--spacing-xl);
 }
@@ -1487,7 +1486,7 @@ header {
 }
 
 #plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal { z-index: 2010; }
-#bulk-add-modal { z-index: 2015; } /* NEW: Ensure bulk modal is on top */
+#bulk-add-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
 
@@ -1983,9 +1982,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     justify-content: flex-end;
     font-size: var(--small-font-size);
 }
-.budget-grid-row:hover .budget-grid-cell {
-    background-color: var(--secondary-color);
-}
+/* FIX: Removed hover effects for budget grid */
 .budget-grid-cell.header-cell {
     background-color: var(--primary-color);
     color: var(--white-color);
@@ -2005,9 +2002,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     left: 0;
     z-index: 5;
 }
-.budget-grid-row:hover .budget-grid-cell.category-cell {
-    background-color: #e9e5dc;
+/* FIX: Added rule to ensure category header text is visible */
+.budget-grid-cell.header-cell.category-cell {
+    color: var(--text-color);
 }
+
 .budget-grid-cell .owner-tag {
     font-size: 0.8em;
     color: #777;
