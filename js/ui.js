@@ -16,7 +16,6 @@ export function initUI(state, elements) {
     initNavigationClicks();
     initModals();
     initMobileNav();
-    initHjemTabs();
 }
 
 /**
@@ -26,21 +25,20 @@ export function initUI(state, elements) {
 export function navigateTo(hash) {
     const effectiveHash = hash || '#dashboard';
 
-    // Hide all pages by removing the .active class
-    UIElements.pages.forEach(page => page.classList.remove('active'));
+    // FIX: Hide all pages by ADDING the 'hidden' class.
+    UIElements.pages.forEach(page => page.classList.add('hidden'));
     
-    // Find the target page by its ID (which matches the hash) and show it by adding the .active class
+    // FIX: Find the target page by its ID and show it by REMOVING the 'hidden' class.
     const targetPage = document.querySelector(effectiveHash);
     if (targetPage) {
-        targetPage.classList.add('active');
+        targetPage.classList.remove('hidden');
     } else {
-        document.getElementById('dashboard').classList.add('active'); // Fallback to dashboard
+        document.getElementById('dashboard').classList.remove('hidden'); // Fallback to dashboard
     }
     
-    // Update active link in navigations
+    // FIX: Update active link in navigations. The .active class goes on the link itself, not a parent.
     UIElements.navLinks.forEach(link => {
-        // The parent <li> gets the .active class for styling
-        link.parentElement.classList.toggle('active', link.getAttribute('href') === effectiveHash);
+        link.classList.toggle('active', link.getAttribute('href') === effectiveHash);
     });
     UIElements.mobileTabLinks.forEach(link => {
         const page = link.dataset.page;
@@ -71,7 +69,7 @@ function initNavigationClicks() {
 }
 
 /**
- * NEW: Rewritten function to handle modal closing with more control.
+ * Handles modal closing with more control.
  * It checks for data-attributes to prevent accidental closing.
  */
 function initModals() {
@@ -92,7 +90,7 @@ function initModals() {
 }
 
 /**
- * NEW: Handles the attempt to close a modal, checking if confirmation is needed.
+ * Handles the attempt to close a modal, checking if confirmation is needed.
  * @param {HTMLElement} overlay - The modal overlay element to potentially close.
  */
 async function handleCloseAttempt(overlay) {
@@ -127,27 +125,6 @@ function initMobileNav() {
             if (page) {
                 window.location.hash = `#${page}`;
             }
-        });
-    }
-}
-
-
-/**
- * Sets up the sub-navigation tabs on the "Hjem" page.
- */
-function initHjemTabs() {
-    if (UIElements.hjemNavTabs) {
-        UIElements.hjemNavTabs.addEventListener('click', e => {
-            const targetTab = e.target.closest('.hjem-tab');
-            if (!targetTab) return;
-
-            UIElements.hjemNavTabs.querySelectorAll('.hjem-tab').forEach(tab => tab.classList.remove('active'));
-            targetTab.classList.add('active');
-
-            const targetId = targetTab.dataset.target;
-            UIElements.hjemSubpages.forEach(page => {
-                page.classList.toggle('active', page.id === targetId);
-            });
         });
     }
 }
