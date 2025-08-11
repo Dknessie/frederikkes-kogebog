@@ -65,7 +65,7 @@ function resetFixedExpenseForm() {
     appElements.addFixedExpenseForm.reset();
     document.getElementById('fixed-expense-id').value = '';
     document.getElementById('fixed-expense-start-date-new').value = formatDate(new Date());
-    populateDropdowns(); // Repopulate to set default owner
+    populateDropdowns();
     appElements.addFixedExpenseForm.querySelector('button[type="submit"]').innerHTML = '<i class="fas fa-plus"></i> Gem Udgift';
 }
 
@@ -146,8 +146,8 @@ function calculateAndRenderBudgetGrid() {
             const startYear = startDate.getFullYear();
 
             for (let i = 0; i < 12; i++) {
-                const currentMonthDate = new Date(currentBudgetYear, i, 1);
-                if (currentMonthDate < new Date(startYear, startMonth, 1)) continue;
+                const currentMonthDate = new Date(currentBudgetYear, i, startDate.getDate());
+                if (currentMonthDate < startDate) continue;
 
                 let shouldApply = false;
                 if (exp.interval === 'månedligt') {
@@ -185,7 +185,7 @@ function calculateAndRenderBudgetGrid() {
             </div>`;
     }).join('');
 
-    container.innerHTML = `<div class="budget-grid">${headerHtml}${bodyHtml}</div>`;
+    container.innerHTML = `<div class="budget-grid">${headerHtml}${bodyHtml || `<div class="empty-grid-row"><div class="budget-grid-cell empty-state">Ingen faste udgifter fundet for i år.</div></div>`}</div>`;
     
     const totalsBar = appElements.budgetTotalsBar;
     const grandTotal = monthlyTotals.reduce((sum, total) => sum + total, 0);
