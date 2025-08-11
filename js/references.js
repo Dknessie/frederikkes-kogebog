@@ -16,7 +16,7 @@ export function initReferences(state, elements) {
         appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
     }
     
-    // NEW: Household member listeners
+    // Listeners are now correctly scoped to the static form in index.html
     const addMemberForm = document.getElementById('add-member-form');
     if (addMemberForm) {
         addMemberForm.addEventListener('submit', e => {
@@ -29,9 +29,9 @@ export function initReferences(state, elements) {
             }
         });
     }
-    // Event delegation for deleting members
-    if (appElements.referencesContainer) {
-        appElements.referencesContainer.addEventListener('click', e => {
+    
+    if (appElements.householdMembersList) {
+        appElements.householdMembersList.addEventListener('click', e => {
             if (e.target.closest('.delete-member-btn')) {
                 const memberName = e.target.closest('[data-member-name]').dataset.memberName;
                 deleteHouseholdMember(memberName);
@@ -41,7 +41,9 @@ export function initReferences(state, elements) {
 }
 
 export function renderReferencesPage() {
-    appElements.referencesContainer.innerHTML = '';
+    // Clear only the dynamic part, leave the static household card
+    const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
+    dynamicCards.forEach(card => card.remove());
     
     const referenceData = {
         itemCategories: {
@@ -66,25 +68,8 @@ export function renderReferencesPage() {
             isReadOnly: true
         }
     };
-
-    // Household members card
-    const householdCard = document.createElement('div');
-    householdCard.className = 'reference-card household-members-card'; // Added class for specific targeting if needed
-    householdCard.innerHTML = `
-        <h4>Husstandsmedlemmer</h4>
-        <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
-        <ul id="household-members-list" class="reference-list"></ul>
-        <form id="add-member-form" class="add-reference-form">
-            <div class="input-group">
-                <input type="text" id="new-member-name" placeholder="Tilføj nyt navn..." required>
-            </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i></button>
-        </form>
-    `;
-    appElements.referencesContainer.appendChild(householdCard);
-    appElements.householdMembersList = householdCard.querySelector('#household-members-list');
     
-    // Render other reference cards
+    // Render only the dynamic reference cards
     for (const key in referenceData) {
         const data = referenceData[key];
         const card = document.createElement('div');
@@ -158,6 +143,7 @@ export function renderReferencesPage() {
         appElements.referencesContainer.appendChild(card);
     }
     
+    // Render the household members into the static list
     renderHouseholdMembers();
 }
 
