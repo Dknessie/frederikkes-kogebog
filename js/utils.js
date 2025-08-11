@@ -29,3 +29,17 @@ export function handleError(error, userMessage, context = 'Ukendt kontekst') {
         alert(`Fejl: ${userMessage}`);
     }
 }
+
+/**
+ * Formaterer et dato-objekt eller en ISO-streng til et læsbart format (DD.MM.YYYY).
+ * @param {Date|string} date - Datoen, der skal formateres.
+ * @returns {string} Den formaterede dato-streng.
+ */
+export function formatDate(date) {
+    if (!date) return 'Ingen dato';
+    const d = new Date(date);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+}
