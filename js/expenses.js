@@ -2,40 +2,48 @@
 
 import { db } from './firebase.js';
 import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { handleError } from './ui.js';
+// Rettet import til at bruge den centrale fejlhåndtering fra utils.js
+import { handleError } from './utils.js'; 
 
-let appState;
+let state;
 
-/**
- * Initializes the expenses module.
- * @param {object} state - The global app state.
- */
-export function initExpenses(state) {
-    appState = state;
+export function initExpenses(appState) {
+    state = appState;
+    
+    const addExpenseForm = document.getElementById('add-expense-form');
+    if (addExpenseForm) {
+        addExpenseForm.addEventListener('submit', handleAddExpense);
+    }
 }
 
-/**
- * Logs a new expense to the Firestore 'expenses' collection.
- * @param {number} amount - The total amount of the expense.
- * @param {string} category - The category of the expense (e.g., 'Dagligvarer', 'Projekter').
- * @param {string} description - A brief description of the expense.
- * @param {string} [relatedId=null] - The ID of the related document (e.g., itemId, projectId).
- */
-export async function logExpense(amount, category, description, relatedId = null) {
-    if (!appState.currentUser || typeof amount !== 'number' || amount <= 0) {
-        return; // Do not log invalid or zero-amount expenses
+async function handleAddExpense(e) {
+    e.preventDefault();
+    if (!state.currentUser) {
+        handleError(new Error("Bruger ikke logget ind"), "Du skal være logget ind for at tilføje en udgift.");
+        return;
+    }
+
+    const form = e.target;
+    const expenseData = {
+        userId: state.currentUser.uid,
+        description: form.description.value,
+        amount: parseFloat(form.amount.value),
+        category: form.category.value,
+        date: new Date(form.date.value),
+        createdAt: serverTimestamp()
+    };
+
+    if (isNaN(expenseData.amount)) {
+        handleError(new Error("Ugyldigt beløb"), "Indtast venligst et gyldigt tal i beløbsfeltet.");
+        return;
     }
 
     try {
-        await addDoc(collection(db, 'expenses'), {
-            userId: appState.currentUser.uid,
-            amount: amount,
-            category: category,
-            description: description,
-            date: serverTimestamp(), // Use server timestamp for accuracy
-            relatedId: relatedId
-        });
+        await addDoc(collection(db, 'expenses'), expenseData);
+        form.reset();
+        // Her kunne man lukke en modal, hvis formularen var i en
+        // hideModal('add-expense-modal');
     } catch (error) {
-        handleError(error, "Udgiften kunne ikke logges.", "logExpense");
+        handleError(error, "Kunne ikke gemme udgiften.", "handleAddExpense");
     }
 }
