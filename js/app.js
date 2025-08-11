@@ -67,9 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         budgetSpentEl: document.getElementById('budget-spent'),
         budgetTotalEl: document.getElementById('budget-total'),
 
-        // Hjem - OPPDATERET for at afspejle den nye, samlede side
-        hjemNavTabs: document.querySelector('.hjem-nav-tabs'), // Dette element fjernes i HTML
-        hjemSubpages: document.querySelectorAll('.hjem-subpage'), // Disse elementer er nu bare sektioner
+        // Hjem
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
         roomEditModal: document.getElementById('room-edit-modal'),
@@ -159,11 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dayDetailsTitle: document.getElementById('day-details-title'),
         dayDetailsContent: document.getElementById('day-details-content'),
 
-
         // References
         referencesContainer: document.getElementById('references-container'),
-        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
-        householdMembersList: document.getElementById('household-members-list'),
 
         // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
@@ -182,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
         
-        // NEW: Budget Page
+        // Budget Page
         budgetGridContainer: document.getElementById('budget-grid-container'),
         budgetYearDisplay: document.getElementById('budget-year-display'),
         prevYearBtn: document.getElementById('prev-year-btn'),
@@ -250,90 +245,83 @@ document.addEventListener('DOMContentLoaded', () => {
         const usersQuery = query(collection(db, 'users'));
         state.listeners.users = onSnapshot(usersQuery, (snapshot) => {
             state.users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            const householdMembers = state.users.length > 0 ? state.users.map(u => u.id) : [userId];
-            
-            const expensesQuery = query(collection(db, 'expenses'), where("userId", "==", userId));
-            state.listeners.expenses = onSnapshot(expensesQuery, (expensesSnapshot) => {
-                state.expenses = expensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'expenses'));
-            
-            const fixedExpensesQuery = query(collection(db, 'fixed_expenses'), where("userId", "==", userId));
-            state.listeners.fixedExpenses = onSnapshot(fixedExpensesQuery, (fixedExpensesSnapshot) => {
-                state.fixedExpenses = fixedExpensesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'fixed_expenses'));
-            
-            const collections = {
-                inventory_items: 'inventoryItems',
-                inventory_batches: 'inventoryBatches',
-                recipes: 'recipes',
-                projects: 'projects',
-                rooms: 'rooms',
-                maintenance_logs: 'maintenanceLogs',
-                events: 'events'
-            };
-
-            for (const [coll, stateKey] of Object.entries(collections)) {
-                const q = query(collection(db, coll), where("userId", "==", userId));
-                state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
-                    state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    
-                    if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
-                        combineInventoryData();
-                    }
-                    if (stateKey === 'projects' || stateKey === 'rooms') {
-                        computeDerivedShoppingLists();
-                    }
-
-                    handleNavigation(window.location.hash);
-                }, (error) => commonErrorHandler(error, coll));
-            }
-
-            const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
-            state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
-                state.mealPlan = {};
-                snapshot.forEach(doc => {
-                    state.mealPlan = { ...state.mealPlan, ...doc.data() };
-                });
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'madplan'));
-
-            // Listener for the manually managed groceries list
-            state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
-                const data = doc.exists() ? doc.data() : {};
-                state.shoppingLists.groceries = data.groceries || {};
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'indkøbslister'));
-            
-            const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
-            state.listeners.budget = onSnapshot(settingsRef, (doc) => {
-                state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'budget'));
-
-            const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
-            state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
-                state.preferences = doc.exists() ? doc.data() : {};
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, 'præferencer'));
-
-            const referencesRef = doc(db, 'references', userId);
-            state.listeners.references = onSnapshot(referencesRef, (doc) => {
-                if (doc.exists()) {
-                    state.references = doc.data();
-                    const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
-                    buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
-                    setReferencesLoaded(true);
-                    handleNavigation(window.location.hash);
-                } else {
-                    handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
-                    window.location.hash = '#references';
-                }
-            }, (error) => commonErrorHandler(error, 'referencer'));
-
         }, (error) => commonErrorHandler(error, 'users'));
+
+        const collections = {
+            inventory_items: 'inventoryItems',
+            inventory_batches: 'inventoryBatches',
+            recipes: 'recipes',
+            projects: 'projects',
+            rooms: 'rooms',
+            maintenance_logs: 'maintenanceLogs',
+            events: 'events',
+            expenses: 'expenses',
+            fixed_expenses: 'fixedExpenses' // Added listener for fixed expenses
+        };
+
+        for (const [coll, stateKey] of Object.entries(collections)) {
+            const q = query(collection(db, coll), where("userId", "==", userId));
+            state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
+                state[stateKey] = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    // Convert Firestore Timestamps to JS Dates for expenses
+                    if ((stateKey === 'expenses' || stateKey === 'fixedExpenses') && data.date && data.date.toDate) {
+                        data.date = data.date.toDate();
+                    }
+                    return { id: doc.id, ...data };
+                });
+                
+                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
+                    combineInventoryData();
+                }
+                if (stateKey === 'projects' || stateKey === 'rooms') {
+                    computeDerivedShoppingLists();
+                }
+
+                handleNavigation(window.location.hash);
+            }, (error) => commonErrorHandler(error, coll));
+        }
+
+        const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
+        state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
+            state.mealPlan = {};
+            snapshot.forEach(doc => {
+                state.mealPlan = { ...state.mealPlan, ...doc.data() };
+            });
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'madplan'));
+
+        state.listeners.shoppingLists = onSnapshot(doc(db, 'shopping_lists', userId), (doc) => {
+            const data = doc.exists() ? doc.data() : {};
+            state.shoppingLists.groceries = data.groceries || {};
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'indkøbslister'));
+        
+        const settingsRef = doc(db, 'users', userId, 'settings', 'budget');
+        state.listeners.budget = onSnapshot(settingsRef, (doc) => {
+            state.budget = doc.exists() ? doc.data() : { monthlyAmount: 4000 };
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'budget'));
+
+        const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
+        state.listeners.preferences = onSnapshot(preferencesRef, (doc) => {
+            state.preferences = doc.exists() ? doc.data() : {};
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'præferencer'));
+
+        const referencesRef = doc(db, 'references', userId);
+        state.listeners.references = onSnapshot(referencesRef, (doc) => {
+            if (doc.exists()) {
+                state.references = doc.data();
+                const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn, elements.addEventBtn];
+                buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
+                setReferencesLoaded(true);
+                handleNavigation(window.location.hash);
+            } else {
+                handleError(new Error("References not found"), "Første gang du logger ind, skal du oprette referencer for at kunne bruge appen. Gå til 'Referencer' for at starte.");
+                window.location.hash = '#references';
+            }
+        }, (error) => commonErrorHandler(error, 'referencer'));
     }
 
     function onLogin(user) {
