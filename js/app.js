@@ -1,7 +1,8 @@
 // js/app.js
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { auth } from './firebase.js';
+import { auth, getAllData } from './firebase.js';
+import { setupLogin, setupLogout } from './auth.js';
 import { showSection, setupNavigation } from './ui.js';
 import { initDashboard } from './dashboard.js';
 import { initRecipes } from './recipes.js';
@@ -9,16 +10,15 @@ import { initInventory } from './inventory.js';
 import { initShoppingList } from './shoppingList.js';
 import { initMealPlanner } from './mealPlanner.js';
 import { initProjects } from './projects.js';
-// Importer andre moduler efter behov...
-import { getAllData } from './firebase.js';
+// ... importer andre moduler efter behov
 
 // Central state for hele applikationen
 const state = {
     user: null,
     recipes: [],
     inventory: [],
-    shoppingList: [],
-    mealPlan: [],
+    shoppingList: {},
+    mealPlan: {},
     projects: [],
     // Tilføj andre state-egenskaber her
 };
@@ -27,7 +27,7 @@ const state = {
  * Funktion til at opdatere og re-renderere de nødvendige dele af UI'en
  * baseret på den aktive sektion.
  */
-function updateUI() {
+function updateActivePage() {
     const activeSection = document.querySelector('main section:not([style*="display: none"])');
     if (!activeSection) return;
 
@@ -60,31 +60,24 @@ function updateUI() {
  */
 async function initializeApp(user) {
     state.user = user;
-    document.body.classList.remove('logged-out');
-    document.body.classList.add('logged-in');
+    
+    // Vis app-container og skjul login-side
+    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('login-page').classList.add('hidden');
     
     // Hent alle data fra Firestore og opdater state
-    try {
-        const allData = await getAllData(user.uid);
-        state.recipes = allData.recipes || [];
-        state.inventory = allData.inventory || [];
-        state.shoppingList = allData.shoppingList || [];
-        state.mealPlan = allData.mealPlan || [];
-        state.projects = allData.projects || [];
-        // ... opdater resten af state
-    } catch (error) {
-        console.error("Fejl ved hentning af data:", error);
-        // Vis en fejlbesked til brugeren i UI'et
-    }
+    const allData = await getAllData(user.uid);
+    Object.assign(state, allData); // Opdater state med de hentede data
     
     console.log("State er initialiseret:", state);
 
-    // Opsæt navigation, der kalder updateUI ved sideskift
-    setupNavigation(updateUI); 
+    // Opsæt navigation og logud-knap
+    setupNavigation(updateActivePage); 
+    setupLogout();
     
-    // Vis dashboard som standard og kald updateUI for at rendere den
+    // Vis dashboard som standard og kald updateActivePage for at rendere den
     showSection('dashboard-section');
-    updateUI();
+    updateActivePage();
 }
 
 /**
@@ -92,20 +85,21 @@ async function initializeApp(user) {
  */
 function handleLoggedOutUser() {
     state.user = null;
-    document.body.classList.remove('logged-in');
-    document.body.classList.add('logged-out');
-    showSection('login-section');
+    // Vis login-side og skjul app-container
+    document.getElementById('app-container').classList.add('hidden');
+    document.getElementById('login-page').classList.remove('hidden');
 }
 
 // Lytter efter ændringer i brugerens login-status
 onAuthStateChanged(auth, (user) => {
     if (user) {
         // Bruger er logget ind
-        if (!state.user || state.user.uid !== user.uid) {
-            initializeApp(user);
-        }
+        initializeApp(user);
     } else {
         // Bruger er logget ud
         handleLoggedOutUser();
     }
 });
+
+// Initialiser login-funktionaliteten én gang, når appen starter
+setupLogin();
