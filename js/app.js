@@ -16,7 +16,7 @@ const state = {
     mealPlan: {},
     projects: [],
     isInitialized: false,
-    unsubscribe: () => {} // Funktion til at stoppe listeners ved logud
+    unsubscribe: () => {}
 };
 
 function updateActivePage() {
@@ -31,12 +31,8 @@ function updateActivePage() {
         case 'recipes-section':
             initRecipes(state);
             break;
+        // Tilføj andre sider her
     }
-    
-    // --- DEBUGGING ---
-    // Koden vil pause her, lige efter den har forsøgt at tegne sidens indhold.
-    console.log("updateActivePage er færdig. Pauser eksekvering for inspektion.");
-    debugger; 
 }
 
 async function initializeApp(user) {
@@ -63,12 +59,15 @@ async function initializeApp(user) {
         }
 
         showSection(initialSectionId);
-        updateActivePage();
+        
+        // DEN ENDELIGE RETTELSE:
+        // Vi giver browseren et mikrosekund til at rendere sektionen, før vi fylder den.
+        setTimeout(updateActivePage, 0);
     });
 }
 
 function handleLoggedOutUser() {
-    state.unsubscribe();
+    if (state.unsubscribe) state.unsubscribe();
     state.isInitialized = false;
     state.user = null;
     document.getElementById('app-container').classList.add('hidden');
