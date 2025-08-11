@@ -6,15 +6,10 @@ import { handleError } from './utils.js';
 
 /**
  * Opsætter event listener for login-formularen.
- * Når formularen submittes, forsøger den at logge brugeren ind med Firebase.
- * Fejl (f.eks. forkert kodeord) bliver håndteret og vist for brugeren.
  */
 export function setupLogin() {
     const loginForm = document.getElementById('login-form');
-    if (!loginForm) {
-        console.error("Login-formular blev ikke fundet.");
-        return;
-    }
+    if (!loginForm) return;
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -23,10 +18,8 @@ export function setupLogin() {
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            // Login er succesfuldt. 'onAuthStateChanged' i app.js vil nu tage over.
-            console.log("Login-forsøg succesfuldt. Venter på onAuthStateChanged.");
+            // onAuthStateChanged i app.js tager over herfra.
         } catch (error) {
-            console.error("Login fejl:", error.code);
             handleError(error, "Login fejlede. Tjek venligst din email og kodeord.");
         }
     });
@@ -34,20 +27,24 @@ export function setupLogin() {
 
 /**
  * Opsætter event listener for logud-knappen.
+ * @param {function} unsubscribeAll - En funktion der stopper alle Firestore listeners.
  */
-export function setupLogout() {
+export function setupLogout(unsubscribeAll) {
     const logoutBtn = document.getElementById('logout-btn-header');
-    if (!logoutBtn) {
-        console.error("Logud-knap blev ikke fundet.");
-        return;
-    }
+    if (!logoutBtn) return;
     
-    logoutBtn.addEventListener('click', async () => {
+    // Sørg for at fjerne gamle listeners for at undgå dobbelt-logud
+    const newBtn = logoutBtn.cloneNode(true);
+    logoutBtn.parentNode.replaceChild(newBtn, logoutBtn);
+
+    newBtn.addEventListener('click', async () => {
         try {
+            // Frakobl Firestore listeners FØR logud for at undgå fejl
+            if (typeof unsubscribeAll === 'function') {
+                unsubscribeAll();
+            }
             await signOut(auth);
-            // Logud er succesfuldt. 'onAuthStateChanged' i app.js vil nu tage over.
-            console.log("Bruger logget ud.");
-            // Nulstil siden for at sikre, at alt er ryddet.
+            // onAuthStateChanged i app.js tager over og genindlæser siden.
             window.location.hash = '';
             window.location.reload();
         } catch (error) {
