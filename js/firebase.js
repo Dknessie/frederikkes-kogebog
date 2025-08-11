@@ -3,15 +3,14 @@
 // Importer de nødvendige funktioner fra Firebase SDK'erne
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // Din webapps Firebase-konfiguration
-// Sørg for at dine faktiske konfigurationsværdier er her
 const firebaseConfig = {
   apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
   authDomain: "frederikkes-kogebog.firebaseapp.com",
   projectId: "frederikkes-kogebog",
-  storageBucket: "frederikkes-kogebog.firebasestorage.app",
+  storageBucket: "frederikkes-kogebog.appspot.com",
   messagingSenderId: "557087234453",
   appId: "1:557087234453:web:9abec4eb124bc08583be9c"
 };
@@ -25,52 +24,71 @@ export const db = getFirestore(app);
 
 /**
  * Henter alle nødvendige startdata for en given bruger fra Firestore.
- * Dette samler flere databasekald i én funktion for at forenkle initialiseringen i app.js.
  * @param {string} userId - ID'et på den bruger, der er logget ind.
- * @returns {Promise<object>} Et objekt, der indeholder alle de hentede data (opskrifter, varelager osv.).
+ * @returns {Promise<object>} Et objekt, der indeholder alle de hentede data.
  */
 export async function getAllData(userId) {
     const data = {
         recipes: [],
         inventory: [],
-        shoppingList: [],
-        mealPlan: [],
+        shoppingList: {}, // Ændret til objekt
+        mealPlan: {},     // Ændret til objekt
         projects: []
     };
 
     try {
-        // Definer de collections, vi vil hente
-        const collectionsToFetch = [
-            'recipes',
-            'inventory', // Bemærk: Dette skal muligvis justeres ift. din datamodel (f.eks. inventory_items)
-            'shoppingList', // Bemærk: Dette er måske et enkelt dokument, ikke en collection
-            'mealPlan', // Bemærk: Dette er måske et enkelt dokument, ikke en collection
-            'projects'
-        ];
-
-        // Opret en liste af promises for hvert databasekald
-        const promises = collectionsToFetch.map(async (collectionName) => {
+        // --- Hent collections hvor dokumenter har et 'userId' felt ---
+        const collectionsToFetch = ['recipes', 'projects', 'inventory_items', 'inventory_batches'];
+        const collectionPromises = collectionsToFetch.map(async (collectionName) => {
             const q = query(collection(db, collectionName), where("userId", "==", userId));
             const querySnapshot = await getDocs(q);
             return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         });
+        
+        // --- Hent enkelte dokumenter hvor dokument-ID er userId ---
+        const mealPlanDocRef = doc(db, 'meal_plans', userId);
+        const shoppingListDocRef = doc(db, 'shopping_lists', userId);
+
+        const docPromises = [
+            getDoc(mealPlanDocRef),
+            getDoc(shoppingListDocRef)
+        ];
 
         // Kør alle databasekald parallelt
-        const results = await Promise.all(promises);
+        const [collectionResults, docResults] = await Promise.all([
+            Promise.all(collectionPromises),
+            Promise.all(docPromises)
+        ]);
 
-        // Tildel resultaterne til vores data-objekt
-        data.recipes = results[0];
-        data.inventory = results[1];
-        data.shoppingList = results[2];
-        data.mealPlan = results[3];
-        data.projects = results[4];
+        // Tildel resultater fra collections
+        data.recipes = collectionResults[0];
+        data.projects = collectionResults[1];
+        
+        // Kombiner inventory_items og inventory_batches til et samlet inventory
+        const inventoryItems = collectionResults[2];
+        const inventoryBatches = collectionResults[3];
+        data.inventory = inventoryItems.map(item => ({
+            ...item,
+            batches: inventoryBatches.filter(batch => batch.itemId === item.id)
+        }));
 
-        console.log('Alle data hentet fra Firestore:', data);
+        // Tildel resultater fra enkelte dokumenter
+        if (docResults[0].exists()) {
+            data.mealPlan = docResults[0].data();
+        }
+        if (docResults[1].exists()) {
+            data.shoppingList = docResults[1].data();
+        }
+
+        console.log('Alle data hentet korrekt fra Firestore:', data);
         return data;
 
     } catch (error) {
         console.error("Fejl under hentning af alle data i getAllData:", error);
-        // Returner det tomme data-objekt, så appen ikke crasher
-        return data;
+        // Vis en mere specifik fejl, hvis det er et tilladelsesproblem
+        if (error.code === 'permission-denied') {
+            console.error("Dette skyldes sandsynligvis en fejl i Firestore sikkerhedsreglerne. Dobbelttjek dine regler i Firebase-konsollen.");
+        }
+        return data; // Returner tomt data-objekt for at undgå at appen crasher
     }
 }
