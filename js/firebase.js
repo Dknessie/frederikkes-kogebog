@@ -5,6 +5,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 import { getFirestore, collection, doc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { handleError } from './utils.js';
 
+// Korrekt Firebase-konfiguration fra din originale fil.
 const firebaseConfig = {
     apiKey: "AIzaSyAs8XVRkru11e8MpZLJrzB-iXKg3SGjHnw",
     authDomain: "frederikkes-kogebog.firebaseapp.com",
@@ -14,6 +15,7 @@ const firebaseConfig = {
     appId: "1:557087234453:web:9abec4eb124bc08583be9c"
 };
 
+// Initialiser Firebase og eksporter de nødvendige services med det samme.
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
