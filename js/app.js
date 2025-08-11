@@ -240,13 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // REWRITTEN: Listeners are now independent and not nested.
     function setupRealtimeListeners(userId) {
         if (!userId) return;
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
-        // Collections that are filtered by the current user's ID
         const collections = {
             inventory_items: 'inventoryItems',
             inventory_batches: 'inventoryBatches',
@@ -264,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
                 state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                // Handle derived data after a relevant collection updates
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
@@ -276,7 +273,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
 
-        // Listeners for documents where the ID is the userId
         const userSpecificDocs = {
             shopping_lists: 'shoppingLists',
             references: 'references'
@@ -301,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
         
-        // Listeners for nested documents (settings)
         const settings = {
             budget: 'budget',
             preferences: 'preferences'
@@ -315,15 +310,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, setting));
         }
         
-        // Listener for meal plans (special case)
-        const mealPlansQuery = query(collection(db, 'meal_plans'), where("userId", "==", userId));
-        state.listeners.mealPlan = onSnapshot(mealPlansQuery, (snapshot) => {
-            state.mealPlan = {};
-            snapshot.forEach(doc => {
-                // Remove the userId field before merging
-                const { userId, ...planData } = doc.data();
-                state.mealPlan = { ...state.mealPlan, ...planData };
-            });
+        // FIX: Listen to a specific document for the current year instead of querying the collection.
+        // This avoids the permission error. We can expand this later to listen to more years if needed.
+        const currentYear = new Date().getFullYear();
+        const mealPlanRef = doc(db, 'meal_plans', `plan_${currentYear}`);
+        state.listeners.mealPlan = onSnapshot(mealPlanRef, (docSnap) => {
+            // Check if the document exists and belongs to the current user before processing
+            if (docSnap.exists() && docSnap.data().userId === userId) {
+                const { userId, ...planData } = docSnap.data();
+                state.mealPlan = planData;
+            } else {
+                // If the doc doesn't exist or doesn't belong to the user, ensure the plan is empty
+                state.mealPlan = {};
+            }
             handleNavigation(window.location.hash);
         }, (error) => commonErrorHandler(error, 'madplan'));
     }
