@@ -154,3 +154,47 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     });
     return totalPrice;
 }
+
+/**
+ * Viser en toast-notifikation.
+ * @param {string} message - Meddelelsen, der skal vises.
+ * @param {string} [type='info'] - Typen af notifikation ('info', 'success', 'error').
+ */
+export function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        console.error('Toast container not found!');
+        return;
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Vis toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+
+    // Skjul og fjern toast efter 3 sekunder
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        });
+    }, 3000);
+}
+
+/**
+ * Håndterer og logger fejl til konsollen med en standardiseret besked.
+ * @param {string} message - En beskrivende besked om fejlen.
+ * @param {Error} error - Det faktiske fejl-objekt.
+ */
+export function handleError(message, error) {
+    console.error(`[APP_ERROR] ${message}`, error);
+    // Her kan vi senere udvide med mere avanceret fejlhåndtering, f.eks. logging til en service.
+}
