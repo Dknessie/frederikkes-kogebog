@@ -16,7 +16,6 @@ export function initReferences(state, elements) {
         appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
     }
     
-    // Listeners are now correctly scoped to the static form in index.html
     const addMemberForm = document.getElementById('add-member-form');
     if (addMemberForm) {
         addMemberForm.addEventListener('submit', e => {
@@ -41,11 +40,15 @@ export function initReferences(state, elements) {
 }
 
 export function renderReferencesPage() {
-    // Clear only the dynamic part, leave the static household card
     const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
     dynamicCards.forEach(card => card.remove());
     
     const referenceData = {
+        budgetCategories: { // NEW
+            title: 'Budgetkategorier',
+            items: appState.references.budgetCategories || [],
+            isHierarchical: true
+        },
         itemCategories: {
             title: 'Varekategorier',
             items: appState.references.itemCategories || [],
@@ -69,7 +72,6 @@ export function renderReferencesPage() {
         }
     };
     
-    // Render only the dynamic reference cards
     for (const key in referenceData) {
         const data = referenceData[key];
         const card = document.createElement('div');
@@ -100,7 +102,7 @@ export function renderReferencesPage() {
             `;
         } else if (data.isHierarchical) {
             const listItemsHTML = (data.items || [])
-                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat)) // Handle old string format
+                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
                 .sort((a,b) => a.name.localeCompare(b.name))
                 .map(cat => `
                 <li class="category-item" data-value="${cat.name}">
@@ -143,7 +145,6 @@ export function renderReferencesPage() {
         appElements.referencesContainer.appendChild(card);
     }
     
-    // Render the household members into the static list
     renderHouseholdMembers();
 }
 
@@ -161,7 +162,7 @@ export function renderHouseholdMembers() {
 
     members.sort().forEach(name => {
         const memberRow = document.createElement('li');
-        memberRow.className = 'reference-item'; // Re-using class for consistent styling
+        memberRow.className = 'reference-item';
         memberRow.dataset.memberName = name;
 
         memberRow.innerHTML = `
@@ -234,7 +235,7 @@ async function handleListClick(e) {
         const mainCatItem = target.closest('.category-item');
         const subCatValue = subCatItem.dataset.value;
         const mainCatValue = mainCatItem.dataset.value;
-        await deleteSubCategory(mainCatValue, subCatValue);
+        await deleteSubCategory(key, mainCatValue, subCatValue);
     }
 }
 
@@ -247,18 +248,19 @@ async function handleFormSubmit(e) {
         const value = input.value.trim();
         if (!value) return;
 
-        if (key === 'itemCategories') {
-            await addMainCategory(value);
+        if (key === 'itemCategories' || key === 'budgetCategories') {
+            await addMainCategory(key, value);
         } else {
             await addSimpleReference(key, value);
         }
         input.value = '';
     } else if (e.target.classList.contains('add-subcategory-form')) {
         const input = e.target.querySelector('input');
+        const key = e.target.closest('.reference-card').dataset.key;
         const mainCategory = e.target.closest('.category-item').dataset.value;
         const subCategory = input.value.trim();
         if (!subCategory) return;
-        await addSubCategory(mainCategory, subCategory);
+        await addSubCategory(key, mainCategory, subCategory);
         input.value = '';
     }
 }
@@ -272,19 +274,19 @@ async function addSimpleReference(key, value) {
     await setDoc(ref, { [key]: arrayUnion(value) }, { merge: true });
 }
 
-async function addMainCategory(name) {
-    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+async function addMainCategory(key, name) {
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     if (categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Overkategorien "${name}" findes allerede.`});
         return;
     }
     const newCategory = { name: name, subcategories: [] };
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { itemCategories: arrayUnion(newCategory) });
+    await updateDoc(ref, { [key]: arrayUnion(newCategory) });
 }
 
-async function addSubCategory(mainCategoryName, subCategoryName) {
-    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+async function addSubCategory(key, mainCategoryName, subCategoryName) {
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
     if (mainCatIndex === -1) return;
 
@@ -298,11 +300,11 @@ async function addSubCategory(mainCategoryName, subCategoryName) {
     mainCat.subcategories.push(subCategoryName);
     
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { itemCategories: categories });
+    await updateDoc(ref, { [key]: categories });
 }
 
-async function deleteSubCategory(mainCategoryName, subCategoryName) {
-    const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+async function deleteSubCategory(key, mainCategoryName, subCategoryName) {
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
     if (mainCatIndex === -1) return;
 
@@ -311,7 +313,7 @@ async function deleteSubCategory(mainCategoryName, subCategoryName) {
 
     mainCat.subcategories = mainCat.subcategories.filter(sub => sub !== subCategoryName);
     const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, { itemCategories: categories });
+    await updateDoc(ref, { [key]: categories });
 }
 
 async function deleteReferenceItem(key, value) {
@@ -322,12 +324,12 @@ async function deleteReferenceItem(key, value) {
 
     const ref = doc(db, 'references', appState.currentUser.uid);
     
-    if (key === 'itemCategories') {
-        const categoryToDelete = (appState.references.itemCategories || [])
+    if (key === 'itemCategories' || key === 'budgetCategories') {
+        const categoryToDelete = (appState.references[key] || [])
             .find(cat => (typeof cat === 'object' ? cat.name : cat) === value);
         
         if (categoryToDelete) {
-            await updateDoc(ref, { itemCategories: arrayRemove(categoryToDelete) });
+            await updateDoc(ref, { [key]: arrayRemove(categoryToDelete) });
         }
     } else {
         const batch = writeBatch(db);
@@ -379,12 +381,12 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     
     const ref = doc(db, 'references', appState.currentUser.uid);
     
-    if (key === 'itemCategories') {
-        const categories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+    if (key === 'itemCategories' || key === 'budgetCategories') {
+        const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
         const catToUpdate = categories.find(cat => cat.name === oldValue);
         if (catToUpdate) {
             catToUpdate.name = newValue;
-            await updateDoc(ref, { itemCategories: categories });
+            await updateDoc(ref, { [key]: categories });
             showNotification({title: "Opdateret!", message: `Kategorien er blevet omdøbt.`});
         }
     } else {
