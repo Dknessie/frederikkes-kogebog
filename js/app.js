@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
     const state = {
         currentUser: null,
-        users: [], // Bemærk: Denne vil ikke længere blive udfyldt globalt af sikkerhedsårsager.
+        users: [],
         inventoryItems: [],
         inventoryBatches: [],
         inventory: [],
@@ -190,24 +190,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // Compute materials list from projects
         const materialsList = {};
-        state.projects.forEach(project => {
-            (project.materials || []).forEach(material => {
-                const key = material.name.toLowerCase();
-                materialsList[key] = {
-                    name: material.name,
-                    quantity_to_buy: material.quantity || 1,
-                    unit: material.unit || 'stk',
-                    price: material.price || null,
-                    projectId: project.id,
-                    storeId: 'Byggemarked'
-                };
+        state.projects
+            .filter(project => project.status !== 'Afsluttet')
+            .forEach(project => {
+                (project.materials || []).forEach(material => {
+                    const key = material.name.toLowerCase();
+                    materialsList[key] = {
+                        name: material.name,
+                        quantity_to_buy: material.quantity || 1,
+                        unit: material.unit || 'stk',
+                        price: material.price || null,
+                        projectId: project.id,
+                        storeId: 'Byggemarked'
+                    };
+                });
             });
-        });
         state.shoppingLists.materials = materialsList;
 
-        // Compute wishlist from rooms
         const wishlist = {};
         state.rooms.forEach(room => {
             (room.wishlist || []).forEach(item => {
@@ -275,14 +275,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const userSpecificDocs = {
             shopping_lists: 'shoppingLists',
-            references: 'references'
+            references: 'references',
+            // FINAL FIX: Add meal_plans here, as it follows the same pattern (docId === userId)
+            meal_plans: 'mealPlan' 
         };
 
         for (const [coll, stateKey] of Object.entries(userSpecificDocs)) {
+            // The document ID for these collections is the user's ID.
             state.listeners[stateKey] = onSnapshot(doc(db, coll, userId), (doc) => {
                 const data = doc.exists() ? doc.data() : {};
+                
                 if (stateKey === 'shoppingLists') {
                     state.shoppingLists.groceries = data.groceries || {};
+                } else if (stateKey === 'mealPlan') {
+                    // Remove the userId field before storing in state
+                    const { userId, ...planData } = data;
+                    state.mealPlan = planData;
                 } else {
                     state[stateKey] = data;
                 }
@@ -309,22 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleNavigation(window.location.hash);
             }, (error) => commonErrorHandler(error, setting));
         }
-        
-        // FIX: Listen to a specific document for the current year instead of querying the collection.
-        // This avoids the permission error. We can expand this later to listen to more years if needed.
-        const currentYear = new Date().getFullYear();
-        const mealPlanRef = doc(db, 'meal_plans', `plan_${currentYear}`);
-        state.listeners.mealPlan = onSnapshot(mealPlanRef, (docSnap) => {
-            // Check if the document exists and belongs to the current user before processing
-            if (docSnap.exists() && docSnap.data().userId === userId) {
-                const { userId, ...planData } = docSnap.data();
-                state.mealPlan = planData;
-            } else {
-                // If the doc doesn't exist or doesn't belong to the user, ensure the plan is empty
-                state.mealPlan = {};
-            }
-            handleNavigation(window.location.hash);
-        }, (error) => commonErrorHandler(error, 'madplan'));
     }
 
     function onLogin(user) {
@@ -411,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initProjects(state, elements);
         initRooms(state, elements);
         initExpenses(state);
-        initEvents(state); // Bemærk: elements er ikke nødvendige her
+        initEvents(state);
         initBudget(state, elements);
     }
 
