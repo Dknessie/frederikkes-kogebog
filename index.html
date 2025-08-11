@@ -284,52 +284,69 @@
                             <button id="next-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="budget-controls">
+                            <select id="budget-main-category-filter" class="budget-user-selector"></select>
                             <select id="budgetUserSelector" class="budget-user-selector"></select>
                         </div>
                     </div>
 
                     <div class="add-fixed-expense-container">
-                        <h3>Tilføj Fast Udgift</h3>
-                        <form id="add-fixed-expense-form" class="add-fixed-expense-form">
+                        <h3>Tilføj/Rediger Fast Udgift</h3>
+                        <form id="add-fixed-expense-form">
                             <input type="hidden" id="fixed-expense-id">
                             <div class="input-group">
-                                <label for="fixed-expense-category-new">Kategori</label>
-                                <input type="text" id="fixed-expense-category-new" required>
+                                <label for="fixed-expense-title">Titel</label>
+                                <input type="text" id="fixed-expense-title" required placeholder="F.eks. Afdrag bil, Netflix">
                             </div>
                             <div class="input-group">
-                                <label for="fixed-expense-amount-new">Beløb (kr.)</label>
-                                <input type="number" id="fixed-expense-amount-new" step="0.01" required>
+                                <label for="fixed-expense-total-amount">Total Beløb (kr.)</label>
+                                <input type="number" id="fixed-expense-total-amount" step="0.01" required placeholder="Samlet pris for regningen">
                             </div>
-                            <div class="input-group">
-                                <label for="fixed-expense-interval-new">Interval</label>
-                                <select id="fixed-expense-interval-new" required>
-                                    <option value="månedligt">Månedligt</option>
-                                    <option value="kvartalsvist">Kvartalsvist</option>
-                                    <option value="årligt">Årligt</option>
-                                </select>
+                            <div class="form-grid-2-col">
+                                <div class="input-group">
+                                    <label for="fixed-expense-start-date">Startdato</label>
+                                    <input type="date" id="fixed-expense-start-date" required>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fixed-expense-end-date">Slutdato (valgfri)</label>
+                                    <input type="date" id="fixed-expense-end-date">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="fixed-expense-start-month-new">Start Måned</label>
-                                <select id="fixed-expense-start-month-new" required></select>
+                            <div class="form-grid-2-col">
+                                <div class="input-group">
+                                    <label for="fixed-expense-interval-new">Interval</label>
+                                    <select id="fixed-expense-interval-new" required>
+                                        <option value="månedligt">Månedligt</option>
+                                        <option value="kvartalsvist">Kvartalsvist</option>
+                                        <option value="årligt">Årligt</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fixed-expense-owner-new">Ejer</label>
+                                    <select id="fixed-expense-owner-new" required></select>
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="fixed-expense-owner-new">Ejer</label>
-                                <select id="fixed-expense-owner-new" required></select>
+                            <hr style="grid-column: 1 / -1;">
+                            <div class="expense-split-section" style="grid-column: 1 / -1;">
+                                <h4>Opdel Udgift <span id="split-sum-indicator" class="split-sum-indicator"></span></h4>
+                                <div id="expense-split-container">
+                                    <!-- Split rows will be added here by JS -->
+                                </div>
+                                <button type="button" id="add-expense-split-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Opdeling</button>
                             </div>
-                            <div class="form-actions">
+                            <div class="form-actions" style="grid-column: 1 / -1;">
                                 <button type="button" id="clear-fixed-expense-form-btn" class="btn btn-secondary">Ryd</button>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Gem Udgift</button>
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem Udgift</button>
                             </div>
                         </form>
                     </div>
 
                     <hr>
                     <h3>Budget Oversigt</h3>
-                    <div id="budget-grid-container" class="budget-grid-container">
-                        <!-- Budget gitter renderes her af JS -->
+                    <div id="budget-grid-container">
+                        <!-- Budget groups and grids will be rendered here by JS -->
                     </div>
                     <div id="budget-totals-bar" class="budget-totals-bar">
-                         <!-- Månedstotaler renderes her af JS -->
+                         <!-- Month totals will be rendered here by JS -->
                     </div>
                 </div>
             </section>
@@ -339,7 +356,6 @@
                 <h2>Referencer</h2>
                 <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
                 <div id="references-container" class="references-layout">
-                    <!-- FIX: Re-introduced the static household members card -->
                     <div class="reference-card household-members-card">
                         <h4>Husstandsmedlemmer</h4>
                         <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
