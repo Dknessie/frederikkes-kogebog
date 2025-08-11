@@ -654,17 +654,16 @@ header {
     padding: var(--spacing-m) 0;
     border-bottom: 1px solid rgba(255,255,255,0.2);
     align-items: center;
+    /* FIX: Set text color on the row itself to ensure inheritance */
+    color: var(--white-color);
 }
-.shopping-list-theme-materials .material-row span {
-    color: var(--white-color); /* Sørger for at teksten er læselig */
-}
+/* FIX: Removed redundant/conflicting rule. The rule above is sufficient. */
 .shopping-list-theme-materials .material-header {
     font-weight: 600;
     text-transform: uppercase;
 }
 .shopping-list-theme-materials .material-name {
     font-weight: 700;
-    color: var(--white-color);
 }
 .shopping-list-theme-materials .add-item-form input {
     background-color: var(--white-color);
