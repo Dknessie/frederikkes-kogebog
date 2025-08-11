@@ -43,3 +43,29 @@ export function formatDate(date) {
     const year = d.getFullYear();
     return `${day}.${month}.${year}`;
 }
+
+/**
+ * Omregner en given mængde af en enhed til gram.
+ * @param {number} quantity - Mængden.
+ * @param {string} unit - Enheden (f.eks. 'kg', 'g', 'l', 'dl').
+ * @returns {number} Mængden i gram.
+ */
+export function convertToGrams(quantity, unit) {
+    const unitLower = unit.toLowerCase();
+    switch (unitLower) {
+        case 'kg':
+        case 'l': // Antager 1 liter ≈ 1 kg for simplicitetens skyld
+            return quantity * 1000;
+        case 'g':
+        case 'ml': // Antager 1 ml ≈ 1 g
+            return quantity;
+        case 'dl':
+            return quantity * 100;
+        case 'tsk':
+            return quantity * 5; // Cirka-værdi
+        case 'spsk':
+            return quantity * 15; // Cirka-værdi
+        default:
+            return quantity; // Returner som den er, hvis enheden er ukendt
+    }
+}
