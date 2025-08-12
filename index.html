@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frederikkes Kogebog</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Placeholder favicon to prevent 404 error -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,7 +41,7 @@
                     <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjem</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
-                    <a href="#økonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
+                    <a href="#oekonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                 </nav>
                  <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
@@ -52,7 +51,6 @@
         <main id="app-main-content">
             <section id="dashboard" class="page">
                 <div class="dashboard-layout">
-                    <!-- Venstre Kolonne: Primær Information -->
                     <div class="dashboard-main-column">
                         <div id="welcome-widget" class="dashboard-widget">
                             <h2 id="welcome-title">Velkommen</h2>
@@ -84,7 +82,6 @@
                         </div>
                     </div>
 
-                    <!-- Højre Kolonne: Widgets & Hurtig Adgang -->
                     <div class="dashboard-sidebar-column">
                         <div id="shopping-widget" class="dashboard-widget">
                             <h3><i class="fas fa-shopping-cart"></i> Indkøb</h3>
@@ -122,7 +119,7 @@
                             <div class="quick-actions-container">
                                 <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
                                 <a href="#hjem" data-action="add-project" class="quick-action-btn"><i class="fas fa-tools"></i><span>Nyt Projekt</span></a>
-                                <a href="#økonomi" data-action="add-expense" class="quick-action-btn"><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
+                                <a href="#oekonomi" data-action="add-expense" class="quick-action-btn"><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
                                 <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
                             </div>
                         </div>
@@ -247,8 +244,8 @@
                     <div id="inventory-list-container"></div>
                 </div>
             </section>
-
-            <section id="økonomi" class="page hidden">
+            
+            <section id="oekonomi" class="page hidden">
                 <h2>Økonomi</h2>
                 <div class="economy-tabs">
                     <button class="economy-tab-btn active" data-view="monthly-budget">Månedsbudget</button>
@@ -257,11 +254,8 @@
                 </div>
 
                 <div id="economy-view-monthly-budget" class="economy-view active">
-                    <!-- Savings Dashboard -->
                     <div id="savings-dashboard" class="dashboard-widget"></div>
-                    <!-- What-if Simulation -->
                     <div id="what-if-simulation" class="dashboard-widget"></div>
-                    <!-- Monthly Budget Bars -->
                     <div id="monthly-budget-bars" class="dashboard-widget"></div>
                 </div>
 
@@ -320,8 +314,7 @@
                         <h4>Husstandsmedlemmer</h4>
                         <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
                         <ul id="household-members-list" class="reference-list">
-                            <!-- Members will be rendered here by JS -->
-                        </ul>
+                            </ul>
                         <form id="add-member-form" class="add-reference-form">
                             <div class="input-group">
                                 <input type="text" id="new-member-name" placeholder="Tilføj nyt navn..." required>
@@ -329,8 +322,7 @@
                             <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i></button>
                         </form>
                     </div>
-                    <!-- Other cards for references will be generated by JS -->
-                </div>
+                    </div>
             </section>
         </main>
 
@@ -339,11 +331,10 @@
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
             <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
-            <a href="#økonomi" class="mobile-tab-link" data-page="økonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
+            <a href="#oekonomi" class="mobile-tab-link" data-page="oekonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
         </nav>
     </div>
 
-    <!-- MODALS -->
     <div id="add-expense-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -472,7 +463,6 @@
         </div>
     </div>
     
-    <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
@@ -1016,7 +1006,6 @@
         </div>
     </div>
 
-    <!-- Third-party libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
