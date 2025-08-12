@@ -1094,7 +1094,11 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--spacing-m);
+}
+.category-header .reference-name {
     font-weight: bold;
+    flex-grow: 1;
 }
 .subcategory-list {
     list-style: none;
@@ -1984,6 +1988,40 @@ input:checked + .slider:before { transform: translateX(22px); }
     background-color: var(--accent-color);
     border-radius: 10px;
     transition: width 0.5s ease-in-out, background-color 0.5s ease;
+}
+
+/* NYT: Budget-barer */
+.budget-category-item {
+    margin-bottom: var(--spacing-l);
+}
+.budget-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: var(--spacing-s);
+}
+.budget-bar-label {
+    color: var(--text-color);
+}
+.budget-bar-amount {
+    color: #666;
+}
+.budget-bar-container {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    height: 20px;
+    overflow: hidden;
+}
+.budget-bar-inner {
+    height: 100%;
+    border-radius: var(--border-radius);
+    transition: width 0.5s ease-in-out;
+}
+.budget-bar-footer {
+    text-align: right;
+    font-size: var(--small-font-size);
+    color: #888;
+    margin-top: var(--spacing-xs);
 }
 
 
