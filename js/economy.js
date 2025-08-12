@@ -1,7 +1,7 @@
 // js/economy.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, addDoc, deleteDoc, collection, writeBatch } from "[https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js](https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js)";
+import { doc, setDoc, updateDoc, addDoc, deleteDoc, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
 
@@ -47,8 +47,6 @@ export function initEconomy(state, elements) {
         economySettingsForm: document.getElementById('economy-settings-form'),
         fixedExpensesList: document.getElementById('fixed-expenses-list'),
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
-        // FASE 1: Tilføj den nye container til element-cachen
-        categoryBudgetsContainer: document.getElementById('category-budgets-container'),
     };
 
     // Main view tabs
@@ -432,48 +430,8 @@ function renderSettingsView() {
     // Populate form with current settings
     document.getElementById('monthly-income').value = appState.economySettings.monthlyIncome || '';
     document.getElementById('monthly-savings-goal').value = appState.economySettings.monthlySavingsGoal || '';
-    
-    // FASE 1: Render budget input fields for each category
-    renderCategoryBudgets();
-    
     renderFixedExpensesList();
 }
-
-// FASE 1: NY FUNKTION til at rendere budget-inputfelter
-function renderCategoryBudgets() {
-    const container = appElements.categoryBudgetsContainer;
-    if (!container) return;
-    container.innerHTML = '';
-
-    const budgetCategories = (appState.references.budgetCategories || [])
-        .map(cat => (typeof cat === 'string' ? cat : cat.name));
-    
-    if (budgetCategories.length === 0) {
-        container.innerHTML = `<p class="empty-state-small">Opret venligst budgetkategorier under "Referencer" først.</p>`;
-        return;
-    }
-
-    const currentBudgets = appState.economySettings.categoryBudgets || {};
-
-    budgetCategories.sort().forEach(categoryName => {
-        const inputGroup = document.createElement('div');
-        inputGroup.className = 'input-group';
-        
-        // Use a unique but consistent ID for each input
-        const inputId = `budget-cat-${categoryName.replace(/\s+/g, '-')}`;
-        
-        inputGroup.innerHTML = `
-            <label for="${inputId}">${categoryName}</label>
-            <div class="price-input-wrapper">
-                <input type="number" id="${inputId}" data-category-name="${categoryName}" 
-                       step="50" placeholder="Månedligt budget" 
-                       value="${currentBudgets[categoryName] || ''}">
-            </div>
-        `;
-        container.appendChild(inputGroup);
-    });
-}
-
 
 function renderFixedExpensesList() {
     const container = appElements.fixedExpensesList;
@@ -566,24 +524,11 @@ async function handleDeleteFixedExpense() {
     }
 }
 
-// FASE 1: Opdateret funktion til at gemme alle økonomi-indstillinger
 async function handleSaveEconomySettings(e) {
     e.preventDefault();
-    
-    // Indsaml budgetter fra de dynamisk genererede felter
-    const categoryBudgets = {};
-    appElements.categoryBudgetsContainer.querySelectorAll('input[data-category-name]').forEach(input => {
-        const categoryName = input.dataset.categoryName;
-        const budgetValue = parseFloat(input.value);
-        if (categoryName && !isNaN(budgetValue) && budgetValue > 0) {
-            categoryBudgets[categoryName] = budgetValue;
-        }
-    });
-
     const settingsData = {
         monthlyIncome: parseFloat(document.getElementById('monthly-income').value) || 0,
         monthlySavingsGoal: parseFloat(document.getElementById('monthly-savings-goal').value) || 0,
-        categoryBudgets: categoryBudgets, // Tilføj det nye budget-objekt
     };
 
     try {
