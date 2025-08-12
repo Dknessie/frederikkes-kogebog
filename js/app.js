@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#inventory':
                 renderInventory();
                 break;
-            case '#økonomi':
+            case '#oekonomi': // ÆNDRET
                 renderEconomyPage();
                 break;
             case '#references':
@@ -354,7 +354,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const [mainHash, subId] = hash.split('/');
             state.currentlyViewedRoomId = subId || null;
 
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#økonomi', '#references'];
+            // ÆNDRET
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#oekonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
