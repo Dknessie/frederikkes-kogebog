@@ -1418,12 +1418,18 @@ header {
     display: flex;
     justify-content: space-between;
     padding: var(--spacing-s) 0;
+    align-items: center;
 }
 .info-list .info-item:not(:last-child) {
     border-bottom: 1px solid var(--border-color);
 }
 .info-list .info-label {
     font-weight: 600;
+}
+.wish-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
 }
 
 /* ===== 9. Modaler ===== */
@@ -1952,45 +1958,63 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-color: var(--border-color);
 }
 
-/* NYT: Opsparings-Dashboard */
-.savings-dashboard-grid {
+/* Månedsbudget & Opsparing */
+.monthly-budget-grid {
     display: grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 2fr 1fr;
     gap: var(--spacing-l);
-    align-items: center;
+}
+.monthly-budget-main, .monthly-budget-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+.savings-potential {
+    text-align: center;
+    padding: var(--spacing-m);
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
     margin-bottom: var(--spacing-l);
 }
-.savings-numbers {
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-}
-.savings-label {
-    display: block;
-    font-size: 1rem;
+.savings-potential span {
     font-weight: 600;
+}
+.savings-potential strong {
+    color: var(--accent-color);
+    margin-left: var(--spacing-s);
+}
+.savings-goal-item {
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.savings-goal-item:last-child {
+    border-bottom: none;
+}
+.savings-goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+}
+.savings-goal-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    margin: var(--spacing-s) 0;
+}
+.savings-goal-progress .progress-bar {
+    flex-grow: 1;
+}
+.savings-goal-amount {
+    font-size: var(--small-font-size);
     color: #666;
 }
-.savings-value {
-    display: block;
-    font-size: 1.8rem;
-    font-weight: 700;
+.savings-goal-forecast {
+    font-size: var(--small-font-size);
+    font-style: italic;
     color: var(--primary-color);
 }
-#savings-progress-bar-container {
-    height: 20px;
-    background-color: var(--border-color);
-    border-radius: 10px;
-    overflow: hidden;
-}
-#savings-progress-bar-inner {
-    height: 100%;
-    background-color: var(--accent-color);
-    border-radius: 10px;
-    transition: width 0.5s ease-in-out, background-color 0.5s ease;
-}
 
-/* NYT: Budget-barer */
 .budget-category-item {
     margin-bottom: var(--spacing-l);
 }
@@ -2024,6 +2048,32 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-top: var(--spacing-xs);
 }
 
+/* Transaktionsliste */
+.transaction-item {
+    display: grid;
+    grid-template-columns: 100px 1fr 200px 120px;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m);
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    cursor: pointer;
+    border-radius: var(--border-radius);
+}
+.transaction-item:hover {
+    background-color: var(--secondary-color);
+}
+.transaction-description {
+    font-weight: 600;
+}
+.transaction-category {
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.transaction-amount {
+    text-align: right;
+    font-weight: 700;
+}
+
 
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
@@ -2054,7 +2104,7 @@ input:checked + .slider:before { transform: translateX(22px); }
     #add-fixed-expense-form {
         grid-template-columns: 1fr;
     }
-    .asset-liability-layout {
+    .asset-liability-layout, .monthly-budget-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -2102,4 +2152,14 @@ input:checked + .slider:before { transform: translateX(22px); }
     .savings-dashboard-grid {
         grid-template-columns: 1fr;
     }
+    .transaction-item {
+        grid-template-columns: 1fr 100px;
+        grid-template-areas: 
+            "desc amount"
+            "cat date";
+    }
+    .transaction-description { grid-area: desc; }
+    .transaction-amount { grid-area: amount; }
+    .transaction-category { grid-area: cat; }
+    .transaction-date { grid-area: date; text-align: right; }
 }
