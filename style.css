@@ -1948,15 +1948,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     border-color: var(--border-color);
 }
 
-/* FASE 1: Styling til budget-container */
-.category-budgets-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: var(--spacing-l);
-    margin-top: var(--spacing-m);
-}
-
-
 /* NYT: Opsparings-Dashboard */
 .savings-dashboard-grid {
     display: grid;
