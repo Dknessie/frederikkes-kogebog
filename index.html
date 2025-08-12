@@ -5,11 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frederikkes Kogebog</title>
     <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Placeholder favicon to prevent 404 error -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css)">
     <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
     <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
     <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap)" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -247,7 +251,7 @@
                     <div id="inventory-list-container"></div>
                 </div>
             </section>
-            
+
             <section id="oekonomi" class="page hidden">
                 <h2>Økonomi</h2>
                 <div class="economy-tabs">
@@ -325,7 +329,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Indstillinger View -->
                 <div id="economy-view-settings" class="economy-view hidden">
                     <div class="dashboard-widget">
@@ -535,7 +539,7 @@
             </form>
         </div>
     </div>
-    
+
     <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
@@ -652,6 +656,7 @@
                 <div class="project-image-container">
                     <div class="image-upload-container">
                         <h4>Før Billede</h4>
+                        <img id="project-image-preview-before" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Før" alt="Før billede af projektet">
                         <img id="project-image-preview-before" src="[https://placehold.co/600x400/f3f0e9/d1603d?text=Før](https://placehold.co/600x400/f3f0e9/d1603d?text=Før)" alt="Før billede af projektet">
                         <div class="image-options">
                             <label for="project-image-upload-before" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload</label>
@@ -662,6 +667,7 @@
                     </div>
                     <div class="image-upload-container">
                         <h4>Efter Billede</h4>
+                        <img id="project-image-preview-after" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Efter" alt="Efter billede af projektet">
                         <img id="project-image-preview-after" src="[https://placehold.co/600x400/f3f0e9/d1603d?text=Efter](https://placehold.co/600x400/f3f0e9/d1603d?text=Efter)" alt="Efter billede af projektet">
                         <div class="image-options">
                             <label for="project-image-upload-after" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload</label>
@@ -863,6 +869,7 @@
             <form id="recipe-form">
                 <input type="hidden" id="recipe-id">
                 <div class="image-upload-container">
+                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                     <img id="recipe-image-preview" src="[https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede](https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede)" alt="Billede af opskrift" onerror="this.onerror=null;this.src='[https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler](https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler)';">
                 </div>
                 <div class="image-options">
@@ -944,6 +951,7 @@
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <div id="recipe-read-view-content">
+                <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
                 <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image" onerror="this.onerror=null;this.src='[https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler](https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler)';">
                 <h3 id="read-view-title"></h3>
                 <div class="read-view-meta">
@@ -1081,6 +1089,9 @@
     </div>
 
     <!-- Third-party libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="[https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js](https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js)"></script>
     <script src="[https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js](https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js)"></script>
     <script src="[https://d3js.org/d3.v7.min.js](https://d3js.org/d3.v7.min.js)"></script>
