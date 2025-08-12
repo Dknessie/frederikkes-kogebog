@@ -516,7 +516,13 @@ async function handleBulkSave(e) {
 
         // Log the total expense after the batch commit is successful
         if (totalExpense > 0) {
-            await logExpense(totalExpense, 'Dagligvarer', `Indkøb af ${purchasedItems.length} vare(r)`);
+            // NYT: Opdateret kald til logExpense med et objekt for at være mere specifik.
+            await logExpense({
+                amount: totalExpense,
+                mainCategory: 'Dagligvarer', // Fast kategori for indkøbsliste
+                description: `Indkøb af ${purchasedItems.length} vare(r)`,
+                isImpulse: true // Indkøb fra listen tæller som variable udgifter
+            });
         }
 
         appElements.bulkAddModal.classList.add('hidden');
