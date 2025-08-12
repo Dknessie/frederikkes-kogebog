@@ -425,7 +425,6 @@ function openAddExpenseModal(expenseId = null) {
     appElements.addExpenseModal.classList.remove('hidden');
 }
 
-// FIX: Tilføjet 'export' for at gøre funktionen tilgængelig for andre moduler
 export async function togglePinnedSavingsGoal(goal) {
     const settings = appState.economySettings || {};
     let pinnedGoals = settings.pinnedGoals || [];
@@ -458,7 +457,6 @@ async function unpinSavingsGoal(goalId) {
     }
 }
 
-// Stubs for the unchanged functions to indicate their presence.
 function renderAssets() { /* ... unchanged ... */ }
 function openAssetModal(assetId = null) { /* ... unchanged ... */ }
 async function handleSaveAsset(e) { /* ... unchanged ... */ }
