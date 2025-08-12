@@ -16,7 +16,7 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-import { initBudget, renderBudgetPage } from './budget.js';
+import { initEconomy, renderEconomyPage } from './economy.js'; // UPDATED
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rooms: [],
         maintenanceLogs: [],
         expenses: [],
+        fixedExpenses: [], // Will be replaced by new economy module
+        assets: [], // NEW
+        liabilities: [], // NEW
+        economySettings: {}, // NEW
         events: [],
         references: {
             maintenanceTasks: []
@@ -42,8 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
             materials: {},
             wishlist: {}
         },
-        budget: { monthlyAmount: 4000 },
-        fixedExpenses: [],
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
@@ -63,9 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headerTitleLink: document.querySelector('.header-title-link'),
         
         // Dashboard
-        editBudgetBtn: document.getElementById('edit-budget-btn'),
-        budgetSpentEl: document.getElementById('budget-spent'),
-        budgetTotalEl: document.getElementById('budget-total'),
+        netWorthWidgetContent: document.getElementById('net-worth-widget-content'),
 
         // Hjem
         roomsGrid: document.getElementById('rooms-grid'),
@@ -157,10 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
         dayDetailsTitle: document.getElementById('day-details-title'),
         dayDetailsContent: document.getElementById('day-details-content'),
 
-
         // References
         referencesContainer: document.getElementById('references-container'),
-        addHouseholdMemberBtn: document.getElementById('add-household-member-btn'),
         householdMembersList: document.getElementById('household-members-list'),
 
         // Mobile
@@ -172,21 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
         notificationActions: document.getElementById('notification-actions'),
-        editBudgetModal: document.getElementById('edit-budget-modal'),
-        editBudgetForm: document.getElementById('edit-budget-form'),
-        monthlyBudgetInput: document.getElementById('monthly-budget-input'),
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
-        
-        // Budget Page
-        budgetGridContainer: document.getElementById('budget-grid-container'),
-        budgetYearDisplay: document.getElementById('budget-year-display'),
-        prevYearBtn: document.getElementById('prev-year-btn'),
-        nextYearBtn: document.getElementById('next-year-btn'),
-        addExpenseModal: document.getElementById('add-expense-modal'),
-        addExpenseForm: document.getElementById('add-expense-form'),
     };
 
     function computeDerivedShoppingLists() {
@@ -251,10 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
             recipes: 'recipes',
             projects: 'projects',
             rooms: 'rooms',
-            maintenance_logs: 'maintenanceLogs',
             events: 'events',
             expenses: 'expenses',
-            fixed_expenses: 'fixedExpenses'
+            fixed_expenses: 'fixedExpenses',
+            assets: 'assets', // NEW
+            liabilities: 'liabilities' // NEW
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -276,19 +264,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const userSpecificDocs = {
             shopping_lists: 'shoppingLists',
             references: 'references',
-            // FINAL FIX: Add meal_plans here, as it follows the same pattern (docId === userId)
             meal_plans: 'mealPlan' 
         };
 
         for (const [coll, stateKey] of Object.entries(userSpecificDocs)) {
-            // The document ID for these collections is the user's ID.
             state.listeners[stateKey] = onSnapshot(doc(db, coll, userId), (doc) => {
                 const data = doc.exists() ? doc.data() : {};
                 
                 if (stateKey === 'shoppingLists') {
                     state.shoppingLists.groceries = data.groceries || {};
                 } else if (stateKey === 'mealPlan') {
-                    // Remove the userId field before storing in state
                     const { userId, ...planData } = data;
                     state.mealPlan = planData;
                 } else {
@@ -305,18 +290,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
         
-        const settings = {
-            budget: 'budget',
-            preferences: 'preferences'
-        };
-
-        for (const [setting, stateKey] of Object.entries(settings)) {
-            const settingRef = doc(db, 'users', userId, 'settings', setting);
-            state.listeners[stateKey] = onSnapshot(settingRef, (doc) => {
-                state[stateKey] = doc.exists() ? doc.data() : (setting === 'budget' ? { monthlyAmount: 4000 } : {});
-                handleNavigation(window.location.hash);
-            }, (error) => commonErrorHandler(error, setting));
-        }
+        // Listener for economy settings
+        const economySettingsRef = doc(db, 'users', userId, 'settings', 'economy');
+        state.listeners.economySettings = onSnapshot(economySettingsRef, (doc) => {
+            state.economySettings = doc.exists() ? doc.data() : {};
+            handleNavigation(window.location.hash);
+        }, (error) => commonErrorHandler(error, 'economySettings'));
     }
 
     function onLogin(user) {
@@ -345,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [mainHash, subId] = hash.split('/');
             state.currentlyViewedRoomId = subId || null;
 
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#budget', '#references'];
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#økonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -375,8 +354,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 case '#inventory':
                     renderInventory();
                     break;
-                case '#budget':
-                    renderBudgetPage();
+                case '#økonomi': // UPDATED
+                    renderEconomyPage();
                     break;
                 case '#references':
                     renderReferencesPage();
@@ -402,9 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initProjects(state, elements);
         initRooms(state, elements);
-        initExpenses(state);
         initEvents(state);
-        initBudget(state, elements);
+        initEconomy(state, elements); // UPDATED
     }
 
     init();
