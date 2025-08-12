@@ -19,7 +19,6 @@ export function initEconomy(state, elements) {
         economyTabs: document.querySelector('.economy-tabs'),
         economyViews: document.querySelectorAll('.economy-view'),
         
-        // NYT: Knap tilføjet
         addVariableExpenseBtn: document.getElementById('add-variable-expense-btn'),
 
         // Expense Modal
@@ -50,6 +49,9 @@ export function initEconomy(state, elements) {
         economySettingsForm: document.getElementById('economy-settings-form'),
         fixedExpensesList: document.getElementById('fixed-expenses-list'),
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
+        
+        // NYT: Element til budget-barer
+        monthlyBudgetBarsContainer: document.getElementById('monthly-budget-bars'),
     };
 
     // Main view tabs
@@ -60,7 +62,6 @@ export function initEconomy(state, elements) {
     });
 
     // Listeners for modals
-    // NYT: Listener tilføjet til den nye knap
     if(appElements.addVariableExpenseBtn) appElements.addVariableExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseBtn) appElements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseForm) appElements.addExpenseForm.addEventListener('submit', handleSaveVariableExpense);
@@ -143,28 +144,24 @@ export function renderEconomyPage() {
 // --- MONTHLY BUDGET VIEW ---
 
 function renderMonthlyBudgetView() {
-    // This will be the main function to orchestrate the rendering of the budget dashboard
     const year = economyState.viewDate.getFullYear();
     const month = economyState.viewDate.getMonth();
 
-    // 1. Get all relevant expenses for the current view month
     const monthlyExpenses = (appState.expenses || []).filter(exp => {
         const expDate = new Date(exp.date.seconds * 1000);
         return expDate.getFullYear() === year && expDate.getMonth() === month;
     });
 
-    // 2. Get all active fixed expenses for the current view month
     const monthlyFixedExpenses = (appState.fixedExpenses || []).filter(fe => {
         const startDate = new Date(fe.startDate);
         const endDate = fe.endDate ? new Date(fe.endDate) : null;
-        const viewDate = new Date(year, month, 15); // Use mid-month to be safe
+        const viewDate = new Date(year, month, 15);
         
         if (startDate > viewDate) return false;
         if (endDate && endDate < viewDate) return false;
         return true;
     });
 
-    // 3. Calculate summary numbers
     const totalVariable = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
     const totalFixed = monthlyFixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
     const totalImpulse = monthlyExpenses.filter(exp => exp.isImpulse).reduce((sum, exp) => sum + exp.amount, 0);
@@ -174,9 +171,8 @@ function renderMonthlyBudgetView() {
     const savingsGoal = appState.economySettings.monthlySavingsGoal || 0;
 
     const expectedSavings = income - totalCashFlow;
-    const realSavings = income - totalCashFlow - totalImpulse; // Note: This is a simplified calculation
+    const realSavings = income - totalCashFlow - totalImpulse;
 
-    // 4. Render the savings dashboard
     document.getElementById('savings-goal-value').textContent = `${savingsGoal.toLocaleString('da-DK')} kr.`;
     document.getElementById('savings-status-value').textContent = `${realSavings.toLocaleString('da-DK')} kr.`;
     document.getElementById('savings-prognosis-value').textContent = `${expectedSavings.toLocaleString('da-DK')} kr.`;
@@ -186,7 +182,64 @@ function renderMonthlyBudgetView() {
     progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
     progressBar.style.backgroundColor = progress >= 100 ? 'var(--status-green)' : 'var(--accent-color)';
 
-    // 5. Render budget bars (future implementation)
+    // NYT: Kald funktionen til at rendere budget-barer
+    renderBudgetBars(monthlyExpenses, monthlyFixedExpenses);
+}
+
+// NYT: Funktion til at rendere de visuelle budget-barer
+function renderBudgetBars(monthlyExpenses, monthlyFixedExpenses) {
+    const container = appElements.monthlyBudgetBarsContainer.querySelector('.dashboard-widget-content');
+    if (!container) {
+        // Opret containeren, hvis den ikke findes (første gang)
+        const newContainer = document.createElement('div');
+        newContainer.className = 'dashboard-widget-content';
+        appElements.monthlyBudgetBarsContainer.appendChild(newContainer);
+        container = newContainer;
+    }
+    container.innerHTML = '';
+
+    const budgetCategories = (appState.references.budgetCategories || [])
+        .filter(cat => cat.budget && cat.budget > 0);
+
+    if (budgetCategories.length === 0) {
+        container.innerHTML = `<p class="empty-state-small">Du har ikke defineret nogen budgetter endnu. Gå til "Indstillinger" -> "Referencer" for at tilføje dem.</p>`;
+        return;
+    }
+
+    budgetCategories.forEach(cat => {
+        const fixedSpending = monthlyFixedExpenses
+            .filter(exp => exp.mainCategory === cat.name)
+            .reduce((sum, exp) => sum + exp.amount, 0);
+        
+        const variableSpending = monthlyExpenses
+            .filter(exp => exp.mainCategory === cat.name)
+            .reduce((sum, exp) => sum + exp.amount, 0);
+
+        const totalSpent = fixedSpending + variableSpending;
+        const budgetAmount = cat.budget;
+        const percentage = (totalSpent / budgetAmount) * 100;
+        const remaining = budgetAmount - totalSpent;
+
+        let barColorClass = 'status-green';
+        if (percentage > 80) barColorClass = 'status-yellow';
+        if (percentage >= 100) barColorClass = 'status-red';
+
+        const barItem = document.createElement('div');
+        barItem.className = 'budget-category-item';
+        barItem.innerHTML = `
+            <div class="budget-bar-header">
+                <span class="budget-bar-label">${cat.name}</span>
+                <span class="budget-bar-amount">${totalSpent.toLocaleString('da-DK')} / ${budgetAmount.toLocaleString('da-DK')} kr.</span>
+            </div>
+            <div class="budget-bar-container">
+                <div class="budget-bar-inner ${barColorClass}" style="width: ${Math.min(100, percentage)}%;"></div>
+            </div>
+            <div class="budget-bar-footer">
+                <span>${remaining >= 0 ? `${remaining.toLocaleString('da-DK')} kr. tilbage` : `${Math.abs(remaining).toLocaleString('da-DK')} kr. over budget`}</span>
+            </div>
+        `;
+        container.appendChild(barItem);
+    });
 }
 
 
