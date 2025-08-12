@@ -252,6 +252,7 @@
                 <h2>Økonomi</h2>
                 <div class="economy-tabs">
                     <button class="economy-tab-btn active" data-view="monthly-budget">Månedsbudget</button>
+                    <button class="economy-tab-btn" data-view="transactions">Transaktioner</button>
                     <button class="economy-tab-btn" data-view="net-worth">Formue</button>
                     <button class="economy-tab-btn" data-view="settings">Indstillinger</button>
                 </div>
@@ -265,19 +266,24 @@
                         <div class="monthly-budget-main">
                             <div id="monthly-budget-bars" class="dashboard-widget">
                                 <h3>Budget-kategorier</h3>
-                                <div class="dashboard-widget-content">
-                                    <!-- Budget bars for each category will be rendered here -->
-                                </div>
+                                <div class="dashboard-widget-content"></div>
                             </div>
                         </div>
                         <div class="monthly-budget-sidebar">
                             <div id="savings-dashboard" class="dashboard-widget">
                                 <h3>Opsparings-Dashboard</h3>
-                                <div id="pinned-savings-goals-container">
-                                    <!-- Pinned savings goals will be rendered here -->
-                                </div>
+                                <div id="pinned-savings-goals-container"></div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Transaktioner View -->
+                <div id="economy-view-transactions" class="economy-view hidden">
+                    <div class="dashboard-widget">
+                        <h3>Alle Transaktioner</h3>
+                        <p class="small-text">Her kan du se og redigere alle dine registrerede variable udgifter.</p>
+                        <div id="transactions-list-container"></div>
                     </div>
                 </div>
 
@@ -303,12 +309,10 @@
                         <div class="asset-column">
                             <h4>Aktiver</h4>
                             <div id="assets-list"></div>
-                            <button id="add-asset-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Aktiv</button>
                         </div>
                         <div class="liability-column">
                             <h4>Gæld</h4>
                             <div id="liabilities-list"></div>
-                            <button id="add-liability-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Gæld</button>
                         </div>
                     </div>
                 </div>
@@ -316,22 +320,28 @@
                 <!-- Indstillinger View -->
                 <div id="economy-view-settings" class="economy-view hidden">
                     <div class="dashboard-widget">
-                        <h3>Indstillinger for Økonomi</h3>
+                        <h3>Generelle Indstillinger</h3>
                         <form id="economy-settings-form">
                             <div class="form-grid-2-col">
                                 <div class="input-group">
                                     <label for="monthly-income">Forventet Månedlig Indkomst (kr.)</label>
                                     <input type="number" id="monthly-income" step="100" placeholder="F.eks. 25000">
                                 </div>
-                                <div class="input-group">
-                                    <label for="monthly-savings-goal">Månedligt Opsparingsmål (kr.)</label>
-                                    <input type="number" id="monthly-savings-goal" step="100" placeholder="F.eks. 5000">
-                                </div>
                             </div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">Gem Indstillinger</button>
                             </div>
                         </form>
+                    </div>
+                    <div class="dashboard-widget">
+                        <h3>Budgetkategorier & Mål</h3>
+                        <p class="small-text">Sæt dine månedlige budgetter her. Disse defineres under "Referencer".</p>
+                        <div id="budget-category-settings-list"></div>
+                    </div>
+                     <div class="dashboard-widget">
+                        <h3>Gældsposter (Lån)</h3>
+                        <div id="liability-settings-list"></div>
+                        <button id="add-liability-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Gældspost</button>
                     </div>
                     <div class="dashboard-widget">
                         <h3>Faste Udgifter</h3>
@@ -379,6 +389,7 @@
             <button class="close-modal-btn">&times;</button>
             <h3 id="add-expense-modal-title">Registrer Køb</h3>
             <form id="add-expense-form">
+                <input type="hidden" id="add-expense-id">
                 <div class="input-group">
                     <label for="add-expense-amount">Beløb (kr.)</label>
                     <input type="number" id="add-expense-amount" step="0.01" required>
@@ -406,6 +417,7 @@
                     <label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
                 </div>
                 <div class="form-actions">
+                    <button type="button" id="delete-expense-btn" class="btn btn-danger hidden">Slet</button>
                     <button type="submit" class="btn btn-primary">Gem Udgift</button>
                 </div>
             </form>
@@ -456,7 +468,6 @@
                     <label for="liability-original-amount">Oprindeligt Lånebeløb (kr.)</label>
                     <input type="number" id="liability-original-amount" step="1000" required>
                 </div>
-                <!-- ÆNDRET: Tilføjet manglende felt -->
                 <div class="input-group">
                     <label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
                     <input type="number" id="liability-current-balance" step="1000" required>
