@@ -15,9 +15,7 @@ export function initDashboard(state, elements) {
         timelineContent: document.getElementById('timeline-content'),
         addEventBtn: document.getElementById('add-event-btn'),
         projectsFocusContent: document.getElementById('projects-focus-content'),
-        inventoryNotificationsContent: document.getElementById('inventory-notifications-content'),
         quickActionsContainer: document.getElementById('quick-actions-widget'),
-        categoryValuesContent: document.getElementById('category-values-content'),
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
         materialsSummaryWidget: document.getElementById('widget-materials-summary'),
         wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
@@ -36,7 +34,6 @@ export function initDashboard(state, elements) {
     if (appElements.materialsSummaryWidget) appElements.materialsSummaryWidget.addEventListener('click', () => openShoppingListModal('materials'));
     if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => openShoppingListModal('wishlist'));
     if (appElements.quickActionsContainer) appElements.quickActionsContainer.addEventListener('click', handleQuickActionClick);
-    if (appElements.inventoryNotificationsContent) appElements.inventoryNotificationsContent.addEventListener('click', handleNotificationClick);
     if (appElements.addEventBtn) appElements.addEventBtn.addEventListener('click', () => openEventModal());
 }
 
@@ -47,9 +44,7 @@ export function renderDashboardPage() {
     renderTimelineWidget();
     renderProjectsFocusWidget();
     renderNetWorthWidget();
-    renderInventoryNotificationsWidget();
     renderShoppingListWidgets();
-    renderCategoryValuesWidget();
 }
 
 function handleQuickActionClick(e) {
@@ -71,13 +66,6 @@ function handleQuickActionClick(e) {
         }
     }
     else window.location.hash = actionBtn.getAttribute('href');
-}
-
-function handleNotificationClick(e) {
-    const addBtn = e.target.closest('.add-notification-to-list-btn');
-    if (addBtn) {
-        addSingleItemToGroceries(addBtn.dataset.itemId);
-    }
 }
 
 function renderTimelineWidget() {
@@ -219,60 +207,6 @@ function renderNetWorthWidget() {
                 </div>
             </div>
         `;
-    }).join('');
-}
-
-function renderInventoryNotificationsWidget() {
-    const container = appElements.inventoryNotificationsContent;
-    container.innerHTML = '';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(today.getDate() + 7);
-    const expiringBatches = appState.inventoryBatches.filter(batch => {
-        if (!batch.expiryDate) return false;
-        const expiryDate = new Date(batch.expiryDate);
-        return expiryDate >= today && expiryDate <= sevenDaysFromNow;
-    }).map(b => ({ ...b, itemName: appState.inventoryItems.find(i => i.id === b.itemId)?.name || 'Ukendt vare', daysLeft: Math.ceil((new Date(b.expiryDate) - today) / (1000 * 60 * 60 * 24)) })).sort((a, b) => a.daysLeft - b.daysLeft);
-    const lowStockItems = appState.inventory.filter(item => item.reorderPoint && item.totalStock > 0 && item.totalStock <= item.reorderPoint);
-    const outOfStockItems = appState.inventory.filter(item => item.reorderPoint && item.totalStock <= 0);
-    let html = '';
-    if (expiringBatches.length > 0) {
-        html += `<h4>Udløber Snart</h4>`;
-        html += expiringBatches.map(item => `<div class="notification-item expiring"><span class="notification-text"><strong>${item.itemName}</strong> udløber om ${item.daysLeft} dag(e)</span><button class="btn-icon add-notification-to-list-btn" data-item-id="${item.itemId}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`).join('');
-    }
-    if (lowStockItems.length > 0) {
-        html += `<h4>Lav Beholdning</h4>`;
-        html += lowStockItems.map(item => `<div class="notification-item low-stock"><span class="notification-text"><strong>${item.name}</strong> <span class="stock-details">(${item.totalStock.toFixed(0)} / ${item.reorderPoint} ${item.defaultUnit})</span></span><button class="btn-icon add-notification-to-list-btn" data-item-id="${item.id}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`).join('');
-    }
-    if (outOfStockItems.length > 0) {
-        html += `<h4>Løbet Tør</h4>`;
-        html += outOfStockItems.map(item => `<div class="notification-item out-of-stock"><span class="notification-text"><strong>${item.name}</strong> <span class="stock-details">(0 / ${item.reorderPoint} ${item.defaultUnit})</span></span><button class="btn-icon add-notification-to-list-btn" data-item-id="${item.id}" title="Tilføj til indkøbsliste"><i class="fas fa-plus-circle"></i></button></div>`).join('');
-    }
-    if (html === '') {
-        container.innerHTML = '<p class="empty-state">Alt er fyldt op, og intet udløber snart. Godt gået!</p>';
-    } else {
-        container.innerHTML = html;
-    }
-}
-
-function renderCategoryValuesWidget() {
-    const container = appElements.categoryValuesContent;
-    const categoryValues = {};
-    appState.inventory.forEach(item => {
-        const category = item.mainCategory || 'Ukategoriseret';
-        if (!categoryValues[category]) categoryValues[category] = 0;
-        item.batches.forEach(batch => { categoryValues[category] += batch.price || 0; });
-    });
-    const sortedCategories = Object.entries(categoryValues).sort(([, a], [, b]) => b - a);
-    const totalValue = sortedCategories.reduce((sum, [, value]) => sum + value, 0);
-    if (sortedCategories.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen varer med pris på lager.</p>';
-        return;
-    }
-    container.innerHTML = sortedCategories.map(([name, value]) => {
-        const percentage = totalValue > 0 ? (value / totalValue) * 100 : 0;
-        return `<div class="category-value-item"><span class="category-name" title="${name}">${name}</span><div class="category-bar-container"><div class="category-bar" style="width: ${percentage}%">${value.toFixed(0)} kr.</div></div></div>`;
     }).join('');
 }
 
