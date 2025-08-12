@@ -1,14 +1,10 @@
 // js/dashboard.js
-import { db } from './firebase.js';
-import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { formatDate } from './utils.js';
 import { openShoppingListModal, addSingleItemToGroceries } from './shoppingList.js';
 import { openEventModal } from './events.js';
 
 let appState;
 let appElements;
-let budgetGauge;
 
 export function initDashboard(state, elements) {
     appState = state;
@@ -19,7 +15,6 @@ export function initDashboard(state, elements) {
         timelineContent: document.getElementById('timeline-content'),
         addEventBtn: document.getElementById('add-event-btn'),
         projectsFocusContent: document.getElementById('projects-focus-content'),
-        budgetGaugeContainer: document.getElementById('budget-gauge-container'),
         inventoryNotificationsContent: document.getElementById('inventory-notifications-content'),
         quickActionsContainer: document.getElementById('quick-actions-widget'),
         categoryValuesContent: document.getElementById('category-values-content'),
@@ -34,10 +29,9 @@ export function initDashboard(state, elements) {
         timelineBirthdays: document.getElementById('timeline-birthdays'),
         timelineEvents: document.getElementById('timeline-events'),
         timelineTodos: document.getElementById('timeline-todos'),
+        netWorthWidgetContent: document.getElementById('net-worth-widget-content'),
     };
 
-    if (appElements.editBudgetBtn) appElements.editBudgetBtn.addEventListener('click', openEditBudgetModal);
-    if (appElements.editBudgetForm) appElements.editBudgetForm.addEventListener('submit', handleSaveBudget);
     if (appElements.groceriesSummaryWidget) appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
     if (appElements.materialsSummaryWidget) appElements.materialsSummaryWidget.addEventListener('click', () => openShoppingListModal('materials'));
     if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => openShoppingListModal('wishlist'));
@@ -52,7 +46,7 @@ export function renderDashboardPage() {
     renderWelcomeWidget();
     renderTimelineWidget();
     renderProjectsFocusWidget();
-    renderBudgetWidget();
+    renderNetWorthWidget();
     renderInventoryNotificationsWidget();
     renderShoppingListWidgets();
     renderCategoryValuesWidget();
@@ -67,7 +61,11 @@ function handleQuickActionClick(e) {
     if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
     else if (action === 'add-project') document.getElementById('add-project-btn').click();
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
-    else if (action === 'add-note') openEventModal(null, { category: 'To-do' });
+    else if (action === 'add-expense') {
+        // This will be handled by the economy module, we just need to open the modal
+        const addExpenseModal = document.getElementById('add-expense-modal');
+        if (addExpenseModal) addExpenseModal.classList.remove('hidden');
+    }
     else window.location.hash = actionBtn.getAttribute('href');
 }
 
@@ -82,10 +80,6 @@ function renderTimelineWidget() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const birthdays = [];
-    const events = [];
-    const todos = [];
-    
     const allEvents = [...appState.events]
         .map(event => {
             if (event.category === 'Fødselsdag' && event.date) {
@@ -98,57 +92,24 @@ function renderTimelineWidget() {
             }
             return { ...event, displayDate: new Date(event.date) };
         })
-        .filter(event => event.displayDate >= today)
+        .filter(event => new Date(event.date) >= today)
         .sort((a, b) => a.displayDate - b.displayDate);
 
-    // Hent projekter og opgaver fra kalenderen for at vise på tidslinjen
-    Object.entries(appState.mealPlan).forEach(([dateString, dayPlan]) => {
-        const date = new Date(dateString);
-        if (date >= today) {
-            Object.values(dayPlan).flat().forEach(item => {
-                if (item.type === 'project') {
-                    const project = appState.projects.find(p => p.id === item.projectId);
-                    if (project) {
-                        allEvents.push({
-                            date: date,
-                            displayDate: date,
-                            title: `Projekt: ${project.title}`,
-                            category: 'Projekt',
-                        });
-                    }
-                } else if (item.type === 'task') {
-                     allEvents.push({
-                            date: date,
-                            displayDate: date,
-                            title: item.taskName,
-                            category: 'To-do',
-                        });
-                }
-            });
-        }
-    });
+    const birthdays = allEvents.filter(item => item.category === 'Fødselsdag');
+    const todos = allEvents.filter(item => item.category === 'To-do');
+    const otherEvents = allEvents.filter(item => item.category !== 'Fødselsdag' && item.category !== 'To-do');
 
-    allEvents.forEach(item => {
-        if (item.category === 'Fødselsdag') {
-            birthdays.push(item);
-        } else if (item.category === 'To-do' || item.category === 'Projekt') {
-            todos.push(item);
-        } else {
-            events.push(item);
-        }
-    });
-
-    renderTimelineColumn(appElements.timelineBirthdays, birthdays.slice(0, 5));
-    renderTimelineColumn(appElements.timelineEvents, events.slice(0, 5));
-    renderTimelineColumn(appElements.timelineTodos, todos.slice(0, 5));
+    renderTimelineColumn(appElements.timelineBirthdays, birthdays.slice(0, 5), 'Fødselsdage');
+    renderTimelineColumn(appElements.timelineEvents, otherEvents.slice(0, 5), 'Begivenheder');
+    renderTimelineColumn(appElements.timelineTodos, todos.slice(0, 5), 'To-do');
 }
 
-function renderTimelineColumn(container, items) {
+function renderTimelineColumn(container, items, title) {
     if (!container) return;
-    container.innerHTML = ''; // Ryd indholdet
+    container.innerHTML = '';
 
     if (items.length === 0) {
-        container.innerHTML = `<h4 class="empty-state-small">Ingen kommende begivenheder.</h4>`;
+        container.innerHTML = `<h4 class="timeline-column-title">${title}</h4><p class="empty-state-small">Ingen kommende begivenheder.</p>`;
         return;
     }
     
@@ -167,20 +128,8 @@ function renderTimelineColumn(container, items) {
         `;
     }).join('');
     
-    container.innerHTML = `
-        <h4 class="timeline-column-title">${getTimelineTitle(items[0]?.category)}</h4>
-        ${listHtml}
-    `;
+    container.innerHTML = `<h4 class="timeline-column-title">${title}</h4>${listHtml}`;
 }
-
-function getTimelineTitle(category) {
-    switch(category) {
-        case 'Fødselsdag': return 'Fødselsdage';
-        case 'To-do': return 'To-do';
-        default: return 'Begivenheder';
-    }
-}
-
 
 function getIconForCategory(eventData) {
     switch (eventData.category) {
@@ -219,78 +168,54 @@ function renderWelcomeWidget() {
     else if (hours < 18) greeting = "Goddag";
     else greeting = "Godaften";
     appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
-    const today = formatDate(new Date());
-    const mealsToday = appState.mealPlan[today] ? Object.values(appState.mealPlan[today]).flat().length : 0;
-    const activeProjects = appState.projects.filter(p => p.status !== 'completed').length;
-    appElements.welcomeSummary.innerHTML = `Du har <strong>${mealsToday}</strong> måltid(er) planlagt i dag og <strong>${activeProjects}</strong> aktive projekter.`;
+    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').length;
+    appElements.welcomeSummary.innerHTML = `Du har <strong>${activeProjects}</strong> aktive projekt(er).`;
 }
 
 function renderProjectsFocusWidget() {
     const container = appElements.projectsFocusContent;
-    if (!container) return; // FIX: Add guard clause
+    if (!container) return;
     const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').slice(0, 3);
     if (activeProjects.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Projekter" siden.</p>';
+        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Hjem" siden.</p>';
         return;
     }
     container.innerHTML = activeProjects.map(p => {
-        const progress = p.progress || 30; // Placeholder progress
-        return `<div class="project-focus-item"><span class="project-focus-title">${p.title}</span><div class="project-progress-bar"><div style="width: ${progress}%"></div></div></div>`;
+        return `<div class="project-focus-item"><span class="project-focus-title">${p.title}</span><span class="project-status-tag">${p.status}</span></div>`;
     }).join('');
 }
 
-function calculateMonthlySpending() {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    let totalFixed = 0;
-    appState.fixedExpenses.forEach(exp => {
-        if (exp.interval === 'månedligt') {
-            totalFixed += exp.amount;
-        } else if (exp.interval === 'kvartalsvist') {
-            totalFixed += exp.amount / 3;
-        } else if (exp.interval === 'årligt') {
-            totalFixed += exp.amount / 12;
-        }
-    });
+function renderNetWorthWidget() {
+    const container = appElements.netWorthWidgetContent;
+    if (!container) return;
 
-    const totalVariable = appState.expenses
-        .filter(expense => {
-            if (!expense.date || !expense.date.toDate) return false;
-            const expenseDate = expense.date.toDate();
-            return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
-        })
-        .reduce((total, expense) => total + expense.amount, 0);
-    
-    return totalFixed + totalVariable;
-}
+    const assets = appState.assets || [];
+    const liabilities = appState.liabilities || [];
 
-function renderBudgetWidget() {
-    const monthlyBudget = appState.budget.monthlyAmount || 0;
-    const monthlySpent = calculateMonthlySpending();
-    appElements.budgetSpentEl.textContent = `${monthlySpent.toFixed(2).replace('.',',')} kr.`;
-    appElements.budgetTotalEl.textContent = `${monthlyBudget.toFixed(2).replace('.',',')} kr.`;
-    appElements.budgetGaugeContainer.innerHTML = '';
-    if (typeof JustGage !== 'undefined') {
-        budgetGauge = new JustGage({
-            id: 'budget-gauge-container',
-            value: monthlySpent,
-            min: 0,
-            max: monthlyBudget > 0 ? monthlyBudget : 1,
-            title: "Faktisk Forbrug",
-            label: "kr.",
-            levelColors: ["#4CAF50", "#FFC107", "#F44336"],
-            valueFontColor: "#3d3d3d",
-            titleFontColor: "#3d3d3d",
-            labelFontColor: "#777",
-            gaugeWidthScale: 0.6,
-            counter: true,
-            formatNumber: true,
-            humanFriendlyDecimal: 2,
-            decimals: 2,
-        });
-    } else {
-        appElements.budgetGaugeContainer.innerHTML = '<p class="empty-state">Kunne ikke indlæse budget-graf.</p>';
+    if (assets.length === 0) {
+        container.innerHTML = '<p class="empty-state-small">Tilføj aktiver under "Økonomi" for at se din formue her.</p>';
+        return;
     }
+
+    const sortedAssets = [...assets].sort((a, b) => b.value - a.value).slice(0, 3);
+
+    container.innerHTML = sortedAssets.map(asset => {
+        const linkedLiability = liabilities.find(l => l.id === asset.linkedLiabilityId);
+        const equity = linkedLiability ? asset.value - linkedLiability.currentBalance : asset.value;
+        const ownershipPercentage = asset.value > 0 ? (equity / asset.value) * 100 : 0;
+
+        return `
+            <div class="net-worth-item">
+                <div class="net-worth-item-header">
+                    <span class="net-worth-item-title">${asset.name}</span>
+                    <span class="net-worth-item-value">${equity.toLocaleString('da-DK', { style: 'currency', currency: 'DKK' })}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-bar-inner" style="width: ${ownershipPercentage.toFixed(2)}%;"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function renderInventoryNotificationsWidget() {
@@ -345,26 +270,4 @@ function renderCategoryValuesWidget() {
         const percentage = totalValue > 0 ? (value / totalValue) * 100 : 0;
         return `<div class="category-value-item"><span class="category-name" title="${name}">${name}</span><div class="category-bar-container"><div class="category-bar" style="width: ${percentage}%">${value.toFixed(0)} kr.</div></div></div>`;
     }).join('');
-}
-
-function openEditBudgetModal() {
-    if (appElements.monthlyBudgetInput) appElements.monthlyBudgetInput.value = appState.budget.monthlyAmount || '';
-    if (appElements.editBudgetModal) appElements.editBudgetModal.classList.remove('hidden');
-}
-
-async function handleSaveBudget(e) {
-    e.preventDefault();
-    const newAmount = parseFloat(appElements.monthlyBudgetInput.value);
-    if (isNaN(newAmount) || newAmount < 0) {
-        showNotification({ title: "Ugyldigt Beløb", message: "Indtast venligst et gyldigt, positivt tal for budgettet." });
-        return;
-    }
-    const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'budget');
-    try {
-        await setDoc(settingsRef, { monthlyAmount: newAmount }, { merge: true });
-        appElements.editBudgetModal.classList.add('hidden');
-        showNotification({ title: "Budget Opdateret", message: "Dit månedlige budget er blevet gemt." });
-    } catch (error) {
-        handleError(error, "Budgettet kunne ikke gemmes.", "saveBudget");
-    }
 }
