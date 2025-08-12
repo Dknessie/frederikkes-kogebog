@@ -1,6 +1,6 @@
 // js/dashboard.js
 import { showNotification, handleError } from './ui.js';
-import { openShoppingListModal, addSingleItemToGroceries } from './shoppingList.js';
+import { openShoppingListModal } from './shoppingList.js';
 import { openEventModal } from './events.js';
 
 let appState;
@@ -12,7 +12,6 @@ export function initDashboard(state, elements) {
         ...elements,
         welcomeTitle: document.getElementById('welcome-title'),
         welcomeSummary: document.getElementById('welcome-summary'),
-        timelineContent: document.getElementById('timeline-content'),
         addEventBtn: document.getElementById('add-event-btn'),
         projectsFocusContent: document.getElementById('projects-focus-content'),
         quickActionsContainer: document.getElementById('quick-actions-widget'),
@@ -38,7 +37,7 @@ export function initDashboard(state, elements) {
 }
 
 export function renderDashboardPage() {
-    if (!appState.currentUser || !appState.recipes || !appState.projects || !appState.inventory) return;
+    if (!appState.currentUser || !appState.projects || !appState.inventory) return;
     
     renderWelcomeWidget();
     renderTimelineWidget();
@@ -59,7 +58,6 @@ function handleQuickActionClick(e) {
     else if (action === 'add-expense') {
         const addExpenseModal = document.getElementById('add-expense-modal');
         if (addExpenseModal) {
-            // Pre-fill date and populate categories before showing
             document.getElementById('add-expense-date').value = formatDate(new Date());
             populateReferenceDropdown(document.getElementById('add-expense-main-category'), (appState.references.budgetCategories || []).map(c => c.name), 'Vælg kategori...');
             addExpenseModal.classList.remove('hidden');
