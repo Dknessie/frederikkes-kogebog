@@ -169,6 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
+
+        // NYT: Knap tilføjet til element-cache
+        addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
     function computeDerivedShoppingLists() {
@@ -251,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#inventory':
                 renderInventory();
                 break;
-            case '#oekonomi': // ÆNDRET
+            case '#oekonomi':
                 renderEconomyPage();
                 break;
             case '#references':
@@ -313,7 +316,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (stateKey === 'references') {
-                     const buttonsToEnable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn];
+                     // NYT: Tilføjet addExpenseBtn til listen over knapper, der skal aktiveres
+                     const buttonsToEnable = [
+                        elements.addInventoryItemBtn, 
+                        elements.reorderAssistantBtn, 
+                        elements.addRecipeBtn, 
+                        elements.addProjectBtn, 
+                        elements.addRoomBtn, 
+                        elements.editRoomBtn, 
+                        elements.generateGroceriesBtn, 
+                        elements.impulsePurchaseBtn,
+                        elements.addExpenseBtn
+                    ];
                      buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                      setReferencesLoaded(true);
                 }
@@ -344,7 +358,18 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        const buttonsToDisable = [elements.addInventoryItemBtn, elements.reorderAssistantBtn, elements.addRecipeBtn, elements.addProjectBtn, elements.addRoomBtn, elements.editRoomBtn, elements.generateGroceriesBtn, elements.impulsePurchaseBtn];
+        // NYT: Tilføjet addExpenseBtn til listen over knapper, der skal deaktiveres ved logout
+        const buttonsToDisable = [
+            elements.addInventoryItemBtn, 
+            elements.reorderAssistantBtn, 
+            elements.addRecipeBtn, 
+            elements.addProjectBtn, 
+            elements.addRoomBtn, 
+            elements.editRoomBtn, 
+            elements.generateGroceriesBtn, 
+            elements.impulsePurchaseBtn,
+            elements.addExpenseBtn
+        ];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
         setReferencesLoaded(false);
     }
@@ -354,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const [mainHash, subId] = hash.split('/');
             state.currentlyViewedRoomId = subId || null;
 
-            // ÆNDRET
             const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#oekonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
