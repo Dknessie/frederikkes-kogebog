@@ -16,6 +16,7 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomy, renderEconomyPage } from './economy.js';
+import { initExpenses } from './expenses.js'; // NYT: Importeret
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -316,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (stateKey === 'references') {
-                     // NYT: Tilføjet addExpenseBtn til listen over knapper, der skal aktiveres
                      const buttonsToEnable = [
                         elements.addInventoryItemBtn, 
                         elements.reorderAssistantBtn, 
@@ -358,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
         elements.loginPage.classList.remove('hidden');
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
-        // NYT: Tilføjet addExpenseBtn til listen over knapper, der skal deaktiveres ved logout
         const buttonsToDisable = [
             elements.addInventoryItemBtn, 
             elements.reorderAssistantBtn, 
@@ -406,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initRooms(state, elements);
         initEvents(state);
         initEconomy(state, elements);
+        initExpenses(state); // NYT: Initialiseret expenses-modulet
     }
 
     init();
