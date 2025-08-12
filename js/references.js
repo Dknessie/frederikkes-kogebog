@@ -44,10 +44,15 @@ export function renderReferencesPage() {
     dynamicCards.forEach(card => card.remove());
     
     const referenceData = {
-        budgetCategories: { // NEW
+        budgetCategories: {
             title: 'Budgetkategorier',
             items: appState.references.budgetCategories || [],
             isHierarchical: true
+        },
+        assetTypes: {
+            title: 'Aktivtyper',
+            items: appState.references.assetTypes || [],
+            isSimpleList: true
         },
         itemCategories: {
             title: 'Varekategorier',
@@ -63,12 +68,6 @@ export function renderReferencesPage() {
             title: 'Butikker',
             items: appState.references.stores || [],
             isSimpleList: true
-        },
-        standardUnits: {
-            title: 'Standardenheder',
-            items: appState.references.standardUnits || [],
-            isSimpleList: true,
-            isReadOnly: true
         }
     };
     
@@ -82,23 +81,21 @@ export function renderReferencesPage() {
             const listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
                 <li class="reference-item" data-value="${item}">
                     <span class="reference-name">${item}</span>
-                    ${!data.isReadOnly ? `
                     <div class="reference-actions">
                         <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
-                    </div>` : ''}
+                    </div>
                 </li>
             `).join('');
             card.innerHTML = `
                 <h4>${data.title}</h4>
                 <ul class="reference-list">${listItemsHTML}</ul>
-                ${!data.isReadOnly ? `
                 <form class="add-reference-form">
                     <div class="input-group">
                         <input type="text" placeholder="Tilføj ny..." required>
                     </div>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-                </form>` : '<p class="small-text">Denne liste administreres af systemet.</p>'}
+                </form>
             `;
         } else if (data.isHierarchical) {
             const listItemsHTML = (data.items || [])
@@ -334,7 +331,6 @@ async function deleteReferenceItem(key, value) {
     } else {
         const batch = writeBatch(db);
         batch.update(ref, { [key]: arrayRemove(value) });
-        // Add logic to update documents that use this reference...
         await batch.commit();
         showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
     }
@@ -393,7 +389,6 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
         const batch = writeBatch(db);
         batch.update(ref, { [key]: arrayRemove(oldValue) });
         batch.update(ref, { [key]: arrayUnion(newValue) });
-        // Add logic to update documents that use this reference...
         await batch.commit();
         showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
     }
