@@ -222,6 +222,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // This function will be called to re-render the content of the current page
+    // whenever data is updated.
+    function renderCurrentPage() {
+        const hash = window.location.hash || '#dashboard';
+        const [mainHash] = hash.split('/');
+        
+        switch(mainHash) {
+            case '#dashboard':
+                renderDashboardPage();
+                break;
+            case '#calendar':
+                renderMealPlanner();
+                break;
+            case '#hjem':
+                renderRoomsListPage();
+                renderProjects();
+                break;
+            case '#room-details':
+                if (state.currentlyViewedRoomId) {
+                    renderRoomDetailsPage();
+                }
+                break;
+            case '#recipes':
+                renderPageTagFilters();
+                renderRecipes();
+                break;
+            case '#inventory':
+                renderInventory();
+                break;
+            case '#økonomi':
+                renderEconomyPage();
+                break;
+            case '#references':
+                renderReferencesPage();
+                break;
+        }
+    }
+
     function setupRealtimeListeners(userId) {
         if (!userId) return;
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
@@ -251,8 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'projects' || stateKey === 'rooms') {
                     computeDerivedShoppingLists();
                 }
-
-                handleNavigation(window.location.hash);
+                renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
 
@@ -280,15 +317,14 @@ document.addEventListener('DOMContentLoaded', () => {
                      buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                      setReferencesLoaded(true);
                 }
-
-                handleNavigation(window.location.hash);
+                renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
         
         const economySettingsRef = doc(db, 'users', userId, 'settings', 'economy');
         state.listeners.economySettings = onSnapshot(economySettingsRef, (doc) => {
             state.economySettings = doc.exists() ? doc.data() : {};
-            handleNavigation(window.location.hash);
+            renderCurrentPage();
         }, (error) => commonErrorHandler(error, 'economySettings'));
     }
 
@@ -322,39 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
-
-            switch(currentHash) {
-                case '#dashboard':
-                    renderDashboardPage();
-                    break;
-                case '#calendar':
-                    renderMealPlanner();
-                    break;
-                case '#hjem':
-                    renderRoomsListPage();
-                    renderProjects();
-                    break;
-                case '#room-details':
-                    if (state.currentlyViewedRoomId) {
-                        renderRoomDetailsPage();
-                    } else {
-                        window.location.hash = '#hjem';
-                    }
-                    break;
-                case '#recipes':
-                    renderPageTagFilters();
-                    renderRecipes();
-                    break;
-                case '#inventory':
-                    renderInventory();
-                    break;
-                case '#økonomi':
-                    renderEconomyPage();
-                    break;
-                case '#references':
-                    renderReferencesPage();
-                    break;
-            }
+            renderCurrentPage();
         } catch (error) {
             console.error("Fejl under navigation:", error);
             handleError(error, "Der opstod en fejl under navigation.");
