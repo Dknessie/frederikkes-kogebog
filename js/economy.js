@@ -19,6 +19,9 @@ export function initEconomy(state, elements) {
         economyTabs: document.querySelector('.economy-tabs'),
         economyViews: document.querySelectorAll('.economy-view'),
         
+        // NYT: Knap tilføjet
+        addVariableExpenseBtn: document.getElementById('add-variable-expense-btn'),
+
         // Expense Modal
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
         addExpenseModal: document.getElementById('add-expense-modal'),
@@ -57,6 +60,8 @@ export function initEconomy(state, elements) {
     });
 
     // Listeners for modals
+    // NYT: Listener tilføjet til den nye knap
+    if(appElements.addVariableExpenseBtn) appElements.addVariableExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseBtn) appElements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseForm) appElements.addExpenseForm.addEventListener('submit', handleSaveVariableExpense);
     if(appElements.addAssetBtn) appElements.addAssetBtn.addEventListener('click', () => openAssetModal());
