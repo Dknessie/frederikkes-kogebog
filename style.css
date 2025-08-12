@@ -1880,23 +1880,34 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .economy-view.active {
     display: block;
+    animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Formue Visning */
 .net-worth-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: var(--spacing-l);
 }
 .net-worth-summary-card {
-    /* Styles for the main summary card */
-}
-.net-worth-controls {
     display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
+    justify-content: space-around;
+    background-color: var(--light-bg-color);
+    padding: var(--spacing-l);
+    border-radius: var(--card-border-radius);
+    text-align: center;
 }
+.net-worth-summary-item span {
+    display: block;
+    font-size: var(--small-font-size);
+    color: #666;
+}
+.net-worth-summary-item strong {
+    font-size: 1.5rem;
+    color: var(--text-color);
+}
+.net-worth-summary-item.net-worth-total strong {
+    color: var(--accent-color);
+}
+
 .asset-liability-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1909,20 +1920,72 @@ input:checked + .slider:before { transform: translateX(22px); }
     box-shadow: var(--shadow);
 }
 .asset-card, .liability-card {
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
     margin-bottom: var(--spacing-m);
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
 }
-.progress-bar {
-    height: 10px;
+.asset-card:hover, .liability-card:hover {
+    box-shadow: var(--shadow);
+}
+.asset-card h5, .liability-card h5 {
+    margin: 0 0 var(--spacing-s) 0;
+    color: var(--text-color);
+}
+
+.fixed-expense-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.fixed-expense-item:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--border-color);
+}
+
+/* NYT: Opsparings-Dashboard */
+.savings-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: var(--spacing-l);
+    align-items: center;
+    margin-bottom: var(--spacing-l);
+}
+.savings-numbers {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+.savings-label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #666;
+}
+.savings-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+#savings-progress-bar-container {
+    height: 20px;
     background-color: var(--border-color);
-    border-radius: 5px;
+    border-radius: 10px;
     overflow: hidden;
-    margin-top: var(--spacing-s);
 }
-.progress-bar-inner {
+#savings-progress-bar-inner {
     height: 100%;
     background-color: var(--accent-color);
-    border-radius: 5px;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease;
 }
+
 
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
@@ -1996,6 +2059,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     .timeline-grid {
+        grid-template-columns: 1fr;
+    }
+    .savings-dashboard-grid {
         grid-template-columns: 1fr;
     }
 }
