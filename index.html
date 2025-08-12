@@ -258,49 +258,32 @@
 
                 <!-- Månedsbudget View -->
                 <div id="economy-view-monthly-budget" class="economy-view active">
-                    <!-- NYT: Knap til at registrere køb direkte fra siden -->
                     <div class="actions-bar">
                         <button id="add-variable-expense-btn" class="btn btn-primary"><i class="fas fa-receipt"></i> Registrer Nyt Køb</button>
                     </div>
-                    <div id="savings-dashboard" class="dashboard-widget">
-                        <h3>Opsparings-Dashboard</h3>
-                        <div class="savings-dashboard-grid">
-                            <div class="savings-gauge-container">
-                                <!-- Gauge vil blive indsat her af JustGage -->
-                            </div>
-                            <div class="savings-numbers">
-                                <div class="savings-number-item">
-                                    <span class="savings-label">Mål</span>
-                                    <span id="savings-goal-value" class="savings-value">0 kr.</span>
-                                </div>
-                                <div class="savings-number-item">
-                                    <span class="savings-label">Status</span>
-                                    <span id="savings-status-value" class="savings-value">0 kr.</span>
-                                </div>
-                                <div class="savings-number-item">
-                                    <span class="savings-label">Prognose</span>
-                                    <span id="savings-prognosis-value" class="savings-value">0 kr.</span>
+                    <div class="monthly-budget-grid">
+                        <div class="monthly-budget-main">
+                            <div id="monthly-budget-bars" class="dashboard-widget">
+                                <h3>Budget-kategorier</h3>
+                                <div class="dashboard-widget-content">
+                                    <!-- Budget bars for each category will be rendered here -->
                                 </div>
                             </div>
                         </div>
-                        <div id="savings-progress-bar-container" class="progress-bar">
-                            <div id="savings-progress-bar-inner" class="progress-bar-inner"></div>
+                        <div class="monthly-budget-sidebar">
+                            <div id="savings-dashboard" class="dashboard-widget">
+                                <h3>Opsparings-Dashboard</h3>
+                                <div id="pinned-savings-goals-container">
+                                    <!-- Pinned savings goals will be rendered here -->
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <div id="monthly-budget-bars" class="dashboard-widget">
-                        <h3>Budget-kategorier</h3>
-                        <!-- Budget bars for each category will be rendered here -->
-                    </div>
-                    <div id="what-if-simulation" class="dashboard-widget">
-                        <h3>"Hvad nu hvis?"-Simulation</h3>
-                        <!-- Simulation controls and results will be rendered here -->
                     </div>
                 </div>
 
                 <!-- Formue View -->
                 <div id="economy-view-net-worth" class="economy-view hidden">
                     <div class="net-worth-header">
-                        <!-- ÆNDRET: Tilføjet struktur til nøgletal -->
                         <div class="net-worth-summary-card dashboard-widget">
                             <div class="net-worth-summary-item">
                                 <span>Aktiver I Alt</span>
