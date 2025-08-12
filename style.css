@@ -1341,27 +1341,6 @@ header {
     align-self: center;
 }
 
-/* Budget Widget */
-#budget-gauge-container {
-    height: 150px;
-    margin-bottom: var(--spacing-m);
-}
-.budget-summary {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-s);
-}
-.budget-item {
-    display: flex;
-    justify-content: space-between;
-}
-.budget-label {
-    color: #666;
-}
-.budget-value {
-    font-weight: 700;
-}
-
 /* Quick Actions Widget */
 .quick-actions-container {
     display: grid;
@@ -1443,32 +1422,6 @@ header {
     font-weight: 600;
 }
 
-/* NEW: Maintenance Page Styles */
-.maintenance-room-section {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-l);
-    margin-bottom: var(--spacing-l);
-    box-shadow: var(--shadow);
-}
-.maintenance-log-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: var(--spacing-m);
-}
-.maintenance-log-table th, .maintenance-log-table td {
-    padding: var(--spacing-m);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-.maintenance-log-table th {
-    font-weight: 600;
-}
-.maintenance-log-table td:last-child {
-    text-align: right;
-}
-
-
 /* ===== 9. Modaler ===== */
 .modal-overlay {
     position: fixed;
@@ -1485,7 +1438,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
 #bulk-add-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
@@ -1897,173 +1850,79 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
-/* ===== 11. NEW Budget Page Styles ===== */
-.budget-dashboard {
-    background: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
+/* ===== 11. Økonomi Side Styles ===== */
+.economy-tabs {
+    display: flex;
+    gap: var(--spacing-s);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-l);
 }
-.budget-dashboard h2, .budget-dashboard h3 {
-    margin-top: 0;
+.economy-tab-btn {
+    padding: var(--spacing-m) var(--spacing-l);
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #777;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
 }
-.budget-header {
+.economy-tab-btn:hover {
+    color: var(--primary-color);
+}
+.economy-tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+.economy-view {
+    display: none;
+}
+.economy-view.active {
+    display: block;
+}
+
+/* Formue Visning */
+.net-worth-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--spacing-l);
-    flex-wrap: wrap;
-    gap: var(--spacing-m);
 }
-.budget-year-nav {
+.net-worth-summary-card {
+    /* Styles for the main summary card */
+}
+.net-worth-controls {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
 }
-.budget-year-nav h2 {
-    margin: 0;
-    min-width: 80px;
-    text-align: center;
+.asset-liability-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-l);
 }
-.budget-controls {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-}
-.budget-user-selector {
-    padding: var(--spacing-s) var(--spacing-m);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: var(--small-font-size);
-}
-
-.add-fixed-expense-container {
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
+.asset-column, .liability-column {
+    background: var(--white-color);
     padding: var(--spacing-l);
-    margin-bottom: var(--spacing-l);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
 }
-#add-fixed-expense-form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-m) var(--spacing-l);
-    align-items: end;
+.asset-card, .liability-card {
+    margin-bottom: var(--spacing-m);
 }
-.expense-split-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 120px auto;
-    gap: var(--spacing-s);
-    align-items: center;
-}
-.split-sum-indicator {
-    font-size: var(--small-font-size);
-    font-weight: 600;
-}
-.split-sum-indicator.status-green { color: var(--status-green); }
-.split-sum-indicator.status-red { color: var(--status-red); }
-
-.budget-group {
-    margin-bottom: var(--spacing-xl);
-}
-.budget-grid-container {
-    overflow-x: auto;
-    width: 100%;
-}
-.budget-grid {
-    display: grid;
-    grid-template-columns: minmax(250px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
-    border-collapse: collapse;
-    width: fit-content;
-    min-width: 100%;
-}
-.budget-grid-row {
-    display: contents;
-}
-.budget-grid-cell {
-    padding: var(--spacing-s) var(--spacing-m);
-    text-align: right;
-    border: 1px solid var(--border-color);
-    background-color: var(--light-bg-color);
-    white-space: nowrap;
+.progress-bar {
+    height: 10px;
+    background-color: var(--border-color);
+    border-radius: 5px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    font-size: var(--small-font-size);
+    margin-top: var(--spacing-s);
 }
-
-.budget-grid-cell.header-cell {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-    font-weight: 600;
-    text-align: center;
-    justify-content: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+.progress-bar-inner {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 5px;
 }
-.budget-grid-cell.category-cell {
-    background-color: var(--light-bg-color);
-    font-weight: 600;
-    text-align: left;
-    justify-content: flex-start;
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    color: var(--text-color);
-}
-.budget-grid-cell.sub-category-cell {
-    padding-left: var(--spacing-l);
-    font-weight: normal;
-}
-.budget-grid-cell .owner-tag {
-    font-size: 0.8em;
-    color: #777;
-    margin-left: var(--spacing-s);
-}
-.budget-grid-cell.total-cell {
-    font-weight: 700;
-}
-.budget-grid-cell.actions-cell {
-    background-color: var(--light-bg-color);
-}
-.budget-grid-cell.actions-cell .actions {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-}
-
-.budget-totals-bar {
-    display: grid;
-    grid-template-columns: minmax(250px, 1.5fr) repeat(12, minmax(80px, 1fr)) minmax(100px, 1fr) 80px;
-    width: fit-content;
-    min-width: 100%;
-    position: sticky;
-    bottom: 0;
-    background-color: var(--white-color);
-    box-shadow: 0 -4px 8px rgba(0,0,0,0.05);
-}
-.budget-totals-cell {
-    padding: var(--spacing-m);
-    text-align: right;
-    font-weight: 700;
-    border: 1px solid var(--border-color);
-    border-top: 2px solid var(--text-color);
-    background-color: var(--secondary-color);
-}
-.budget-totals-cell.header-cell {
-    text-align: left;
-    background-color: var(--text-color);
-    color: var(--white-color);
-    position: sticky;
-    left: 0;
-}
-.budget-totals-cell.grand-total-cell {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-}
-
 
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
@@ -2092,6 +1951,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         display: flex;
     }
     #add-fixed-expense-form {
+        grid-template-columns: 1fr;
+    }
+    .asset-liability-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -2131,6 +1993,9 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
     .expense-split-row {
+        grid-template-columns: 1fr;
+    }
+    .timeline-grid {
         grid-template-columns: 1fr;
     }
 }
