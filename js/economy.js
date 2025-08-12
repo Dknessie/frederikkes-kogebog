@@ -50,8 +50,9 @@ export function initEconomy(state, elements) {
         fixedExpensesList: document.getElementById('fixed-expenses-list'),
         addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
         
-        // NYT: Element til budget-barer
+        // Budget & Savings Elements
         monthlyBudgetBarsContainer: document.getElementById('monthly-budget-bars'),
+        pinnedSavingsGoalsContainer: document.getElementById('pinned-savings-goals-container'),
     };
 
     // Main view tabs
@@ -61,7 +62,7 @@ export function initEconomy(state, elements) {
         }
     });
 
-    // Listeners for modals
+    // Listeners for modals and actions
     if(appElements.addVariableExpenseBtn) appElements.addVariableExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseBtn) appElements.addExpenseBtn.addEventListener('click', openAddExpenseModal);
     if(appElements.addExpenseForm) appElements.addExpenseForm.addEventListener('submit', handleSaveVariableExpense);
@@ -76,7 +77,7 @@ export function initEconomy(state, elements) {
     if(appElements.deleteFixedExpenseBtn) appElements.deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
     if(appElements.economySettingsForm) appElements.economySettingsForm.addEventListener('submit', handleSaveEconomySettings);
     
-    // Event delegation for asset/liability/fixed expense lists
+    // Event delegation
     if(appElements.assetsList) appElements.assetsList.addEventListener('click', e => {
         if (e.target.closest('.asset-card')) openAssetModal(e.target.closest('.asset-card').dataset.id);
     });
@@ -85,6 +86,13 @@ export function initEconomy(state, elements) {
     });
     if(appElements.fixedExpensesList) appElements.fixedExpensesList.addEventListener('click', e => {
         if (e.target.closest('.fixed-expense-item')) openFixedExpenseModal(e.target.closest('.fixed-expense-item').dataset.id);
+    });
+    // NYT: Listener for at fjerne et pinnet opsparingsmål
+    if(appElements.pinnedSavingsGoalsContainer) appElements.pinnedSavingsGoalsContainer.addEventListener('click', e => {
+        if (e.target.closest('.unpin-goal-btn')) {
+            const goalId = e.target.closest('.savings-goal-item').dataset.goalId;
+            unpinSavingsGoal(goalId);
+        }
     });
 
     // Connect checkbox to dropdown visibility in fixed expense modal
@@ -124,7 +132,7 @@ function switchEconomyView(viewName) {
     appElements.economyViews.forEach(view => {
         view.classList.toggle('active', view.id.includes(viewName));
     });
-    renderEconomyPage(); // Re-render content for the active view
+    renderEconomyPage();
 }
 
 export function renderEconomyPage() {
@@ -162,47 +170,19 @@ function renderMonthlyBudgetView() {
         return true;
     });
 
-    const totalVariable = monthlyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const totalFixed = monthlyFixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const totalImpulse = monthlyExpenses.filter(exp => exp.isImpulse).reduce((sum, exp) => sum + exp.amount, 0);
-    
-    const totalCashFlow = totalVariable + totalFixed;
-    const income = appState.economySettings.monthlyIncome || 0;
-    const savingsGoal = appState.economySettings.monthlySavingsGoal || 0;
-
-    const expectedSavings = income - totalCashFlow;
-    const realSavings = income - totalCashFlow - totalImpulse;
-
-    document.getElementById('savings-goal-value').textContent = `${savingsGoal.toLocaleString('da-DK')} kr.`;
-    document.getElementById('savings-status-value').textContent = `${realSavings.toLocaleString('da-DK')} kr.`;
-    document.getElementById('savings-prognosis-value').textContent = `${expectedSavings.toLocaleString('da-DK')} kr.`;
-
-    const progress = savingsGoal > 0 ? (realSavings / savingsGoal) * 100 : 0;
-    const progressBar = document.getElementById('savings-progress-bar-inner');
-    progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
-    progressBar.style.backgroundColor = progress >= 100 ? 'var(--status-green)' : 'var(--accent-color)';
-
-    // NYT: Kald funktionen til at rendere budget-barer
     renderBudgetBars(monthlyExpenses, monthlyFixedExpenses);
+    renderSavingsDashboard(monthlyFixedExpenses);
 }
 
-// NYT: Funktion til at rendere de visuelle budget-barer
 function renderBudgetBars(monthlyExpenses, monthlyFixedExpenses) {
     const container = appElements.monthlyBudgetBarsContainer.querySelector('.dashboard-widget-content');
-    if (!container) {
-        // Opret containeren, hvis den ikke findes (første gang)
-        const newContainer = document.createElement('div');
-        newContainer.className = 'dashboard-widget-content';
-        appElements.monthlyBudgetBarsContainer.appendChild(newContainer);
-        container = newContainer;
-    }
     container.innerHTML = '';
 
     const budgetCategories = (appState.references.budgetCategories || [])
         .filter(cat => cat.budget && cat.budget > 0);
 
     if (budgetCategories.length === 0) {
-        container.innerHTML = `<p class="empty-state-small">Du har ikke defineret nogen budgetter endnu. Gå til "Indstillinger" -> "Referencer" for at tilføje dem.</p>`;
+        container.innerHTML = `<p class="empty-state-small">Du har ikke defineret nogen budgetter endnu. Gå til "Referencer" for at tilføje dem.</p>`;
         return;
     }
 
@@ -242,6 +222,66 @@ function renderBudgetBars(monthlyExpenses, monthlyFixedExpenses) {
     });
 }
 
+// NYT: Funktion til at rendere opsparings-dashboardet
+function renderSavingsDashboard(monthlyFixedExpenses) {
+    const container = appElements.pinnedSavingsGoalsContainer;
+    container.innerHTML = '';
+
+    const income = appState.economySettings.monthlyIncome || 0;
+    const totalFixed = monthlyFixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const savingsPotential = income - totalFixed;
+
+    container.innerHTML = `
+        <div class="savings-potential">
+            <span>Opsparingspotentiale:</span>
+            <strong>${savingsPotential.toLocaleString('da-DK')} kr./md.</strong>
+        </div>
+    `;
+
+    const pinnedGoals = appState.economySettings.pinnedGoals || [];
+
+    if (pinnedGoals.length === 0) {
+        container.innerHTML += `<p class="empty-state-small">Pin et projekt eller et ønske fra "Hjem"-siden for at følge din opsparing.</p>`;
+        return;
+    }
+
+    pinnedGoals.forEach(goal => {
+        let goalData;
+        if (goal.type === 'project') {
+            goalData = appState.projects.find(p => p.id === goal.id);
+            if(goalData) goalData.targetAmount = (goalData.materials || []).reduce((sum, mat) => sum + (mat.price || 0), 0);
+        } else if (goal.type === 'wishlist') {
+            const allWishes = Object.values(appState.shoppingLists.wishlist || {});
+            goalData = allWishes.find(w => w.name.toLowerCase() === goal.id.toLowerCase());
+            if(goalData) goalData.targetAmount = goalData.price || 0;
+        }
+
+        if (!goalData || !goalData.targetAmount) return;
+
+        const monthsToGoal = savingsPotential > 0 ? Math.ceil(goalData.targetAmount / savingsPotential) : Infinity;
+        
+        const goalItem = document.createElement('div');
+        goalItem.className = 'savings-goal-item';
+        goalItem.dataset.goalId = goal.id;
+        goalItem.innerHTML = `
+            <div class="savings-goal-header">
+                <span class="savings-goal-title">${goalData.title || goalData.name}</span>
+                <button class="btn-icon unpin-goal-btn" title="Fjern mål"><i class="fas fa-thumbtack"></i></button>
+            </div>
+            <div class="savings-goal-progress">
+                <div class="progress-bar">
+                    <!-- Progress bar vil blive implementeret, når vi tracker opsparet beløb -->
+                    <div class="progress-bar-inner" style="width: 0%;"></div>
+                </div>
+                <span class="savings-goal-amount">0 / ${goalData.targetAmount.toLocaleString('da-DK')} kr.</span>
+            </div>
+            <div class="savings-goal-forecast">
+                ${monthsToGoal !== Infinity ? `Ca. ${monthsToGoal} måneder til mål` : 'Opsparing påkrævet'}
+            </div>
+        `;
+        container.appendChild(goalItem);
+    });
+}
 
 // --- NET WORTH VIEW ---
 
@@ -485,7 +525,6 @@ async function handleSaveVariableExpense(e) {
 // --- SETTINGS VIEW ---
 
 function renderSettingsView() {
-    // Populate form with current settings
     document.getElementById('monthly-income').value = appState.economySettings.monthlyIncome || '';
     document.getElementById('monthly-savings-goal').value = appState.economySettings.monthlySavingsGoal || '';
     renderFixedExpensesList();
@@ -595,6 +634,39 @@ async function handleSaveEconomySettings(e) {
         showNotification({title: "Gemt!", message: "Dine økonomi-indstillinger er blevet gemt."});
     } catch (error) {
         handleError(error, "Indstillingerne kunne ikke gemmes.", "saveEconomySettings");
+    }
+}
+
+// NYT: Funktion til at pinne/unpinne et opsparingsmål
+export async function togglePinnedSavingsGoal(goal) {
+    const settings = appState.economySettings || {};
+    let pinnedGoals = settings.pinnedGoals || [];
+    const goalIndex = pinnedGoals.findIndex(g => g.id === goal.id && g.type === goal.type);
+
+    if (goalIndex > -1) {
+        pinnedGoals.splice(goalIndex, 1); // Unpin
+    } else {
+        pinnedGoals.push(goal); // Pin
+    }
+
+    try {
+        const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'economy');
+        await setDoc(settingsRef, { pinnedGoals: pinnedGoals }, { merge: true });
+        showNotification({title: "Opdateret!", message: `Dit opsparingsmål er blevet ${goalIndex > -1 ? 'fjernet' : 'tilføjet'}.`});
+    } catch (error) {
+        handleError(error, "Kunne ikke opdatere opsparingsmål.", "togglePinnedSavingsGoal");
+    }
+}
+
+async function unpinSavingsGoal(goalId) {
+    const settings = appState.economySettings || {};
+    let pinnedGoals = settings.pinnedGoals || [];
+    const updatedGoals = pinnedGoals.filter(g => g.id !== goalId);
+     try {
+        const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'economy');
+        await setDoc(settingsRef, { pinnedGoals: updatedGoals }, { merge: true });
+    } catch (error) {
+        handleError(error, "Kunne ikke fjerne opsparingsmål.", "unpinSavingsGoal");
     }
 }
 
