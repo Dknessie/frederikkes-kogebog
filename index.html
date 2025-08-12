@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frederikkes Kogebog</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Placeholder favicon to prevent 404 error -->
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,6 +52,7 @@
         <main id="app-main-content">
             <section id="dashboard" class="page">
                 <div class="dashboard-layout">
+                    <!-- Venstre Kolonne: Primær Information -->
                     <div class="dashboard-main-column">
                         <div id="welcome-widget" class="dashboard-widget">
                             <h2 id="welcome-title">Velkommen</h2>
@@ -82,6 +84,7 @@
                         </div>
                     </div>
 
+                    <!-- Højre Kolonne: Widgets & Hurtig Adgang -->
                     <div class="dashboard-sidebar-column">
                         <div id="shopping-widget" class="dashboard-widget">
                             <h3><i class="fas fa-shopping-cart"></i> Indkøb</h3>
@@ -253,19 +256,59 @@
                     <button class="economy-tab-btn" data-view="settings">Indstillinger</button>
                 </div>
 
+                <!-- NYT: Månedsbudget View -->
                 <div id="economy-view-monthly-budget" class="economy-view active">
-                    <div id="savings-dashboard" class="dashboard-widget"></div>
-                    <div id="what-if-simulation" class="dashboard-widget"></div>
-                    <div id="monthly-budget-bars" class="dashboard-widget"></div>
+                    <div id="savings-dashboard" class="dashboard-widget">
+                        <h3>Opsparings-Dashboard</h3>
+                        <div class="savings-dashboard-grid">
+                            <div class="savings-gauge-container">
+                                <!-- Gauge vil blive indsat her af JustGage -->
+                            </div>
+                            <div class="savings-numbers">
+                                <div class="savings-number-item">
+                                    <span class="savings-label">Mål</span>
+                                    <span id="savings-goal-value" class="savings-value">0 kr.</span>
+                                </div>
+                                <div class="savings-number-item">
+                                    <span class="savings-label">Status</span>
+                                    <span id="savings-status-value" class="savings-value">0 kr.</span>
+                                </div>
+                                <div class="savings-number-item">
+                                    <span class="savings-label">Prognose</span>
+                                    <span id="savings-prognosis-value" class="savings-value">0 kr.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="savings-progress-bar-container" class="progress-bar">
+                            <div id="savings-progress-bar-inner" class="progress-bar-inner"></div>
+                        </div>
+                    </div>
+                    <div id="monthly-budget-bars" class="dashboard-widget">
+                        <h3>Budget-kategorier</h3>
+                        <!-- Budget bars for each category will be rendered here -->
+                    </div>
+                    <div id="what-if-simulation" class="dashboard-widget">
+                        <h3>"Hvad nu hvis?"-Simulation</h3>
+                        <!-- Simulation controls and results will be rendered here -->
+                    </div>
                 </div>
 
+                <!-- Formue View -->
                 <div id="economy-view-net-worth" class="economy-view hidden">
                     <div class="net-worth-header">
-                        <div class="net-worth-summary-card"></div>
-                        <div class="net-worth-controls">
-                            <button id="prev-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <h3 id="net-worth-year-display"></h3>
-                            <button id="next-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                        <div class="net-worth-summary-card dashboard-widget">
+                            <div class="net-worth-summary-item">
+                                <span>Aktiver I Alt</span>
+                                <strong id="net-worth-total-assets">0 kr.</strong>
+                            </div>
+                            <div class="net-worth-summary-item">
+                                <span>Gæld I Alt</span>
+                                <strong id="net-worth-total-liabilities">0 kr.</strong>
+                            </div>
+                            <div class="net-worth-summary-item net-worth-total">
+                                <span>Nettoformue</span>
+                                <strong id="net-worth-total-value">0 kr.</strong>
+                            </div>
                         </div>
                     </div>
                     <div id="asset-liability-container" class="asset-liability-layout">
@@ -282,25 +325,30 @@
                     </div>
                 </div>
                 
+                <!-- Indstillinger View -->
                 <div id="economy-view-settings" class="economy-view hidden">
                     <div class="dashboard-widget">
                         <h3>Indstillinger for Økonomi</h3>
                         <form id="economy-settings-form">
-                            <div class="input-group">
-                                <label for="monthly-income">Forventet Månedlig Indkomst (kr.)</label>
-                                <input type="number" id="monthly-income" step="100" placeholder="F.eks. 25000">
+                            <div class="form-grid-2-col">
+                                <div class="input-group">
+                                    <label for="monthly-income">Forventet Månedlig Indkomst (kr.)</label>
+                                    <input type="number" id="monthly-income" step="100" placeholder="F.eks. 25000">
+                                </div>
+                                <div class="input-group">
+                                    <label for="monthly-savings-goal">Månedligt Opsparingsmål (kr.)</label>
+                                    <input type="number" id="monthly-savings-goal" step="100" placeholder="F.eks. 5000">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="monthly-savings-goal">Månedligt Opsparingsmål (kr.)</label>
-                                <input type="number" id="monthly-savings-goal" step="100" placeholder="F.eks. 5000">
-                            </div>
-                            <hr>
-                            <h4>Budget-konvolutter</h4>
-                            <div id="budget-envelopes-container"></div>
                             <div class="form-actions">
                                 <button type="submit" class="btn btn-primary">Gem Indstillinger</button>
                             </div>
                         </form>
+                    </div>
+                    <div class="dashboard-widget">
+                        <h3>Faste Udgifter</h3>
+                        <div id="fixed-expenses-list"></div>
+                        <button id="add-fixed-expense-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Fast Udgift</button>
                     </div>
                 </div>
             </section>
@@ -314,7 +362,8 @@
                         <h4>Husstandsmedlemmer</h4>
                         <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
                         <ul id="household-members-list" class="reference-list">
-                            </ul>
+                            <!-- Members will be rendered here by JS -->
+                        </ul>
                         <form id="add-member-form" class="add-reference-form">
                             <div class="input-group">
                                 <input type="text" id="new-member-name" placeholder="Tilføj nyt navn..." required>
@@ -322,7 +371,8 @@
                             <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i></button>
                         </form>
                     </div>
-                    </div>
+                    <!-- Other cards for references will be generated by JS -->
+                </div>
             </section>
         </main>
 
@@ -335,6 +385,7 @@
         </nav>
     </div>
 
+    <!-- MODALS -->
     <div id="add-expense-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -348,9 +399,15 @@
                     <label for="add-expense-date">Dato</label>
                     <input type="date" id="add-expense-date" required>
                 </div>
-                <div class="input-group">
-                    <label for="add-expense-main-category">Hovedkategori</label>
-                    <select id="add-expense-main-category" required></select>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="add-expense-main-category">Hovedkategori</label>
+                        <select id="add-expense-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="add-expense-sub-category">Underkategori</label>
+                        <select id="add-expense-sub-category"></select>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="add-expense-description">Beskrivelse</label>
@@ -411,6 +468,10 @@
                     <label for="liability-original-amount">Oprindeligt Lånebeløb (kr.)</label>
                     <input type="number" id="liability-original-amount" step="1000" required>
                 </div>
+                <div class="input-group">
+                    <label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
+                    <input type="number" id="liability-current-balance" step="1000" required>
+                </div>
                 <div class="form-actions">
                      <button type="button" id="delete-liability-btn" class="btn btn-danger hidden">Slet</button>
                     <button type="submit" class="btn btn-primary">Gem Gæld</button>
@@ -425,13 +486,15 @@
             <h3>Administrer Fast Udgift</h3>
             <form id="fixed-expense-form">
                 <input type="hidden" id="fixed-expense-id-edit">
-                <div class="input-group">
-                    <label for="fixed-expense-main-category">Hovedkategori</label>
-                    <select id="fixed-expense-main-category" required></select>
-                </div>
-                <div class="input-group">
-                    <label for="fixed-expense-sub-category">Underkategori</label>
-                    <select id="fixed-expense-sub-category" required></select>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-main-category">Hovedkategori</label>
+                        <select id="fixed-expense-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-sub-category">Underkategori</label>
+                        <select id="fixed-expense-sub-category" required></select>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="fixed-expense-amount">Beløb (kr.)</label>
@@ -463,6 +526,7 @@
         </div>
     </div>
     
+    <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
@@ -1006,6 +1070,7 @@
         </div>
     </div>
 
+    <!-- Third-party libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
