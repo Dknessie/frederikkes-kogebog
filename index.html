@@ -42,7 +42,7 @@
                     <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjem</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
-                    <a href="#budget" class="nav-link"><i class="fas fa-chart-pie"></i> Budget</a>
+                    <a href="#økonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                 </nav>
                  <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
@@ -57,6 +57,10 @@
                         <div id="welcome-widget" class="dashboard-widget">
                             <h2 id="welcome-title">Velkommen</h2>
                             <p id="welcome-summary">Laster data...</p>
+                        </div>
+                        <div id="net-worth-widget" class="dashboard-widget">
+                            <h3>Formue Overblik</h3>
+                            <div id="net-worth-widget-content"></div>
                         </div>
                         <div id="timeline-widget" class="dashboard-widget">
                             <div class="widget-header">
@@ -77,14 +81,6 @@
                                     <p class="empty-state-small">Ingen to-do's fundet.</p>
                                 </div>
                             </div>
-                        </div>
-                        <div id="projects-focus-widget" class="dashboard-widget">
-                            <h3>Projektoversigt</h3>
-                            <div id="projects-focus-content"></div>
-                        </div>
-                        <div id="category-values-widget" class="dashboard-widget">
-                            <h3>Lagerværdi pr. Kategori</h3>
-                            <div id="category-values-content"></div>
                         </div>
                     </div>
 
@@ -121,35 +117,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="budget-widget" class="dashboard-widget">
-                            <div class="card-header">
-                                <h3>Budget</h3>
-                                <button id="edit-budget-btn" class="btn-icon" title="Rediger budget"><i class="fas fa-edit"></i></button>
-                            </div>
-                            <div id="budget-gauge-container">
-                                <!-- Gauge vil blive renderet her af JS -->
-                            </div>
-                            <div class="budget-summary">
-                                <div class="budget-item">
-                                    <span class="budget-label">Forbrug (Måned)</span>
-                                    <span id="budget-spent" class="budget-value">0,00 kr.</span>
-                                </div>
-                                <div class="budget-item">
-                                    <span class="budget-label">Budget</span>
-                                    <span id="budget-total" class="budget-value">4000,00 kr.</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="inventory-notifications-widget" class="dashboard-widget">
-                            <h3>Varelager Notifikationer</h3>
-                            <div id="inventory-notifications-content"></div>
-                        </div>
                         <div id="quick-actions-widget" class="dashboard-widget">
                             <h3>Hurtig Adgang</h3>
                             <div class="quick-actions-container">
                                 <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
                                 <a href="#hjem" data-action="add-project" class="quick-action-btn"><i class="fas fa-tools"></i><span>Nyt Projekt</span></a>
-                                <a href="#calendar" class="quick-action-btn"><i class="fas fa-calendar-plus"></i><span>Planlæg Måltid</span></a>
+                                <a href="#økonomi" data-action="add-expense" class="quick-action-btn"><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
                                 <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
                             </div>
                         </div>
@@ -275,78 +248,65 @@
                 </div>
             </section>
 
-            <section id="budget" class="page hidden">
-                <div class="budget-dashboard">
-                    <div class="budget-header">
-                        <div class="budget-year-nav">
+            <section id="økonomi" class="page hidden">
+                <h2>Økonomi</h2>
+                <div class="economy-tabs">
+                    <button class="economy-tab-btn active" data-view="monthly-budget">Månedsbudget</button>
+                    <button class="economy-tab-btn" data-view="net-worth">Formue</button>
+                    <button class="economy-tab-btn" data-view="settings">Indstillinger</button>
+                </div>
+
+                <div id="economy-view-monthly-budget" class="economy-view active">
+                    <!-- Savings Dashboard -->
+                    <div id="savings-dashboard" class="dashboard-widget"></div>
+                    <!-- What-if Simulation -->
+                    <div id="what-if-simulation" class="dashboard-widget"></div>
+                    <!-- Monthly Budget Bars -->
+                    <div id="monthly-budget-bars" class="dashboard-widget"></div>
+                </div>
+
+                <div id="economy-view-net-worth" class="economy-view hidden">
+                    <div class="net-worth-header">
+                        <div class="net-worth-summary-card"></div>
+                        <div class="net-worth-controls">
                             <button id="prev-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <h2 id="budget-year-display"></h2>
+                            <h3 id="net-worth-year-display"></h3>
                             <button id="next-year-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <div class="budget-controls">
-                            <select id="budget-main-category-filter" class="budget-user-selector"></select>
-                            <select id="budgetUserSelector" class="budget-user-selector"></select>
+                    </div>
+                    <div id="asset-liability-container" class="asset-liability-layout">
+                        <div class="asset-column">
+                            <h4>Aktiver</h4>
+                            <div id="assets-list"></div>
+                            <button id="add-asset-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Aktiv</button>
+                        </div>
+                        <div class="liability-column">
+                            <h4>Gæld</h4>
+                            <div id="liabilities-list"></div>
+                            <button id="add-liability-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Gæld</button>
                         </div>
                     </div>
-
-                    <div class="add-fixed-expense-container">
-                        <h3>Tilføj/Rediger Fast Udgift</h3>
-                        <form id="add-fixed-expense-form">
-                            <input type="hidden" id="fixed-expense-id">
+                </div>
+                
+                <div id="economy-view-settings" class="economy-view hidden">
+                    <div class="dashboard-widget">
+                        <h3>Indstillinger for Økonomi</h3>
+                        <form id="economy-settings-form">
                             <div class="input-group">
-                                <label for="fixed-expense-title">Titel</label>
-                                <input type="text" id="fixed-expense-title" required placeholder="F.eks. Afdrag bil, Netflix">
+                                <label for="monthly-income">Forventet Månedlig Indkomst (kr.)</label>
+                                <input type="number" id="monthly-income" step="100" placeholder="F.eks. 25000">
                             </div>
                             <div class="input-group">
-                                <label for="fixed-expense-total-amount">Total Beløb (kr.)</label>
-                                <input type="number" id="fixed-expense-total-amount" step="0.01" required placeholder="Samlet pris for regningen">
+                                <label for="monthly-savings-goal">Månedligt Opsparingsmål (kr.)</label>
+                                <input type="number" id="monthly-savings-goal" step="100" placeholder="F.eks. 5000">
                             </div>
-                            <div class="form-grid-2-col">
-                                <div class="input-group">
-                                    <label for="fixed-expense-start-date">Startdato</label>
-                                    <input type="date" id="fixed-expense-start-date" required>
-                                </div>
-                                <div class="input-group">
-                                    <label for="fixed-expense-end-date">Slutdato (valgfri)</label>
-                                    <input type="date" id="fixed-expense-end-date">
-                                </div>
-                            </div>
-                            <div class="form-grid-2-col">
-                                <div class="input-group">
-                                    <label for="fixed-expense-interval-new">Interval</label>
-                                    <select id="fixed-expense-interval-new" required>
-                                        <option value="månedligt">Månedligt</option>
-                                        <option value="kvartalsvist">Kvartalsvist</option>
-                                        <option value="årligt">Årligt</option>
-                                    </select>
-                                </div>
-                                <div class="input-group">
-                                    <label for="fixed-expense-owner-new">Ejer</label>
-                                    <select id="fixed-expense-owner-new" required></select>
-                                </div>
-                            </div>
-                            <hr style="grid-column: 1 / -1;">
-                            <div class="expense-split-section" style="grid-column: 1 / -1;">
-                                <h4>Opdel Udgift <span id="split-sum-indicator" class="split-sum-indicator"></span></h4>
-                                <div id="expense-split-container">
-                                    <!-- Split rows will be added here by JS -->
-                                </div>
-                                <button type="button" id="add-expense-split-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Opdeling</button>
-                            </div>
-                            <div class="form-actions" style="grid-column: 1 / -1;">
-                                <button type="button" id="clear-fixed-expense-form-btn" class="btn btn-secondary">Ryd</button>
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem Udgift</button>
+                            <hr>
+                            <h4>Budget-konvolutter</h4>
+                            <div id="budget-envelopes-container"></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Gem Indstillinger</button>
                             </div>
                         </form>
-                    </div>
-
-                    <hr>
-                    <h3>Budget Oversigt</h3>
-                    <div id="budget-grid-container">
-                        <!-- Budget groups and grids will be rendered here by JS -->
-                    </div>
-                    <div id="budget-totals-bar" class="budget-totals-bar">
-                         <!-- Month totals will be rendered here by JS -->
                     </div>
                 </div>
             </section>
@@ -379,7 +339,7 @@
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
             <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
-            <a href="#budget" class="mobile-tab-link" data-page="budget"><i class="fas fa-chart-pie"></i><span>Budget</span></a>
+            <a href="#økonomi" class="mobile-tab-link" data-page="økonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
         </nav>
     </div>
 
@@ -387,29 +347,27 @@
     <div id="add-expense-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
-            <h3 id="add-expense-modal-title">Tilføj Udgift</h3>
+            <h3 id="add-expense-modal-title">Registrer Køb</h3>
             <form id="add-expense-form">
                 <div class="input-group">
-                    <label for="add-expense-user">Bruger</label>
-                    <select id="add-expense-user" required></select>
-                </div>
-                <div class="input-group">
                     <label for="add-expense-amount">Beløb (kr.)</label>
-                    <div class="price-input-wrapper">
-                        <input type="number" id="add-expense-amount" step="0.01" required>
-                    </div>
+                    <input type="number" id="add-expense-amount" step="0.01" required>
                 </div>
                 <div class="input-group">
                     <label for="add-expense-date">Dato</label>
                     <input type="date" id="add-expense-date" required>
                 </div>
                 <div class="input-group">
-                    <label for="add-expense-category">Kategori</label>
-                    <input type="text" id="add-expense-category" required>
+                    <label for="add-expense-main-category">Hovedkategori</label>
+                    <select id="add-expense-main-category" required></select>
                 </div>
                 <div class="input-group">
                     <label for="add-expense-description">Beskrivelse</label>
-                    <textarea id="add-expense-description" rows="3"></textarea>
+                    <input type="text" id="add-expense-description" required>
+                </div>
+                <div class="input-group-inline">
+                    <input type="checkbox" id="add-expense-is-impulse" checked>
+                    <label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Udgift</button>
@@ -418,15 +376,110 @@
         </div>
     </div>
 
+    <div id="asset-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="asset-modal-title">Administrer Aktiv</h3>
+            <form id="asset-form">
+                <input type="hidden" id="asset-id">
+                <div class="input-group">
+                    <label for="asset-name">Navn på aktiv</label>
+                    <input type="text" id="asset-name" required placeholder="F.eks. Andelsbolig, Volvo V60">
+                </div>
+                <div class="input-group">
+                    <label for="asset-type">Type</label>
+                    <select id="asset-type" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="asset-value">Nuværende Værdi (kr.)</label>
+                    <input type="number" id="asset-value" step="1000" required>
+                </div>
+                <div class="input-group">
+                    <label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
+                    <select id="asset-linked-liability"></select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-asset-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Aktiv</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="liability-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="liability-modal-title">Administrer Gæld</h3>
+            <form id="liability-form">
+                <input type="hidden" id="liability-id">
+                <div class="input-group">
+                    <label for="liability-name">Navn på lån</label>
+                    <input type="text" id="liability-name" required placeholder="F.eks. Boliglån, Billån">
+                </div>
+                <div class="input-group">
+                    <label for="liability-original-amount">Oprindeligt Lånebeløb (kr.)</label>
+                    <input type="number" id="liability-original-amount" step="1000" required>
+                </div>
+                <div class="form-actions">
+                     <button type="button" id="delete-liability-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Gæld</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="fixed-expense-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Administrer Fast Udgift</h3>
+            <form id="fixed-expense-form">
+                <input type="hidden" id="fixed-expense-id-edit">
+                <div class="input-group">
+                    <label for="fixed-expense-main-category">Hovedkategori</label>
+                    <select id="fixed-expense-main-category" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="fixed-expense-sub-category">Underkategori</label>
+                    <select id="fixed-expense-sub-category" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="fixed-expense-amount">Beløb (kr.)</label>
+                    <input type="number" id="fixed-expense-amount" step="0.01" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-start-date-edit">Startdato</label>
+                        <input type="date" id="fixed-expense-start-date-edit" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-end-date-edit">Slutdato (valgfri)</label>
+                        <input type="date" id="fixed-expense-end-date-edit">
+                    </div>
+                </div>
+                <div class="input-group-inline">
+                    <input type="checkbox" id="fixed-expense-is-repayment">
+                    <label for="fixed-expense-is-repayment">Betalingen er et afdrag</label>
+                </div>
+                <div class="input-group hidden" id="repayment-liability-link-group">
+                    <label for="fixed-expense-linked-liability">Tilknyt til lån</label>
+                    <select id="fixed-expense-linked-liability"></select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-fixed-expense-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Fast Udgift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
             <h3>Registrer Indkøb</h3>
             <p>Udfyld detaljer for de varer, du har købt. Varer uden antal eller pris vil ikke blive tilføjet til lageret.</p>
             <form id="bulk-add-form">
-                <div id="bulk-add-list-container">
-                    <!-- Rows will be dynamically inserted here -->
-                </div>
+                <div id="bulk-add-list-container"></div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem alle og opdater lager</button>
                 </div>
@@ -458,39 +511,9 @@
                     <label for="event-title">Titel</label>
                     <input type="text" id="event-title" required>
                 </div>
-                <div id="event-type-specific-fields">
-                    <!-- Dynamic fields based on type will be inserted here -->
-                </div>
+                <div id="event-type-specific-fields"></div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="maintenance-log-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="maintenance-log-modal-title">Log vedligeholdelse</h3>
-            <form id="maintenance-log-form">
-                <input type="hidden" id="maintenance-log-id">
-                <div class="input-group">
-                    <label for="maintenance-log-date">Dato for udførelse</label>
-                    <input type="date" id="maintenance-log-date" required>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-room">Rum (valgfri)</label>
-                    <select id="maintenance-log-room"></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-task">Opgave</label>
-                    <select id="maintenance-log-task" required></select>
-                </div>
-                <div class="input-group">
-                    <label for="maintenance-log-note">Note (valgfri)</label>
-                    <textarea id="maintenance-log-note" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Log</button>
                 </div>
             </form>
         </div>
@@ -511,9 +534,7 @@
                 <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
                 <button class="close-modal-btn">&times;</button>
             </div>
-            <div id="shopping-list-modal-content-wrapper">
-                <!-- Tematiseret indhold indsættes her af JS -->
-            </div>
+            <div id="shopping-list-modal-content-wrapper"></div>
         </div>
     </div>
     <div id="room-edit-modal" class="modal-overlay hidden">
@@ -539,36 +560,8 @@
                 </div>
                 <div class="input-group">
                     <label for="room-notes">Generelle Noter</label>
-                    <textarea id="room-notes" rows="3" placeholder="F.eks. malingskoder, gulvtype, info om skråvægge..."></textarea>
+                    <textarea id="room-notes" rows="3" placeholder="F.eks. malingskoder..."></textarea>
                 </div>
-                <hr>
-                <h4>Vedligeholdelsesnoter</h4>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="room-notes-vvs">VVS & Sanitet</label>
-                        <textarea id="room-notes-vvs" rows="3" placeholder="Modelnr. på armatur, sidste service..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-el">El-installationer</label>
-                        <textarea id="room-notes-el" rows="3" placeholder="Sikringsgruppe, pæretyper..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-windows">Vinduer & Døre</label>
-                        <textarea id="room-notes-windows" rows="3" placeholder="Sidste smøring af hængsler..."></textarea>
-                    </div>
-                    <div class="input-group">
-                        <label for="room-notes-ventilation">Ventilation</label>
-                        <textarea id="room-notes-ventilation" rows="3" placeholder="Filtertype, sidste rens..."></textarea>
-                    </div>
-                </div>
-                 <div class="input-group">
-                    <label for="room-notes-surfaces">Overflader</label>
-                    <textarea id="room-notes-surfaces" rows="3" placeholder="Pleje af bordplade, gulvbehandling..."></textarea>
-                </div>
-                <hr>
-                <h4>Inventar</h4>
-                <div id="room-inventory-list-container"></div>
-                <button id="add-room-inventory-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Inventar</button>
                 <hr>
                 <h4>Billedgalleri</h4>
                 <div id="room-images-preview-container" class="room-gallery"></div>
@@ -592,7 +585,6 @@
             <h3 id="project-edit-modal-title">Rediger Projekt</h3>
             <form id="project-form">
                 <input type="hidden" id="project-id">
-
                 <div class="project-image-container">
                     <div class="image-upload-container">
                         <h4>Før Billede</h4>
@@ -615,7 +607,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="form-grid">
                     <div class="input-group">
                         <label for="project-title">Projekttitel</label>
@@ -671,7 +662,6 @@
             <h3 id="inventory-item-modal-title">Administrér Vare</h3>
             <form id="inventory-item-form">
                 <input type="hidden" id="inventory-item-id">
-
                 <div class="form-section-box">
                     <h4>Generel Vareinformation</h4>
                     <p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
@@ -708,14 +698,12 @@
                         <input type="number" id="inventory-item-reorder-point" placeholder="F.eks. 500 (i standardenhed)">
                     </div>
                 </div>
-
                 <div class="form-section-box">
                     <h4>Konverteringsregler</h4>
                     <p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
                     <div id="conversion-rules-container"></div>
                     <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
                 </div>
-
                 <div class="form-section-box">
                     <div class="section-header">
                         <h4>Batches på Lager</h4>
@@ -724,7 +712,6 @@
                     <p class="small-text">Dette er de specifikke indkøb af varen. Et batch repræsenterer én eller flere enheder fra samme indkøb.</p>
                     <div id="batch-list-container"></div>
                 </div>
-
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-inventory-item-btn">Slet Hele Varen</button>
                     <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem Vare</button>
@@ -739,7 +726,6 @@
             <form id="batch-edit-form">
                 <input type="hidden" id="batch-edit-item-id">
                 <input type="hidden" id="batch-edit-batch-id">
-
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="batch-edit-purchase-date">Indkøbsdato</label>
@@ -750,7 +736,6 @@
                         <input type="date" id="batch-edit-expiry-date">
                     </div>
                 </div>
-
                 <div class="form-grid-3-col">
                     <div class="input-group">
                         <label for="batch-edit-quantity">Antal</label>
@@ -768,7 +753,6 @@
                         <input type="text" id="batch-edit-unit" required>
                     </div>
                 </div>
-
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="batch-edit-price">Pris (total for batch)</label>
@@ -781,7 +765,6 @@
                         <select id="batch-edit-store" required></select>
                     </div>
                 </div>
-
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
                     <button type="submit" class="btn btn-primary">Gem Batch</button>
