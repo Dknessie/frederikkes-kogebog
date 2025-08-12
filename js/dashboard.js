@@ -62,9 +62,13 @@ function handleQuickActionClick(e) {
     else if (action === 'add-project') document.getElementById('add-project-btn').click();
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
     else if (action === 'add-expense') {
-        // This will be handled by the economy module, we just need to open the modal
         const addExpenseModal = document.getElementById('add-expense-modal');
-        if (addExpenseModal) addExpenseModal.classList.remove('hidden');
+        if (addExpenseModal) {
+            // Pre-fill date and populate categories before showing
+            document.getElementById('add-expense-date').value = formatDate(new Date());
+            populateReferenceDropdown(document.getElementById('add-expense-main-category'), (appState.references.budgetCategories || []).map(c => c.name), 'Vælg kategori...');
+            addExpenseModal.classList.remove('hidden');
+        }
     }
     else window.location.hash = actionBtn.getAttribute('href');
 }
@@ -270,4 +274,21 @@ function renderCategoryValuesWidget() {
         const percentage = totalValue > 0 ? (value / totalValue) * 100 : 0;
         return `<div class="category-value-item"><span class="category-name" title="${name}">${name}</span><div class="category-bar-container"><div class="category-bar" style="width: ${percentage}%">${value.toFixed(0)} kr.</div></div></div>`;
     }).join('');
+}
+
+// Helper function used by handleQuickActionClick
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
+}
+
+// Helper function used by handleQuickActionClick
+function formatDate(date) {
+    if (!(date instanceof Date) || isNaN(date)) return '';
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
