@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { normalizeUnit } from './utils.js';
+import { togglePinnedSavingsGoal } from './economy.js'; // NYT: Importeret
 
 let appState;
 let appElements;
@@ -58,7 +59,6 @@ export function renderProjects() {
     const fragment = document.createDocumentFragment();
     appElements.projectsGrid.innerHTML = '';
     
-    // FIX: Removed all status filtering to show every project.
     let projectsToRender = [...appState.projects];
 
     projectsToRender.sort((a,b) => a.title.localeCompare(b.title));
@@ -91,6 +91,10 @@ function createProjectCard(project) {
     
     const imageUrl = project.imageBase64Before || project.imageUrlBefore || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(project.title)}`;
 
+    // NYT: Tjek om projektet er pinnet som et opsparingsmål
+    const isPinned = (appState.economySettings.pinnedGoals || []).some(g => g.id === project.id && g.type === 'project');
+    const pinIconClass = isPinned ? 'fas' : 'far';
+
     card.innerHTML = `
         <img src="${imageUrl}" alt="Før billede af ${project.title}" class="recipe-card-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
         <div class="recipe-card-content">
@@ -99,6 +103,8 @@ function createProjectCard(project) {
             <div class="recipe-card-tags">${tagsHTML}</div>
         </div>
         <div class="recipe-card-actions">
+            <!-- NYT: Knap til at pinne opsparingsmål -->
+            <button class="btn-icon pin-goal-btn" title="Pin til opsparing"><i class="${pinIconClass} fa-thumbtack"></i></button>
             <button class="btn-icon edit-project-btn" title="Rediger Projekt"><i class="fas fa-edit"></i></button>
             <button class="btn-icon delete-project-btn" title="Slet Projekt"><i class="fas fa-trash"></i></button>
         </div>`;
@@ -203,7 +209,7 @@ async function handleSaveProject(e) {
 }
 
 /**
- * Handles clicks within the projects grid (edit, delete).
+ * Handles clicks within the projects grid (edit, delete, pin).
  * @param {Event} e - The click event.
  */
 async function handleGridClick(e) {
@@ -229,6 +235,17 @@ async function handleGridClick(e) {
         }
         return;
     }
+
+    // NYT: Håndter klik på pin-knappen
+    if (e.target.closest('.pin-goal-btn')) {
+        e.stopPropagation();
+        const goal = { id: docId, type: 'project' };
+        await togglePinnedSavingsGoal(goal);
+        return;
+    }
+
+    // Default action: open details (hvis vi implementerer en detaljevisning for projekter)
+    // For nu gør vi ingenting, men lader pladsen være åben for fremtiden.
 }
 
 /**
