@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
+import { togglePinnedSavingsGoal } from './economy.js'; // NYT: Importeret
 
 let appState;
 let appElements;
@@ -89,6 +90,15 @@ export function initRoomDetails(state, elements) {
             if (logItem && logItem.dataset.logId) {
                 openLogEntryModal(logItem.dataset.logId);
             }
+            // NYT: Håndter klik på pin-knap i ønskelisten
+            if (e.target.closest('.pin-goal-btn')) {
+                const wishItem = e.target.closest('.info-item');
+                const wishName = wishItem.dataset.wishName;
+                if (wishName) {
+                    const goal = { id: wishName, type: 'wishlist' };
+                    togglePinnedSavingsGoal(goal);
+                }
+            }
         });
     }
 }
@@ -166,7 +176,15 @@ export function renderRoomDetailsPage() {
         ? room.wishlist.map(i => {
             const link = i.url ? `<a href="${i.url}" target="_blank" rel="noopener noreferrer">${i.name} <i class="fas fa-external-link-alt"></i></a>` : i.name;
             const price = i.price ? `<span>${i.price.toFixed(2).replace('.',',')} kr.</span>` : '';
-            return `<div class="info-item"><span>${link}</span>${price}</div>`;
+            // NYT: Tjek om ønsket er pinnet og tilføj pin-knap
+            const isPinned = (appState.economySettings.pinnedGoals || []).some(g => g.id.toLowerCase() === i.name.toLowerCase() && g.type === 'wishlist');
+            const pinIconClass = isPinned ? 'fas' : 'far';
+            const pinButton = `<button class="btn-icon pin-goal-btn" title="Pin til opsparing"><i class="${pinIconClass} fa-thumbtack"></i></button>`;
+
+            return `<div class="info-item" data-wish-name="${i.name}">
+                        <span>${link}</span>
+                        <div class="wish-actions">${price}${pinButton}</div>
+                    </div>`;
         }).join('') 
         : '<p class="empty-state-small">Ingen ønsker for dette rum.</p>';
 
@@ -219,7 +237,6 @@ function openAddRoomModal() {
     const existingRoomNames = appState.rooms.map(r => r.name);
     const availableRooms = (appState.references.rooms || []).filter(r => !existingRoomNames.includes(r));
     
-    // NYT: Populer dropdown med tilgængelige rum fra referencelisten
     populateReferenceDropdown(roomNameSelect, availableRooms, 'Vælg et rum...');
 
     modal.classList.remove('hidden');
