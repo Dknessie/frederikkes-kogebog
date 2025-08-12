@@ -16,7 +16,7 @@ import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.j
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initExpenses } from './expenses.js';
 import { initEvents } from './events.js';
-import { initEconomy, renderEconomyPage } from './economy.js'; // UPDATED
+import { initEconomy, renderEconomyPage } from './economy.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -29,12 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
         recipes: [],
         projects: [],
         rooms: [],
-        maintenanceLogs: [],
+        assets: [],
+        liabilities: [],
+        economySettings: {},
         expenses: [],
-        fixedExpenses: [], // Will be replaced by new economy module
-        assets: [], // NEW
-        liabilities: [], // NEW
-        economySettings: {}, // NEW
+        fixedExpenses: [],
         events: [],
         references: {
             maintenanceTasks: []
@@ -64,9 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
-        // Dashboard
-        netWorthWidgetContent: document.getElementById('net-worth-widget-content'),
-
         // Hjem
         roomsGrid: document.getElementById('rooms-grid'),
         addRoomBtn: document.getElementById('add-room-btn'),
@@ -241,8 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
             events: 'events',
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
-            assets: 'assets', // NEW
-            liabilities: 'liabilities' // NEW
+            assets: 'assets',
+            liabilities: 'liabilities'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -290,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
         
-        // Listener for economy settings
         const economySettingsRef = doc(db, 'users', userId, 'settings', 'economy');
         state.listeners.economySettings = onSnapshot(economySettingsRef, (doc) => {
             state.economySettings = doc.exists() ? doc.data() : {};
@@ -354,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case '#inventory':
                     renderInventory();
                     break;
-                case '#økonomi': // UPDATED
+                case '#økonomi':
                     renderEconomyPage();
                     break;
                 case '#references':
@@ -382,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initProjects(state, elements);
         initRooms(state, elements);
         initEvents(state);
-        initEconomy(state, elements); // UPDATED
+        initEconomy(state, elements);
     }
 
     init();
