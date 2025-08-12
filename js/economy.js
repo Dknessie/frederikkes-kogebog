@@ -9,7 +9,6 @@ let appState;
 let appElements;
 let economyState = {
     currentView: 'monthly-budget',
-    // NYT: Holder styr på den måned, vi kigger på
     viewDate: new Date(), 
 };
 
@@ -510,7 +509,19 @@ async function handleSaveFixedExpense(e) {
 }
 
 async function handleDeleteFixedExpense() {
-    // Similar to other delete functions
+    const expenseId = document.getElementById('fixed-expense-id-edit').value;
+    if (!expenseId) return;
+
+    const confirmed = await showNotification({title: "Slet Fast Udgift", message: "Er du sikker?", type: 'confirm'});
+    if (!confirmed) return;
+
+    try {
+        await deleteDoc(doc(db, 'fixed_expenses', expenseId));
+        appElements.fixedExpenseModal.classList.add('hidden');
+        showNotification({title: "Slettet", message: "Den faste udgift er blevet slettet."});
+    } catch (error) {
+        handleError(error, "Udgiften kunne ikke slettes.", "handleDeleteFixedExpense");
+    }
 }
 
 async function handleSaveEconomySettings(e) {
