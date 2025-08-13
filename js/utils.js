@@ -156,6 +156,40 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
 }
 
 /**
+ * Viser en toast-notifikation.
+ * @param {string} message - Meddelelsen, der skal vises.
+ * @param {string} [type='info'] - Typen af notifikation ('info', 'success', 'error').
+ */
+export function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        console.error('Toast container not found!');
+        return;
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+
+    toastContainer.appendChild(toast);
+
+    // Vis toast
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 100);
+
+    // Skjul og fjern toast efter 3 sekunder
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        });
+    }, 3000);
+}
+
+/**
  * Håndterer og logger fejl til konsollen med en standardiseret besked.
  * @param {string} message - En beskrivende besked om fejlen.
  * @param {Error} error - Det faktiske fejl-objekt.
@@ -163,47 +197,4 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
 export function handleError(message, error) {
     console.error(`[APP_ERROR] ${message}`, error);
     // Her kan vi senere udvide med mere avanceret fejlhåndtering, f.eks. logging til en service.
-}
-
-/**
- * Funktion til at generere et unikt ID.
- * @returns {string}
- */
-export function generateId() {
-    return '_' + Math.random().toString(36).substr(2, 9);
-}
-
-
-// --- NYT: Funktioner tilføjet for Budget App ---
-
-/**
- * Formaterer et tal til dansk valuta (DKK).
- * @param {number} value - Tallet der skal formateres.
- * @returns {string} Det formaterede beløb som en string.
- */
-export function formatCurrency(value) {
-    return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(value || 0);
-}
-
-/**
- * Beregner det gennemsnitlige månedlige beløb for en periodisk post.
- * @param {object} item - Den periodiske post med 'amount' og 'interval'.
- * @returns {number} Det gennemsnitlige månedlige beløb.
- */
-export function getMonthlyAmount(item) {
-    const divisors = { monthly: 1, quarterly: 3, yearly: 12 };
-    return (item.amount || 0) / (divisors[item.interval] || 1);
-}
-
-/**
- * Beregner antallet af hele måneder mellem to datoer.
- * @param {Date} date1 - Startdato.
- * @param {Date} date2 - Slutdato.
- * @returns {number} Antallet af måneder.
- */
-export function monthsBetween(date1, date2) {
-    let months = (date2.getFullYear() - date1.getFullYear()) * 12;
-    months -= date1.getMonth();
-    months += date2.getMonth();
-    return months <= 0 ? 0 : months;
 }
