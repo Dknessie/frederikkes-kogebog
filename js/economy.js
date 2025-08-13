@@ -1,12 +1,12 @@
 import { db, auth } from './firebase.js';
 import { collection, doc, addDoc, onSnapshot, setDoc, deleteDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { formatCurrency, getMonthlyAmount, monthsBetween } from './utils.js';
+import { formatCurrency, getMonthlyAmount, monthsBetween, generateId } from './utils.js';
+import { showToast } from './ui.js';
 
 // State variabler for økonomi-siden
 let userId = null;
 let currentDate = new Date();
 let allTransactions = [], allAssets = [], allRecurringItems = [], allSavingsGoals = [];
-let activeFilters = { person: 'all', subCategory: 'all' };
 let unsubscribeListeners = []; // Til at holde styr på listeners for at undgå memory leaks
 
 const getCollectionPath = (name) => `users/${userId}/${name}`;
@@ -268,55 +268,140 @@ function renderSavingsGoals(goals) {
     });
 }
 
-function renderAssetsAndLiabilities(assets) { /* Funktion til at rendere aktiver */ }
-function renderRecurringSummary(items) { /* Funktion til at rendere faste poster */ }
+function renderAssetsAndLiabilities(assets) {
+    const summaryEl = document.getElementById('assetLiabilitySummary');
+    if (!summaryEl) return;
+    summaryEl.innerHTML = '';
+    let totalAssetValue = 0, totalLiabilityValue = 0;
+
+    if (assets.length === 0) {
+        summaryEl.innerHTML = '<p class="text-gray-500 text-sm">Ingen aktiver tilføjet.</p>';
+    }
+
+    assets.forEach(asset => {
+        totalAssetValue += asset.value;
+        let assetLiabilityTotal = 0;
+        let liabilityHTML = '';
+
+        if (asset.liabilities && asset.liabilities.length > 0) {
+            asset.liabilities.forEach(loan => {
+                assetLiabilityTotal += loan.amount || 0;
+                liabilityHTML += `<div class="flex justify-between items-center text-sm pl-4"><p class="text-gray-600">${loan.name}</p><p class="font-semibold text-red-500">-${formatCurrency(loan.amount)}</p></div>`;
+            });
+        }
+        totalLiabilityValue += assetLiabilityTotal;
+
+        const assetDiv = document.createElement('div');
+        assetDiv.className = 'border-b pb-3';
+        assetDiv.innerHTML = `<div class="flex justify-between items-center"><div class="flex items-center"><p class="font-semibold">${asset.name}</p><button class="edit-asset-btn ml-2 text-gray-400 hover:text-blue-600" data-id="${asset.id}"><i class="fas fa-pencil-alt fa-xs"></i></button></div><p class="font-bold text-green-500">${formatCurrency(asset.value)}</p></div>${liabilityHTML}`;
+        summaryEl.appendChild(assetDiv);
+    });
+
+    const netWorthEl = document.getElementById('netWorth');
+    if (netWorthEl) netWorthEl.textContent = formatCurrency(totalAssetValue - totalLiabilityValue);
+}
+
+function renderRecurringSummary(items) {
+    const summaryEl = document.getElementById('recurringSummary');
+    if (!summaryEl) return;
+    summaryEl.innerHTML = '';
+    if (items.length === 0) { summaryEl.innerHTML = '<p class="text-gray-500 text-sm">Ingen faste poster tilføjet.</p>'; return; }
+    items.forEach(item => {
+        const monthlyAmount = getMonthlyAmount(item);
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center text-sm';
+        div.innerHTML = `<span class="text-gray-700">${item.description}</span><span class="font-semibold ${item.type === 'expense' ? 'text-red-600' : 'text-green-600'}">${formatCurrency(monthlyAmount)}/md.</span>`;
+        summaryEl.appendChild(div);
+    });
+}
 
 function setupEventListeners() {
-    document.getElementById('prevMonthBtn')?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); updateUI(); });
-    document.getElementById('nextMonthBtn')?.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); updateUI(); });
-    document.getElementById('showTransactionFormBtn')?.addEventListener('click', () => {
-        document.getElementById('transactionForm')?.classList.remove('hidden');
-        document.getElementById('savingsTransferForm')?.classList.add('hidden');
+    const app = document.getElementById('app');
+    app.addEventListener('click', (e) => {
+        // Navigation
+        if (e.target.closest('#prevMonthBtn')) { currentDate.setMonth(currentDate.getMonth() - 1); updateUI(); }
+        if (e.target.closest('#nextMonthBtn')) { currentDate.setMonth(currentDate.getMonth() + 1); updateUI(); }
+        // Form Toggling
+        if (e.target.closest('#showTransactionFormBtn')) {
+            document.getElementById('transactionForm')?.classList.remove('hidden');
+            document.getElementById('savingsTransferForm')?.classList.add('hidden');
+        }
+        if (e.target.closest('#showSavingsTransferBtn')) {
+            document.getElementById('transactionForm')?.classList.add('hidden');
+            document.getElementById('savingsTransferForm')?.classList.remove('hidden');
+        }
+        // Modal Triggers
+        if (e.target.closest('#manageSavingsGoalBtn')) openSavingsGoalModal();
+        if (e.target.closest('#addAssetLiabilityBtn')) openAssetModal();
+        if (e.target.closest('#manageRecurringBtn')) openRecurringModal();
+        // Modal Closers
+        if (e.target.closest('#closeSavingsGoalModal')) document.getElementById('savingsGoalModal').classList.remove('active');
+        if (e.target.closest('#closeAssetModal')) document.getElementById('assetLiabilityModal').classList.remove('active');
+        if (e.target.closest('#closeRecurringModal')) document.getElementById('recurringModal').classList.remove('active');
+        // Asset/Loan buttons
+        if (e.target.closest('#addLoanBtn')) addLoanToModal();
+        if (e.target.closest('.edit-asset-btn')) {
+            const asset = allAssets.find(a => a.id === e.target.closest('.edit-asset-btn').dataset.id);
+            if (asset) openAssetModal(asset);
+        }
+        if (e.target.closest('.remove-loan-btn')) {
+            e.target.closest('.loan-form-group').remove();
+        }
     });
-    document.getElementById('showSavingsTransferBtn')?.addEventListener('click', () => {
-        document.getElementById('transactionForm')?.classList.add('hidden');
-        document.getElementById('savingsTransferForm')?.classList.remove('hidden');
+
+    app.addEventListener('submit', (e) => {
+        if (e.target.id === 'transactionForm') handleTransactionSubmit(e);
+        if (e.target.id === 'savingsGoalForm') handleSavingsGoalSubmit(e);
+        if (e.target.id === 'savingsTransferForm') handleSavingsTransfer(e);
+        if (e.target.id === 'assetLiabilityForm') handleAssetFormSubmit(e);
+        if (e.target.id === 'recurringForm') handleRecurringSubmit(e);
     });
-    document.getElementById('manageSavingsGoalBtn')?.addEventListener('click', openSavingsGoalModal);
-    document.getElementById('addAssetLiabilityBtn')?.addEventListener('click', openAssetModal);
-    document.getElementById('manageRecurringBtn')?.addEventListener('click', openRecurringModal);
-    document.getElementById('closeSavingsGoalModal')?.addEventListener('click', () => document.getElementById('savingsGoalModal').classList.remove('active'));
-    document.getElementById('closeAssetModal')?.addEventListener('click', () => document.getElementById('assetLiabilityModal').classList.remove('active'));
-    document.getElementById('closeRecurringModal')?.addEventListener('click', () => document.getElementById('recurringModal').classList.remove('active'));
-    document.getElementById('transactionForm')?.addEventListener('submit', handleTransactionSubmit);
-    document.getElementById('savingsGoalForm')?.addEventListener('submit', handleSavingsGoalSubmit);
-    document.getElementById('savingsTransferForm')?.addEventListener('submit', handleSavingsTransfer);
-    document.getElementById('assetLiabilityForm')?.addEventListener('submit', handleAssetFormSubmit);
-    document.getElementById('recurringForm')?.addEventListener('submit', handleRecurringSubmit);
-    document.getElementById('addLoanBtn')?.addEventListener('click', () => addLoanToModal());
 }
 
 function openSavingsGoalModal() {
     const form = document.getElementById('savingsGoalForm');
     if (form) { form.reset(); document.getElementById('savingsGoalId').value = ''; document.getElementById('savingsGoalModal').classList.add('active'); }
 }
-function openAssetModal() {
+
+function openAssetModal(asset = null) {
     const form = document.getElementById('assetLiabilityForm');
-    if (form) { form.reset(); document.getElementById('assetId').value = ''; document.getElementById('liabilitiesContainer').innerHTML = ''; document.getElementById('assetModalTitle').textContent = 'Tilføj Nyt Aktiv'; document.getElementById('assetLiabilityModal').classList.add('active'); }
+    if (form) {
+        form.reset();
+        document.getElementById('liabilitiesContainer').innerHTML = '';
+        const nameInput = document.getElementById('modalAssetName');
+        if (asset) {
+            document.getElementById('assetId').value = asset.id;
+            document.getElementById('assetModalTitle').textContent = `Rediger: ${asset.name}`;
+            nameInput.value = asset.name;
+            nameInput.readOnly = true;
+            document.getElementById('modalAssetValue').value = asset.value;
+            if (asset.liabilities) {
+                asset.liabilities.forEach(loan => addLoanToModal(loan));
+            }
+        } else {
+            document.getElementById('assetId').value = '';
+            document.getElementById('assetModalTitle').textContent = 'Tilføj Nyt Aktiv';
+            nameInput.readOnly = false;
+        }
+        document.getElementById('assetLiabilityModal').classList.add('active');
+    }
 }
+
 function openRecurringModal() {
     const form = document.getElementById('recurringForm');
     if (form) { form.reset(); document.getElementById('recurringId').value = ''; document.getElementById('recurringModal').classList.add('active'); }
 }
+
 function addLoanToModal(loan = {}) {
     const container = document.getElementById('liabilitiesContainer');
-    const loanId = loan.id || `loan_${Date.now()}`;
+    const loanId = loan.id || `loan_${generateId()}`;
     const div = document.createElement('div');
     div.className = 'loan-form-group p-4 border rounded-lg bg-gray-50 relative';
     div.dataset.loanId = loanId;
     div.innerHTML = `<button type="button" class="remove-loan-btn absolute top-2 right-2 text-red-500 hover:text-red-700">&times;</button><div class="grid grid-cols-2 gap-x-4 gap-y-2"><div class="col-span-2"><label class="text-sm font-medium">Lånets Navn</label><input type="text" data-field="name" value="${loan.name || ''}" class="input-field mt-1"></div><div><label class="text-sm font-medium">Resterende Gæld</label><input type="number" data-field="amount" value="${loan.amount || ''}" class="input-field mt-1"></div><div><label class="text-sm font-medium">Total Månedlig Betaling</label><input type="number" data-field="monthlyPayment" value="${loan.monthlyPayment || ''}" class="input-field mt-1"></div><div><label class="text-sm font-medium">Heraf Afdrag</label><input type="number" data-field="principalPayment" value="${loan.principalPayment || ''}" class="input-field mt-1"></div><div><label class="text-sm font-medium">Heraf Renter/Gebyr</label><input type="number" data-field="interestPayment" value="${loan.interestPayment || ''}" class="input-field mt-1"></div></div>`;
     container.appendChild(div);
 }
+
 async function handleTransactionSubmit(e) {
     e.preventDefault();
     await addDoc(collection(db, getCollectionPath('transactions')), {
@@ -330,23 +415,62 @@ async function handleTransactionSubmit(e) {
     });
     e.target.reset();
     document.getElementById('date').valueAsDate = new Date();
+    showToast('Transaktion tilføjet!');
 }
+
 async function handleSavingsGoalSubmit(e) {
     e.preventDefault();
     const id = document.getElementById('savingsGoalId').value;
-    const data = { name: document.getElementById('goalName').value, targetAmount: parseFloat(document.getElementById('goalTargetAmount').value), targetDate: document.getElementById('goalTargetDate').value, savedAmount: 0 };
+    const data = { name: document.getElementById('goalName').value, targetAmount: parseFloat(document.getElementById('goalTargetAmount').value), targetDate: document.getElementById('goalTargetDate').value, savedAmount: parseFloat(id ? allSavingsGoals.find(g=>g.id===id).savedAmount : 0) };
     const docRef = id ? doc(db, getCollectionPath('savingsGoals'), id) : doc(collection(db, getCollectionPath('savingsGoals')));
     await setDoc(docRef, data, { merge: true });
     document.getElementById('savingsGoalModal').classList.remove('active');
+    showToast('Opsparingsmål gemt!');
 }
+
 async function handleSavingsTransfer(e) {
     e.preventDefault();
     const goalId = document.getElementById('savingsGoalSelect').value, amount = parseFloat(document.getElementById('savingsTransferAmount').value);
-    if (!goalId || !amount || amount <= 0) { alert('Vælg et mål og indtast et gyldigt beløb.'); return; }
+    if (!goalId || !amount || amount <= 0) { showToast('Vælg et mål og indtast et gyldigt beløb.'); return; }
     const goal = allSavingsGoals.find(g => g.id === goalId);
     await addDoc(collection(db, getCollectionPath('transactions')), { description: `Opsparing: ${goal.name}`, amount: amount, type: 'expense', category: 'savings', subCategory: 'Opsparing', person: 'System', date: new Date().toISOString().split('T')[0] });
     await updateDoc(doc(db, getCollectionPath('savingsGoals'), goalId), { savedAmount: increment(amount) });
     e.target.reset();
+    showToast(`${formatCurrency(amount)} overført til ${goal.name}!`);
 }
-async function handleAssetFormSubmit(e) { e.preventDefault(); /* Logic to save asset */ }
-async function handleRecurringSubmit(e) { e.preventDefault(); /* Logic to save recurring item */ }
+
+async function handleAssetFormSubmit(e) {
+    e.preventDefault();
+    const assetId = document.getElementById('assetId').value;
+    const assetName = document.getElementById('modalAssetName').value;
+    const liabilities = [];
+    document.querySelectorAll('.loan-form-group').forEach(group => {
+        const loan = { id: group.dataset.loanId };
+        group.querySelectorAll('input[data-field]').forEach(input => {
+            loan[input.dataset.field] = input.type === 'number' ? parseFloat(input.value) || 0 : input.value;
+        });
+        liabilities.push(loan);
+    });
+    const assetData = { name: assetName, value: parseFloat(document.getElementById('modalAssetValue').value), liabilities: liabilities };
+    const docId = assetId || assetName; // Brug eksisterende ID eller navnet som nyt ID
+    await setDoc(doc(db, getCollectionPath('assets'), docId), assetData);
+    document.getElementById('assetLiabilityModal').classList.remove('active');
+    showToast('Aktiv gemt!');
+}
+
+async function handleRecurringSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('recurringId').value;
+    const data = {
+        description: document.getElementById('recurringDescription').value,
+        amount: parseFloat(document.getElementById('recurringAmount').value),
+        type: document.getElementById('recurringType').value,
+        subCategory: document.getElementById('recurringSubCategory').value,
+        interval: document.getElementById('recurringInterval').value,
+    };
+    const docRef = id ? doc(db, getCollectionPath('recurringItems'), id) : doc(collection(db, getCollectionPath('recurringItems')));
+    await setDoc(docRef, data, { merge: true });
+    document.getElementById('recurringForm').reset();
+    document.getElementById('recurringId').value = '';
+    showToast('Fast post gemt!');
+}
