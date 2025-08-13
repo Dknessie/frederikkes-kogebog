@@ -198,3 +198,47 @@ export function handleError(message, error) {
     console.error(`[APP_ERROR] ${message}`, error);
     // Her kan vi senere udvide med mere avanceret fejlhåndtering, f.eks. logging til en service.
 }
+export function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = 'toast show';
+    setTimeout(() => {
+        toast.className = toast.className.replace('show', '');
+    }, 3000);
+}
+
+export function generateId() {
+    return '_' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * Formaterer et tal til dansk valuta (DKK).
+ * @param {number} value - Tallet der skal formateres.
+ * @returns {string} Det formaterede beløb som en string.
+ */
+export function formatCurrency(value) {
+    return new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(value || 0);
+}
+
+/**
+ * Beregner det gennemsnitlige månedlige beløb for en periodisk post.
+ * @param {object} item - Den periodiske post med 'amount' og 'interval'.
+ * @returns {number} Det gennemsnitlige månedlige beløb.
+ */
+export function getMonthlyAmount(item) {
+    const divisors = { monthly: 1, quarterly: 3, yearly: 12 };
+    return (item.amount || 0) / (divisors[item.interval] || 1);
+}
+
+/**
+ * Beregner antallet af hele måneder mellem to datoer.
+ * @param {Date} date1 - Startdato.
+ * @param {Date} date2 - Slutdato.
+ * @returns {number} Antallet af måneder.
+ */
+export function monthsBetween(date1, date2) {
+    let months = (date2.getFullYear() - date1.getFullYear()) * 12;
+    months -= date1.getMonth();
+    months += date2.getMonth();
+    return months <= 0 ? 0 : months;
+}
