@@ -1,7 +1,7 @@
 import { db, auth } from './firebase.js';
 import { collection, doc, addDoc, onSnapshot, setDoc, deleteDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { formatCurrency, getMonthlyAmount, monthsBetween, generateId } from './utils.js';
-import { showToast } from './ui.js';
+import { showNotification } from './ui.js';
 
 // State variabler for økonomi-siden
 let userId = null;
@@ -318,10 +318,8 @@ function renderRecurringSummary(items) {
 function setupEventListeners() {
     const app = document.getElementById('app');
     app.addEventListener('click', (e) => {
-        // Navigation
         if (e.target.closest('#prevMonthBtn')) { currentDate.setMonth(currentDate.getMonth() - 1); updateUI(); }
         if (e.target.closest('#nextMonthBtn')) { currentDate.setMonth(currentDate.getMonth() + 1); updateUI(); }
-        // Form Toggling
         if (e.target.closest('#showTransactionFormBtn')) {
             document.getElementById('transactionForm')?.classList.remove('hidden');
             document.getElementById('savingsTransferForm')?.classList.add('hidden');
@@ -330,15 +328,12 @@ function setupEventListeners() {
             document.getElementById('transactionForm')?.classList.add('hidden');
             document.getElementById('savingsTransferForm')?.classList.remove('hidden');
         }
-        // Modal Triggers
         if (e.target.closest('#manageSavingsGoalBtn')) openSavingsGoalModal();
         if (e.target.closest('#addAssetLiabilityBtn')) openAssetModal();
         if (e.target.closest('#manageRecurringBtn')) openRecurringModal();
-        // Modal Closers
         if (e.target.closest('#closeSavingsGoalModal')) document.getElementById('savingsGoalModal').classList.remove('active');
         if (e.target.closest('#closeAssetModal')) document.getElementById('assetLiabilityModal').classList.remove('active');
         if (e.target.closest('#closeRecurringModal')) document.getElementById('recurringModal').classList.remove('active');
-        // Asset/Loan buttons
         if (e.target.closest('#addLoanBtn')) addLoanToModal();
         if (e.target.closest('.edit-asset-btn')) {
             const asset = allAssets.find(a => a.id === e.target.closest('.edit-asset-btn').dataset.id);
@@ -415,7 +410,7 @@ async function handleTransactionSubmit(e) {
     });
     e.target.reset();
     document.getElementById('date').valueAsDate = new Date();
-    showToast('Transaktion tilføjet!');
+    showNotification({ title: 'Succes', message: 'Transaktion tilføjet!' });
 }
 
 async function handleSavingsGoalSubmit(e) {
@@ -425,18 +420,18 @@ async function handleSavingsGoalSubmit(e) {
     const docRef = id ? doc(db, getCollectionPath('savingsGoals'), id) : doc(collection(db, getCollectionPath('savingsGoals')));
     await setDoc(docRef, data, { merge: true });
     document.getElementById('savingsGoalModal').classList.remove('active');
-    showToast('Opsparingsmål gemt!');
+    showNotification({ title: 'Succes', message: 'Opsparingsmål gemt!' });
 }
 
 async function handleSavingsTransfer(e) {
     e.preventDefault();
     const goalId = document.getElementById('savingsGoalSelect').value, amount = parseFloat(document.getElementById('savingsTransferAmount').value);
-    if (!goalId || !amount || amount <= 0) { showToast('Vælg et mål og indtast et gyldigt beløb.'); return; }
+    if (!goalId || !amount || amount <= 0) { showNotification({ title: 'Fejl', message: 'Vælg et mål og indtast et gyldigt beløb.', type: 'alert' }); return; }
     const goal = allSavingsGoals.find(g => g.id === goalId);
     await addDoc(collection(db, getCollectionPath('transactions')), { description: `Opsparing: ${goal.name}`, amount: amount, type: 'expense', category: 'savings', subCategory: 'Opsparing', person: 'System', date: new Date().toISOString().split('T')[0] });
     await updateDoc(doc(db, getCollectionPath('savingsGoals'), goalId), { savedAmount: increment(amount) });
     e.target.reset();
-    showToast(`${formatCurrency(amount)} overført til ${goal.name}!`);
+    showNotification({ title: 'Succes', message: `${formatCurrency(amount)} overført til ${goal.name}!` });
 }
 
 async function handleAssetFormSubmit(e) {
@@ -452,10 +447,10 @@ async function handleAssetFormSubmit(e) {
         liabilities.push(loan);
     });
     const assetData = { name: assetName, value: parseFloat(document.getElementById('modalAssetValue').value), liabilities: liabilities };
-    const docId = assetId || assetName; // Brug eksisterende ID eller navnet som nyt ID
+    const docId = assetId || assetName;
     await setDoc(doc(db, getCollectionPath('assets'), docId), assetData);
     document.getElementById('assetLiabilityModal').classList.remove('active');
-    showToast('Aktiv gemt!');
+    showNotification({ title: 'Succes', message: 'Aktiv gemt!' });
 }
 
 async function handleRecurringSubmit(e) {
@@ -472,5 +467,5 @@ async function handleRecurringSubmit(e) {
     await setDoc(docRef, data, { merge: true });
     document.getElementById('recurringForm').reset();
     document.getElementById('recurringId').value = '';
-    showToast('Fast post gemt!');
+    showNotification({ title: 'Succes', message: 'Fast post gemt!' });
 }
