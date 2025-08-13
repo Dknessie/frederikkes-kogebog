@@ -2163,3 +2163,241 @@ input:checked + .slider:before { transform: translateX(22px); }
     .transaction-category { grid-area: cat; }
     .transaction-date { grid-area: date; text-align: right; }
 }
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+#navbar {
+    background-color: #333;
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.nav-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap; /* Gør at nav links kan wrappe på små skærme */
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    text-decoration: underline;
+}
+
+#app {
+    padding: 2rem;
+    flex-grow: 1;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1001; /* Sørg for at modal er over alt andet */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+}
+
+.close-btn {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-btn:hover,
+.close-btn:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.toast {
+    visibility: hidden;
+    min-width: 250px;
+    margin-left: -125px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 2px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1002; /* Sørg for at toast er øverst */
+    left: 50%;
+    bottom: 30px;
+}
+
+.toast.show {
+    visibility: visible;
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@-webkit-keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@-webkit-keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+
+/* --- NYT: Budget App Styles --- */
+:root {
+    --bg-main: #f0f4f8;
+    --bg-card: #ffffff;
+    --text-dark: #2d3748;
+    --text-light: #718096;
+    --primary: #60a5fa;
+    --primary-dark: #3b82f6;
+    --accent-green: #4ade80;
+    --accent-red: #f87171;
+    --accent-yellow: #facc15;
+    --shadow-color: rgba(113, 128, 150, 0.15);
+}
+
+#app.economy-page {
+    font-family: 'Nunito', sans-serif; 
+    background-color: var(--bg-main);
+    color: var(--text-dark);
+    background-image: url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23dbeafe" fill-opacity="0.4"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
+    padding: 0; /* Nulstil padding for at lade Tailwind styre det */
+}
+
+.economy-page .card {
+    background-color: var(--bg-card);
+    border-radius: 1rem;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: all 0.3s ease;
+}
+
+.economy-page .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px var(--shadow-color);
+}
+
+/* Overstyr den generelle modal-styling når vi er på økonomisiden */
+.economy-page .modal { 
+    display: none; 
+    position: fixed; 
+    z-index: 1010; /* Højere z-index for at være sikker */
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgba(45, 55, 72, 0.6); 
+    align-items: center; 
+    justify-content: center; 
+    backdrop-filter: blur(4px); 
+}
+
+.economy-page .modal-content { 
+    background-color: var(--bg-card); 
+    margin: auto; 
+    padding: 2rem; 
+    border-radius: 1rem; 
+    width: 90%; 
+    max-width: 600px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+    border: none; /* Fjern standard border */
+}
+
+.economy-page .modal.active { 
+    display: flex; 
+}
+
+.economy-page .btn-primary { 
+    background-color: var(--primary); 
+    color: white; 
+    font-weight: 600; 
+    border-radius: 0.75rem; 
+    padding: 0.75rem 1.5rem; 
+    transition: background-color 0.2s; 
+    border: none; 
+    cursor: pointer; 
+}
+
+.economy-page .btn-primary:hover { 
+    background-color: var(--primary-dark); 
+}
+
+.economy-page .btn-secondary { 
+    background-color: #e2e8f0; 
+    color: var(--text-dark); 
+    font-weight: 600; 
+    border-radius: 0.75rem; 
+    padding: 0.75rem 1.5rem; 
+    transition: background-color 0.2s; 
+    border: none; 
+    cursor: pointer; 
+}
+
+.economy-page .btn-secondary:hover { 
+    background-color: #cbd5e1; 
+}
+
+.economy-page .input-field { 
+    background-color: #f7fafc; 
+    border: 1px solid #e2e8f0; 
+    border-radius: 0.5rem; 
+    padding: 0.75rem; 
+    width: 100%; 
+    transition: all 0.2s; 
+}
+
+.economy-page .input-field:focus { 
+    outline: none; 
+    border-color: var(--primary); 
+    box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3); 
+}
+
