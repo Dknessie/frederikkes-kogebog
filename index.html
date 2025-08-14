@@ -365,6 +365,51 @@
             </form>
         </div>
     </div>
+
+    <div id="transaction-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Rediger Postering</h3>
+            <form id="transaction-edit-form">
+                <input type="hidden" id="transaction-edit-id">
+                <div class="input-group">
+                    <label for="transaction-edit-description">Beskrivelse</label>
+                    <input type="text" id="transaction-edit-description" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="transaction-edit-amount">Beløb (kr.)</label>
+                        <input type="number" id="transaction-edit-amount" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="transaction-edit-type">Type</label>
+                        <select id="transaction-edit-type" required>
+                            <option value="expense">Udgift</option>
+                            <option value="income">Indkomst</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="transaction-edit-category">Overkategori</label>
+                        <select id="transaction-edit-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="transaction-edit-person">Person</label>
+                        <select id="transaction-edit-person" required></select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="transaction-edit-date">Dato</label>
+                    <input type="date" id="transaction-edit-date" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-transaction-btn" class="btn btn-danger">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Ændringer</button>
+                </div>
+            </form>
+        </div>
+    </div>
     
     <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
