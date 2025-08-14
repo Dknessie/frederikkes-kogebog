@@ -120,6 +120,11 @@ function buildPageSkeleton(container) {
                     </div>
                 </div>
 
+                <div class="spending-categories-summary">
+                    <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
+                    <div id="spending-categories-content"></div>
+                </div>
+
                 <div class="new-transaction-form">
                     <h4>Ny Postering</h4>
                     <form id="transaction-form">
@@ -174,11 +179,6 @@ function buildPageSkeleton(container) {
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
-                
-                <div class="spending-categories-summary">
-                    <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
-                    <div id="spending-categories-content"></div>
                 </div>
             </div>
 
