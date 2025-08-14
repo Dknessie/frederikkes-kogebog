@@ -175,6 +175,11 @@ function buildPageSkeleton(container) {
                         <tbody></tbody>
                     </table>
                 </div>
+                
+                <div class="spending-categories-summary">
+                    <h4>Forbrugs Kategorier</h4>
+                    <div id="spending-categories-content"></div>
+                </div>
             </div>
 
             <div class="economy-sidebar">
@@ -269,6 +274,7 @@ export function renderEconomyPage() {
     renderTransactionsTable(monthlyTransactions);
     renderAssetsListWidget();
     renderLiabilitiesListWidget(projected.liabilities);
+    renderSpendingCategories();
 }
 
 function calculateProjectedValues(targetDate) {
@@ -288,6 +294,7 @@ function calculateProjectedValues(targetDate) {
                     const monthlyInterest = (liability.currentBalance * (liability.interestRate / 100)) / 12;
                     const principalPayment = liability.monthlyPayment - monthlyInterest;
                     liability.currentBalance -= principalPayment;
+                    liability.currentBalance = parseFloat(liability.currentBalance.toFixed(2)); // Round to 2 decimals
                 }
             });
             currentDate.setMonth(currentDate.getMonth() + 1);
@@ -387,6 +394,41 @@ function renderLiabilitiesListWidget(liabilitiesToRender) {
         `;
         container.appendChild(row);
     });
+}
+
+function renderSpendingCategories() {
+    const container = document.getElementById('spending-categories-content');
+    if (!container) return;
+
+    const fixedExpenses = appState.fixedExpenses || [];
+    const totalFixed = fixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+    if (totalFixed === 0) {
+        container.innerHTML = '<p class="empty-state-small">Ingen faste udgifter at vise.</p>';
+        return;
+    }
+
+    const categories = {};
+    fixedExpenses.forEach(exp => {
+        const key = exp.mainCategory;
+        if (!categories[key]) categories[key] = 0;
+        categories[key] += exp.amount;
+    });
+
+    const sortedCategories = Object.entries(categories).sort(([,a],[,b]) => b-a);
+
+    container.innerHTML = sortedCategories.map(([name, amount]) => {
+        const percentage = (amount / totalFixed) * 100;
+        return `
+            <div class="category-summary-item">
+                <span class="category-name">${name}</span>
+                <div class="category-bar-container">
+                    <div class="category-bar" style="width: ${percentage}%;"></div>
+                </div>
+                <span class="category-amount">${amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.</span>
+            </div>
+        `;
+    }).join('');
 }
 
 
