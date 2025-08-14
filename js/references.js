@@ -14,8 +14,6 @@ export function initReferences(state, elements) {
     if (appElements.referencesContainer) {
         appElements.referencesContainer.addEventListener('click', handleListClick);
         appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
-        // NYT: Listener for at gemme budgetændringer direkte fra listen
-        appElements.referencesContainer.addEventListener('change', handleBudgetInputChange);
     }
     
     const addMemberForm = document.getElementById('add-member-form');
@@ -46,16 +44,6 @@ export function renderReferencesPage() {
     dynamicCards.forEach(card => card.remove());
     
     const referenceData = {
-        budgetCategories: {
-            title: 'Budgetkategorier',
-            items: appState.references.budgetCategories || [],
-            isHierarchical: true
-        },
-        assetTypes: {
-            title: 'Aktivtyper',
-            items: appState.references.assetTypes || [],
-            isSimpleList: true
-        },
         itemCategories: {
             title: 'Varekategorier',
             items: appState.references.itemCategories || [],
@@ -101,44 +89,34 @@ export function renderReferencesPage() {
             `;
         } else if (data.isHierarchical) {
             const listItemsHTML = (data.items || [])
-                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat))
+                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
                 .sort((a,b) => a.name.localeCompare(b.name))
-                .map(cat => {
-                    // NYT: Tilføjet budget-inputfelt for budgetkategorier
-                    const budgetInputHTML = key === 'budgetCategories' ? `
-                        <div class="price-input-wrapper">
-                            <input type="number" class="category-budget-input" placeholder="Budget" value="${cat.budget || ''}" data-category-name="${cat.name}">
+                .map(cat => `
+                <li class="category-item" data-value="${cat.name}">
+                    <div class="category-header">
+                        <span class="reference-name">${cat.name}</span>
+                        <div class="reference-actions">
+                            <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
                         </div>
-                    ` : '';
-
-                    return `
-                        <li class="category-item" data-value="${cat.name}">
-                            <div class="category-header">
-                                <span class="reference-name">${cat.name}</span>
-                                ${budgetInputHTML}
+                    </div>
+                    <ul class="subcategory-list">
+                        ${(cat.subcategories || []).sort().map(sub => `
+                            <li class="subcategory-item" data-value="${sub}">
+                                <span>${sub}</span>
                                 <div class="reference-actions">
-                                    <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                                    <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
+                                    <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
                                 </div>
-                            </div>
-                            <ul class="subcategory-list">
-                                ${(cat.subcategories || []).sort().map(sub => `
-                                    <li class="subcategory-item" data-value="${sub}">
-                                        <span>${sub}</span>
-                                        <div class="reference-actions">
-                                            <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
-                                            <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
-                                        </div>
-                                    </li>
-                                `).join('')}
-                            </ul>
-                            <form class="add-subcategory-form">
-                                <input type="text" placeholder="Tilføj underkategori..." required>
-                                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                            </form>
-                        </li>
-                    `;
-                }).join('');
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <form class="add-subcategory-form">
+                        <input type="text" placeholder="Tilføj underkategori..." required>
+                        <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+                    </form>
+                </li>
+            `).join('');
             card.innerHTML = `
                 <h4>${data.title}</h4>
                 <ul class="reference-list">${listItemsHTML}</ul>
@@ -274,36 +252,6 @@ async function handleFormSubmit(e) {
     }
 }
 
-// NYT: Funktion til at håndtere ændringer i budget-inputfelterne
-async function handleBudgetInputChange(e) {
-    if (!e.target.classList.contains('category-budget-input')) return;
-
-    const input = e.target;
-    const categoryName = input.dataset.categoryName;
-    const newBudgetValue = parseFloat(input.value) || null; // Gem som null hvis tomt
-    const key = 'budgetCategories';
-
-    const categories = (appState.references[key] || []).map(cat => 
-        (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat)
-    );
-    
-    const categoryToUpdate = categories.find(cat => cat.name === categoryName);
-
-    if (categoryToUpdate) {
-        categoryToUpdate.budget = newBudgetValue;
-        try {
-            const ref = doc(db, 'references', appState.currentUser.uid);
-            await updateDoc(ref, { [key]: categories });
-            // Ingen notifikation for at undgå forstyrrelser ved hurtig indtastning
-        } catch (error) {
-            handleError(error, "Budgettet kunne ikke opdateres.", "handleBudgetInputChange");
-            // Gendan gammel værdi ved fejl
-            input.value = categoryToUpdate.budget || ''; 
-        }
-    }
-}
-
-
 async function addSimpleReference(key, value) {
     if (appState.references[key] && appState.references[key].map(v => v.toLowerCase()).includes(value.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `"${value}" findes allerede.`});
@@ -314,18 +262,18 @@ async function addSimpleReference(key, value) {
 }
 
 async function addMainCategory(key, name) {
-    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat));
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     if (categories.some(cat => cat.name.toLowerCase() === name.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Overkategorien "${name}" findes allerede.`});
         return;
     }
-    const newCategory = { name: name, subcategories: [], budget: null };
+    const newCategory = { name: name, subcategories: [] };
     const ref = doc(db, 'references', appState.currentUser.uid);
     await updateDoc(ref, { [key]: arrayUnion(newCategory) });
 }
 
 async function addSubCategory(key, mainCategoryName, subCategoryName) {
-    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat));
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
     if (mainCatIndex === -1) return;
 
@@ -343,7 +291,7 @@ async function addSubCategory(key, mainCategoryName, subCategoryName) {
 }
 
 async function deleteSubCategory(key, mainCategoryName, subCategoryName) {
-    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat));
+    const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
     const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
     if (mainCatIndex === -1) return;
 
@@ -420,7 +368,7 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     const ref = doc(db, 'references', appState.currentUser.uid);
     
     if (key === 'itemCategories' || key === 'budgetCategories') {
-        const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [], budget: null } : cat));
+        const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
         const catToUpdate = categories.find(cat => cat.name === oldValue);
         if (catToUpdate) {
             catToUpdate.name = newValue;
