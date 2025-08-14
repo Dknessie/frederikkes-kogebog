@@ -1438,7 +1438,7 @@ header {
     box-sizing: border-box;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal, #transaction-edit-modal { z-index: 2010; }
 #bulk-add-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
@@ -2182,6 +2182,13 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: var(--small-font-size);
     color: #7f8c8d;
     font-weight: 600;
+}
+.transactions-list tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.transactions-list tbody tr:hover {
+    background-color: var(--secondary-color);
 }
 .transactions-list .text-right {
     text-align: right;
