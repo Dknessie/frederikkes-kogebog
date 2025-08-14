@@ -37,7 +37,7 @@ export function initDashboard(state, elements) {
 }
 
 export function renderDashboardPage() {
-    if (!appState.currentUser || !appState.projects || !appState.inventory) return;
+    if (!appState.currentUser) return;
     
     renderWelcomeWidget();
     renderTimelineWidget();
@@ -52,17 +52,15 @@ function handleQuickActionClick(e) {
     
     e.preventDefault();
     const action = actionBtn.dataset.action;
-    if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
-    else if (action === 'add-project') document.getElementById('add-project-btn').click();
-    else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
-    else if (action === 'add-expense') {
-        const addExpenseModal = document.getElementById('add-expense-modal');
-        if (addExpenseModal) {
-            document.getElementById('add-expense-date').value = formatDate(new Date());
-            populateReferenceDropdown(document.getElementById('add-expense-main-category'), (appState.references.budgetCategories || []).map(c => c.name), 'Vælg kategori...');
-            addExpenseModal.classList.remove('hidden');
-        }
+    
+    // RETTET: Ændret 'add-expense' til at navigere i stedet for at åbne en modal
+    if (action === 'add-expense') {
+        window.location.hash = '#oekonomi';
+        return;
     }
+    
+    if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
+    else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
     else window.location.hash = actionBtn.getAttribute('href');
 }
 
@@ -158,21 +156,15 @@ function renderWelcomeWidget() {
     else if (hours < 18) greeting = "Goddag";
     else greeting = "Godaften";
     appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
-    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').length;
-    appElements.welcomeSummary.innerHTML = `Du har <strong>${activeProjects}</strong> aktive projekt(er).`;
+    // Da projects er fjernet, sætter vi en generisk besked
+    appElements.welcomeSummary.innerHTML = `Klar til at organisere din dag!`;
 }
 
 function renderProjectsFocusWidget() {
     const container = appElements.projectsFocusContent;
     if (!container) return;
-    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet').slice(0, 3);
-    if (activeProjects.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen aktive projekter. Start et nyt fra "Hjem" siden.</p>';
-        return;
-    }
-    container.innerHTML = activeProjects.map(p => {
-        return `<div class="project-focus-item"><span class="project-focus-title">${p.title}</span><span class="project-status-tag">${p.status}</span></div>`;
-    }).join('');
+    // Da projects er fjernet, viser vi en tom state
+    container.innerHTML = '<p class="empty-state">Projekter er fjernet i denne version.</p>';
 }
 
 function renderNetWorthWidget() {
@@ -206,21 +198,4 @@ function renderNetWorthWidget() {
             </div>
         `;
     }).join('');
-}
-
-// Helper function used by handleQuickActionClick
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
-}
-
-// Helper function used by handleQuickActionClick
-function formatDate(date) {
-    if (!(date instanceof Date) || isNaN(date)) return '';
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
 }
