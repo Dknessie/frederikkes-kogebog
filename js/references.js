@@ -43,7 +43,6 @@ export function renderReferencesPage() {
     const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
     dynamicCards.forEach(card => card.remove());
     
-    // RETTET: Genindsat budgetCategories og assetTypes, og tilføjet liabilityTypes
     const referenceData = {
         budgetCategories: {
             title: 'Budgetkategorier',
