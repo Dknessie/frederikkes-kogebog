@@ -11,10 +11,11 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage, renderHouseholdMembers } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
+// OPDATERET: Bytter 'initProjects' og 'initRooms' ud med det nye samlede 'initHjemmet' modul
+import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-// RETTET: Importerer den korrekte funktion fra det nye economy.js modul
-import { initEconomyPage, renderEconomyPage } from './economy.js';
+import { initEconomy, renderEconomyPage } from './economy.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -25,6 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
+        projects: [],
+        rooms: [],
+        // NYT: Tilføjet state for planter
+        plants: [],
         assets: [],
         liabilities: [],
         economySettings: {},
@@ -59,6 +64,18 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
+        // Hjemmet (erstatter de gamle 'hjem' elementer)
+        hjemmetPage: document.getElementById('hjemmet'),
+        roomDetailsPage: document.getElementById('room-details'),
+        roomDetailsContent: document.getElementById('room-details-content'),
+        roomDetailsTitle: document.getElementById('room-details-title'),
+        editRoomBtn: document.getElementById('edit-room-btn'),
+        projectEditModal: document.getElementById('project-edit-modal'),
+        projectForm: document.getElementById('project-form'),
+        addProjectBtn: document.getElementById('add-project-btn'), // Note: This might be removed if only accessible from Hjemmet
+        projectMaterialsContainer: document.getElementById('project-materials-container'),
+        addMaterialBtn: document.getElementById('add-material-btn'),
+
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -151,15 +168,42 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // NYT: Knap tilføjet til element-cache
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
     function computeDerivedShoppingLists() {
         const materialsList = {};
+        state.projects
+            .filter(project => project.status !== 'Afsluttet')
+            .forEach(project => {
+                (project.materials || []).forEach(material => {
+                    const key = material.name.toLowerCase();
+                    materialsList[key] = {
+                        name: material.name,
+                        quantity_to_buy: material.quantity || 1,
+                        unit: material.unit || 'stk',
+                        price: material.price || null,
+                        projectId: project.id,
+                        storeId: 'Byggemarked'
+                    };
+                });
+            });
         state.shoppingLists.materials = materialsList;
 
         const wishlist = {};
+        state.rooms.forEach(room => {
+            (room.wishlist || []).forEach(item => {
+                const key = item.name.toLowerCase();
+                wishlist[key] = {
+                    name: item.name,
+                    price: item.price || null,
+                    url: item.url || null,
+                    roomId: room.id,
+                    quantity_to_buy: 1,
+                    unit: 'stk'
+                };
+            });
+        });
         state.shoppingLists.wishlist = wishlist;
     }
 
@@ -178,8 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // This function will be called to re-render the content of the current page
-    // whenever data is updated.
     function renderCurrentPage() {
         const hash = window.location.hash || '#dashboard';
         const [mainHash] = hash.split('/');
@@ -190,6 +232,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case '#calendar':
                 renderMealPlanner();
+                break;
+            case '#hjemmet': // OPDATERET
+                renderHjemmetPage();
+                break;
+            case '#room-details':
+                // This logic might move to hjemmet.js if it becomes part of that view
+                if (state.currentlyViewedRoomId) {
+                    // renderRoomDetailsPage(); // This function will be moved/adapted
+                }
                 break;
             case '#recipes':
                 renderPageTagFilters();
@@ -216,11 +267,15 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_items: 'inventoryItems',
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
+            projects: 'projects',
+            rooms: 'rooms',
             events: 'events',
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
             assets: 'assets',
-            liabilities: 'liabilities'
+            liabilities: 'liabilities',
+            // NYT: Tilføjet listener for 'plants'
+            plants: 'plants'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -231,7 +286,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                computeDerivedShoppingLists();
+                if (stateKey === 'projects' || stateKey === 'rooms') {
+                    computeDerivedShoppingLists();
+                }
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -260,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.addInventoryItemBtn, 
                         elements.reorderAssistantBtn, 
                         elements.addRecipeBtn, 
+                        elements.addProjectBtn, 
                         elements.generateGroceriesBtn, 
                         elements.impulsePurchaseBtn,
                         elements.addExpenseBtn
@@ -298,6 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addInventoryItemBtn, 
             elements.reorderAssistantBtn, 
             elements.addRecipeBtn, 
+            elements.addProjectBtn, 
             elements.generateGroceriesBtn, 
             elements.impulsePurchaseBtn,
             elements.addExpenseBtn
@@ -309,9 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleNavigation(hash) {
         try {
             const [mainHash, subId] = hash.split('/');
-            state.currentlyViewedRoomId = subId || null;
+            // OPDATERET: Sætter nu subId for både room-details og det nye hjemmet-modul
+            state.currentlyViewedRoomId = (mainHash === '#room-details' || mainHash === '#hjemmet') ? subId : null;
 
-            const validHashes = ['#dashboard', '#calendar', '#recipes', '#inventory', '#oekonomi', '#references'];
+            const validHashes = ['#dashboard', '#calendar', '#hjemmet', '#room-details', '#recipes', '#inventory', '#oekonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -334,9 +394,10 @@ document.addEventListener('DOMContentLoaded', () => {
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
+        // OPDATERET: Kalder det nye samlede init-kald
+        initHjemmet(state, elements);
         initEvents(state);
-        // RETTET: Kalder den korrekte funktion
-        initEconomyPage(state);
+        initEconomy(state, elements);
     }
 
     init();
