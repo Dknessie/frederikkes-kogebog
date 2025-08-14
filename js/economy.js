@@ -228,6 +228,13 @@ function attachEventListeners(container) {
         
         const liabilityItem = e.target.closest('.economy-item-row[data-liability-id]');
         if (liabilityItem) openLiabilityModal(liabilityItem.dataset.liabilityId);
+
+        const fixedPostItem = e.target.closest('.economy-item-row[data-fixed-id]');
+        if (fixedPostItem) openFixedExpenseModal(fixedPostItem.dataset.fixedId);
+        
+        const transactionRow = e.target.closest('#transactions-table tbody tr[data-id]');
+        if(transactionRow) openTransactionEditModal(transactionRow.dataset.id);
+
     });
 
     const transactionForm = container.querySelector('#transaction-form');
@@ -261,6 +268,11 @@ function attachModalEventListeners() {
              );
         });
     }
+
+    const transactionEditForm = document.getElementById('transaction-edit-form');
+    if(transactionEditForm) transactionEditForm.addEventListener('submit', handleUpdateTransaction);
+    const deleteTransactionBtn = document.getElementById('delete-transaction-btn');
+    if(deleteTransactionBtn) deleteTransactionBtn.addEventListener('click', handleDeleteTransaction);
 }
 
 // --- RENDERING & BEREGNING ---
@@ -379,7 +391,7 @@ function renderTransactionsTable(transactions) {
     tableBody.innerHTML = transactions
         .sort((a, b) => b.date.toDate() - a.date.toDate())
         .map(t => `
-            <tr>
+            <tr data-id="${t.id}">
                 <td>${t.date.toDate().toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}</td>
                 <td>${t.description}</td>
                 <td>${t.person || 'Fælles'}</td>
@@ -444,7 +456,7 @@ function renderFixedPostsWidget(fixedPosts) {
     fixedPosts.forEach(post => {
         const row = document.createElement('div');
         row.className = 'economy-item-row';
-        // Note: We don't add a data-id here as the whole widget is a button
+        row.dataset.fixedId = post.id;
         row.innerHTML = `
             <span>${post.description}</span>
             <span class="economy-item-value ${post.type === 'income' ? 'income-amount' : 'expense-amount'}">
@@ -746,5 +758,63 @@ async function handleDeleteFixedExpense() {
         showNotification({title: "Slettet", message: "Den faste post er blevet slettet."});
     } catch (error) {
         handleError(error, "Posten kunne ikke slettes.", "handleDeleteFixedExpense");
+    }
+}
+
+function openTransactionEditModal(transactionId) {
+    const modal = document.getElementById('transaction-edit-modal');
+    const form = document.getElementById('transaction-edit-form');
+    const transaction = appState.expenses.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    form.reset();
+    document.getElementById('transaction-edit-id').value = transaction.id;
+    document.getElementById('transaction-edit-description').value = transaction.description;
+    document.getElementById('transaction-edit-amount').value = transaction.amount;
+    document.getElementById('transaction-edit-type').value = transaction.type || 'expense';
+    document.getElementById('transaction-edit-date').value = formatDate(transaction.date.toDate());
+    
+    populateReferenceDropdown(document.getElementById('transaction-edit-category'), (appState.references.budgetCategories || []).map(c => c.name), 'Vælg overkategori...', transaction.mainCategory);
+    populateReferenceDropdown(document.getElementById('transaction-edit-person'), appState.references.householdMembers, 'Vælg person...', transaction.person);
+    
+    modal.classList.remove('hidden');
+}
+
+async function handleUpdateTransaction(e) {
+    e.preventDefault();
+    const transactionId = document.getElementById('transaction-edit-id').value;
+    if (!transactionId) return;
+
+    const transactionData = {
+        amount: parseFloat(document.getElementById('transaction-edit-amount').value),
+        date: Timestamp.fromDate(new Date(document.getElementById('transaction-edit-date').value)),
+        description: document.getElementById('transaction-edit-description').value.trim(),
+        type: document.getElementById('transaction-edit-type').value,
+        mainCategory: document.getElementById('transaction-edit-category').value,
+        person: document.getElementById('transaction-edit-person').value,
+    };
+
+    try {
+        await updateDoc(doc(db, 'expenses', transactionId), transactionData);
+        document.getElementById('transaction-edit-modal').classList.add('hidden');
+        showNotification({ title: "Opdateret!", message: "Posteringen er blevet opdateret." });
+    } catch (error) {
+        handleError(error, "Kunne ikke opdatere postering.", "handleUpdateTransaction");
+    }
+}
+
+async function handleDeleteTransaction() {
+    const transactionId = document.getElementById('transaction-edit-id').value;
+    if (!transactionId) return;
+
+    const confirmed = await showNotification({title: "Slet Postering", message: "Er du sikker?", type: 'confirm'});
+    if (!confirmed) return;
+
+    try {
+        await deleteDoc(doc(db, 'expenses', transactionId));
+        document.getElementById('transaction-edit-modal').classList.add('hidden');
+        showNotification({title: "Slettet", message: "Posteringen er blevet slettet."});
+    } catch(error) {
+        handleError(error, "Kunne ikke slette postering.", "handleDeleteTransaction");
     }
 }
