@@ -25,16 +25,38 @@ function formatDate(date) {
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
     if (!selectElement) return;
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
+    (options || []).sort().forEach(opt => {
+        const option = new Option(opt, opt);
+        selectElement.add(option);
+    });
+    // For multiselect, handle array of values
+    if (selectElement.multiple) {
+        Array.from(selectElement.options).forEach(opt => {
+            if (currentValue && currentValue.includes(opt.value)) {
+                opt.selected = true;
+            }
+        });
+    } else {
+        selectElement.value = currentValue || "";
+    }
 }
 
 function populateLiabilitiesDropdown(selectElement, placeholder, currentValue) {
     if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    selectElement.innerHTML = ''; // Clear existing options
     (appState.liabilities || []).forEach(l => selectElement.add(new Option(l.name, l.id)));
-    selectElement.value = currentValue || "";
+    
+    if (selectElement.multiple) {
+        Array.from(selectElement.options).forEach(opt => {
+            if (currentValue && currentValue.includes(opt.value)) {
+                opt.selected = true;
+            }
+        });
+    } else {
+        selectElement.value = currentValue || "";
+    }
 }
+
 
 function populateMainCategoryDropdown(selectElement, currentValue) {
     const mainCategories = (appState.references.budgetCategories || [])
@@ -159,7 +181,7 @@ function buildPageSkeleton(container) {
                 <div class="economy-sidebar-widget">
                     <h5>Opsparingsmål</h5>
                     <p class="empty-state-small">Du har ingen opsparingsmål endnu.</p>
-                    <button class="btn btn-secondary" disabled>Administrer Mål</button>
+                    <button id="manage-goals-btn" class="btn btn-secondary">Administrer Mål</button>
                 </div>
                 <div id="net-worth-widget" class="economy-sidebar-widget">
                     <h5>Formue & Gæld</h5>
@@ -170,11 +192,6 @@ function buildPageSkeleton(container) {
                         <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
                         <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
                     </div>
-                </div>
-                <div class="economy-sidebar-widget">
-                    <h5>Faste Poster</h5>
-                     <p id="fixed-expenses-summary" class="empty-state-small">Du har ingen faste poster endnu.</p>
-                    <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
                 </div>
             </div>
         </div>
@@ -193,7 +210,7 @@ function attachEventListeners(container) {
         }
         if (e.target.closest('#add-asset-btn')) openAssetModal();
         if (e.target.closest('#add-liability-btn')) openLiabilityModal();
-        if (e.target.closest('#manage-fixed-btn')) openFixedExpenseModal();
+        if (e.target.closest('#manage-goals-btn')) document.getElementById('edit-budget-modal').classList.remove('hidden');
 
         const assetItem = e.target.closest('.economy-item-row[data-asset-id]');
         if (assetItem) openAssetModal(assetItem.dataset.assetId);
@@ -218,21 +235,6 @@ function attachModalEventListeners() {
     if (liabilityForm) liabilityForm.addEventListener('submit', handleSaveLiability);
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
     if (deleteLiabilityBtn) deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
-
-    const fixedExpenseForm = document.getElementById('fixed-expense-form');
-    if (fixedExpenseForm) fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
-    const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
-    if (deleteFixedExpenseBtn) deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
-
-    const fixedMainCategorySelect = document.getElementById('fixed-expense-main-category');
-    if (fixedMainCategorySelect) {
-        fixedMainCategorySelect.addEventListener('change', () => {
-             populateSubCategoryDropdown(
-                document.getElementById('fixed-expense-sub-category'), 
-                fixedMainCategorySelect.value
-             );
-        });
-    }
 }
 
 // --- RENDERING & BEREGNING ---
@@ -260,42 +262,32 @@ export function renderEconomyPage() {
     document.getElementById('total-income').textContent = `${totalIncome.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     document.getElementById('total-expense').textContent = `${totalExpense.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     document.getElementById('monthly-disposable').textContent = `${monthlyDisposable.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
-    
-    // NYT: Beregn og vis fremskrivning af formue
+
     const projected = calculateProjectedValues(economyState.currentDate);
     document.getElementById('net-worth-summary').innerHTML = `<strong>Beregnet Friværdi:</strong> ${projected.netWorth.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     
-    const fixedSummary = document.getElementById('fixed-expenses-summary');
-    const totalFixed = (appState.fixedExpenses || []).reduce((sum, fe) => sum + fe.amount, 0);
-    if (totalFixed > 0) {
-        fixedSummary.innerHTML = `<strong>Total:</strong> ${totalFixed.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr./md.`;
-    } else {
-        fixedSummary.textContent = 'Du har ingen faste poster endnu.';
-    }
-
     renderTransactionsTable(monthlyTransactions);
     renderAssetsListWidget();
-    renderLiabilitiesListWidget(projected.liabilities); // Brug fremskrevne værdier
+    renderLiabilitiesListWidget(projected.liabilities);
 }
 
 function calculateProjectedValues(targetDate) {
     const today = new Date();
     today.setHours(0,0,0,0);
-    targetDate.setHours(0,0,0,0);
+    const target = new Date(targetDate);
+    target.setHours(0,0,0,0);
 
-    const projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || [])); // Deep copy
+    const projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || []));
 
-    if (targetDate > today) {
-        const repayments = (appState.fixedExpenses || []).filter(fe => fe.isRepayment && fe.linkedLiabilityId);
+    if (target > today) {
+        let currentDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         
-        let currentDate = new Date(today);
-        currentDate.setMonth(currentDate.getMonth() + 1, 1); // Start from the beginning of next month
-
-        while (currentDate <= targetDate) {
-            repayments.forEach(repayment => {
-                const liability = projectedLiabilities.find(l => l.id === repayment.linkedLiabilityId);
-                if (liability) {
-                    liability.currentBalance -= repayment.amount;
+        while (currentDate <= target) {
+            projectedLiabilities.forEach(liability => {
+                if (liability.monthlyPayment && liability.interestRate) {
+                    const monthlyInterest = (liability.currentBalance * (liability.interestRate / 100)) / 12;
+                    const principalPayment = liability.monthlyPayment - monthlyInterest;
+                    liability.currentBalance -= principalPayment;
                 }
             });
             currentDate.setMonth(currentDate.getMonth() + 1);
@@ -308,6 +300,7 @@ function calculateProjectedValues(targetDate) {
 
     return { liabilities: projectedLiabilities, netWorth };
 }
+
 
 function populateDropdowns() {
     const categorySelect = document.getElementById('transaction-category');
@@ -449,18 +442,21 @@ function openAssetModal(assetId = null) {
     }
     
     populateReferenceDropdown(document.getElementById('asset-type'), appState.references.assetTypes, 'Vælg type...', asset?.type);
-    populateLiabilitiesDropdown(document.getElementById('asset-linked-liability'), 'Tilknyt gæld...', asset?.linkedLiabilityId);
+    populateLiabilitiesDropdown(document.getElementById('asset-linked-liability'), 'Tilknyt gæld...', asset?.linkedLiabilityIds);
     modal.classList.remove('hidden');
 }
 
 async function handleSaveAsset(e) {
     e.preventDefault();
     const assetId = document.getElementById('asset-id').value;
+    const linkedLiabilitySelect = document.getElementById('asset-linked-liability');
+    const linkedLiabilityIds = Array.from(linkedLiabilitySelect.selectedOptions).map(opt => opt.value);
+
     const assetData = {
         name: document.getElementById('asset-name').value.trim(),
         type: document.getElementById('asset-type').value,
         value: parseFloat(document.getElementById('asset-value').value),
-        linkedLiabilityId: document.getElementById('asset-linked-liability').value || null,
+        linkedLiabilityIds: linkedLiabilityIds,
         userId: appState.currentUser.uid
     };
 
@@ -511,27 +507,30 @@ function openLiabilityModal(liabilityId = null) {
 
     if (isEditing) {
         document.getElementById('liability-name').value = liability.name;
-        document.getElementById('liability-original-amount').value = liability.originalAmount;
         document.getElementById('liability-current-balance').value = liability.currentBalance;
+        document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
+        document.getElementById('liability-interest-rate').value = liability.interestRate || '';
     }
+    
+    populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
     modal.classList.remove('hidden');
 }
 
 async function handleSaveLiability(e) {
     e.preventDefault();
     const liabilityId = document.getElementById('liability-id').value;
-    const originalAmount = parseFloat(document.getElementById('liability-original-amount').value);
-    const currentBalance = parseFloat(document.getElementById('liability-current-balance').value);
     
     const liabilityData = {
         name: document.getElementById('liability-name').value.trim(),
-        originalAmount: isNaN(originalAmount) ? 0 : originalAmount,
-        currentBalance: isNaN(currentBalance) ? originalAmount : currentBalance,
+        type: document.getElementById('liability-type').value,
+        currentBalance: parseFloat(document.getElementById('liability-current-balance').value),
+        monthlyPayment: parseFloat(document.getElementById('liability-monthly-payment').value) || null,
+        interestRate: parseFloat(document.getElementById('liability-interest-rate').value) || null,
         userId: appState.currentUser.uid
     };
 
-    if (!liabilityData.name) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Navn skal være udfyldt."});
+    if (!liabilityData.name || !liabilityData.type || isNaN(liabilityData.currentBalance)) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Navn, type og restgæld skal være udfyldt."});
         return;
     }
 
@@ -559,10 +558,11 @@ async function handleDeleteLiability() {
         const batch = writeBatch(db);
         batch.delete(doc(db, 'liabilities', liabilityId));
 
-        const linkedAssets = (appState.assets || []).filter(a => a.linkedLiabilityId === liabilityId);
+        const linkedAssets = (appState.assets || []).filter(a => a.linkedLiabilityIds && a.linkedLiabilityIds.includes(liabilityId));
         linkedAssets.forEach(asset => {
             const assetRef = doc(db, 'assets', asset.id);
-            batch.update(assetRef, { linkedLiabilityId: null });
+            const updatedIds = asset.linkedLiabilityIds.filter(id => id !== liabilityId);
+            batch.update(assetRef, { linkedLiabilityIds: updatedIds });
         });
 
         await batch.commit();
@@ -570,76 +570,5 @@ async function handleDeleteLiability() {
         showNotification({title: "Slettet", message: "Gældsposten er blevet slettet."});
     } catch (error) {
         handleError(error, "Gældsposten kunne ikke slettes.", "deleteLiability");
-    }
-}
-
-function openFixedExpenseModal(expenseId = null) {
-    const modal = document.getElementById('fixed-expense-modal');
-    const form = document.getElementById('fixed-expense-form');
-    form.reset();
-    const isEditing = !!expenseId;
-    const expense = isEditing ? appState.fixedExpenses.find(e => e.id === expenseId) : null;
-
-    document.getElementById('fixed-expense-id-edit').value = expenseId || '';
-    modal.querySelector('h3').textContent = isEditing ? 'Rediger Fast Udgift' : 'Ny Fast Udgift';
-    document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
-
-    populateMainCategoryDropdown(document.getElementById('fixed-expense-main-category'), expense?.mainCategory);
-    populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), expense?.mainCategory, expense?.subCategory);
-    populateLiabilitiesDropdown(document.getElementById('fixed-expense-linked-liability'), 'Vælg lån...', expense?.linkedLiabilityId);
-
-    if (isEditing) {
-        document.getElementById('fixed-expense-amount').value = expense.amount;
-        document.getElementById('fixed-expense-start-date-edit').value = expense.startDate;
-        document.getElementById('fixed-expense-end-date-edit').value = expense.endDate || '';
-        document.getElementById('fixed-expense-is-repayment').checked = expense.isRepayment || false;
-    } else {
-        document.getElementById('fixed-expense-start-date-edit').value = formatDate(new Date());
-    }
-    
-    document.getElementById('repayment-liability-link-group').classList.toggle('hidden', !expense?.isRepayment);
-    modal.classList.remove('hidden');
-}
-
-async function handleSaveFixedExpense(e) {
-    e.preventDefault();
-    const expenseId = document.getElementById('fixed-expense-id-edit').value;
-    const expenseData = {
-        amount: parseFloat(document.getElementById('fixed-expense-amount').value),
-        mainCategory: document.getElementById('fixed-expense-main-category').value,
-        subCategory: document.getElementById('fixed-expense-sub-category').value,
-        startDate: document.getElementById('fixed-expense-start-date-edit').value,
-        endDate: document.getElementById('fixed-expense-end-date-edit').value || null,
-        isRepayment: document.getElementById('fixed-expense-is-repayment').checked,
-        linkedLiabilityId: document.getElementById('fixed-expense-linked-liability').value || null,
-        userId: appState.currentUser.uid,
-    };
-
-    try {
-        if (expenseId) {
-            await updateDoc(doc(db, 'fixed_expenses', expenseId), expenseData);
-        } else {
-            await addDoc(collection(db, 'fixed_expenses'), expenseData);
-        }
-        document.getElementById('fixed-expense-modal').classList.add('hidden');
-        showNotification({title: "Gemt!", message: "Fast udgift er gemt."});
-    } catch (error) {
-        handleError(error, "Kunne ikke gemme fast udgift.", "saveFixedExpense");
-    }
-}
-
-async function handleDeleteFixedExpense() {
-    const expenseId = document.getElementById('fixed-expense-id-edit').value;
-    if (!expenseId) return;
-
-    const confirmed = await showNotification({title: "Slet Fast Udgift", message: "Er du sikker?", type: 'confirm'});
-    if (!confirmed) return;
-
-    try {
-        await deleteDoc(doc(db, 'fixed_expenses', expenseId));
-        document.getElementById('fixed-expense-modal').classList.add('hidden');
-        showNotification({title: "Slettet", message: "Den faste udgift er blevet slettet."});
-    } catch (error) {
-        handleError(error, "Udgiften kunne ikke slettes.", "handleDeleteFixedExpense");
     }
 }
