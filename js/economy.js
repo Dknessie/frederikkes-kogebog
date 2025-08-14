@@ -383,7 +383,7 @@ function renderLiabilitiesListWidget(liabilitiesToRender) {
         row.dataset.liabilityId = liability.id;
         row.innerHTML = `
             <span>${liability.name}</span>
-            <span class="economy-item-value">${liability.currentBalance.toLocaleString('da-DK')} kr.</span>
+            <span class="economy-item-value">${liability.currentBalance.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.</span>
         `;
         container.appendChild(row);
     });
