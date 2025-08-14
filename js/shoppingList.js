@@ -5,7 +5,6 @@ import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
 import { openBatchModal } from './inventory.js';
-import { logExpense } from './expenses.js';
 
 let appState;
 let appElements;
@@ -514,16 +513,8 @@ async function handleBulkSave(e) {
     try {
         await batch.commit();
 
-        // Log the total expense after the batch commit is successful
-        if (totalExpense > 0) {
-            // NYT: Opdateret kald til logExpense med et objekt for at være mere specifik.
-            await logExpense({
-                amount: totalExpense,
-                mainCategory: 'Dagligvarer', // Fast kategori for indkøbsliste
-                description: `Indkøb af ${purchasedItems.length} vare(r)`,
-                isImpulse: true // Indkøb fra listen tæller som variable udgifter
-            });
-        }
+        // Expense logging is now handled by the new economy module.
+        // The user should register the purchase manually there for a better overview.
 
         appElements.bulkAddModal.classList.add('hidden');
         showNotification({ title: "Lager Opdateret!", message: `${purchasedItems.length} vare(r) er blevet tilføjet til dit varelager.` });
