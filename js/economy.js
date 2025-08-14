@@ -1,478 +1,326 @@
 // js/economy.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, addDoc, deleteDoc, collection, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { formatDate } from './utils.js';
 
+// Lokal state for økonomisiden
 let appState;
-let appElements;
 let economyState = {
-    currentView: 'monthly-budget',
-    viewDate: new Date(), 
+    currentDate: new Date(), // Start med den nuværende måned
 };
 
-export function initEconomy(state, elements) {
+// Funktion til at formatere datoer til YYYY-MM-DD
+function formatDate(date) {
+    const d = new Date(date);
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    const year = d.getFullYear();
+
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+
+    return [year, month, day].join('-');
+}
+
+/**
+ * Initialiserer hele økonomisiden
+ * @param {object} state - Applikationens globale state-objekt
+ * @param {object} elements - Applikationens globale DOM-element-cache
+ */
+export function initEconomyPage(state) {
     appState = state;
-    appElements = {
-        ...elements,
-        economyTabs: document.querySelector('.economy-tabs'),
-        economyViews: document.querySelectorAll('.economy-view'),
-        
-        addVariableExpenseBtn: document.getElementById('add-variable-expense-btn'),
+    const pageContainer = document.getElementById('oekonomi');
+    if (!pageContainer) return;
 
-        addExpenseModal: document.getElementById('add-expense-modal'),
-        addExpenseForm: document.getElementById('add-expense-form'),
-        deleteExpenseBtn: document.getElementById('delete-expense-btn'),
+    // Byg sidens skelet én gang
+    buildPageSkeleton(pageContainer);
 
-        assetModal: document.getElementById('asset-modal'),
-        assetForm: document.getElementById('asset-form'),
-        addAssetBtn: document.getElementById('add-asset-btn'),
-        assetsList: document.getElementById('assets-list'),
-        deleteAssetBtn: document.getElementById('delete-asset-btn'),
-        
-        liabilityModal: document.getElementById('liability-modal'),
-        liabilityForm: document.getElementById('liability-form'),
-        addLiabilityBtn: document.getElementById('add-liability-btn'),
-        liabilitiesList: document.getElementById('liabilities-list'),
-        deleteLiabilityBtn: document.getElementById('delete-liability-btn'),
-        liabilitySettingsList: document.getElementById('liability-settings-list'),
+    // Tilføj event listeners
+    attachEventListeners(pageContainer);
 
-        netWorthTotalAssets: document.getElementById('net-worth-total-assets'),
-        netWorthTotalLiabilities: document.getElementById('net-worth-total-liabilities'),
-        netWorthTotalValue: document.getElementById('net-worth-total-value'),
+    // Render indholdet
+    renderEconomyDashboard();
+}
 
-        fixedExpenseModal: document.getElementById('fixed-expense-modal'),
-        fixedExpenseForm: document.getElementById('fixed-expense-form'),
-        deleteFixedExpenseBtn: document.getElementById('delete-fixed-expense-btn'),
-        repaymentLinkGroup: document.getElementById('repayment-liability-link-group'),
-        economySettingsForm: document.getElementById('economy-settings-form'),
-        fixedExpensesList: document.getElementById('fixed-expenses-list'),
-        addFixedExpenseBtn: document.getElementById('add-fixed-expense-btn'),
-        
-        monthlyBudgetBarsContainer: document.getElementById('monthly-budget-bars'),
-        pinnedSavingsGoalsContainer: document.getElementById('pinned-savings-goals-container'),
-        budgetCategorySettingsList: document.getElementById('budget-category-settings-list'),
-        transactionsListContainer: document.getElementById('transactions-list-container'),
-    };
+/**
+ * Bygger den grundlæggende HTML-struktur for økonomisiden
+ * @param {HTMLElement} container - Container-elementet for økonomisiden (#oekonomi)
+ */
+function buildPageSkeleton(container) {
+    container.innerHTML = `
+        <div class="economy-dashboard-layout">
+            <div class="economy-header">
+                <h2>Mit Økonomiske Overblik</h2>
+                <p>Planlæg din fremtid, en krone ad gangen.</p>
+            </div>
 
-    appElements.economyTabs.addEventListener('click', (e) => {
-        if (e.target.matches('.economy-tab-btn')) {
-            switchEconomyView(e.target.dataset.view);
+            <div class="economy-main">
+                <div class="economy-month-navigator">
+                    <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                    <h3 id="current-month-display"></h3>
+                    <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <div class="economy-summary-grid">
+                    <div class="economy-summary-card">
+                        <h4>Total Indkomst</h4>
+                        <p id="total-income">0,00 kr.</p>
+                    </div>
+                    <div class="economy-summary-card">
+                        <h4>Total Udgift</h4>
+                        <p id="total-expense">0,00 kr.</p>
+                    </div>
+                    <div class="economy-summary-card">
+                        <h4>Månedligt Råderum</h4>
+                        <p id="monthly-disposable">0,00 kr.</p>
+                    </div>
+                </div>
+
+                <div class="new-transaction-form">
+                    <h4>Ny Postering</h4>
+                    <form id="transaction-form">
+                        <div class="input-group">
+                            <label for="transaction-description">Beskrivelse</label>
+                            <input type="text" id="transaction-description" placeholder="F.eks. Indkøb, Restaurantbesøg" required>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="transaction-amount">Beløb (kr.)</label>
+                                <input type="number" id="transaction-amount" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="transaction-type">Type</label>
+                                <select id="transaction-type" required>
+                                    <option value="expense">Udgift</option>
+                                    <option value="income">Indkomst</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="transaction-category">Kategori</label>
+                                <select id="transaction-category" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="transaction-person">Person</label>
+                                <select id="transaction-person" required></select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="transaction-date">Dato</label>
+                            <input type="date" id="transaction-date" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Tilføj</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="transactions-list">
+                    <h4>Bevægelser for Måneden</h4>
+                    <table id="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>DATO</th>
+                                <th>POST</th>
+                                <th>PERSON</th>
+                                <th>KATEGORI</th>
+                                <th class="text-right">BELØB</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rækker indsættes her af JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="economy-sidebar">
+                <div class="economy-sidebar-widget">
+                    <h5>Opsparingsmål</h5>
+                    <p class="empty-state-small">Du har ingen opsparingsmål endnu.</p>
+                    <button class="btn btn-secondary" disabled>Administrer Mål</button>
+                </div>
+                <div class="economy-sidebar-widget">
+                    <h5>Formue & Gæld</h5>
+                    <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
+                    <button id="manage-assets-btn" class="btn btn-secondary">Administrer Aktiver</button>
+                </div>
+                <div class="economy-sidebar-widget">
+                    <h5>Faste Poster</h5>
+                     <p class="empty-state-small">Du har ingen faste poster endnu.</p>
+                    <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Tilføjer event listeners til de dynamisk oprettede elementer
+ * @param {HTMLElement} container - Container-elementet for økonomisiden (#oekonomi)
+ */
+function attachEventListeners(container) {
+    container.addEventListener('click', (e) => {
+        if (e.target.closest('#prev-month-btn')) {
+            economyState.currentDate.setMonth(economyState.currentDate.getMonth() - 1);
+            renderEconomyDashboard();
+        }
+        if (e.target.closest('#next-month-btn')) {
+            economyState.currentDate.setMonth(economyState.currentDate.getMonth() + 1);
+            renderEconomyDashboard();
+        }
+        if (e.target.closest('#manage-assets-btn')) {
+            // Denne funktionalitet findes i den gamle economy.js, men skal genimplementeres
+            // For nu åbner vi blot en notifikation
+            showNotification({ title: "Kommer Snart", message: "Administration af aktiver og gæld vil blive genimplementeret." });
+        }
+         if (e.target.closest('#manage-fixed-btn')) {
+            showNotification({ title: "Kommer Snart", message: "Administration af faste poster vil blive genimplementeret." });
         }
     });
 
-    if(appElements.addVariableExpenseBtn) appElements.addVariableExpenseBtn.addEventListener('click', () => openAddExpenseModal());
-    if(appElements.addExpenseForm) appElements.addExpenseForm.addEventListener('submit', handleSaveVariableExpense);
-    if(appElements.deleteExpenseBtn) appElements.deleteExpenseBtn.addEventListener('click', handleDeleteVariableExpense);
-    
-    if(appElements.addAssetBtn) appElements.addAssetBtn.addEventListener('click', () => openAssetModal());
-    if(appElements.assetForm) appElements.assetForm.addEventListener('submit', handleSaveAsset);
-    if(appElements.deleteAssetBtn) appElements.deleteAssetBtn.addEventListener('click', handleDeleteAsset);
-    
-    if(appElements.addLiabilityBtn) appElements.addLiabilityBtn.addEventListener('click', () => openLiabilityModal());
-    if(appElements.liabilityForm) appElements.liabilityForm.addEventListener('submit', handleSaveLiability);
-    if(appElements.deleteLiabilityBtn) appElements.deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
-    
-    if(appElements.addFixedExpenseBtn) appElements.addFixedExpenseBtn.addEventListener('click', () => openFixedExpenseModal());
-    if(appElements.fixedExpenseForm) appElements.fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
-    if(appElements.deleteFixedExpenseBtn) appElements.deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
-    
-    if(appElements.economySettingsForm) appElements.economySettingsForm.addEventListener('submit', handleSaveEconomySettings);
-    
-    if(appElements.assetsList) appElements.assetsList.addEventListener('click', e => {
-        if (e.target.closest('.asset-card')) openAssetModal(e.target.closest('.asset-card').dataset.id);
-    });
-    if(appElements.liabilitiesList) appElements.liabilitiesList.addEventListener('click', e => {
-        if (e.target.closest('.liability-card')) openLiabilityModal(e.target.closest('.liability-card').dataset.id);
-    });
-    if(appElements.fixedExpensesList) appElements.fixedExpensesList.addEventListener('click', e => {
-        if (e.target.closest('.fixed-expense-item')) openFixedExpenseModal(e.target.closest('.fixed-expense-item').dataset.id);
-    });
-    if(appElements.liabilitySettingsList) appElements.liabilitySettingsList.addEventListener('click', e => {
-        if (e.target.closest('.liability-card')) openLiabilityModal(e.target.closest('.liability-card').dataset.id);
-    });
-    if(appElements.transactionsListContainer) appElements.transactionsListContainer.addEventListener('click', e => {
-        if (e.target.closest('.transaction-item')) openAddExpenseModal(e.target.closest('.transaction-item').dataset.id);
-    });
-    if(appElements.pinnedSavingsGoalsContainer) appElements.pinnedSavingsGoalsContainer.addEventListener('click', e => {
-        if (e.target.closest('.unpin-goal-btn')) {
-            const goalId = e.target.closest('.savings-goal-item').dataset.goalId;
-            unpinSavingsGoal(goalId);
-        }
-    });
-
-    const isRepaymentCheckbox = document.getElementById('fixed-expense-is-repayment');
-    if (isRepaymentCheckbox) {
-        isRepaymentCheckbox.addEventListener('change', (e) => {
-            appElements.repaymentLinkGroup.classList.toggle('hidden', !e.target.checked);
-        });
-    }
-
-    const mainCategorySelect = document.getElementById('add-expense-main-category');
-    if (mainCategorySelect) {
-        mainCategorySelect.addEventListener('change', () => {
-             populateSubCategoryDropdown(document.getElementById('add-expense-sub-category'), mainCategorySelect.value);
-        });
-    }
-    const fixedMainCategorySelect = document.getElementById('fixed-expense-main-category');
-    if (fixedMainCategorySelect) {
-        fixedMainCategorySelect.addEventListener('change', () => {
-             populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), fixedMainCategorySelect.value);
-        });
+    const transactionForm = container.querySelector('#transaction-form');
+    if (transactionForm) {
+        transactionForm.addEventListener('submit', handleSaveTransaction);
     }
 }
 
-function switchEconomyView(viewName) {
-    economyState.currentView = viewName;
-    appElements.economyTabs.querySelectorAll('.economy-tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.view === viewName);
-    });
-    appElements.economyViews.forEach(view => {
-        view.classList.toggle('active', view.id.includes(viewName));
-    });
-    renderEconomyPage();
-}
-
-export function renderEconomyPage() {
-    switch (economyState.currentView) {
-        case 'monthly-budget':
-            renderMonthlyBudgetView();
-            break;
-        case 'transactions':
-            renderTransactionsView();
-            break;
-        case 'net-worth':
-            renderNetWorthView();
-            break;
-        case 'settings':
-            renderSettingsView();
-            break;
+/**
+ * Renderer alt dynamisk indhold på dashboardet (tal, lister, etc.)
+ */
+function renderEconomyDashboard() {
+    // Opdater månedsvælger
+    const monthDisplay = document.getElementById('current-month-display');
+    if (monthDisplay) {
+        monthDisplay.textContent = economyState.currentDate.toLocaleDateString('da-DK', {
+            month: 'long',
+            year: 'numeric'
+        });
     }
-}
 
-// --- RENDER FUNCTIONS FOR EACH VIEW ---
+    // Udfyld dropdowns i formular
+    populateDropdowns();
+    document.getElementById('transaction-date').value = formatDate(new Date());
 
-function renderMonthlyBudgetView() {
-    const year = economyState.viewDate.getFullYear();
-    const month = economyState.viewDate.getMonth();
 
-    const monthlyExpenses = (appState.expenses || []).filter(exp => {
-        const expDate = new Date(exp.date.seconds * 1000);
+    // Filtrer transaktioner for den valgte måned
+    const year = economyState.currentDate.getFullYear();
+    const month = economyState.currentDate.getMonth();
+    
+    // Note: Vi bruger den gamle 'expenses' collection indtil en ny 'transactions' er fuldt implementeret
+    const monthlyTransactions = (appState.expenses || []).filter(exp => {
+        const expDate = exp.date.toDate(); // Konverter Firestore Timestamp til Date
         return expDate.getFullYear() === year && expDate.getMonth() === month;
     });
 
-    const monthlyFixedExpenses = (appState.fixedExpenses || []).filter(fe => {
-        const startDate = new Date(fe.startDate);
-        const endDate = fe.endDate ? new Date(fe.endDate) : null;
-        const viewDate = new Date(year, month, 15);
-        if (startDate > viewDate) return false;
-        if (endDate && endDate < viewDate) return false;
-        return true;
-    });
+    // Beregn og vis summer
+    const totalIncome = 0; // Skal implementeres med 'transactions'
+    const totalExpense = monthlyTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const monthlyDisposable = totalIncome - totalExpense;
 
-    renderBudgetBars(monthlyExpenses, monthlyFixedExpenses);
-    renderSavingsDashboard(monthlyFixedExpenses);
-}
+    document.getElementById('total-income').textContent = `${totalIncome.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
+    document.getElementById('total-expense').textContent = `${totalExpense.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
+    document.getElementById('monthly-disposable').textContent = `${monthlyDisposable.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
 
-function renderTransactionsView() {
-    const container = appElements.transactionsListContainer;
-    container.innerHTML = '';
-    const expenses = [...(appState.expenses || [])].sort((a, b) => b.date.seconds - a.date.seconds);
-
-    if (expenses.length === 0) {
-        container.innerHTML = '<p class="empty-state">Ingen transaktioner registreret endnu.</p>';
-        return;
-    }
-
-    expenses.forEach(exp => {
-        const item = document.createElement('div');
-        item.className = 'transaction-item';
-        item.dataset.id = exp.id;
-        const date = new Date(exp.date.seconds * 1000);
-        item.innerHTML = `
-            <div class="transaction-date">${date.toLocaleDateString('da-DK')}</div>
-            <div class="transaction-description">${exp.description}</div>
-            <div class="transaction-category">${exp.mainCategory} ${exp.subCategory ? `> ${exp.subCategory}` : ''}</div>
-            <div class="transaction-amount">${exp.amount.toLocaleString('da-DK', {style: 'currency', currency: 'DKK'})}</div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-function renderNetWorthView() {
-    renderAssets();
-    renderLiabilities();
-    
+    // Opdater formue-widget
     const totalAssets = (appState.assets || []).reduce((sum, asset) => sum + asset.value, 0);
     const totalLiabilities = (appState.liabilities || []).reduce((sum, l) => sum + l.currentBalance, 0);
     const netWorth = totalAssets - totalLiabilities;
+    document.getElementById('net-worth-summary').innerHTML = `<strong>Beregnet Friværdi:</strong> ${netWorth.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
 
-    appElements.netWorthTotalAssets.textContent = `${totalAssets.toLocaleString('da-DK')} kr.`;
-    appElements.netWorthTotalLiabilities.textContent = `${totalLiabilities.toLocaleString('da-DK')} kr.`;
-    appElements.netWorthTotalValue.textContent = `${netWorth.toLocaleString('da-DK')} kr.`;
+    // Render transaktionstabel
+    renderTransactionsTable(monthlyTransactions);
 }
 
-function renderSettingsView() {
-    document.getElementById('monthly-income').value = appState.economySettings.monthlyIncome || '';
-    renderBudgetCategorySettings();
-    renderLiabilitySettings();
-    renderFixedExpensesList();
-}
+/**
+ * Udfylder Kategori og Person dropdowns i transaktionsformularen
+ */
+function populateDropdowns() {
+    const categorySelect = document.getElementById('transaction-category');
+    const personSelect = document.getElementById('transaction-person');
 
-// --- COMPONENT RENDER FUNCTIONS ---
+    // Udfyld kategorier
+    const budgetCategories = (appState.references.budgetCategories || []).flatMap(cat => 
+        (cat.subcategories || []).map(sub => `${cat.name}: ${sub}`)
+    );
+    categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
+    budgetCategories.sort().forEach(cat => {
+        const option = new Option(cat, cat);
+        categorySelect.add(option);
+    });
 
-function renderBudgetBars(monthlyExpenses, monthlyFixedExpenses) {
-    const container = appElements.monthlyBudgetBarsContainer.querySelector('.dashboard-widget-content');
-    container.innerHTML = '';
-
-    const budgetCategories = (appState.references.budgetCategories || [])
-        .filter(cat => cat.budget && cat.budget > 0);
-
-    if (budgetCategories.length === 0) {
-        container.innerHTML = `<p class="empty-state-small">Definér budgetter under "Indstillinger".</p>`;
-        return;
-    }
-
-    budgetCategories.forEach(cat => {
-        const fixedSpending = monthlyFixedExpenses.filter(exp => exp.mainCategory === cat.name).reduce((sum, exp) => sum + exp.amount, 0);
-        const variableSpending = monthlyExpenses.filter(exp => exp.mainCategory === cat.name).reduce((sum, exp) => sum + exp.amount, 0);
-        const totalSpent = fixedSpending + variableSpending;
-        const budgetAmount = cat.budget;
-        const percentage = (totalSpent / budgetAmount) * 100;
-        const remaining = budgetAmount - totalSpent;
-
-        let barColorClass = 'status-green';
-        if (percentage > 80) barColorClass = 'status-yellow';
-        if (percentage >= 100) barColorClass = 'status-red';
-
-        const barItem = document.createElement('div');
-        barItem.className = 'budget-category-item';
-        barItem.innerHTML = `
-            <div class="budget-bar-header">
-                <span class="budget-bar-label">${cat.name}</span>
-                <span class="budget-bar-amount">${totalSpent.toLocaleString('da-DK')} / ${budgetAmount.toLocaleString('da-DK')} kr.</span>
-            </div>
-            <div class="budget-bar-container">
-                <div class="budget-bar-inner ${barColorClass}" style="width: ${Math.min(100, percentage)}%;"></div>
-            </div>
-            <div class="budget-bar-footer">
-                <span>${remaining >= 0 ? `${remaining.toLocaleString('da-DK')} kr. tilbage` : `${Math.abs(remaining).toLocaleString('da-DK')} kr. over budget`}</span>
-            </div>
-        `;
-        container.appendChild(barItem);
+    // Udfyld personer
+    const householdMembers = appState.references.householdMembers || [];
+    personSelect.innerHTML = '<option value="">Vælg person...</option>';
+    householdMembers.sort().forEach(person => {
+        const option = new Option(person, person);
+        personSelect.add(option);
     });
 }
 
-function renderSavingsDashboard(monthlyFixedExpenses) {
-    const container = appElements.pinnedSavingsGoalsContainer;
-    container.innerHTML = '';
+/**
+ * Renderer rækkerne i tabellen med månedens bevægelser
+ * @param {Array} transactions - Et array af transaktionsobjekter for den valgte måned
+ */
+function renderTransactionsTable(transactions) {
+    const tableBody = document.querySelector('#transactions-table tbody');
+    if (!tableBody) return;
 
-    const income = appState.economySettings.monthlyIncome || 0;
-    const totalFixed = monthlyFixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-    const savingsPotential = income - totalFixed;
-
-    container.innerHTML = `<div class="savings-potential"><span>Opsparingspotentiale:</span><strong>${savingsPotential.toLocaleString('da-DK')} kr./md.</strong></div>`;
-
-    const pinnedGoals = appState.economySettings.pinnedGoals || [];
-
-    if (pinnedGoals.length === 0) {
-        container.innerHTML += `<p class="empty-state-small">Pin et projekt eller ønske for at følge din opsparing.</p>`;
+    if (transactions.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="empty-state-small">Ingen bevægelser for denne måned.</td></tr>';
         return;
     }
 
-    pinnedGoals.forEach(goal => {
-        let goalData;
-        if (goal.type === 'project') {
-            goalData = appState.projects.find(p => p.id === goal.id);
-            if(goalData) goalData.targetAmount = (goalData.materials || []).reduce((sum, mat) => sum + (mat.price || 0), 0);
-        } else if (goal.type === 'wishlist') {
-            const allWishes = Object.values(appState.shoppingLists.wishlist || {});
-            goalData = allWishes.find(w => w.name.toLowerCase() === goal.id.toLowerCase());
-            if(goalData) goalData.targetAmount = goalData.price || 0;
-        }
-
-        if (!goalData || !goalData.targetAmount) return;
-
-        const monthsToGoal = savingsPotential > 0 ? Math.ceil(goalData.targetAmount / savingsPotential) : Infinity;
-        
-        const goalItem = document.createElement('div');
-        goalItem.className = 'savings-goal-item';
-        goalItem.dataset.goalId = goal.id;
-        goalItem.innerHTML = `
-            <div class="savings-goal-header">
-                <span class="savings-goal-title">${goalData.title || goalData.name}</span>
-                <button class="btn-icon unpin-goal-btn" title="Fjern mål"><i class="fas fa-thumbtack"></i></button>
-            </div>
-            <div class="savings-goal-progress">
-                <div class="progress-bar"><div class="progress-bar-inner" style="width: 0%;"></div></div>
-                <span class="savings-goal-amount">0 / ${goalData.targetAmount.toLocaleString('da-DK')} kr.</span>
-            </div>
-            <div class="savings-goal-forecast">${monthsToGoal !== Infinity ? `Ca. ${monthsToGoal} måneder til mål` : 'Opsparing påkrævet'}</div>`;
-        container.appendChild(goalItem);
-    });
+    tableBody.innerHTML = transactions
+        .sort((a, b) => b.date.toDate() - a.date.toDate()) // Sorter efter dato
+        .map(t => `
+            <tr>
+                <td>${t.date.toDate().toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}</td>
+                <td>${t.description}</td>
+                <td>${t.person || 'Fælles'}</td>
+                <td>${t.subCategory ? t.subCategory : t.mainCategory}</td>
+                <td class="text-right ${t.type === 'income' ? 'income-amount' : 'expense-amount'}">
+                    -${t.amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.
+                </td>
+            </tr>
+        `).join('');
 }
 
-function renderBudgetCategorySettings() {
-    const container = appElements.budgetCategorySettingsList;
-    container.innerHTML = '';
-    const categories = appState.references.budgetCategories || [];
-    if (categories.length === 0) {
-        container.innerHTML = `<p class="empty-state-small">Opret budgetkategorier under "Referencer".</p>`;
-        return;
-    }
-    categories.forEach(cat => {
-        const item = document.createElement('div');
-        item.className = 'reference-item'; // Re-use style
-        item.innerHTML = `
-            <span class="reference-name">${cat.name}</span>
-            <div class="price-input-wrapper">
-                <input type="number" class="category-budget-input" placeholder="Budget" value="${cat.budget || ''}" data-category-name="${cat.name}">
-            </div>
-        `;
-        container.appendChild(item);
-    });
-}
-
-function renderLiabilitySettings() {
-    const container = appElements.liabilitySettingsList;
-    container.innerHTML = '';
-    if (!appState.liabilities || appState.liabilities.length === 0) {
-        container.innerHTML = '<p class="empty-state-small">Ingen gældsposter tilføjet.</p>';
-        return;
-    }
-    appState.liabilities.forEach(liability => {
-        const card = document.createElement('div');
-        card.className = 'liability-card';
-        card.dataset.id = liability.id;
-        card.innerHTML = `<h5>${liability.name}</h5><p>Nuværende gæld: ${liability.currentBalance.toLocaleString('da-DK')} kr.</p>`;
-        container.appendChild(card);
-    });
-}
-
-// --- DATA HANDLING FUNCTIONS ---
-
-async function handleSaveVariableExpense(e) {
+/**
+ * Håndterer indsendelse af en ny transaktion
+ * @param {Event} e - Form submit event
+ */
+async function handleSaveTransaction(e) {
     e.preventDefault();
-    const expenseId = document.getElementById('add-expense-id').value;
-    const expenseData = {
-        amount: parseFloat(document.getElementById('add-expense-amount').value),
-        date: Timestamp.fromDate(new Date(document.getElementById('add-expense-date').value)),
-        mainCategory: document.getElementById('add-expense-main-category').value,
-        subCategory: document.getElementById('add-expense-sub-category').value,
-        description: document.getElementById('add-expense-description').value.trim(),
-        isImpulse: document.getElementById('add-expense-is-impulse').checked,
-        userId: appState.currentUser.uid
+
+    const [mainCategory, subCategory] = document.getElementById('transaction-category').value.split(': ');
+
+    // Note: Gemmer til den gamle 'expenses' collection for nu.
+    // Dette skal ændres til en ny 'transactions' collection.
+    const transactionData = {
+        amount: parseFloat(document.getElementById('transaction-amount').value),
+        date: Timestamp.fromDate(new Date(document.getElementById('transaction-date').value)),
+        description: document.getElementById('transaction-description').value.trim(),
+        type: document.getElementById('transaction-type').value, // 'expense' or 'income'
+        mainCategory: mainCategory.trim(),
+        subCategory: subCategory ? subCategory.trim() : null,
+        person: document.getElementById('transaction-person').value,
+        userId: appState.currentUser.uid,
     };
 
-    if (isNaN(expenseData.amount) || !expenseData.date || !expenseData.mainCategory || !expenseData.description) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Beløb, dato, kategori og beskrivelse er påkrævet."});
+    if (isNaN(transactionData.amount) || !transactionData.description || !transactionData.mainCategory) {
+        showNotification({ title: "Ugyldigt input", message: "Udfyld venligst beskrivelse, beløb og kategori." });
         return;
     }
 
     try {
-        if (expenseId) {
-            await updateDoc(doc(db, 'expenses', expenseId), expenseData);
-        } else {
-            await addDoc(collection(db, 'expenses'), expenseData);
-        }
-        appElements.addExpenseModal.classList.add('hidden');
-        showNotification({ title: 'Gemt!', message: 'Din udgift er registreret.' });
+        await addDoc(collection(db, 'expenses'), transactionData);
+        showNotification({ title: "Gemt!", message: "Din postering er blevet registreret." });
+        e.target.reset(); // Nulstil formularen
+        document.getElementById('transaction-date').value = formatDate(new Date());
     } catch (error) {
-        handleError(error, 'Kunne ikke gemme udgift.', 'saveVariableExpense');
+        handleError(error, "Posteringen kunne ikke gemmes.", "saveTransaction");
     }
 }
-
-async function handleDeleteVariableExpense() {
-    const expenseId = document.getElementById('add-expense-id').value;
-    if (!expenseId) return;
-
-    const confirmed = await showNotification({title: "Slet Udgift", message: "Er du sikker?", type: 'confirm'});
-    if (!confirmed) return;
-
-    try {
-        await deleteDoc(doc(db, 'expenses', expenseId));
-        appElements.addExpenseModal.classList.add('hidden');
-        showNotification({title: "Slettet", message: "Udgiften er blevet slettet."});
-    } catch (error) {
-        handleError(error, "Udgiften kunne ikke slettes.", "handleDeleteVariableExpense");
-    }
-}
-
-// --- MODAL & HELPER FUNCTIONS ---
-
-function openAddExpenseModal(expenseId = null) {
-    const form = appElements.addExpenseForm;
-    form.reset();
-    const isEditing = !!expenseId;
-    const expense = isEditing ? appState.expenses.find(e => e.id === expenseId) : null;
-
-    document.getElementById('add-expense-id').value = expenseId || '';
-    appElements.addExpenseModal.querySelector('h3').textContent = isEditing ? 'Rediger Udgift' : 'Registrer Køb';
-    appElements.deleteExpenseBtn.classList.toggle('hidden', !isEditing);
-    
-    if (isEditing) {
-        document.getElementById('add-expense-amount').value = expense.amount;
-        document.getElementById('add-expense-date').value = formatDate(new Date(expense.date.seconds * 1000));
-        document.getElementById('add-expense-description').value = expense.description;
-        document.getElementById('add-expense-is-impulse').checked = expense.isImpulse;
-    } else {
-        document.getElementById('add-expense-date').value = formatDate(new Date());
-    }
-    
-    populateMainCategoryDropdown(document.getElementById('add-expense-main-category'), expense?.mainCategory);
-    populateSubCategoryDropdown(document.getElementById('add-expense-sub-category'), expense?.mainCategory, expense?.subCategory);
-    appElements.addExpenseModal.classList.remove('hidden');
-}
-
-// FIX: Tilføjet 'export' for at gøre funktionen tilgængelig for andre moduler
-export async function togglePinnedSavingsGoal(goal) {
-    const settings = appState.economySettings || {};
-    let pinnedGoals = settings.pinnedGoals || [];
-    const goalIndex = pinnedGoals.findIndex(g => g.id === goal.id && g.type === goal.type);
-
-    if (goalIndex > -1) {
-        pinnedGoals.splice(goalIndex, 1); // Unpin
-    } else {
-        pinnedGoals.push(goal); // Pin
-    }
-
-    try {
-        const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'economy');
-        await setDoc(settingsRef, { pinnedGoals: pinnedGoals }, { merge: true });
-        showNotification({title: "Opdateret!", message: `Dit opsparingsmål er blevet ${goalIndex > -1 ? 'fjernet' : 'tilføjet'}.`});
-    } catch (error) {
-        handleError(error, "Kunne ikke opdatere opsparingsmål.", "togglePinnedSavingsGoal");
-    }
-}
-
-async function unpinSavingsGoal(goalId) {
-    const settings = appState.economySettings || {};
-    let pinnedGoals = settings.pinnedGoals || [];
-    const updatedGoals = pinnedGoals.filter(g => g.id !== goalId);
-     try {
-        const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'economy');
-        await setDoc(settingsRef, { pinnedGoals: updatedGoals }, { merge: true });
-    } catch (error) {
-        handleError(error, "Kunne ikke fjerne opsparingsmål.", "unpinSavingsGoal");
-    }
-}
-
-// Stubs for the unchanged functions to indicate their presence.
-function renderAssets() { /* ... unchanged ... */ }
-function openAssetModal(assetId = null) { /* ... unchanged ... */ }
-async function handleSaveAsset(e) { /* ... unchanged ... */ }
-async function handleDeleteAsset() { /* ... unchanged ... */ }
-function renderLiabilities() { /* ... unchanged ... */ }
-function openLiabilityModal(liabilityId = null) { /* ... unchanged ... */ }
-async function handleSaveLiability(e) { /* ... unchanged ... */ }
-async function handleDeleteLiability() { /* ... unchanged ... */ }
-function renderFixedExpensesList() { /* ... unchanged ... */ }
-function openFixedExpenseModal(expenseId = null) { /* ... unchanged ... */ }
-async function handleSaveFixedExpense(e) { /* ... unchanged ... */ }
-async function handleDeleteFixedExpense() { /* ... unchanged ... */ }
-async function handleSaveEconomySettings(e) { /* ... unchanged ... */ }
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) { /* ... unchanged ... */ }
-function populateLiabilitiesDropdown(selectElement, placeholder, currentValue) { /* ... unchanged ... */ }
-function populateMainCategoryDropdown(selectElement, currentValue) { /* ... unchanged ... */ }
-function populateSubCategoryDropdown(selectElement, mainCategoryName, currentValue) { /* ... unchanged ... */ }
