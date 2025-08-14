@@ -11,12 +11,9 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage, renderHouseholdMembers } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
-import { initProjects, renderProjects } from './projects.js';
-import { initRooms, renderRoomsListPage, renderRoomDetailsPage } from './rooms.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomy, renderEconomyPage } from './economy.js';
-import { initExpenses } from './expenses.js'; // NYT: Importeret
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -27,8 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
-        projects: [],
-        rooms: [],
         assets: [],
         liabilities: [],
         economySettings: {},
@@ -63,22 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
-        // Hjem
-        roomsGrid: document.getElementById('rooms-grid'),
-        addRoomBtn: document.getElementById('add-room-btn'),
-        roomEditModal: document.getElementById('room-edit-modal'),
-        roomForm: document.getElementById('room-form'),
-        roomDetailsPage: document.getElementById('room-details'),
-        roomDetailsContent: document.getElementById('room-details-content'),
-        roomDetailsTitle: document.getElementById('room-details-title'),
-        editRoomBtn: document.getElementById('edit-room-btn'),
-        projectEditModal: document.getElementById('project-edit-modal'),
-        projectForm: document.getElementById('project-form'),
-        addProjectBtn: document.getElementById('add-project-btn'),
-        projectsGrid: document.getElementById('projects-grid'),
-        projectMaterialsContainer: document.getElementById('project-materials-container'),
-        addMaterialBtn: document.getElementById('add-material-btn'),
-
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -176,38 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
+        // Denne funktion vil blive opdateret/fjernet, da materials og wishlist nu håndteres anderledes
         const materialsList = {};
-        state.projects
-            .filter(project => project.status !== 'Afsluttet')
-            .forEach(project => {
-                (project.materials || []).forEach(material => {
-                    const key = material.name.toLowerCase();
-                    materialsList[key] = {
-                        name: material.name,
-                        quantity_to_buy: material.quantity || 1,
-                        unit: material.unit || 'stk',
-                        price: material.price || null,
-                        projectId: project.id,
-                        storeId: 'Byggemarked'
-                    };
-                });
-            });
         state.shoppingLists.materials = materialsList;
 
         const wishlist = {};
-        state.rooms.forEach(room => {
-            (room.wishlist || []).forEach(item => {
-                const key = item.name.toLowerCase();
-                wishlist[key] = {
-                    name: item.name,
-                    price: item.price || null,
-                    url: item.url || null,
-                    roomId: room.id,
-                    quantity_to_buy: 1,
-                    unit: 'stk'
-                };
-            });
-        });
         state.shoppingLists.wishlist = wishlist;
     }
 
@@ -239,15 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#calendar':
                 renderMealPlanner();
                 break;
-            case '#hjem':
-                renderRoomsListPage();
-                renderProjects();
-                break;
-            case '#room-details':
-                if (state.currentlyViewedRoomId) {
-                    renderRoomDetailsPage();
-                }
-                break;
             case '#recipes':
                 renderPageTagFilters();
                 renderRecipes();
@@ -273,8 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_items: 'inventoryItems',
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
-            projects: 'projects',
-            rooms: 'rooms',
             events: 'events',
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
@@ -290,9 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                if (stateKey === 'projects' || stateKey === 'rooms') {
-                    computeDerivedShoppingLists();
-                }
+                computeDerivedShoppingLists();
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -321,9 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.addInventoryItemBtn, 
                         elements.reorderAssistantBtn, 
                         elements.addRecipeBtn, 
-                        elements.addProjectBtn, 
-                        elements.addRoomBtn, 
-                        elements.editRoomBtn, 
                         elements.generateGroceriesBtn, 
                         elements.impulsePurchaseBtn,
                         elements.addExpenseBtn
@@ -362,9 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addInventoryItemBtn, 
             elements.reorderAssistantBtn, 
             elements.addRecipeBtn, 
-            elements.addProjectBtn, 
-            elements.addRoomBtn, 
-            elements.editRoomBtn, 
             elements.generateGroceriesBtn, 
             elements.impulsePurchaseBtn,
             elements.addExpenseBtn
@@ -378,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const [mainHash, subId] = hash.split('/');
             state.currentlyViewedRoomId = subId || null;
 
-            const validHashes = ['#dashboard', '#calendar', '#hjem', '#room-details', '#recipes', '#inventory', '#oekonomi', '#references'];
+            const validHashes = ['#dashboard', '#calendar', '#recipes', '#inventory', '#oekonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -401,11 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
-        initProjects(state, elements);
-        initRooms(state, elements);
         initEvents(state);
         initEconomy(state, elements);
-        initExpenses(state); // NYT: Initialiseret expenses-modulet
     }
 
     init();
