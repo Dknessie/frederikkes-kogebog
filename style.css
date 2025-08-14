@@ -2198,6 +2198,33 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-top: var(--spacing-m);
 }
 
+#net-worth-widget h6 {
+    font-family: var(--body-font);
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin: var(--spacing-m) 0 var(--spacing-s) 0;
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.economy-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.economy-item-row:hover {
+    background-color: var(--secondary-color);
+}
+
+.economy-item-value {
+    font-weight: 600;
+}
+
 @media (max-width: 992px) {
     .economy-dashboard-layout {
         grid-template-columns: 1fr;
