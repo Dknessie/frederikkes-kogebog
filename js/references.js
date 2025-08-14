@@ -43,7 +43,7 @@ export function renderReferencesPage() {
     const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
     dynamicCards.forEach(card => card.remove());
     
-    // RETTET: Genindsat budgetCategories og assetTypes
+    // RETTET: Genindsat budgetCategories og assetTypes, og tilføjet liabilityTypes
     const referenceData = {
         budgetCategories: {
             title: 'Budgetkategorier',
@@ -53,6 +53,11 @@ export function renderReferencesPage() {
         assetTypes: {
             title: 'Aktivtyper',
             items: appState.references.assetTypes || [],
+            isSimpleList: true
+        },
+        liabilityTypes: {
+            title: 'Gældstyper',
+            items: appState.references.liabilityTypes || [],
             isSimpleList: true
         },
         itemCategories: {
