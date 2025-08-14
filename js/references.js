@@ -43,7 +43,18 @@ export function renderReferencesPage() {
     const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
     dynamicCards.forEach(card => card.remove());
     
+    // RETTET: Genindsat budgetCategories og assetTypes
     const referenceData = {
+        budgetCategories: {
+            title: 'Budgetkategorier',
+            items: appState.references.budgetCategories || [],
+            isHierarchical: true
+        },
+        assetTypes: {
+            title: 'Aktivtyper',
+            items: appState.references.assetTypes || [],
+            isSimpleList: true
+        },
         itemCategories: {
             title: 'Varekategorier',
             items: appState.references.itemCategories || [],
