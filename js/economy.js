@@ -63,7 +63,6 @@ export function initEconomyPage(state) {
         attachEventListeners(pageContainer);
     }
     
-    // Sørg for at modals har de nødvendige event listeners
     attachModalEventListeners();
 
     renderEconomyPage();
@@ -162,11 +161,15 @@ function buildPageSkeleton(container) {
                     <p class="empty-state-small">Du har ingen opsparingsmål endnu.</p>
                     <button class="btn btn-secondary" disabled>Administrer Mål</button>
                 </div>
-                <div class="economy-sidebar-widget">
+                <div id="net-worth-widget" class="economy-sidebar-widget">
                     <h5>Formue & Gæld</h5>
                     <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
-                    <button id="manage-assets-btn" class="btn btn-secondary">Administrer Aktiver</button>
-                    <button id="manage-liabilities-btn" class="btn btn-secondary">Administrer Gæld</button>
+                    <div id="assets-list-widget"></div>
+                    <div id="liabilities-list-widget"></div>
+                    <div class="form-actions">
+                        <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
+                        <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
+                    </div>
                 </div>
                 <div class="economy-sidebar-widget">
                     <h5>Faste Poster</h5>
@@ -188,9 +191,16 @@ function attachEventListeners(container) {
             economyState.currentDate.setMonth(economyState.currentDate.getMonth() + 1);
             renderEconomyPage();
         }
-        if (e.target.closest('#manage-assets-btn')) openAssetModal();
-        if (e.target.closest('#manage-liabilities-btn')) openLiabilityModal();
+        if (e.target.closest('#add-asset-btn')) openAssetModal();
+        if (e.target.closest('#add-liability-btn')) openLiabilityModal();
         if (e.target.closest('#manage-fixed-btn')) openFixedExpenseModal();
+
+        // Listeners for clicking on list items to edit
+        const assetItem = e.target.closest('.economy-item-row[data-asset-id]');
+        if (assetItem) openAssetModal(assetItem.dataset.assetId);
+        
+        const liabilityItem = e.target.closest('.economy-item-row[data-liability-id]');
+        if (liabilityItem) openLiabilityModal(liabilityItem.dataset.liabilityId);
     });
 
     const transactionForm = container.querySelector('#transaction-form');
@@ -269,6 +279,8 @@ export function renderEconomyPage() {
     }
 
     renderTransactionsTable(monthlyTransactions);
+    renderAssetsListWidget();
+    renderLiabilitiesListWidget();
 }
 
 function populateDropdowns() {
@@ -315,6 +327,49 @@ function renderTransactionsTable(transactions) {
             </tr>
         `).join('');
 }
+
+function renderAssetsListWidget() {
+    const container = document.getElementById('assets-list-widget');
+    if (!container) return;
+    container.innerHTML = '<h6>Aktiver</h6>';
+    const assets = appState.assets || [];
+    if (assets.length === 0) {
+        container.innerHTML += '<p class="empty-state-small">Ingen aktiver tilføjet.</p>';
+        return;
+    }
+    assets.forEach(asset => {
+        const row = document.createElement('div');
+        row.className = 'economy-item-row';
+        row.dataset.assetId = asset.id;
+        row.innerHTML = `
+            <span>${asset.name}</span>
+            <span class="economy-item-value">${asset.value.toLocaleString('da-DK')} kr.</span>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function renderLiabilitiesListWidget() {
+    const container = document.getElementById('liabilities-list-widget');
+    if (!container) return;
+    container.innerHTML = '<h6>Gæld</h6>';
+    const liabilities = appState.liabilities || [];
+    if (liabilities.length === 0) {
+        container.innerHTML += '<p class="empty-state-small">Ingen gæld tilføjet.</p>';
+        return;
+    }
+    liabilities.forEach(liability => {
+        const row = document.createElement('div');
+        row.className = 'economy-item-row';
+        row.dataset.liabilityId = liability.id;
+        row.innerHTML = `
+            <span>${liability.name}</span>
+            <span class="economy-item-value">${liability.currentBalance.toLocaleString('da-DK')} kr.</span>
+        `;
+        container.appendChild(row);
+    });
+}
+
 
 // --- DATA HÅNDTERING ---
 
