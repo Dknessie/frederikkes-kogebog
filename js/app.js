@@ -13,7 +13,8 @@ import { initReferences, renderReferencesPage, renderHouseholdMembers } from './
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-import { initEconomy, renderEconomyPage } from './economy.js';
+// RETTET: Importerer den korrekte funktion fra det nye economy.js modul
+import { initEconomyPage, renderEconomyPage } from './economy.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -155,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // Denne funktion vil blive opdateret/fjernet, da materials og wishlist nu håndteres anderledes
         const materialsList = {};
         state.shoppingLists.materials = materialsList;
 
@@ -335,7 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initEvents(state);
-        initEconomy(state, elements);
+        // RETTET: Kalder den korrekte funktion
+        initEconomyPage(state);
     }
 
     init();
