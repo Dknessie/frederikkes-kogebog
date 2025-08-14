@@ -142,7 +142,7 @@ function buildPageSkeleton(container) {
                         </div>
                         <div class="form-grid-2-col">
                             <div class="input-group">
-                                <label for="transaction-category">Kategori</label>
+                                <label for="transaction-category">Overkategori</label>
                                 <select id="transaction-category" required></select>
                             </div>
                             <div class="input-group">
@@ -177,7 +177,7 @@ function buildPageSkeleton(container) {
                 </div>
                 
                 <div class="spending-categories-summary">
-                    <h4>Forbrugs Kategorier</h4>
+                    <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
                     <div id="spending-categories-content"></div>
                 </div>
             </div>
@@ -198,6 +198,11 @@ function buildPageSkeleton(container) {
                         <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
                     </div>
                 </div>
+                 <div class="economy-sidebar-widget">
+                    <h5>Faste Poster</h5>
+                     <div id="fixed-posts-list-widget"></div>
+                    <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
+                </div>
             </div>
         </div>
     `;
@@ -216,6 +221,7 @@ function attachEventListeners(container) {
         if (e.target.closest('#add-asset-btn')) openAssetModal();
         if (e.target.closest('#add-liability-btn')) openLiabilityModal();
         if (e.target.closest('#manage-goals-btn')) document.getElementById('edit-budget-modal').classList.remove('hidden');
+        if (e.target.closest('#manage-fixed-btn')) openFixedExpenseModal();
 
         const assetItem = e.target.closest('.economy-item-row[data-asset-id]');
         if (assetItem) openAssetModal(assetItem.dataset.assetId);
@@ -240,6 +246,21 @@ function attachModalEventListeners() {
     if (liabilityForm) liabilityForm.addEventListener('submit', handleSaveLiability);
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
     if (deleteLiabilityBtn) deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
+
+    const fixedExpenseForm = document.getElementById('fixed-expense-form');
+    if (fixedExpenseForm) fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
+    const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
+    if (deleteFixedExpenseBtn) deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
+
+    const fixedMainCategorySelect = document.getElementById('fixed-expense-main-category');
+    if (fixedMainCategorySelect) {
+        fixedMainCategorySelect.addEventListener('change', () => {
+             populateSubCategoryDropdown(
+                document.getElementById('fixed-expense-sub-category'), 
+                fixedMainCategorySelect.value
+             );
+        });
+    }
 }
 
 // --- RENDERING & BEREGNING ---
@@ -260,8 +281,23 @@ export function renderEconomyPage() {
         return expDate.getFullYear() === year && expDate.getMonth() === month;
     });
 
-    const totalIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const totalExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+    const activeFixedPosts = (appState.fixedExpenses || []).filter(fp => {
+        const startDate = new Date(fp.startDate);
+        const endDate = fp.endDate ? new Date(fp.endDate) : null;
+        const viewDate = new Date(year, month, 15);
+        if (startDate > viewDate) return false;
+        if (endDate && endDate < viewDate) return false;
+        return true;
+    });
+
+    const totalFixedIncome = activeFixedPosts.filter(fp => fp.type === 'income').reduce((sum, p) => sum + p.amount, 0);
+    const totalFixedExpense = activeFixedPosts.filter(fp => fp.type === 'expense').reduce((sum, p) => sum + p.amount, 0);
+
+    const totalVariableIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const totalVariableExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+
+    const totalIncome = totalVariableIncome + totalFixedIncome;
+    const totalExpense = totalVariableExpense + totalFixedExpense;
     const monthlyDisposable = totalIncome - totalExpense;
 
     document.getElementById('total-income').textContent = `${totalIncome.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
@@ -274,7 +310,8 @@ export function renderEconomyPage() {
     renderTransactionsTable(monthlyTransactions);
     renderAssetsListWidget();
     renderLiabilitiesListWidget(projected.liabilities);
-    renderSpendingCategories();
+    renderSpendingCategories(activeFixedPosts);
+    renderFixedPostsWidget(activeFixedPosts);
 }
 
 function calculateProjectedValues(targetDate) {
@@ -313,10 +350,10 @@ function populateDropdowns() {
     const categorySelect = document.getElementById('transaction-category');
     const personSelect = document.getElementById('transaction-person');
 
-    const budgetCategories = (appState.references.budgetCategories || []).flatMap(cat => 
-        (typeof cat === 'object' && cat.subcategories) ? cat.subcategories.map(sub => `${cat.name}: ${sub}`) : []
+    const budgetCategories = (appState.references.budgetCategories || []).map(cat => 
+        (typeof cat === 'object') ? cat.name : cat
     );
-    categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
+    categorySelect.innerHTML = '<option value="">Vælg overkategori...</option>';
     budgetCategories.sort().forEach(cat => {
         const option = new Option(cat, cat);
         categorySelect.add(option);
@@ -335,7 +372,7 @@ function renderTransactionsTable(transactions) {
     if (!tableBody) return;
 
     if (transactions.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="empty-state-small">Ingen bevægelser for denne måned.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="5" class="empty-state-small">Ingen variable bevægelser for denne måned.</td></tr>';
         return;
     }
 
@@ -396,12 +433,35 @@ function renderLiabilitiesListWidget(liabilitiesToRender) {
     });
 }
 
-function renderSpendingCategories() {
+function renderFixedPostsWidget(fixedPosts) {
+    const container = document.getElementById('fixed-posts-list-widget');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!fixedPosts || fixedPosts.length === 0) {
+        container.innerHTML = '<p class="empty-state-small">Ingen faste poster endnu.</p>';
+        return;
+    }
+    fixedPosts.forEach(post => {
+        const row = document.createElement('div');
+        row.className = 'economy-item-row';
+        // Note: We don't add a data-id here as the whole widget is a button
+        row.innerHTML = `
+            <span>${post.description}</span>
+            <span class="economy-item-value ${post.type === 'income' ? 'income-amount' : 'expense-amount'}">
+                ${post.amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.
+            </span>
+        `;
+        container.appendChild(row);
+    });
+}
+
+
+function renderSpendingCategories(fixedExpenses) {
     const container = document.getElementById('spending-categories-content');
     if (!container) return;
 
-    const fixedExpenses = appState.fixedExpenses || [];
-    const totalFixed = fixedExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const fixedSpending = (fixedExpenses || []).filter(exp => exp.type === 'expense');
+    const totalFixed = fixedSpending.reduce((sum, exp) => sum + exp.amount, 0);
 
     if (totalFixed === 0) {
         container.innerHTML = '<p class="empty-state-small">Ingen faste udgifter at vise.</p>';
@@ -409,7 +469,7 @@ function renderSpendingCategories() {
     }
 
     const categories = {};
-    fixedExpenses.forEach(exp => {
+    fixedSpending.forEach(exp => {
         const key = exp.mainCategory;
         if (!categories[key]) categories[key] = 0;
         categories[key] += exp.amount;
@@ -437,15 +497,14 @@ function renderSpendingCategories() {
 async function handleSaveTransaction(e) {
     e.preventDefault();
     const categoryValue = document.getElementById('transaction-category').value;
-    const [mainCategory, subCategory] = categoryValue ? categoryValue.split(': ') : [null, null];
-
+    
     const transactionData = {
         amount: parseFloat(document.getElementById('transaction-amount').value),
         date: Timestamp.fromDate(new Date(document.getElementById('transaction-date').value)),
         description: document.getElementById('transaction-description').value.trim(),
         type: document.getElementById('transaction-type').value,
-        mainCategory: mainCategory ? mainCategory.trim() : null,
-        subCategory: subCategory ? subCategory.trim() : null,
+        mainCategory: categoryValue,
+        subCategory: null, // Simplified
         person: document.getElementById('transaction-person').value,
         userId: appState.currentUser.uid,
     };
@@ -612,5 +671,80 @@ async function handleDeleteLiability() {
         showNotification({title: "Slettet", message: "Gældsposten er blevet slettet."});
     } catch (error) {
         handleError(error, "Gældsposten kunne ikke slettes.", "deleteLiability");
+    }
+}
+
+function openFixedExpenseModal(expenseId = null) {
+    const modal = document.getElementById('fixed-expense-modal');
+    const form = document.getElementById('fixed-expense-form');
+    form.reset();
+    const isEditing = !!expenseId;
+    const expense = isEditing ? appState.fixedExpenses.find(e => e.id === expenseId) : null;
+
+    document.getElementById('fixed-expense-id-edit').value = expenseId || '';
+    modal.querySelector('h3').textContent = isEditing ? 'Rediger Fast Post' : 'Ny Fast Post';
+    document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
+
+    populateMainCategoryDropdown(document.getElementById('fixed-expense-main-category'), expense?.mainCategory);
+    populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), expense?.mainCategory, expense?.subCategory);
+
+    if (isEditing) {
+        document.getElementById('fixed-expense-description').value = expense.description;
+        document.getElementById('fixed-expense-amount').value = expense.amount;
+        document.getElementById('fixed-expense-type').value = expense.type;
+        document.getElementById('fixed-expense-start-date-edit').value = expense.startDate;
+        document.getElementById('fixed-expense-end-date-edit').value = expense.endDate || '';
+    } else {
+        document.getElementById('fixed-expense-start-date-edit').value = formatDate(new Date());
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+async function handleSaveFixedExpense(e) {
+    e.preventDefault();
+    const expenseId = document.getElementById('fixed-expense-id-edit').value;
+    const expenseData = {
+        description: document.getElementById('fixed-expense-description').value.trim(),
+        amount: parseFloat(document.getElementById('fixed-expense-amount').value),
+        type: document.getElementById('fixed-expense-type').value,
+        mainCategory: document.getElementById('fixed-expense-main-category').value,
+        subCategory: document.getElementById('fixed-expense-sub-category').value,
+        startDate: document.getElementById('fixed-expense-start-date-edit').value,
+        endDate: document.getElementById('fixed-expense-end-date-edit').value || null,
+        userId: appState.currentUser.uid,
+    };
+
+    if (!expenseData.description || isNaN(expenseData.amount) || !expenseData.mainCategory) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Beskrivelse, beløb og kategori er påkrævet."});
+        return;
+    }
+
+    try {
+        if (expenseId) {
+            await updateDoc(doc(db, 'fixed_expenses', expenseId), expenseData);
+        } else {
+            await addDoc(collection(db, 'fixed_expenses'), expenseData);
+        }
+        document.getElementById('fixed-expense-modal').classList.add('hidden');
+        showNotification({title: "Gemt!", message: "Fast post er gemt."});
+    } catch (error) {
+        handleError(error, "Kunne ikke gemme fast post.", "saveFixedExpense");
+    }
+}
+
+async function handleDeleteFixedExpense() {
+    const expenseId = document.getElementById('fixed-expense-id-edit').value;
+    if (!expenseId) return;
+
+    const confirmed = await showNotification({title: "Slet Fast Post", message: "Er du sikker?", type: 'confirm'});
+    if (!confirmed) return;
+
+    try {
+        await deleteDoc(doc(db, 'fixed_expenses', expenseId));
+        document.getElementById('fixed-expense-modal').classList.add('hidden');
+        showNotification({title: "Slettet", message: "Den faste post er blevet slettet."});
+    } catch (error) {
+        handleError(error, "Posten kunne ikke slettes.", "handleDeleteFixedExpense");
     }
 }
