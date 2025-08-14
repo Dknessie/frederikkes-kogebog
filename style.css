@@ -2136,7 +2136,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 .economy-summary-card,
 .new-transaction-form,
 .transactions-list,
-.economy-sidebar-widget {
+.economy-sidebar-widget,
+.spending-categories-summary {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
     padding: var(--spacing-l);
@@ -2159,7 +2160,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .new-transaction-form h4,
 .transactions-list h4,
-.economy-sidebar-widget h5 {
+.economy-sidebar-widget h5,
+.spending-categories-summary h4 {
     margin-top: 0;
     color: var(--text-color);
     font-family: var(--body-font);
@@ -2197,6 +2199,15 @@ input:checked + .slider:before { transform: translateX(22px); }
     width: 100%;
     margin-top: var(--spacing-m);
 }
+#net-worth-widget .form-actions {
+    flex-direction: column;
+    gap: var(--spacing-s);
+}
+#net-worth-widget .btn {
+    width: 100%;
+    margin: 0;
+}
+
 
 #net-worth-widget h6 {
     font-family: var(--body-font);
@@ -2224,6 +2235,37 @@ input:checked + .slider:before { transform: translateX(22px); }
 .economy-item-value {
     font-weight: 600;
 }
+
+.category-summary-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+}
+.category-summary-item .category-name {
+    width: 120px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.category-summary-item .category-bar-container {
+    flex-grow: 1;
+    background-color: #eee;
+    border-radius: var(--border-radius);
+    height: 20px;
+}
+.category-summary-item .category-bar {
+    background-color: var(--accent-color);
+    height: 100%;
+    border-radius: var(--border-radius);
+}
+.category-summary-item .category-amount {
+    font-weight: 600;
+    width: 100px;
+    text-align: right;
+}
+
 
 @media (max-width: 992px) {
     .economy-dashboard-layout {
