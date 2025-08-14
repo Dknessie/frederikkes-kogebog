@@ -195,7 +195,6 @@ function attachEventListeners(container) {
         if (e.target.closest('#add-liability-btn')) openLiabilityModal();
         if (e.target.closest('#manage-fixed-btn')) openFixedExpenseModal();
 
-        // Listeners for clicking on list items to edit
         const assetItem = e.target.closest('.economy-item-row[data-asset-id]');
         if (assetItem) openAssetModal(assetItem.dataset.assetId);
         
@@ -210,19 +209,16 @@ function attachEventListeners(container) {
 }
 
 function attachModalEventListeners() {
-    // Asset Modal
     const assetForm = document.getElementById('asset-form');
     if (assetForm) assetForm.addEventListener('submit', handleSaveAsset);
     const deleteAssetBtn = document.getElementById('delete-asset-btn');
     if (deleteAssetBtn) deleteAssetBtn.addEventListener('click', handleDeleteAsset);
 
-    // Liability Modal
     const liabilityForm = document.getElementById('liability-form');
     if (liabilityForm) liabilityForm.addEventListener('submit', handleSaveLiability);
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
     if (deleteLiabilityBtn) deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
 
-    // Fixed Expense Modal
     const fixedExpenseForm = document.getElementById('fixed-expense-form');
     if (fixedExpenseForm) fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
     const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
@@ -239,7 +235,7 @@ function attachModalEventListeners() {
     }
 }
 
-// --- RENDERING ---
+// --- RENDERING & BEREGNING ---
 
 export function renderEconomyPage() {
     const monthDisplay = document.getElementById('current-month-display');
@@ -264,11 +260,10 @@ export function renderEconomyPage() {
     document.getElementById('total-income').textContent = `${totalIncome.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     document.getElementById('total-expense').textContent = `${totalExpense.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     document.getElementById('monthly-disposable').textContent = `${monthlyDisposable.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
-
-    const totalAssets = (appState.assets || []).reduce((sum, asset) => sum + asset.value, 0);
-    const totalLiabilities = (appState.liabilities || []).reduce((sum, l) => sum + l.currentBalance, 0);
-    const netWorth = totalAssets - totalLiabilities;
-    document.getElementById('net-worth-summary').innerHTML = `<strong>Beregnet Friværdi:</strong> ${netWorth.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
+    
+    // NYT: Beregn og vis fremskrivning af formue
+    const projected = calculateProjectedValues(economyState.currentDate);
+    document.getElementById('net-worth-summary').innerHTML = `<strong>Beregnet Friværdi:</strong> ${projected.netWorth.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
     
     const fixedSummary = document.getElementById('fixed-expenses-summary');
     const totalFixed = (appState.fixedExpenses || []).reduce((sum, fe) => sum + fe.amount, 0);
@@ -280,7 +275,38 @@ export function renderEconomyPage() {
 
     renderTransactionsTable(monthlyTransactions);
     renderAssetsListWidget();
-    renderLiabilitiesListWidget();
+    renderLiabilitiesListWidget(projected.liabilities); // Brug fremskrevne værdier
+}
+
+function calculateProjectedValues(targetDate) {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    targetDate.setHours(0,0,0,0);
+
+    const projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || [])); // Deep copy
+
+    if (targetDate > today) {
+        const repayments = (appState.fixedExpenses || []).filter(fe => fe.isRepayment && fe.linkedLiabilityId);
+        
+        let currentDate = new Date(today);
+        currentDate.setMonth(currentDate.getMonth() + 1, 1); // Start from the beginning of next month
+
+        while (currentDate <= targetDate) {
+            repayments.forEach(repayment => {
+                const liability = projectedLiabilities.find(l => l.id === repayment.linkedLiabilityId);
+                if (liability) {
+                    liability.currentBalance -= repayment.amount;
+                }
+            });
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+    }
+
+    const totalAssets = (appState.assets || []).reduce((sum, asset) => sum + asset.value, 0);
+    const totalProjectedLiabilities = projectedLiabilities.reduce((sum, l) => sum + l.currentBalance, 0);
+    const netWorth = totalAssets - totalProjectedLiabilities;
+
+    return { liabilities: projectedLiabilities, netWorth };
 }
 
 function populateDropdowns() {
@@ -349,11 +375,11 @@ function renderAssetsListWidget() {
     });
 }
 
-function renderLiabilitiesListWidget() {
+function renderLiabilitiesListWidget(liabilitiesToRender) {
     const container = document.getElementById('liabilities-list-widget');
     if (!container) return;
     container.innerHTML = '<h6>Gæld</h6>';
-    const liabilities = appState.liabilities || [];
+    const liabilities = liabilitiesToRender || appState.liabilities || [];
     if (liabilities.length === 0) {
         container.innerHTML += '<p class="empty-state-small">Ingen gæld tilføjet.</p>';
         return;
