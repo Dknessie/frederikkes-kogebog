@@ -26,21 +26,20 @@ function formatDate(date) {
 /**
  * Initialiserer hele økonomisiden
  * @param {object} state - Applikationens globale state-objekt
- * @param {object} elements - Applikationens globale DOM-element-cache
  */
 export function initEconomyPage(state) {
     appState = state;
     const pageContainer = document.getElementById('oekonomi');
     if (!pageContainer) return;
 
-    // Byg sidens skelet én gang
-    buildPageSkeleton(pageContainer);
+    // Byg sidens skelet én gang, hvis den ikke allerede findes
+    if (!pageContainer.querySelector('.economy-dashboard-layout')) {
+        buildPageSkeleton(pageContainer);
+        attachEventListeners(pageContainer);
+    }
 
-    // Tilføj event listeners
-    attachEventListeners(pageContainer);
-
-    // Render indholdet
-    renderEconomyDashboard();
+    // Render altid indholdet, når siden vises
+    renderEconomyPage();
 }
 
 /**
@@ -149,7 +148,7 @@ function buildPageSkeleton(container) {
                 </div>
                 <div class="economy-sidebar-widget">
                     <h5>Faste Poster</h5>
-                     <p class="empty-state-small">Du har ingen faste poster endnu.</p>
+                     <p id="fixed-expenses-summary" class="empty-state-small">Du har ingen faste poster endnu.</p>
                     <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
                 </div>
             </div>
@@ -165,19 +164,17 @@ function attachEventListeners(container) {
     container.addEventListener('click', (e) => {
         if (e.target.closest('#prev-month-btn')) {
             economyState.currentDate.setMonth(economyState.currentDate.getMonth() - 1);
-            renderEconomyDashboard();
+            renderEconomyPage();
         }
         if (e.target.closest('#next-month-btn')) {
             economyState.currentDate.setMonth(economyState.currentDate.getMonth() + 1);
-            renderEconomyDashboard();
+            renderEconomyPage();
         }
         if (e.target.closest('#manage-assets-btn')) {
-            // Denne funktionalitet findes i den gamle economy.js, men skal genimplementeres
-            // For nu åbner vi blot en notifikation
-            showNotification({ title: "Kommer Snart", message: "Administration af aktiver og gæld vil blive genimplementeret." });
+            document.getElementById('asset-modal').classList.remove('hidden');
         }
          if (e.target.closest('#manage-fixed-btn')) {
-            showNotification({ title: "Kommer Snart", message: "Administration af faste poster vil blive genimplementeret." });
+            document.getElementById('fixed-expense-modal').classList.remove('hidden');
         }
     });
 
@@ -190,7 +187,7 @@ function attachEventListeners(container) {
 /**
  * Renderer alt dynamisk indhold på dashboardet (tal, lister, etc.)
  */
-function renderEconomyDashboard() {
+export function renderEconomyPage() {
     // Opdater månedsvælger
     const monthDisplay = document.getElementById('current-month-display');
     if (monthDisplay) {
@@ -204,20 +201,18 @@ function renderEconomyDashboard() {
     populateDropdowns();
     document.getElementById('transaction-date').value = formatDate(new Date());
 
-
-    // Filtrer transaktioner for den valgte måned
     const year = economyState.currentDate.getFullYear();
     const month = economyState.currentDate.getMonth();
     
-    // Note: Vi bruger den gamle 'expenses' collection indtil en ny 'transactions' er fuldt implementeret
+    // Filtrer transaktioner for den valgte måned
     const monthlyTransactions = (appState.expenses || []).filter(exp => {
-        const expDate = exp.date.toDate(); // Konverter Firestore Timestamp til Date
+        const expDate = exp.date.toDate();
         return expDate.getFullYear() === year && expDate.getMonth() === month;
     });
 
     // Beregn og vis summer
-    const totalIncome = 0; // Skal implementeres med 'transactions'
-    const totalExpense = monthlyTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const totalIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    const totalExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const monthlyDisposable = totalIncome - totalExpense;
 
     document.getElementById('total-income').textContent = `${totalIncome.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
@@ -229,6 +224,16 @@ function renderEconomyDashboard() {
     const totalLiabilities = (appState.liabilities || []).reduce((sum, l) => sum + l.currentBalance, 0);
     const netWorth = totalAssets - totalLiabilities;
     document.getElementById('net-worth-summary').innerHTML = `<strong>Beregnet Friværdi:</strong> ${netWorth.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
+    
+    // Opdater faste poster widget
+    const fixedSummary = document.getElementById('fixed-expenses-summary');
+    const totalFixed = (appState.fixedExpenses || []).reduce((sum, fe) => sum + fe.amount, 0);
+    if (totalFixed > 0) {
+        fixedSummary.innerHTML = `<strong>Total:</strong> ${totalFixed.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr./md.`;
+    } else {
+        fixedSummary.textContent = 'Du har ingen faste poster endnu.';
+    }
+
 
     // Render transaktionstabel
     renderTransactionsTable(monthlyTransactions);
@@ -243,7 +248,7 @@ function populateDropdowns() {
 
     // Udfyld kategorier
     const budgetCategories = (appState.references.budgetCategories || []).flatMap(cat => 
-        (cat.subcategories || []).map(sub => `${cat.name}: ${sub}`)
+        (typeof cat === 'object' && cat.subcategories) ? cat.subcategories.map(sub => `${cat.name}: ${sub}`) : []
     );
     categorySelect.innerHTML = '<option value="">Vælg kategori...</option>';
     budgetCategories.sort().forEach(cat => {
@@ -282,7 +287,7 @@ function renderTransactionsTable(transactions) {
                 <td>${t.person || 'Fælles'}</td>
                 <td>${t.subCategory ? t.subCategory : t.mainCategory}</td>
                 <td class="text-right ${t.type === 'income' ? 'income-amount' : 'expense-amount'}">
-                    -${t.amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.
+                    ${t.type === 'expense' ? '-' : ''}${t.amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.
                 </td>
             </tr>
         `).join('');
@@ -295,16 +300,15 @@ function renderTransactionsTable(transactions) {
 async function handleSaveTransaction(e) {
     e.preventDefault();
 
-    const [mainCategory, subCategory] = document.getElementById('transaction-category').value.split(': ');
+    const categoryValue = document.getElementById('transaction-category').value;
+    const [mainCategory, subCategory] = categoryValue ? categoryValue.split(': ') : [null, null];
 
-    // Note: Gemmer til den gamle 'expenses' collection for nu.
-    // Dette skal ændres til en ny 'transactions' collection.
     const transactionData = {
         amount: parseFloat(document.getElementById('transaction-amount').value),
         date: Timestamp.fromDate(new Date(document.getElementById('transaction-date').value)),
         description: document.getElementById('transaction-description').value.trim(),
-        type: document.getElementById('transaction-type').value, // 'expense' or 'income'
-        mainCategory: mainCategory.trim(),
+        type: document.getElementById('transaction-type').value,
+        mainCategory: mainCategory ? mainCategory.trim() : null,
         subCategory: subCategory ? subCategory.trim() : null,
         person: document.getElementById('transaction-person').value,
         userId: appState.currentUser.uid,
@@ -316,6 +320,7 @@ async function handleSaveTransaction(e) {
     }
 
     try {
+        // Fremadrettet skal dette gemmes i en 'transactions' collection
         await addDoc(collection(db, 'expenses'), transactionData);
         showNotification({ title: "Gemt!", message: "Din postering er blevet registreret." });
         e.target.reset(); // Nulstil formularen
