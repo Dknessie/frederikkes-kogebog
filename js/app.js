@@ -9,12 +9,12 @@ import { initInventory, renderInventory, setReferencesLoaded } from './inventory
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
-import { initReferences, renderReferencesPage, renderHouseholdMembers } from './references.js';
+import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
+// FJERNEDE IMPORTS for rooms.js og projects.js
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-// RETTET: Importerer den korrekte funktion fra det nye economy.js modul
-import { initEconomyPage, renderEconomyPage } from './economy.js';
+import { initEconomy, renderEconomyPage } from './economy.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
+        // FJERNEDE projects og rooms fra state
         assets: [],
         liabilities: [],
         economySettings: {},
@@ -44,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        currentlyViewedRoomId: null,
+        // FJERNEDE currentlyViewedRoomId
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -58,6 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks: document.querySelectorAll('.desktop-nav .nav-link'),
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
+        
+        // FJERNEDE alle DOM elementer relateret til rooms og projects
         
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
@@ -151,16 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // NYT: Knap tilføjet til element-cache
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
+    // FJERNEDE LOGIKKEN for at udlede materialer og ønskelister
     function computeDerivedShoppingLists() {
-        const materialsList = {};
-        state.shoppingLists.materials = materialsList;
-
-        const wishlist = {};
-        state.shoppingLists.wishlist = wishlist;
+        // Denne funktion er nu tom, da de afledte lister kom fra rooms og projects
+        state.shoppingLists.materials = {};
+        state.shoppingLists.wishlist = {};
     }
 
 
@@ -178,8 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // This function will be called to re-render the content of the current page
-    // whenever data is updated.
     function renderCurrentPage() {
         const hash = window.location.hash || '#dashboard';
         const [mainHash] = hash.split('/');
@@ -191,6 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#calendar':
                 renderMealPlanner();
                 break;
+            case '#hjem':
+                // Denne side er nu tom og klar til nyt indhold
+                break;
+            // FJERNEDE '#room-details' case
             case '#recipes':
                 renderPageTagFilters();
                 renderRecipes();
@@ -216,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_items: 'inventoryItems',
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
+            // FJERNEDE 'projects' og 'rooms' listeners
             events: 'events',
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
@@ -231,7 +235,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                computeDerivedShoppingLists();
+                // FJERNEDE check for projects/rooms
+                computeDerivedShoppingLists(); // Kald denne for at rydde listerne
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -308,10 +313,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleNavigation(hash) {
         try {
-            const [mainHash, subId] = hash.split('/');
-            state.currentlyViewedRoomId = subId || null;
-
-            const validHashes = ['#dashboard', '#calendar', '#recipes', '#inventory', '#oekonomi', '#references'];
+            // Simpelt hash check uden sub-sider
+            const mainHash = hash.split('/')[0];
+            
+            const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#oekonomi', '#references'];
             const currentHash = validHashes.includes(mainHash) ? mainHash : '#dashboard';
             
             navigateTo(currentHash);
@@ -334,9 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
+        // FJERNEDE init for projects og rooms
         initEvents(state);
-        // RETTET: Kalder den korrekte funktion
-        initEconomyPage(state);
+        initEconomy(state, elements);
     }
 
     init();
