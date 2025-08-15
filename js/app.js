@@ -11,10 +11,10 @@ import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
-// FJERNEDE IMPORTS for rooms.js og projects.js
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-import { initEconomy, renderEconomyPage } from './economy.js';
+// RETTELSE: Importerer det korrekte funktionsnavn fra din economy.js fil
+import { initEconomyPage } from './economy.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -25,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
-        // FJERNEDE projects og rooms fra state
         assets: [],
         liabilities: [],
         economySettings: {},
@@ -45,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         activeRecipeFilterTags: new Set(),
         currentDate: new Date(),
         currentlyViewedRecipeId: null,
-        // FJERNEDE currentlyViewedRoomId
         recipeFormImage: { type: null, data: null },
         listeners: {}
     };
@@ -59,8 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks: document.querySelectorAll('.desktop-nav .nav-link'),
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
-        
-        // FJERNEDE alle DOM elementer relateret til rooms og projects
         
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
@@ -157,9 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
-    // FJERNEDE LOGIKKEN for at udlede materialer og ønskelister
     function computeDerivedShoppingLists() {
-        // Denne funktion er nu tom, da de afledte lister kom fra rooms og projects
         state.shoppingLists.materials = {};
         state.shoppingLists.wishlist = {};
     }
@@ -193,7 +187,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case '#hjem':
                 // Denne side er nu tom og klar til nyt indhold
                 break;
-            // FJERNEDE '#room-details' case
             case '#recipes':
                 renderPageTagFilters();
                 renderRecipes();
@@ -202,7 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderInventory();
                 break;
             case '#oekonomi':
-                renderEconomyPage();
+                // RETTELSE: Kalder den korrekte funktion fra din economy.js
+                initEconomyPage(state);
                 break;
             case '#references':
                 renderReferencesPage();
@@ -219,7 +213,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_items: 'inventoryItems',
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
-            // FJERNEDE 'projects' og 'rooms' listeners
             events: 'events',
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
@@ -235,8 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
                 }
-                // FJERNEDE check for projects/rooms
-                computeDerivedShoppingLists(); // Kald denne for at rydde listerne
+                computeDerivedShoppingLists();
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -313,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function handleNavigation(hash) {
         try {
-            // Simpelt hash check uden sub-sider
             const mainHash = hash.split('/')[0];
             
             const validHashes = ['#dashboard', '#calendar', '#hjem', '#recipes', '#inventory', '#oekonomi', '#references'];
@@ -339,9 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
-        // FJERNEDE init for projects og rooms
         initEvents(state);
-        initEconomy(state, elements);
+        // RETTELSE: Kalder den korrekte funktion fra din economy.js
+        initEconomyPage(state);
     }
 
     init();
