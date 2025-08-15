@@ -140,26 +140,25 @@ function renderSidebar() {
         `).join('');
 
     appElements.hjemmetSidebar.innerHTML = `
-        <nav class="hjemmet-nav">
-            <div class="hjemmet-nav-section">
-                <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'oversigt' ? 'active' : ''}" data-view="oversigt">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span>Oversigt</span>
-                </a>
-                <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'onskeliste' ? 'active' : ''}" data-view="onskeliste">
-                    <i class="fas fa-gift"></i>
-                    <span>Ønskeliste</span>
-                </a>
-            </div>
-            <div class="hjemmet-nav-section">
-                <h4 class="hjemmet-nav-header">Rum</h4>
-                ${roomLinks}
-                <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>Tilføj Rum</span>
-                </a>
-            </div>
-        </nav>
+        <div class="hjemmet-nav-section">
+             <h4 class="hjemmet-nav-header">Mit Hjem</h4>
+            <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'oversigt' ? 'active' : ''}" data-view="oversigt">
+                <i class="fas fa-home"></i>
+                <span>Oversigt</span>
+            </a>
+            <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'onskeliste' ? 'active' : ''}" data-view="onskeliste">
+                <i class="fas fa-gift"></i>
+                <span>Ønskeliste</span>
+            </a>
+        </div>
+        <div class="hjemmet-nav-section">
+            <h4 class="hjemmet-nav-header">Rum</h4>
+            ${roomLinks}
+            <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
+                <i class="fas fa-plus-circle"></i>
+                <span>Tilføj Rum</span>
+            </a>
+        </div>
     `;
 }
 
@@ -186,17 +185,23 @@ function renderMainContent() {
  * Bygger skelettet til Oversigt-dashboardet.
  */
 function renderOversigtDashboard() {
+    const today = new Date();
+    const dateString = today.toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
     appElements.hjemmetMainContent.innerHTML = `
+        <div class="room-header">
+            <h2>Oversigt</h2>
+            <p>Dine vigtigste opgaver og påmindelser for i dag, ${dateString}.</p>
+        </div>
         <div class="hjemmet-oversigt-grid">
             <div id="watering-widget" class="hjemmet-widget"></div>
             <div id="reminders-widget" class="hjemmet-widget"></div>
-            <div id="maintenance-widget" class="hjemmet-widget"></div>
-            <div id="active-projects-widget" class="hjemmet-widget"></div>
+            <div id="wishlist-widget" class="hjemmet-widget"></div>
         </div>
+        <div id="active-projects-widget" class="hjemmet-widget"></div>
     `;
     renderWateringWidget();
     renderRemindersWidget();
-    renderMaintenanceWidget();
+    renderWishlistWidget();
     renderActiveProjectsWidget();
 }
 
@@ -226,11 +231,11 @@ function renderWateringWidget() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const daysLeft = Math.ceil((plant.nextWateringDate - today) / (1000 * 60 * 60 * 24));
-            let statusText = `om ${daysLeft} dage`;
+            let statusText = `${plant.nextWateringDate.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}`;
             let statusClass = '';
 
             if (daysLeft <= 0) {
-                statusText = 'I dag!';
+                statusText = 'I dag';
                 statusClass = 'status-red';
             } else if (daysLeft === 1) {
                 statusText = 'I morgen';
@@ -239,13 +244,11 @@ function renderWateringWidget() {
             content += `
                 <li class="widget-list-item">
                     <div class="item-main-info">
-                        <span class="item-title">${plant.name}</span>
-                        <span class="item-subtitle">${plant.room}</span>
+                        <span class="item-title">${plant.name} (${plant.room})</span>
                     </div>
                     <div class="item-status ${statusClass}">
                         <span>${statusText}</span>
                     </div>
-                    <button class="btn btn-secondary btn-small water-plant-btn" data-plant-id="${plant.id}">Vandet</button>
                 </li>
             `;
         });
@@ -268,7 +271,7 @@ function renderRemindersWidget() {
     } else {
         content += '<ul class="widget-list">';
         reminders.forEach(r => {
-            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${r.text}</span><span class="item-subtitle">${r.room}</span></div></li>`;
+            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${r.text} (${r.room})</span></div></li>`;
         });
         content += '</ul>';
     }
@@ -276,31 +279,20 @@ function renderRemindersWidget() {
 }
 
 /**
- * NYT: Renderer "Vedligehold" widget.
+ * NYT: Renderer "Ønskeliste" widget.
  */
-function renderMaintenanceWidget() {
-    const container = document.getElementById('maintenance-widget');
+function renderWishlistWidget() {
+    const container = document.getElementById('wishlist-widget');
     if (!container) return;
-    // Viser de første 5 opgaver, kan udvides til at sortere efter 'næste gang'
-    const maintenanceTasks = (appState.maintenance || []).slice(0, 5);
+    const wishlistItems = Object.values(appState.shoppingLists.wishlist || {}).slice(0, 5);
 
-    let content = '<h4><i class="fas fa-tools"></i> Regelmæssig Vedligehold</h4>';
-    if(maintenanceTasks.length === 0) {
-        content += `<p class="empty-state-small">Ingen vedligeholdelsesopgaver defineret.</p>`;
+    let content = '<h4><i class="fas fa-gift"></i> Seneste Ønsker</h4>';
+    if(wishlistItems.length === 0) {
+        content += `<p class="empty-state-small">Ønskelisten er tom.</p>`;
     } else {
         content += '<ul class="widget-list">';
-        maintenanceTasks.forEach(task => {
-            content += `
-                <li class="widget-list-item">
-                    <div class="item-main-info">
-                        <span class="item-title">${task.task}</span>
-                        <span class="item-subtitle">${task.room}</span>
-                    </div>
-                    <div class="item-status">
-                        <span>Hver ${task.interval} dage</span>
-                    </div>
-                </li>
-            `;
+        wishlistItems.forEach(item => {
+            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${item.name}</span></div></li>`;
         });
         content += '</ul>';
     }
