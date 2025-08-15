@@ -15,6 +15,8 @@ import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomyPage } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
+// OPDATERING: Importer det nye projects modul
+import { initProjects } from './projects.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -158,18 +160,22 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // OPDATERING: Tilføjet elementer for Hjemmet modals
+        // Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         wishlistModal: document.getElementById('wishlist-item-modal'),
         wishlistForm: document.getElementById('wishlist-item-form'),
+        // OPDATERING: Tilføjet elementer for projekt-modal
+        projectEditModal: document.getElementById('project-edit-modal'),
+        projectForm: document.getElementById('project-form'),
+        projectMaterialsContainer: document.getElementById('project-materials-container'),
+        addMaterialBtn: document.getElementById('add-material-btn'),
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
     function computeDerivedShoppingLists() {
         state.shoppingLists.materials = {};
-        // Ønskelisten er nu global og administreres direkte, så vi fjerner udledningen herfra.
     }
 
 
@@ -260,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (stateKey === 'shoppingLists') {
                     state.shoppingLists.groceries = data.groceries || {};
-                    state.shoppingLists.wishlist = data.wishlist || {}; // Sørg for at hente den globale ønskeliste
+                    state.shoppingLists.wishlist = data.wishlist || {}; 
                 } else if (stateKey === 'mealPlan') {
                     const { userId, ...planData } = data;
                     state.mealPlan = planData;
@@ -349,6 +355,8 @@ document.addEventListener('DOMContentLoaded', () => {
         initEvents(state);
         initEconomyPage(state);
         initHjemmet(state, elements);
+        // OPDATERING: Initialiser det nye projects modul
+        initProjects(state, elements);
     }
 
     init();
