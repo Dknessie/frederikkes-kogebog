@@ -2108,6 +2108,9 @@ input:checked + .slider:before { transform: translateX(22px); }
 .hjemmet-nav-link {
     color: var(--hjem-sidebar-text);
     font-weight: 500;
+    padding: var(--spacing-m); /* Tilføjet padding */
+    border-radius: var(--border-radius); /* Tilføjet border-radius */
+    transition: background-color 0.2s ease, color 0.2s ease; /* Tilføjet transition */
 }
 .hjemmet-nav-link:hover {
     background-color: var(--hjem-bg-color);
