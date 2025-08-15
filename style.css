@@ -2244,6 +2244,11 @@ input:checked + .slider:before { transform: translateX(22px); }
     cursor: pointer;
     transition: all 0.2s ease;
     font-family: var(--body-font);
+    font-size: var(--small-font-size);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-s);
 }
 .room-tab:hover:not(.active) {
     background-color: var(--hjem-bg-color);
@@ -2271,13 +2276,20 @@ input:checked + .slider:before { transform: translateX(22px); }
     background-color: var(--hjem-widget-bg);
     border-color: var(--hjem-widget-border);
     box-shadow: var(--shadow);
+    padding: var(--spacing-l);
+    border: 1px solid var(--hjem-widget-border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .hjemmet-card:hover {
     box-shadow: var(--strong-shadow);
+    transform: translateY(-2px);
 }
 .hjemmet-card h5 {
     color: var(--hjem-header-text);
     font-weight: 600;
+    margin-top: 0;
 }
 
 .wishlist-page-grid .wishlist-item-card {
