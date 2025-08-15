@@ -13,8 +13,9 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-// RETTELSE: Importerer det korrekte funktionsnavn fra din economy.js fil
 import { initEconomyPage } from './economy.js';
+// OPDATERING: Tilføjet import for det nye hjemmet modul
+import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -31,6 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
         expenses: [],
         fixedExpenses: [],
         events: [],
+        // OPDATERING: Tilføjet nye state arrays for Hjemmet
+        plants: [],
+        projects: [],
+        reminders: [],
+        maintenance: [],
+        home_inventory: [],
         references: {
             maintenanceTasks: []
         },
@@ -185,7 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderMealPlanner();
                 break;
             case '#hjem':
-                // Denne side er nu tom og klar til nyt indhold
+                // OPDATERING: Kalder den nye render-funktion for Hjemmet
+                renderHjemmetPage();
                 break;
             case '#recipes':
                 renderPageTagFilters();
@@ -195,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderInventory();
                 break;
             case '#oekonomi':
-                // RETTELSE: Kalder den korrekte funktion fra din economy.js
                 initEconomyPage(state);
                 break;
             case '#references':
@@ -217,7 +224,10 @@ document.addEventListener('DOMContentLoaded', () => {
             expenses: 'expenses',
             fixed_expenses: 'fixedExpenses',
             assets: 'assets',
-            liabilities: 'liabilities'
+            liabilities: 'liabilities',
+            // OPDATERING: Tilføjet listeners for de nye collections
+            plants: 'plants',
+            projects: 'projects'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -331,8 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initEvents(state);
-        // RETTELSE: Kalder den korrekte funktion fra din economy.js
         initEconomyPage(state);
+        // OPDATERING: Kalder den nye init-funktion for Hjemmet
+        initHjemmet(state, elements);
     }
 
     init();
