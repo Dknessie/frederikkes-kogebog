@@ -161,16 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // OPDATERING: Tilføjet elementer for Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
+        deletePlantBtn: document.getElementById('delete-plant-btn'),
         wishlistModal: document.getElementById('wishlist-item-modal'),
         wishlistForm: document.getElementById('wishlist-item-form'),
         projectModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
+        deleteProjectBtn: document.getElementById('delete-project-btn'),
         reminderModal: document.getElementById('reminder-edit-modal'),
         reminderForm: document.getElementById('reminder-form'),
+        deleteReminderBtn: document.getElementById('delete-reminder-btn'),
         maintenanceModal: document.getElementById('maintenance-edit-modal'),
         maintenanceForm: document.getElementById('maintenance-form'),
+        deleteMaintenanceBtn: document.getElementById('delete-maintenance-btn'),
         homeInventoryModal: document.getElementById('home-inventory-edit-modal'),
         homeInventoryForm: document.getElementById('home-inventory-form'),
+        deleteHomeInventoryBtn: document.getElementById('delete-home-inventory-btn'),
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
