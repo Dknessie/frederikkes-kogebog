@@ -22,12 +22,19 @@
     --bosch-green: #007bc0;
     --bosch-red: #c4002f;
 
-    /* NYT: Hjemmet Tema Farver */
-    --hjem-bg-color: #F7F5F2; /* Lys beige, som ubehandlet træ */
-    --hjem-primary-green: #4A6A52; /* Dyb, rolig skovgrøn */
-    --hjem-accent-red: #D44D5C; /* En blødere, svensk-rød */
-    --hjem-text-color: #3a3a3a;
-    --hjem-border-color: #EAE5DD;
+    /* NYT: Hjemmet Tema Farver (Moderne App Stil) */
+    --hjem-bg-color: #F9FAFB;
+    --hjem-sidebar-bg: #FFFFFF;
+    --hjem-sidebar-text: #6B7280;
+    --hjem-sidebar-active-bg: #F1F3FF;
+    --hjem-sidebar-active-text: #424874;
+    --hjem-header-text: #111827;
+    --hjem-subheader-text: #6B7280;
+    --hjem-widget-bg: #FFFFFF;
+    --hjem-widget-border: #E5E7EB;
+    --hjem-primary-green: #10B981;
+    --hjem-primary-orange: #F59E0B;
+    --hjem-primary-red: #EF4444;
 
     /* Statusfarver */
     --status-green: #4CAF50;
@@ -43,9 +50,9 @@
 
     /* Layout & Mellemrum */
     --border-radius: 6px;
-    --card-border-radius: 8px;
-    --shadow: 0 2px 5px rgba(0,0,0,0.08);
-    --strong-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    --card-border-radius: 12px; /* Lidt rundere kort */
+    --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --strong-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --spacing-xs: 0.25rem; /* 4px */
     --spacing-s: 0.5rem;   /* 8px */
     --spacing-m: 0.75rem;  /* 12px */
@@ -2068,142 +2075,182 @@ input:checked + .slider:before { transform: translateX(22px); }
 #hjem.page {
     background-color: var(--hjem-bg-color);
 }
+#hjem .btn-primary {
+    background-color: var(--hjem-sidebar-active-text);
+}
+#hjem .btn-primary:hover {
+    background-color: #35385e;
+}
 
 .hjemmet-layout {
     display: grid;
     grid-template-columns: 240px 1fr;
-    gap: var(--spacing-l);
+    gap: var(--spacing-xl);
     align-items: flex-start;
 }
 .hjemmet-sidebar {
-    background-color: var(--hjem-primary-green);
-    color: var(--white-color);
+    background-color: var(--hjem-sidebar-bg);
     border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
+    box-shadow: none;
+    border: 1px solid var(--hjem-widget-border);
     padding: var(--spacing-m);
     position: sticky;
     top: calc(65px + var(--spacing-l));
 }
 .hjemmet-nav-header {
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    color: var(--hjem-subheader-text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 var(--spacing-m);
+    margin-bottom: var(--spacing-s);
 }
 .hjemmet-nav-link {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--hjem-sidebar-text);
+    font-weight: 500;
 }
 .hjemmet-nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--hjem-bg-color);
+    color: var(--hjem-header-text);
 }
 .hjemmet-nav-link.active {
-    background-color: var(--white-color);
-    color: var(--hjem-primary-green);
-    font-weight: 700;
+    background-color: var(--hjem-sidebar-active-bg);
+    color: var(--hjem-sidebar-active-text);
+    font-weight: 600;
 }
 .add-new-room-btn {
-    color: var(--hjem-bg-color);
+    color: var(--hjem-sidebar-text);
     font-style: normal;
 }
 .add-new-room-btn:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: var(--white-color);
+    background-color: var(--hjem-bg-color);
+    color: var(--hjem-header-text);
 }
 
 .hjemmet-oversigt-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: var(--spacing-l);
 }
 
 .hjemmet-widget {
-    background-color: var(--white-color);
+    background-color: var(--hjem-widget-bg);
     border-radius: var(--card-border-radius);
-    border: 1px solid var(--hjem-border-color);
+    border: 1px solid var(--hjem-widget-border);
     box-shadow: var(--shadow);
     padding: var(--spacing-l);
 }
 .hjemmet-widget h4 {
-    color: var(--hjem-primary-green);
+    color: var(--hjem-header-text);
     font-family: var(--body-font);
-    font-weight: 700;
-    font-size: 1.1rem;
-    border-bottom: 1px solid var(--hjem-border-color);
-    padding-bottom: var(--spacing-m);
+    font-weight: 600;
+    font-size: 1rem;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: var(--spacing-m);
 }
 .hjemmet-widget h4 i {
-    color: var(--hjem-accent-red);
+    font-size: 0.9em;
+}
+.hjemmet-widget h4 .fa-tint { color: var(--hjem-primary-green); }
+.hjemmet-widget h4 .fa-bell { color: var(--hjem-primary-orange); }
+.hjemmet-widget h4 .fa-tools { color: var(--hjem-subheader-text); }
+.hjemmet-widget h4 .fa-tasks { color: var(--hjem-sidebar-active-text); }
+.hjemmet-widget h4 .fa-gift { color: var(--hjem-primary-red); }
+
+.widget-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.widget-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--hjem-widget-border);
+    font-size: var(--small-font-size);
+}
+.widget-list-item:last-child {
+    border-bottom: none;
 }
 
 .widget-list-item .item-main-info .item-title {
-    font-weight: 600;
+    font-weight: 500;
     color: var(--hjem-text-color);
 }
+.widget-list-item .item-main-info .item-subtitle {
+    color: var(--hjem-subheader-text);
+}
+.widget-list-item .item-status {
+    font-weight: 500;
+    color: var(--hjem-subheader-text);
+}
+.widget-list-item .item-status.status-red {
+    color: var(--hjem-primary-red);
+    font-weight: 600;
+}
+.widget-list-item .item-status.status-yellow {
+    color: var(--hjem-primary-orange);
+    font-weight: 600;
+}
 
+.room-header {
+    margin-bottom: var(--spacing-s);
+}
 .room-header h2 {
-    color: var(--hjem-text-color);
-    font-family: var(--heading-font);
+    color: var(--hjem-header-text);
+    font-family: var(--body-font);
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+.room-header p {
+    color: var(--hjem-subheader-text);
+    margin-top: -10px;
 }
 
 .room-tabs {
-    border-bottom: 2px solid var(--hjem-border-color);
+    border-bottom: 1px solid var(--hjem-widget-border);
 }
 .room-tab {
-    color: #888;
-    background: none;
-    border: none;
-    padding: var(--spacing-m);
-    border-bottom: 3px solid transparent;
-    font-family: var(--body-font);
-    font-weight: 600;
+    color: var(--hjem-subheader-text);
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
 }
 .room-tab:hover {
-    color: var(--hjem-text-color);
+    color: var(--hjem-header-text);
 }
 .room-tab.active {
-    color: var(--hjem-primary-green);
-    border-bottom-color: var(--hjem-primary-green);
+    color: var(--hjem-sidebar-active-text);
+    border-bottom-color: var(--hjem-sidebar-active-text);
 }
 
 .tab-header h3 {
-    color: var(--hjem-text-color);
-}
-.tab-header .btn-primary {
-    background-color: var(--hjem-accent-red);
-}
-.tab-header .btn-primary:hover {
-    background-color: #b84451;
+    color: var(--hjem-header-text);
 }
 
 .hjemmet-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: var(--spacing-l);
 }
 
 .hjemmet-card {
-    background-color: var(--white-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-m);
-    border: 1px solid var(--hjem-border-color);
+    background-color: var(--hjem-widget-bg);
+    border-color: var(--hjem-widget-border);
     box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .hjemmet-card:hover {
-    transform: translateY(-4px);
     box-shadow: var(--strong-shadow);
 }
 .hjemmet-card h5 {
-    color: var(--hjem-text-color);
-    font-family: var(--body-font);
+    color: var(--hjem-header-text);
     font-weight: 600;
-}
-.hjemmet-card p {
-    color: #666;
-    font-size: var(--small-font-size);
 }
 
 .wishlist-page-grid .wishlist-item-card {
-    background-color: var(--white-color);
-    border-color: var(--hjem-border-color);
+    background-color: var(--hjem-widget-bg);
+    border-color: var(--hjem-widget-border);
 }
 .wishlist-page-grid .wishlist-item-price {
     color: var(--hjem-primary-green);
