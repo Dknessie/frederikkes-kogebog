@@ -2067,7 +2067,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 #hjem.page {
     background-color: var(--hjem-bg-color);
-    color: var(--hjem-text-color);
 }
 
 .hjemmet-layout {
@@ -2077,29 +2076,35 @@ input:checked + .slider:before { transform: translateX(22px); }
     align-items: flex-start;
 }
 .hjemmet-sidebar {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: none;
-    border: 1px solid var(--hjem-border-color);
-    padding: var(--spacing-m);
-    position: sticky;
-    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
-}
-.hjemmet-nav-header {
-    color: #a0a0a0;
-}
-.hjemmet-nav-link {
-    color: var(--hjem-text-color);
-}
-.hjemmet-nav-link:hover {
-    background-color: var(--hjem-bg-color);
-}
-.hjemmet-nav-link.active {
     background-color: var(--hjem-primary-green);
     color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-m);
+    position: sticky;
+    top: calc(65px + var(--spacing-l));
+}
+.hjemmet-nav-header {
+    color: rgba(255, 255, 255, 0.6);
+}
+.hjemmet-nav-link {
+    color: rgba(255, 255, 255, 0.9);
+}
+.hjemmet-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+.hjemmet-nav-link.active {
+    background-color: var(--white-color);
+    color: var(--hjem-primary-green);
+    font-weight: 700;
 }
 .add-new-room-btn {
-    color: var(--hjem-primary-green);
+    color: var(--hjem-bg-color);
+    font-style: normal;
+}
+.add-new-room-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--white-color);
 }
 
 .hjemmet-oversigt-grid {
@@ -2120,6 +2125,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-family: var(--body-font);
     font-weight: 700;
     font-size: 1.1rem;
+    border-bottom: 1px solid var(--hjem-border-color);
+    padding-bottom: var(--spacing-m);
 }
 .hjemmet-widget h4 i {
     color: var(--hjem-accent-red);
@@ -2132,6 +2139,7 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .room-header h2 {
     color: var(--hjem-text-color);
+    font-family: var(--heading-font);
 }
 
 .room-tabs {
@@ -2139,6 +2147,12 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .room-tab {
     color: #888;
+    background: none;
+    border: none;
+    padding: var(--spacing-m);
+    border-bottom: 3px solid transparent;
+    font-family: var(--body-font);
+    font-weight: 600;
 }
 .room-tab:hover {
     color: var(--hjem-text-color);
