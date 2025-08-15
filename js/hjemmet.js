@@ -190,11 +190,13 @@ function renderOversigtDashboard() {
         <div class="hjemmet-oversigt-grid">
             <div id="watering-widget" class="hjemmet-widget"></div>
             <div id="reminders-widget" class="hjemmet-widget"></div>
-            <div id="active-projects-widget" class="hjemmet-widget full-width"></div>
+            <div id="maintenance-widget" class="hjemmet-widget"></div>
+            <div id="active-projects-widget" class="hjemmet-widget"></div>
         </div>
     `;
     renderWateringWidget();
     renderRemindersWidget();
+    renderMaintenanceWidget();
     renderActiveProjectsWidget();
 }
 
@@ -272,6 +274,39 @@ function renderRemindersWidget() {
     }
     container.innerHTML = content;
 }
+
+/**
+ * NYT: Renderer "Vedligehold" widget.
+ */
+function renderMaintenanceWidget() {
+    const container = document.getElementById('maintenance-widget');
+    if (!container) return;
+    // Viser de første 5 opgaver, kan udvides til at sortere efter 'næste gang'
+    const maintenanceTasks = (appState.maintenance || []).slice(0, 5);
+
+    let content = '<h4><i class="fas fa-tools"></i> Regelmæssig Vedligehold</h4>';
+    if(maintenanceTasks.length === 0) {
+        content += `<p class="empty-state-small">Ingen vedligeholdelsesopgaver defineret.</p>`;
+    } else {
+        content += '<ul class="widget-list">';
+        maintenanceTasks.forEach(task => {
+            content += `
+                <li class="widget-list-item">
+                    <div class="item-main-info">
+                        <span class="item-title">${task.task}</span>
+                        <span class="item-subtitle">${task.room}</span>
+                    </div>
+                    <div class="item-status">
+                        <span>Hver ${task.interval} dage</span>
+                    </div>
+                </li>
+            `;
+        });
+        content += '</ul>';
+    }
+    container.innerHTML = content;
+}
+
 
 /**
  * Renderer "Aktive Projekter" widget.
