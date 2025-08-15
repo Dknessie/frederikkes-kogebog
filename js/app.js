@@ -63,7 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
-        // OPDATERING: Tilføjet elementer for Hjemmet
         hjemmetSidebar: document.getElementById('hjemmet-sidebar'),
         hjemmetMainContent: document.getElementById('hjemmet-main-content'),
 
@@ -159,12 +158,18 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
+        // OPDATERING: Tilføjet elementer for Hjemmet modals
+        plantModal: document.getElementById('plant-edit-modal'),
+        plantForm: document.getElementById('plant-form'),
+        wishlistModal: document.getElementById('wishlist-item-modal'),
+        wishlistForm: document.getElementById('wishlist-item-form'),
+
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
     function computeDerivedShoppingLists() {
         state.shoppingLists.materials = {};
-        state.shoppingLists.wishlist = {};
+        // Ønskelisten er nu global og administreres direkte, så vi fjerner udledningen herfra.
     }
 
 
@@ -255,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (stateKey === 'shoppingLists') {
                     state.shoppingLists.groceries = data.groceries || {};
+                    state.shoppingLists.wishlist = data.wishlist || {}; // Sørg for at hente den globale ønskeliste
                 } else if (stateKey === 'mealPlan') {
                     const { userId, ...planData } = data;
                     state.mealPlan = planData;
