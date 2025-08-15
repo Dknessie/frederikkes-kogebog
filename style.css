@@ -2195,12 +2195,78 @@ input:checked + .slider:before { transform: translateX(22px); }
     text-align: center;
 }
 .hjemmet-main-content {
+    min-height: 60vh;
+}
+
+/* =================================================================
+   NYT: HJEMMET DASHBOARD WIDGETS
+   ================================================================= */
+
+.hjemmet-oversigt-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-l);
+}
+
+.hjemmet-widget {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
     box-shadow: var(--shadow);
     padding: var(--spacing-l);
-    min-height: 60vh;
 }
+
+.hjemmet-widget.full-width {
+    grid-column: 1 / -1;
+}
+
+.hjemmet-widget h4 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-m);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+}
+.hjemmet-widget h4 i {
+    color: var(--accent-color);
+}
+
+.widget-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.widget-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.widget-list-item:last-child {
+    border-bottom: none;
+}
+
+.item-main-info .item-title {
+    font-weight: 600;
+    display: block;
+}
+.item-main-info .item-subtitle {
+    font-size: var(--small-font-size);
+    color: #777;
+}
+
+.item-status {
+    font-weight: 600;
+}
+.item-status.status-red {
+    color: var(--status-red);
+}
+.item-status.status-yellow {
+    color: var(--status-yellow);
+}
+
 
 @media (max-width: 768px) {
     .hjemmet-layout {
@@ -2208,5 +2274,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .hjemmet-sidebar {
         position: static;
+    }
+    .hjemmet-oversigt-grid {
+        grid-template-columns: 1fr;
     }
 }
