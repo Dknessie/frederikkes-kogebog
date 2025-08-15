@@ -47,7 +47,6 @@ function handleNavClick(e) {
 
     const newView = navLink.dataset.view;
 
-    // OPDATERING: Håndter klik på "Tilføj Rum"
     if (newView === 'add_room') {
         handleAddNewRoom();
         return;
@@ -55,18 +54,16 @@ function handleNavClick(e) {
 
     if (newView && newView !== hjemmetState.currentView) {
         hjemmetState.currentView = newView;
-        // Nulstil faneblad, når vi skifter til et nyt rum eller en hovedsektion
         hjemmetState.currentRoomTab = 'planter'; 
         renderHjemmetPage();
     }
 }
 
 /**
- * Håndterer klik inde i hovedindholdet (f.eks. på faneblade eller knapper).
+ * Håndterer klik inde i hovedindholdet.
  * @param {Event} e - Klik-eventen.
  */
 function handleMainContentClick(e) {
-    // Håndter fanebladsskift i et rum
     const tab = e.target.closest('.room-tab');
     if (tab) {
         e.preventDefault();
@@ -75,19 +72,26 @@ function handleMainContentClick(e) {
         return;
     }
     
-    // Håndter "Tilføj Plante" knap
     if (e.target.closest('#add-plant-btn')) {
         openPlantModal(hjemmetState.currentView);
     }
 
-    // Håndter "Nyt Ønske" knap
     if (e.target.closest('#add-wish-btn')) {
         openWishlistModal();
+    }
+
+    // OPDATERING: Håndter klik på "Vandet" knap
+    const waterBtn = e.target.closest('.water-plant-btn');
+    if (waterBtn) {
+        const plantId = waterBtn.dataset.plantId;
+        if (plantId) {
+            markPlantAsWatered(plantId);
+        }
     }
 }
 
 /**
- * Renderer hele Hjemmet-siden, inklusiv sidebar og det aktive view.
+ * Renderer hele Hjemmet-siden.
  */
 export function renderHjemmetPage() {
     if (!appState.currentUser || !appElements.hjemmetSidebar || !appElements.hjemmetMainContent) return;
@@ -126,7 +130,6 @@ function renderSidebar() {
             <div class="hjemmet-nav-section">
                 <h4 class="hjemmet-nav-header">Rum</h4>
                 ${roomLinks}
-                <!-- OPDATERING: Tilføjet "Tilføj Rum" knap -->
                 <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
                     <i class="fas fa-plus-circle"></i>
                     <span>Tilføj Rum</span>
@@ -137,7 +140,7 @@ function renderSidebar() {
 }
 
 /**
- * Renderer hovedindholdet baseret på det aktive view i hjemmetState.
+ * Renderer hovedindholdet baseret på det aktive view.
  */
 function renderMainContent() {
     const view = hjemmetState.currentView;
@@ -150,14 +153,13 @@ function renderMainContent() {
             renderWishlistPage();
             break;
         default:
-            // Dette håndterer alle rum-views
             renderRoomPage(view);
             break;
     }
 }
 
 /**
- * Bygger skelettet til Oversigt-dashboardet og kalder funktioner til at fylde widgets.
+ * Bygger skelettet til Oversigt-dashboardet.
  */
 function renderOversigtDashboard() {
     appElements.hjemmetMainContent.innerHTML = `
@@ -217,6 +219,8 @@ function renderWateringWidget() {
                     <div class="item-status ${statusClass}">
                         <span>${statusText}</span>
                     </div>
+                    <!-- OPDATERING: Tilføjet "Vandet" knap -->
+                    <button class="btn btn-secondary btn-small water-plant-btn" data-plant-id="${plant.id}">Vandet</button>
                 </li>
             `;
         });
@@ -299,7 +303,7 @@ function renderRoomPlants(roomName) {
         plantsHTML = `<p class="empty-state-small">Der er ingen planter i dette rum endnu.</p>`;
     } else {
         plantsHTML = '<div class="plant-list-grid">';
-        plantsInRoom.forEach(plant => {
+        plantsInRoom.sort((a,b) => a.name.localeCompare(b.name)).forEach(plant => {
             plantsHTML += `
                 <div class="plant-card-small" data-id="${plant.id}">
                     <h5>${plant.name}</h5>
@@ -332,7 +336,7 @@ function renderWishlistPage() {
         itemsHTML = `<p class="empty-state">Ønskelisten er tom.</p>`;
     } else {
         itemsHTML = '<div class="wishlist-page-grid">';
-        items.forEach(item => {
+        items.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             itemsHTML += `
                 <div class="wishlist-item-card" data-name="${item.name}">
                     <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer">
@@ -340,7 +344,7 @@ function renderWishlistPage() {
                             <span class="wishlist-item-title">${item.name}</span>
                             <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
                         </div>
-                        ${item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2)} kr.</span>` : ''}
+                        ${item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2).replace('.',',')} kr.</span>` : ''}
                     </a>
                 </div>
             `;
@@ -423,7 +427,6 @@ function openWishlistModal() {
     
     const roomSelect = document.getElementById('wish-room');
     const roomNames = appState.references.rooms || [];
-    // Helper function to populate dropdowns
     const populateDropdown = (select, options, placeholder) => {
         select.innerHTML = `<option value="">${placeholder}</option>`;
         options.sort().forEach(opt => select.add(new Option(opt, opt)));
@@ -453,7 +456,6 @@ async function handleSaveWish(e) {
         unit: 'stk'
     };
 
-    // Vi opdaterer direkte i shoppingLists dokumentet
     const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
     try {
         await setDoc(shoppingListRef, {
@@ -470,12 +472,12 @@ async function handleSaveWish(e) {
 }
 
 /**
- * OPDATERING: Håndterer tilføjelse af et nyt rum via en prompt.
+ * Håndterer tilføjelse af et nyt rum via en prompt.
  */
 async function handleAddNewRoom() {
     const roomName = prompt("Hvad hedder det nye rum?");
     if (!roomName || roomName.trim() === "") {
-        return; // Brugeren annullerede eller indtastede et tomt navn
+        return;
     }
 
     const trimmedName = roomName.trim();
@@ -492,8 +494,25 @@ async function handleAddNewRoom() {
             rooms: arrayUnion(trimmedName)
         });
         showNotification({ title: "Rum Tilføjet", message: `"${trimmedName}" er blevet tilføjet til din liste over rum.` });
-        // Firestore listener vil automatisk opdatere UI'et.
     } catch (error) {
         handleError(error, "Rummet kunne ikke tilføjes.", "addNewRoom");
+    }
+}
+
+/**
+ * OPDATERING: Opdaterer en plantes 'lastWatered' dato til i dag.
+ * @param {string} plantId - ID'et på planten, der skal opdateres.
+ */
+async function markPlantAsWatered(plantId) {
+    if (!plantId) return;
+
+    try {
+        const plantRef = doc(db, 'plants', plantId);
+        await updateDoc(plantRef, {
+            lastWatered: formatDate(new Date())
+        });
+        showNotification({ title: "Plante Vandet", message: "Datoen for sidste vanding er opdateret." });
+    } catch (error) {
+        handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered");
     }
 }
