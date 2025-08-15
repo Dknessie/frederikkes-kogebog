@@ -2324,22 +2324,23 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin: 0;
 }
 
-.plant-list-grid {
+.hjemmet-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: var(--spacing-l);
 }
-.plant-card-small {
+
+.hjemmet-card {
     background-color: var(--light-bg-color);
     border-radius: var(--border-radius);
     padding: var(--spacing-m);
     border: 1px solid var(--border-color);
 }
-.plant-card-small h5 {
+.hjemmet-card h5 {
     margin: 0 0 var(--spacing-s) 0;
     color: var(--text-color);
 }
-.plant-card-small p {
+.hjemmet-card p {
     margin: 0;
 }
 
@@ -2385,4 +2386,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .hjemmet-sidebar {
         position: static;
-  
+    }
+    .hjemmet-oversigt-grid {
+        grid-template-columns: 1fr;
+    }
+}
