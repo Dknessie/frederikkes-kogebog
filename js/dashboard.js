@@ -13,16 +13,11 @@ export function initDashboard(state, elements) {
         welcomeTitle: document.getElementById('welcome-title'),
         welcomeSummary: document.getElementById('welcome-summary'),
         addEventBtn: document.getElementById('add-event-btn'),
-        projectsFocusContent: document.getElementById('projects-focus-content'),
+        // FJERNEDE projectsFocusContent
         quickActionsContainer: document.getElementById('quick-actions-widget'),
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
-        materialsSummaryWidget: document.getElementById('widget-materials-summary'),
-        wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
+        // FJERNEDE materials og wishlist widgets
         groceriesCount: document.getElementById('groceries-count'),
-        materialsCount: document.getElementById('materials-count'),
-        materialsPrice: document.getElementById('materials-price'),
-        wishlistCount: document.getElementById('wishlist-count'),
-        wishlistPrice: document.getElementById('wishlist-price'),
         timelineBirthdays: document.getElementById('timeline-birthdays'),
         timelineEvents: document.getElementById('timeline-events'),
         timelineTodos: document.getElementById('timeline-todos'),
@@ -30,18 +25,16 @@ export function initDashboard(state, elements) {
     };
 
     if (appElements.groceriesSummaryWidget) appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
-    if (appElements.materialsSummaryWidget) appElements.materialsSummaryWidget.addEventListener('click', () => openShoppingListModal('materials'));
-    if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => openShoppingListModal('wishlist'));
+    // FJERNEDE event listeners for materials og wishlist
     if (appElements.quickActionsContainer) appElements.quickActionsContainer.addEventListener('click', handleQuickActionClick);
     if (appElements.addEventBtn) appElements.addEventBtn.addEventListener('click', () => openEventModal());
 }
 
 export function renderDashboardPage() {
-    if (!appState.currentUser) return;
+    if (!appState.currentUser || !appState.inventory) return;
     
     renderWelcomeWidget();
     renderTimelineWidget();
-    renderProjectsFocusWidget();
     renderNetWorthWidget();
     renderShoppingListWidgets();
 }
@@ -52,15 +45,17 @@ function handleQuickActionClick(e) {
     
     e.preventDefault();
     const action = actionBtn.dataset.action;
-    
-    // RETTET: Ændret 'add-expense' til at navigere i stedet for at åbne en modal
-    if (action === 'add-expense') {
-        window.location.hash = '#oekonomi';
-        return;
-    }
-    
     if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
+    // FJERNEDE 'add-project' logik
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
+    else if (action === 'add-expense') {
+        const addExpenseModal = document.getElementById('add-expense-modal');
+        if (addExpenseModal) {
+            document.getElementById('add-expense-date').value = formatDate(new Date());
+            populateReferenceDropdown(document.getElementById('add-expense-main-category'), (appState.references.budgetCategories || []).map(c => c.name), 'Vælg kategori...');
+            addExpenseModal.classList.remove('hidden');
+        }
+    }
     else window.location.hash = actionBtn.getAttribute('href');
 }
 
@@ -134,16 +129,7 @@ function getIconForCategory(eventData) {
 function renderShoppingListWidgets() {
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
     appElements.groceriesCount.textContent = `${groceriesCount} vare${groceriesCount !== 1 ? 'r' : ''}`;
-    const materialsList = Object.values(appState.shoppingLists.materials || {});
-    const materialsCount = materialsList.length;
-    const materialsPrice = materialsList.reduce((sum, item) => sum + (item.price || 0), 0);
-    appElements.materialsCount.textContent = `${materialsCount} stk.`;
-    appElements.materialsPrice.textContent = `${materialsPrice.toFixed(2).replace('.',',')} kr.`;
-    const wishlistItems = Object.values(appState.shoppingLists.wishlist || {});
-    const wishlistCount = wishlistItems.length;
-    const wishlistPrice = wishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
-    appElements.wishlistCount.textContent = `${wishlistCount} ${wishlistCount !== 1 ? 'ønsker' : 'ønske'}`;
-    appElements.wishlistPrice.textContent = `${wishlistPrice.toFixed(2).replace('.',',')} kr.`;
+    // FJERNEDE logik for materials og wishlist
 }
 
 function renderWelcomeWidget() {
@@ -156,15 +142,9 @@ function renderWelcomeWidget() {
     else if (hours < 18) greeting = "Goddag";
     else greeting = "Godaften";
     appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
-    // Da projects er fjernet, sætter vi en generisk besked
-    appElements.welcomeSummary.innerHTML = `Klar til at organisere din dag!`;
-}
-
-function renderProjectsFocusWidget() {
-    const container = appElements.projectsFocusContent;
-    if (!container) return;
-    // Da projects er fjernet, viser vi en tom state
-    container.innerHTML = '<p class="empty-state">Projekter er fjernet i denne version.</p>';
+    // Opdaterede velkomstbeskeden til ikke at nævne projekter
+    const recipeCount = appState.recipes.length;
+    appElements.welcomeSummary.innerHTML = `Du har <strong>${recipeCount}</strong> opskrifter i din kogebog.`;
 }
 
 function renderNetWorthWidget() {
@@ -198,4 +178,21 @@ function renderNetWorthWidget() {
             </div>
         `;
     }).join('');
+}
+
+// Helper function used by handleQuickActionClick
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
+    selectElement.value = currentValue || "";
+}
+
+// Helper function used by handleQuickActionClick
+function formatDate(date) {
+    if (!(date instanceof Date) || isNaN(date)) return '';
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
