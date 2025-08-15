@@ -15,8 +15,6 @@ import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomyPage } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
-// OPDATERING: Importer det nye projects modul
-import { initProjects } from './projects.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -160,16 +158,19 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // Hjemmet modals
+        // OPDATERING: Tilføjet elementer for Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         wishlistModal: document.getElementById('wishlist-item-modal'),
         wishlistForm: document.getElementById('wishlist-item-form'),
-        // OPDATERING: Tilføjet elementer for projekt-modal
-        projectEditModal: document.getElementById('project-edit-modal'),
+        projectModal: document.getElementById('project-edit-modal'),
         projectForm: document.getElementById('project-form'),
-        projectMaterialsContainer: document.getElementById('project-materials-container'),
-        addMaterialBtn: document.getElementById('add-material-btn'),
+        reminderModal: document.getElementById('reminder-edit-modal'),
+        reminderForm: document.getElementById('reminder-form'),
+        maintenanceModal: document.getElementById('maintenance-edit-modal'),
+        maintenanceForm: document.getElementById('maintenance-form'),
+        homeInventoryModal: document.getElementById('home-inventory-edit-modal'),
+        homeInventoryForm: document.getElementById('home-inventory-form'),
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
@@ -238,7 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
             assets: 'assets',
             liabilities: 'liabilities',
             plants: 'plants',
-            projects: 'projects'
+            projects: 'projects',
+            reminders: 'reminders',
+            maintenance: 'maintenance',
+            home_inventory: 'home_inventory'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -266,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (stateKey === 'shoppingLists') {
                     state.shoppingLists.groceries = data.groceries || {};
-                    state.shoppingLists.wishlist = data.wishlist || {}; 
+                    state.shoppingLists.wishlist = data.wishlist || {};
                 } else if (stateKey === 'mealPlan') {
                     const { userId, ...planData } = data;
                     state.mealPlan = planData;
@@ -355,8 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initEvents(state);
         initEconomyPage(state);
         initHjemmet(state, elements);
-        // OPDATERING: Initialiser det nye projects modul
-        initProjects(state, elements);
     }
 
     init();
