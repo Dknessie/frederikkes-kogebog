@@ -14,7 +14,7 @@
     --white-color: #ffffff;
     
     /* NEW: Theme colors for calendar */
-    --theme-bg: #F5F5F1;
+    --theme-bg: #F5F51;
     --theme-light-blue: #E3F2FD;
     --theme-grey: #B0B0B0;
 
@@ -2097,6 +2097,16 @@ input:checked + .slider:before { transform: translateX(22px); }
     position: sticky;
     top: calc(65px + var(--spacing-l));
 }
+.hjemmet-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+.hjemmet-nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
 .hjemmet-nav-header {
     font-size: 0.75rem;
     color: var(--hjem-subheader-text);
@@ -2106,11 +2116,15 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-bottom: var(--spacing-s);
 }
 .hjemmet-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    text-decoration: none;
     color: var(--hjem-sidebar-text);
     font-weight: 500;
-    padding: var(--spacing-m); /* Tilføjet padding */
-    border-radius: var(--border-radius); /* Tilføjet border-radius */
-    transition: background-color 0.2s ease, color 0.2s ease; /* Tilføjet transition */
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 .hjemmet-nav-link:hover {
     background-color: var(--hjem-bg-color);
