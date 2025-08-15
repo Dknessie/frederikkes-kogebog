@@ -1,13 +1,17 @@
 // js/hjemmet.js
 
-// Denne fil vil håndtere al logik for "Hjemmet" siden.
+import { db } from './firebase.js';
+import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { showNotification, handleError } from './ui.js';
+import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
 
-// Lokal state for at holde styr på, hvad der vises på Hjemmet-siden
+// Lokal state for Hjemmet-siden
 const hjemmetState = {
     currentView: 'oversigt', // 'oversigt', 'onskeliste', eller et rum-navn
+    currentRoomTab: 'planter', // Aktiv fane for en rum-side
 };
 
 /**
@@ -19,10 +23,17 @@ export function initHjemmet(state, elements) {
     appState = state;
     appElements = elements;
 
-    // Lyt efter klik i sidebaren for at håndtere navigation
+    // Lyt efter klik i sidebaren og hovedindholdet
     if (appElements.hjemmetSidebar) {
         appElements.hjemmetSidebar.addEventListener('click', handleNavClick);
     }
+    if (appElements.hjemmetMainContent) {
+        appElements.hjemmetMainContent.addEventListener('click', handleMainContentClick);
+    }
+    
+    // Lyt efter form submissions fra modals
+    if (appElements.plantForm) appElements.plantForm.addEventListener('submit', handleSavePlant);
+    if (appElements.wishlistForm) appElements.wishlistForm.addEventListener('submit', handleSaveWish);
 }
 
 /**
@@ -37,7 +48,34 @@ function handleNavClick(e) {
     const newView = navLink.dataset.view;
     if (newView && newView !== hjemmetState.currentView) {
         hjemmetState.currentView = newView;
+        // Nulstil faneblad, når vi skifter til et nyt rum eller en hovedsektion
+        hjemmetState.currentRoomTab = 'planter'; 
         renderHjemmetPage();
+    }
+}
+
+/**
+ * Håndterer klik inde i hovedindholdet (f.eks. på faneblade eller knapper).
+ * @param {Event} e - Klik-eventen.
+ */
+function handleMainContentClick(e) {
+    // Håndter fanebladsskift i et rum
+    const tab = e.target.closest('.room-tab');
+    if (tab) {
+        e.preventDefault();
+        hjemmetState.currentRoomTab = tab.dataset.tab;
+        renderRoomPage(hjemmetState.currentView);
+        return;
+    }
+    
+    // Håndter "Tilføj Plante" knap
+    if (e.target.closest('#add-plant-btn')) {
+        openPlantModal(hjemmetState.currentView);
+    }
+
+    // Håndter "Nyt Ønske" knap
+    if (e.target.closest('#add-wish-btn')) {
+        openWishlistModal();
     }
 }
 
@@ -91,18 +129,17 @@ function renderSidebar() {
  */
 function renderMainContent() {
     const view = hjemmetState.currentView;
-    const mainContent = appElements.hjemmetMainContent;
 
     switch(view) {
         case 'oversigt':
             renderOversigtDashboard();
             break;
         case 'onskeliste':
-            mainContent.innerHTML = `<h1>Global Ønskeliste</h1><p>Her vil du kunne se og administrere alle dine ønsker.</p>`;
+            renderWishlistPage();
             break;
         default:
             // Dette håndterer alle rum-views
-            mainContent.innerHTML = `<h1>Rum: ${view}</h1><p>Her vil du se detaljer og faneblade for ${view}.</p>`;
+            renderRoomPage(view);
             break;
     }
 }
@@ -192,4 +229,230 @@ function renderActiveProjectsWidget() {
     const container = document.getElementById('active-projects-widget');
     if (!container) return;
     container.innerHTML = `<h4><i class="fas fa-tasks"></i> Aktive Projekter</h4><p class="empty-state-small">Ingen aktive projekter.</p>`;
+}
+
+/**
+ * Renderer en specifik rum-side med faneblade.
+ * @param {string} roomName - Navnet på det rum, der skal vises.
+ */
+function renderRoomPage(roomName) {
+    const tabs = ['Projekter', 'Planter', 'Påmindelser', 'Vedligehold', 'Inventar'];
+    const tabIcons = {
+        'Projekter': 'fa-tasks',
+        'Planter': 'fa-leaf',
+        'Påmindelser': 'fa-bell',
+        'Vedligehold': 'fa-tools',
+        'Inventar': 'fa-couch'
+    };
+
+    const tabsHTML = tabs.map(tab => `
+        <a href="#" class="room-tab ${hjemmetState.currentRoomTab.toLowerCase() === tab.toLowerCase() ? 'active' : ''}" data-tab="${tab.toLowerCase()}">
+            <i class="fas ${tabIcons[tab]}"></i> ${tab}
+        </a>
+    `).join('');
+
+    let tabContent = '';
+    switch(hjemmetState.currentRoomTab) {
+        case 'planter':
+            tabContent = renderRoomPlants(roomName);
+            break;
+        default:
+            tabContent = `<p class="empty-state">Funktionalitet for "${hjemmetState.currentRoomTab}" er endnu ikke implementeret.</p>`;
+            break;
+    }
+
+    appElements.hjemmetMainContent.innerHTML = `
+        <div class="room-header">
+            <h2>${roomName}</h2>
+        </div>
+        <div class="room-tabs">
+            ${tabsHTML}
+        </div>
+        <div class="room-tab-content">
+            ${tabContent}
+        </div>
+    `;
+}
+
+/**
+ * Renderer indholdet for "Planter" fanebladet for et specifikt rum.
+ * @param {string} roomName - Navnet på rummet.
+ * @returns {string} HTML-strengen for plante-sektionen.
+ */
+function renderRoomPlants(roomName) {
+    const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
+    
+    let plantsHTML = '';
+    if (plantsInRoom.length === 0) {
+        plantsHTML = `<p class="empty-state-small">Der er ingen planter i dette rum endnu.</p>`;
+    } else {
+        plantsHTML = '<div class="plant-list-grid">';
+        plantsInRoom.forEach(plant => {
+            plantsHTML += `
+                <div class="plant-card-small" data-id="${plant.id}">
+                    <h5>${plant.name}</h5>
+                    <p>Vandes hver ${plant.wateringInterval}. dag</p>
+                    <p class="small-text">Sidst vandet: ${formatDate(plant.lastWatered)}</p>
+                </div>
+            `;
+        });
+        plantsHTML += '</div>';
+    }
+
+    return `
+        <div class="tab-header">
+            <h3>Planter i ${roomName}</h3>
+            <button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button>
+        </div>
+        ${plantsHTML}
+    `;
+}
+
+/**
+ * Renderer den globale ønskeliste-side.
+ */
+function renderWishlistPage() {
+    const wishlist = appState.shoppingLists.wishlist || {};
+    const items = Object.values(wishlist);
+
+    let itemsHTML = '';
+    if (items.length === 0) {
+        itemsHTML = `<p class="empty-state">Ønskelisten er tom.</p>`;
+    } else {
+        itemsHTML = '<div class="wishlist-page-grid">';
+        items.forEach(item => {
+            itemsHTML += `
+                <div class="wishlist-item-card" data-name="${item.name}">
+                    <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer">
+                        <div class="wishlist-item-content">
+                            <span class="wishlist-item-title">${item.name}</span>
+                            <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
+                        </div>
+                        ${item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2)} kr.</span>` : ''}
+                    </a>
+                </div>
+            `;
+        });
+        itemsHTML += '</div>';
+    }
+    
+    appElements.hjemmetMainContent.innerHTML = `
+        <div class="tab-header">
+            <h2>Global Ønskeliste</h2>
+            <button id="add-wish-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Ønske</button>
+        </div>
+        ${itemsHTML}
+    `;
+}
+
+/**
+ * Åbner modalen for at tilføje/redigere en plante.
+ * @param {string} roomName - Navnet på det rum, planten tilhører.
+ * @param {string|null} [plantId=null] - ID'et på planten, hvis den redigeres.
+ */
+function openPlantModal(roomName, plantId = null) {
+    const modal = appElements.plantModal;
+    const form = appElements.plantForm;
+    form.reset();
+
+    document.getElementById('plant-room-hidden').value = roomName;
+    document.getElementById('plant-id').value = plantId || '';
+
+    if (plantId) {
+        // Logik for at redigere en plante (ikke implementeret endnu)
+    } else {
+        modal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
+        document.getElementById('plant-last-watered').value = formatDate(new Date());
+    }
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Gemmer en plante til Firestore.
+ * @param {Event} e - Form submission event.
+ */
+async function handleSavePlant(e) {
+    e.preventDefault();
+    const plantId = document.getElementById('plant-id').value;
+    
+    const plantData = {
+        name: document.getElementById('plant-name').value.trim(),
+        room: document.getElementById('plant-room-hidden').value,
+        lastWatered: document.getElementById('plant-last-watered').value,
+        wateringInterval: Number(document.getElementById('plant-watering-interval').value),
+        userId: appState.currentUser.uid,
+    };
+
+    if (!plantData.name || !plantData.room || !plantData.lastWatered || !plantData.wateringInterval) {
+        showNotification({ title: "Udfyld alle felter", message: "Alle felter skal være udfyldt." });
+        return;
+    }
+
+    try {
+        if (plantId) {
+            await updateDoc(doc(db, 'plants', plantId), plantData);
+        } else {
+            await addDoc(collection(db, 'plants'), plantData);
+        }
+        appElements.plantModal.classList.add('hidden');
+        showNotification({ title: "Gemt!", message: "Din plante er blevet gemt." });
+    } catch (error) {
+        handleError(error, "Planten kunne ikke gemmes.", "savePlant");
+    }
+}
+
+/**
+ * Åbner modalen for at tilføje et nyt ønske.
+ */
+function openWishlistModal() {
+    const modal = appElements.wishlistModal;
+    const form = appElements.wishlistForm;
+    form.reset();
+    
+    const roomSelect = document.getElementById('wish-room');
+    const roomNames = appState.references.rooms || [];
+    // Helper function to populate dropdowns
+    const populateDropdown = (select, options, placeholder) => {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        options.sort().forEach(opt => select.add(new Option(opt, opt)));
+    };
+    populateDropdown(roomSelect, roomNames, 'Vælg et rum (valgfri)...');
+
+    modal.classList.remove('hidden');
+}
+
+/**
+ * Gemmer et ønske til Firestore.
+ * @param {Event} e - Form submission event.
+ */
+async function handleSaveWish(e) {
+    e.preventDefault();
+    const wishName = document.getElementById('wish-name').value.trim();
+    if (!wishName) return;
+
+    const key = wishName.toLowerCase();
+    
+    const wishData = {
+        name: wishName,
+        price: Number(document.getElementById('wish-price').value) || null,
+        url: document.getElementById('wish-url').value.trim() || null,
+        roomId: document.getElementById('wish-room').value || null,
+        quantity_to_buy: 1,
+        unit: 'stk'
+    };
+
+    // Vi opdaterer direkte i shoppingLists dokumentet
+    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+    try {
+        await setDoc(shoppingListRef, {
+            wishlist: {
+                [key]: wishData
+            }
+        }, { merge: true });
+
+        appElements.wishlistModal.classList.add('hidden');
+        showNotification({ title: "Gemt!", message: "Dit ønske er blevet tilføjet til listen." });
+    } catch (error) {
+        handleError(error, "Ønsket kunne ikke gemmes.", "saveWish");
+    }
 }
