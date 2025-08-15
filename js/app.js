@@ -14,7 +14,6 @@ import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomyPage } from './economy.js';
-// OPDATERING: Tilføjet import for det nye hjemmet modul
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
         expenses: [],
         fixedExpenses: [],
         events: [],
-        // OPDATERING: Tilføjet nye state arrays for Hjemmet
         plants: [],
         projects: [],
         reminders: [],
@@ -65,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
         pages: document.querySelectorAll('#app-main-content .page'),
         headerTitleLink: document.querySelector('.header-title-link'),
         
+        // OPDATERING: Tilføjet elementer for Hjemmet
+        hjemmetSidebar: document.getElementById('hjemmet-sidebar'),
+        hjemmetMainContent: document.getElementById('hjemmet-main-content'),
+
         // Inventory
         inventoryItemModal: document.getElementById('inventory-item-modal'),
         inventoryItemForm: document.getElementById('inventory-item-form'),
@@ -192,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderMealPlanner();
                 break;
             case '#hjem':
-                // OPDATERING: Kalder den nye render-funktion for Hjemmet
                 renderHjemmetPage();
                 break;
             case '#recipes':
@@ -225,7 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fixed_expenses: 'fixedExpenses',
             assets: 'assets',
             liabilities: 'liabilities',
-            // OPDATERING: Tilføjet listeners for de nye collections
             plants: 'plants',
             projects: 'projects'
         };
@@ -342,7 +342,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initDashboard(state, elements);
         initEvents(state);
         initEconomyPage(state);
-        // OPDATERING: Kalder den nye init-funktion for Hjemmet
         initHjemmet(state, elements);
     }
 
