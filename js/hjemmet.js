@@ -344,9 +344,9 @@ function renderRoomPage(roomName) {
     };
 
     const tabsHTML = tabs.map(tab => `
-        <a href="#" class="room-tab ${hjemmetState.currentRoomTab.toLowerCase() === tab.toLowerCase() ? 'active' : ''}" data-tab="${tab.toLowerCase()}">
+        <button class="room-tab ${hjemmetState.currentRoomTab.toLowerCase() === tab.toLowerCase() ? 'active' : ''}" data-tab="${tab.toLowerCase()}">
             <i class="fas ${tabIcons[tab]}"></i> ${tab}
-        </a>
+        </button>
     `).join('');
 
     let tabContent = '';
@@ -390,7 +390,7 @@ function renderRoomPlants(roomName) {
     const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
     const content = plantsInRoom.length === 0
         ? `<p class="empty-state-small">Ingen planter i dette rum.</p>`
-        : plantsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}"><h5>${p.name}</h5><p>Sidst vandet: ${formatDate(p.lastWatered)}</p></div>`).join('');
+        : plantsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}"><h5>${p.name}</h5><p>Sidst vandet: ${new Date(p.lastWatered).toLocaleDateString('da-DK')}</p></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Planter i ${roomName}</h3><button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button></div>
@@ -426,7 +426,7 @@ function renderRoomInventory(roomName) {
     const inventoryInRoom = (appState.home_inventory || []).filter(i => i.room === roomName);
     const content = inventoryInRoom.length === 0
         ? `<p class="empty-state-small">Intet inventar i dette rum.</p>`
-        : inventoryInRoom.map(i => `<div class="hjemmet-card" data-id="${i.id}" data-type="home_inventory" data-room="${i.room}"><h5>${i.name}</h5><p>Købt: ${formatDate(i.purchaseDate)}</p></div>`).join('');
+        : inventoryInRoom.map(i => `<div class="hjemmet-card" data-id="${i.id}" data-type="home_inventory" data-room="${i.room}"><h5>${i.name}</h5><p>Købt: ${new Date(i.purchaseDate).toLocaleDateString('da-DK')}</p></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Inventar i ${roomName}</h3><button id="add-home-inventory-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Inventar</button></div>
