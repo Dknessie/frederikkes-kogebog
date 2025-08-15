@@ -148,6 +148,10 @@ hr {
     color: #888;
     box-shadow: none;
 }
+.btn.btn-small {
+    padding: var(--spacing-s) var(--spacing-m);
+    font-size: 0.8rem;
+}
 
 .btn-primary {
     background-color: var(--primary-color);
@@ -2273,6 +2277,10 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .item-status.status-yellow {
     color: var(--status-yellow);
+}
+
+.widget-list-item .btn {
+    margin-left: var(--spacing-m);
 }
 
 /* =================================================================
