@@ -47,7 +47,7 @@ export function initMealPlanner(state, elements) {
     appElements.calendarEventViewChooser.addEventListener('click', handleCalendarEventViewChoice);
     appElements.calendarRecipeSearch.addEventListener('input', debounce(e => populateCalendarRecipeList(e.target.value), 300));
     appElements.calendarRecipeList.addEventListener('click', handleCalendarRecipeSelect);
-    appElements.calendarProjectList.addEventListener('click', handleCalendarProjectSelect);
+    // FJERNEDE listeners for project list
     appElements.calendarTaskSearch.addEventListener('input', debounce(e => populateCalendarTaskList(e.target.value), 300));
     appElements.calendarTaskList.addEventListener('click', handleCalendarTaskSelect);
     appElements.calendarTaskForm.addEventListener('submit', handleCalendarTaskSubmit);
@@ -289,15 +289,8 @@ function createEventDiv(eventData) {
                 </div>`;
             break;
         
-        case 'project':
-            eventDiv.draggable = true;
-            const project = appState.projects.find(p => p.id === eventData.projectId);
-            eventDiv.classList.add('project');
-            content = project ? project.title : 'Slettet Projekt';
-            icon = `<i class="fas fa-tasks"></i>`;
-            eventDiv.innerHTML = `<div class="event-content">${icon} ${content}</div><div class="event-actions"><button class="btn-icon remove-meal-btn" title="Fjern"><i class="fas fa-times"></i></button></div>`;
-            break;
-
+        // FJERNEDE 'project' case
+        
         case 'task':
             eventDiv.draggable = true;
             eventDiv.classList.add('task');
@@ -345,7 +338,6 @@ async function handleClearMealPlan() {
     
     const start = getStartOfWeek(appState.currentDate);
     const batch = writeBatch(db);
-    // FINAL FIX: Use the correct document reference (userId)
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
 
     for (let i = 0; i < 7; i++) {
@@ -433,7 +425,6 @@ async function handleMonthGridClick(e) {
 }
 
 async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
-    // FINAL FIX: Use the correct document reference (userId)
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
 
@@ -451,7 +442,6 @@ async function updateCalendarEvent(date, mealType, oldEvent, newEvent) {
 }
 
 async function removeEventFromCalendar(date, mealType, eventData) {
-    // FINAL FIX: Use the correct document reference (userId)
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
     
@@ -531,7 +521,7 @@ function handleCalendarEventViewChoice(e) {
     });
 
     if (viewName === 'recipe') populateCalendarRecipeList();
-    if (viewName === 'project') populateCalendarProjectList();
+    // FJERNEDE kald til populateCalendarProjectList
     if (viewName === 'task') populateCalendarTaskList();
 }
 
@@ -556,24 +546,7 @@ function populateCalendarRecipeList(searchTerm = '') {
     });
 }
 
-function populateCalendarProjectList() {
-    const list = appElements.calendarProjectList;
-    list.innerHTML = '';
-    const activeProjects = appState.projects.filter(p => p.status !== 'Afsluttet');
-    
-    if (activeProjects.length === 0) {
-        list.innerHTML = `<li class="selection-list-item-empty">Ingen aktive projekter fundet.</li>`;
-        return;
-    }
-
-    activeProjects.forEach(project => {
-        const li = document.createElement('li');
-        li.className = 'selection-list-item';
-        li.dataset.id = project.id;
-        li.innerHTML = `<span>${project.title}</span><i class="fas fa-plus-circle"></i>`;
-        list.appendChild(li);
-    });
-}
+// FJERNEDE populateCalendarProjectList funktionen
 
 function populateCalendarTaskList(searchTerm = '') {
     const list = appElements.calendarTaskList;
@@ -611,18 +584,7 @@ async function handleCalendarRecipeSelect(e) {
     appElements.addCalendarEventModal.classList.add('hidden');
 }
 
-async function handleCalendarProjectSelect(e) {
-    const item = e.target.closest('.selection-list-item');
-    if (!item) return;
-
-    const eventData = {
-        id: crypto.randomUUID(),
-        type: 'project',
-        projectId: item.dataset.id
-    };
-    await addEventToCalendar(calendarEventState.date, calendarEventState.meal, eventData);
-    appElements.addCalendarEventModal.classList.add('hidden');
-}
+// FJERNEDE handleCalendarProjectSelect funktionen
 
 function handleCalendarTaskSelect(e) {
     const item = e.target.closest('.selection-list-item');
@@ -651,7 +613,6 @@ async function handleCalendarTaskSubmit(e) {
 }
 
 async function addEventToCalendar(date, mealType, eventData) {
-    // FINAL FIX: Use the correct document reference (userId)
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     const fieldPath = `${date}.${mealType}`;
     
