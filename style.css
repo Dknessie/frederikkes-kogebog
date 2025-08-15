@@ -2385,8 +2385,4 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .hjemmet-sidebar {
         position: static;
-    }
-    .hjemmet-oversigt-grid {
-        grid-template-columns: 1fr;
-    }
-}
+  
