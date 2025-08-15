@@ -38,6 +38,13 @@ export function initHjemmet(state, elements) {
     if (appElements.reminderForm) appElements.reminderForm.addEventListener('submit', handleSaveReminder);
     if (appElements.maintenanceForm) appElements.maintenanceForm.addEventListener('submit', handleSaveMaintenance);
     if (appElements.homeInventoryForm) appElements.homeInventoryForm.addEventListener('submit', handleSaveHomeInventory);
+
+    // Lyt efter slet-knapper i modals
+    if (appElements.deletePlantBtn) appElements.deletePlantBtn.addEventListener('click', handleDeletePlant);
+    if (appElements.deleteProjectBtn) appElements.deleteProjectBtn.addEventListener('click', handleDeleteProject);
+    if (appElements.deleteReminderBtn) appElements.deleteReminderBtn.addEventListener('click', handleDeleteReminder);
+    if (appElements.deleteMaintenanceBtn) appElements.deleteMaintenanceBtn.addEventListener('click', handleDeleteMaintenance);
+    if (appElements.deleteHomeInventoryBtn) appElements.deleteHomeInventoryBtn.addEventListener('click', handleDeleteHomeInventory);
 }
 
 /**
@@ -76,7 +83,7 @@ function handleMainContentClick(e) {
         return;
     }
     
-    // Knapper til at åbne modals
+    // Knapper til at åbne "opret ny" modals
     if (e.target.closest('#add-project-btn')) openProjectModal(hjemmetState.currentView);
     if (e.target.closest('#add-plant-btn')) openPlantModal(hjemmetState.currentView);
     if (e.target.closest('#add-reminder-btn')) openReminderModal(hjemmetState.currentView);
@@ -84,10 +91,26 @@ function handleMainContentClick(e) {
     if (e.target.closest('#add-home-inventory-btn')) openHomeInventoryModal(hjemmetState.currentView);
     if (e.target.closest('#add-wish-btn')) openWishlistModal();
 
+    // Interaktioner
     const waterBtn = e.target.closest('.water-plant-btn');
     if (waterBtn) {
         const plantId = waterBtn.dataset.plantId;
         if (plantId) markPlantAsWatered(plantId);
+    }
+
+    // Klik på et kort for at redigere
+    const card = e.target.closest('.hjemmet-card');
+    if (card && card.dataset.id) {
+        const id = card.dataset.id;
+        const type = card.dataset.type;
+        const room = card.dataset.room;
+        switch(type) {
+            case 'project': openProjectModal(room, id); break;
+            case 'plant': openPlantModal(room, id); break;
+            case 'reminder': openReminderModal(room, id); break;
+            case 'maintenance': openMaintenanceModal(room, id); break;
+            case 'home_inventory': openHomeInventoryModal(room, id); break;
+        }
     }
 }
 
@@ -230,21 +253,45 @@ function renderWateringWidget() {
 }
 
 /**
- * Renderer "Påmindelser" widget (pladsholder).
+ * Renderer "Påmindelser" widget.
  */
 function renderRemindersWidget() {
     const container = document.getElementById('reminders-widget');
     if (!container) return;
-    container.innerHTML = `<h4><i class="fas fa-bell"></i> Påmindelser</h4><p class="empty-state-small">Ingen påmindelser.</p>`;
+    const reminders = (appState.reminders || []).slice(0, 5);
+
+    let content = '<h4><i class="fas fa-bell"></i> Påmindelser</h4>';
+    if(reminders.length === 0) {
+        content += `<p class="empty-state-small">Ingen påmindelser.</p>`;
+    } else {
+        content += '<ul class="widget-list">';
+        reminders.forEach(r => {
+            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${r.text}</span><span class="item-subtitle">${r.room}</span></div></li>`;
+        });
+        content += '</ul>';
+    }
+    container.innerHTML = content;
 }
 
 /**
- * Renderer "Aktive Projekter" widget (pladsholder).
+ * Renderer "Aktive Projekter" widget.
  */
 function renderActiveProjectsWidget() {
     const container = document.getElementById('active-projects-widget');
     if (!container) return;
-    container.innerHTML = `<h4><i class="fas fa-tasks"></i> Aktive Projekter</h4><p class="empty-state-small">Ingen aktive projekter.</p>`;
+    const activeProjects = (appState.projects || []).filter(p => p.status === 'Igangværende');
+
+    let content = '<h4><i class="fas fa-tasks"></i> Aktive Projekter</h4>';
+    if(activeProjects.length === 0) {
+        content += `<p class="empty-state-small">Ingen aktive projekter.</p>`;
+    } else {
+        content += '<ul class="widget-list">';
+        activeProjects.forEach(p => {
+            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${p.title}</span><span class="item-subtitle">${p.room}</span></div></li>`;
+        });
+        content += '</ul>';
+    }
+    container.innerHTML = content;
 }
 
 /**
@@ -269,24 +316,12 @@ function renderRoomPage(roomName) {
 
     let tabContent = '';
     switch(hjemmetState.currentRoomTab) {
-        case 'projekter':
-            tabContent = renderRoomProjects(roomName);
-            break;
-        case 'planter':
-            tabContent = renderRoomPlants(roomName);
-            break;
-        case 'påmindelser':
-            tabContent = renderRoomReminders(roomName);
-            break;
-        case 'vedligehold':
-            tabContent = renderRoomMaintenance(roomName);
-            break;
-        case 'inventar':
-            tabContent = renderRoomInventory(roomName);
-            break;
-        default:
-            tabContent = `<p class="empty-state">Noget gik galt.</p>`;
-            break;
+        case 'projekter': tabContent = renderRoomProjects(roomName); break;
+        case 'planter': tabContent = renderRoomPlants(roomName); break;
+        case 'påmindelser': tabContent = renderRoomReminders(roomName); break;
+        case 'vedligehold': tabContent = renderRoomMaintenance(roomName); break;
+        case 'inventar': tabContent = renderRoomInventory(roomName); break;
+        default: tabContent = `<p class="empty-state">Noget gik galt.</p>`; break;
     }
 
     appElements.hjemmetMainContent.innerHTML = `
@@ -308,7 +343,7 @@ function renderRoomProjects(roomName) {
     const projectsInRoom = (appState.projects || []).filter(p => p.room === roomName);
     const content = projectsInRoom.length === 0
         ? `<p class="empty-state-small">Ingen projekter i dette rum.</p>`
-        : projectsInRoom.map(p => `<div class="hjemmet-card"><h5>${p.title}</h5><p>${p.status}</p></div>`).join('');
+        : projectsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="project" data-room="${p.room}"><h5>${p.title}</h5><p>${p.status}</p></div>`).join('');
     
     return `
         <div class="tab-header"><h3>Projekter i ${roomName}</h3><button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Projekt</button></div>
@@ -320,7 +355,7 @@ function renderRoomPlants(roomName) {
     const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
     const content = plantsInRoom.length === 0
         ? `<p class="empty-state-small">Ingen planter i dette rum.</p>`
-        : plantsInRoom.map(p => `<div class="hjemmet-card"><h5>${p.name}</h5><p>Sidst vandet: ${formatDate(p.lastWatered)}</p></div>`).join('');
+        : plantsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}"><h5>${p.name}</h5><p>Sidst vandet: ${formatDate(p.lastWatered)}</p></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Planter i ${roomName}</h3><button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button></div>
@@ -332,7 +367,7 @@ function renderRoomReminders(roomName) {
     const remindersInRoom = (appState.reminders || []).filter(r => r.room === roomName);
      const content = remindersInRoom.length === 0
         ? `<p class="empty-state-small">Ingen påmindelser i dette rum.</p>`
-        : remindersInRoom.map(r => `<div class="hjemmet-card"><h5>${r.text}</h5></div>`).join('');
+        : remindersInRoom.map(r => `<div class="hjemmet-card" data-id="${r.id}" data-type="reminder" data-room="${r.room}"><h5>${r.text}</h5></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Påmindelser i ${roomName}</h3><button id="add-reminder-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Påmindelse</button></div>
@@ -344,7 +379,7 @@ function renderRoomMaintenance(roomName) {
     const maintenanceInRoom = (appState.maintenance || []).filter(m => m.room === roomName);
     const content = maintenanceInRoom.length === 0
         ? `<p class="empty-state-small">Intet vedligehold i dette rum.</p>`
-        : maintenanceInRoom.map(m => `<div class="hjemmet-card"><h5>${m.task}</h5><p>Interval: ${m.interval} dage</p></div>`).join('');
+        : maintenanceInRoom.map(m => `<div class="hjemmet-card" data-id="${m.id}" data-type="maintenance" data-room="${m.room}"><h5>${m.task}</h5><p>Interval: ${m.interval} dage</p></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Vedligehold i ${roomName}</h3><button id="add-maintenance-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Opgave</button></div>
@@ -356,7 +391,7 @@ function renderRoomInventory(roomName) {
     const inventoryInRoom = (appState.home_inventory || []).filter(i => i.room === roomName);
     const content = inventoryInRoom.length === 0
         ? `<p class="empty-state-small">Intet inventar i dette rum.</p>`
-        : inventoryInRoom.map(i => `<div class="hjemmet-card"><h5>${i.name}</h5><p>Købt: ${formatDate(i.purchaseDate)}</p></div>`).join('');
+        : inventoryInRoom.map(i => `<div class="hjemmet-card" data-id="${i.id}" data-type="home_inventory" data-room="${i.room}"><h5>${i.name}</h5><p>Købt: ${formatDate(i.purchaseDate)}</p></div>`).join('');
 
     return `
         <div class="tab-header"><h3>Inventar i ${roomName}</h3><button id="add-home-inventory-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Inventar</button></div>
@@ -425,12 +460,24 @@ async function handleAddNewRoom() {
 
 // PLANTER
 function openPlantModal(roomName, plantId = null) {
-    appElements.plantForm.reset();
+    const modal = appElements.plantModal;
+    const form = appElements.plantForm;
+    form.reset();
     document.getElementById('plant-room-hidden').value = roomName;
     document.getElementById('plant-id').value = plantId || '';
-    appElements.plantModal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
-    document.getElementById('plant-last-watered').value = formatDate(new Date());
-    appElements.plantModal.classList.remove('hidden');
+    appElements.deletePlantBtn.classList.toggle('hidden', !plantId);
+
+    if (plantId) {
+        const plant = appState.plants.find(p => p.id === plantId);
+        modal.querySelector('h3').textContent = `Rediger ${plant.name}`;
+        document.getElementById('plant-name').value = plant.name;
+        document.getElementById('plant-watering-interval').value = plant.wateringInterval;
+        document.getElementById('plant-last-watered').value = plant.lastWatered;
+    } else {
+        modal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
+        document.getElementById('plant-last-watered').value = formatDate(new Date());
+    }
+    modal.classList.remove('hidden');
 }
 
 async function handleSavePlant(e) {
@@ -455,6 +502,18 @@ async function handleSavePlant(e) {
         }
         appElements.plantModal.classList.add('hidden');
     } catch (error) { handleError(error, "Planten kunne ikke gemmes.", "savePlant"); }
+}
+
+async function handleDeletePlant() {
+    const plantId = document.getElementById('plant-id').value;
+    if (!plantId) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Plante', message: 'Er du sikker?'});
+    if (confirmed) {
+        try {
+            await deleteDoc(doc(db, 'plants', plantId));
+            appElements.plantModal.classList.add('hidden');
+        } catch (error) { handleError(error, "Planten kunne ikke slettes.", "deletePlant"); }
+    }
 }
 
 async function markPlantAsWatered(plantId) {
@@ -500,7 +559,15 @@ function openProjectModal(roomName, projectId = null) {
     appElements.projectForm.reset();
     document.getElementById('project-room-hidden').value = roomName;
     document.getElementById('project-id').value = projectId || '';
-    appElements.projectModal.querySelector('h3').textContent = `Nyt Projekt i ${roomName}`;
+    appElements.deleteProjectBtn.classList.toggle('hidden', !projectId);
+    if (projectId) {
+        const project = appState.projects.find(p => p.id === projectId);
+        appElements.projectModal.querySelector('h3').textContent = `Rediger ${project.title}`;
+        document.getElementById('project-title').value = project.title;
+        document.getElementById('project-status').value = project.status;
+    } else {
+        appElements.projectModal.querySelector('h3').textContent = `Nyt Projekt i ${roomName}`;
+    }
     appElements.projectModal.classList.remove('hidden');
 }
 
@@ -524,12 +591,31 @@ async function handleSaveProject(e) {
     } catch (error) { handleError(error, "Projektet kunne ikke gemmes.", "saveProject"); }
 }
 
+async function handleDeleteProject() {
+    const projectId = document.getElementById('project-id').value;
+    if (!projectId) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Projekt', message: 'Er du sikker?'});
+    if(confirmed) {
+        try {
+            await deleteDoc(doc(db, 'projects', projectId));
+            appElements.projectModal.classList.add('hidden');
+        } catch (error) { handleError(error, "Projektet kunne ikke slettes.", "deleteProject"); }
+    }
+}
+
 // PÅMINDELSER
 function openReminderModal(roomName, reminderId = null) {
     appElements.reminderForm.reset();
     document.getElementById('reminder-room-hidden').value = roomName;
     document.getElementById('reminder-id').value = reminderId || '';
-    appElements.reminderModal.querySelector('h3').textContent = `Ny Påmindelse i ${roomName}`;
+    appElements.deleteReminderBtn.classList.toggle('hidden', !reminderId);
+    if (reminderId) {
+        const reminder = appState.reminders.find(r => r.id === reminderId);
+        appElements.reminderModal.querySelector('h3').textContent = `Rediger Påmindelse`;
+        document.getElementById('reminder-text').value = reminder.text;
+    } else {
+        appElements.reminderModal.querySelector('h3').textContent = `Ny Påmindelse i ${roomName}`;
+    }
     appElements.reminderModal.classList.remove('hidden');
 }
 
@@ -552,12 +638,32 @@ async function handleSaveReminder(e) {
     } catch (error) { handleError(error, "Påmindelsen kunne ikke gemmes.", "saveReminder"); }
 }
 
+async function handleDeleteReminder() {
+    const reminderId = document.getElementById('reminder-id').value;
+    if (!reminderId) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Påmindelse', message: 'Er du sikker?'});
+    if(confirmed) {
+        try {
+            await deleteDoc(doc(db, 'reminders', reminderId));
+            appElements.reminderModal.classList.add('hidden');
+        } catch (error) { handleError(error, "Påmindelsen kunne ikke slettes.", "deleteReminder"); }
+    }
+}
+
 // VEDLIGEHOLD
 function openMaintenanceModal(roomName, taskId = null) {
     appElements.maintenanceForm.reset();
     document.getElementById('maintenance-room-hidden').value = roomName;
     document.getElementById('maintenance-id').value = taskId || '';
-    appElements.maintenanceModal.querySelector('h3').textContent = `Ny Vedligeholdelsesopgave i ${roomName}`;
+    appElements.deleteMaintenanceBtn.classList.toggle('hidden', !taskId);
+    if (taskId) {
+        const task = appState.maintenance.find(m => m.id === taskId);
+        appElements.maintenanceModal.querySelector('h3').textContent = `Rediger Opgave`;
+        document.getElementById('maintenance-task').value = task.task;
+        document.getElementById('maintenance-interval').value = task.interval;
+    } else {
+        appElements.maintenanceModal.querySelector('h3').textContent = `Ny Vedligeholdelsesopgave i ${roomName}`;
+    }
     appElements.maintenanceModal.classList.remove('hidden');
 }
 
@@ -581,13 +687,34 @@ async function handleSaveMaintenance(e) {
     } catch (error) { handleError(error, "Opgaven kunne ikke gemmes.", "saveMaintenance"); }
 }
 
+async function handleDeleteMaintenance() {
+    const taskId = document.getElementById('maintenance-id').value;
+    if (!taskId) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Opgave', message: 'Er du sikker?'});
+    if(confirmed) {
+        try {
+            await deleteDoc(doc(db, 'maintenance', taskId));
+            appElements.maintenanceModal.classList.add('hidden');
+        } catch (error) { handleError(error, "Opgaven kunne ikke slettes.", "deleteMaintenance"); }
+    }
+}
+
 // INVENTAR
 function openHomeInventoryModal(roomName, itemId = null) {
     appElements.homeInventoryForm.reset();
     document.getElementById('home-inventory-room-hidden').value = roomName;
     document.getElementById('home-inventory-id').value = itemId || '';
-    appElements.homeInventoryModal.querySelector('h3').textContent = `Nyt Inventar i ${roomName}`;
-    document.getElementById('home-inventory-purchaseDate').value = formatDate(new Date());
+    appElements.deleteHomeInventoryBtn.classList.toggle('hidden', !itemId);
+    if (itemId) {
+        const item = appState.home_inventory.find(i => i.id === itemId);
+        appElements.homeInventoryModal.querySelector('h3').textContent = `Rediger Inventar`;
+        document.getElementById('home-inventory-name').value = item.name;
+        document.getElementById('home-inventory-purchaseDate').value = item.purchaseDate;
+        document.getElementById('home-inventory-manualUrl').value = item.manualUrl || '';
+    } else {
+        appElements.homeInventoryModal.querySelector('h3').textContent = `Nyt Inventar i ${roomName}`;
+        document.getElementById('home-inventory-purchaseDate').value = formatDate(new Date());
+    }
     appElements.homeInventoryModal.classList.remove('hidden');
 }
 
@@ -610,4 +737,16 @@ async function handleSaveHomeInventory(e) {
         }
         appElements.homeInventoryModal.classList.add('hidden');
     } catch (error) { handleError(error, "Inventar kunne ikke gemmes.", "saveHomeInventory"); }
+}
+
+async function handleDeleteHomeInventory() {
+    const itemId = document.getElementById('home-inventory-id').value;
+    if (!itemId) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Inventar', message: 'Er du sikker?'});
+    if(confirmed) {
+        try {
+            await deleteDoc(doc(db, 'home_inventory', itemId));
+            appElements.homeInventoryModal.classList.add('hidden');
+        } catch (error) { handleError(error, "Inventar kunne ikke slettes.", "deleteHomeInventory"); }
+    }
 }
