@@ -1,7 +1,7 @@
 // js/hjemmet.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
 
@@ -46,6 +46,13 @@ function handleNavClick(e) {
     if (!navLink) return;
 
     const newView = navLink.dataset.view;
+
+    // OPDATERING: Håndter klik på "Tilføj Rum"
+    if (newView === 'add_room') {
+        handleAddNewRoom();
+        return;
+    }
+
     if (newView && newView !== hjemmetState.currentView) {
         hjemmetState.currentView = newView;
         // Nulstil faneblad, når vi skifter til et nyt rum eller en hovedsektion
@@ -119,6 +126,11 @@ function renderSidebar() {
             <div class="hjemmet-nav-section">
                 <h4 class="hjemmet-nav-header">Rum</h4>
                 ${roomLinks}
+                <!-- OPDATERING: Tilføjet "Tilføj Rum" knap -->
+                <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Tilføj Rum</span>
+                </a>
             </div>
         </nav>
     `;
@@ -454,5 +466,34 @@ async function handleSaveWish(e) {
         showNotification({ title: "Gemt!", message: "Dit ønske er blevet tilføjet til listen." });
     } catch (error) {
         handleError(error, "Ønsket kunne ikke gemmes.", "saveWish");
+    }
+}
+
+/**
+ * OPDATERING: Håndterer tilføjelse af et nyt rum via en prompt.
+ */
+async function handleAddNewRoom() {
+    const roomName = prompt("Hvad hedder det nye rum?");
+    if (!roomName || roomName.trim() === "") {
+        return; // Brugeren annullerede eller indtastede et tomt navn
+    }
+
+    const trimmedName = roomName.trim();
+    const existingRooms = (appState.references.rooms || []).map(r => r.toLowerCase());
+
+    if (existingRooms.includes(trimmedName.toLowerCase())) {
+        showNotification({ title: "Rum findes allerede", message: `Et rum med navnet "${trimmedName}" eksisterer allerede.` });
+        return;
+    }
+
+    try {
+        const ref = doc(db, 'references', appState.currentUser.uid);
+        await updateDoc(ref, {
+            rooms: arrayUnion(trimmedName)
+        });
+        showNotification({ title: "Rum Tilføjet", message: `"${trimmedName}" er blevet tilføjet til din liste over rum.` });
+        // Firestore listener vil automatisk opdatere UI'et.
+    } catch (error) {
+        handleError(error, "Rummet kunne ikke tilføjes.", "addNewRoom");
     }
 }
