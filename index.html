@@ -39,7 +39,8 @@
                 <nav class="desktop-nav">
                     <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                     <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
-                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjem</a>
+                    <!-- OPDATERING: Omdøbt "Hjem" til "Hjemmet" -->
+                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjemmet</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
                     <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
                     <a href="#oekonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
@@ -141,9 +142,16 @@
                 </div>
             </section>
 
+            <!-- OPDATERING: Tilføjet grundlæggende layout for "Hjemmet" -->
             <section id="hjem" class="page hidden">
-                <h2>Hjemmet</h2>
-                <!-- Nyt indhold for "Hjemmet" siden vil blive tilføjet her -->
+                <div class="hjemmet-layout">
+                    <aside id="hjemmet-sidebar" class="hjemmet-sidebar">
+                        <!-- Sidebar navigation vil blive indsat her af JS -->
+                    </aside>
+                    <main id="hjemmet-main-content" class="hjemmet-main-content">
+                        <!-- Indhold for den valgte visning (Oversigt, Rum, etc.) vil blive indsat her af JS -->
+                    </main>
+                </div>
             </section>
 
             <section id="recipes" class="page hidden">
@@ -233,7 +241,8 @@
         <nav id="mobile-tab-bar" class="mobile-tab-bar hidden">
             <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
-            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjem</span></a>
+            <!-- OPDATERING: Omdøbt data-page til at matche -->
+            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjemmet</span></a>
             <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
             <a href="#oekonomi" class="mobile-tab-link" data-page="oekonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
         </nav>
