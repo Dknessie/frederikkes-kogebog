@@ -2228,18 +2228,33 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 .room-tabs {
     border-bottom: 1px solid var(--hjem-widget-border);
+    margin-bottom: var(--spacing-l);
+    padding-bottom: var(--spacing-l);
+    display: flex;
+    gap: var(--spacing-m);
+    flex-wrap: wrap;
 }
 .room-tab {
+    background-color: var(--hjem-widget-bg);
+    border: 1px solid var(--hjem-widget-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-s) var(--spacing-m);
     color: var(--hjem-subheader-text);
     font-weight: 500;
-    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--body-font);
 }
-.room-tab:hover {
+.room-tab:hover:not(.active) {
+    background-color: var(--hjem-bg-color);
     color: var(--hjem-header-text);
+    border-color: #d1d5db;
 }
 .room-tab.active {
-    color: var(--hjem-sidebar-active-text);
-    border-bottom-color: var(--hjem-sidebar-active-text);
+    background-color: var(--hjem-sidebar-active-text);
+    color: var(--white-color);
+    border-color: var(--hjem-sidebar-active-text);
+    font-weight: 600;
 }
 
 .tab-header h3 {
