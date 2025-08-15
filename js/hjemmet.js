@@ -11,7 +11,7 @@ let appElements;
 // Lokal state for Hjemmet-siden
 const hjemmetState = {
     currentView: 'oversigt', // 'oversigt', 'onskeliste', eller et rum-navn
-    currentRoomTab: 'planter', // Aktiv fane for en rum-side
+    currentRoomTab: 'projekter', // Aktiv fane for en rum-side
 };
 
 /**
@@ -34,6 +34,10 @@ export function initHjemmet(state, elements) {
     // Lyt efter form submissions fra modals
     if (appElements.plantForm) appElements.plantForm.addEventListener('submit', handleSavePlant);
     if (appElements.wishlistForm) appElements.wishlistForm.addEventListener('submit', handleSaveWish);
+    if (appElements.projectForm) appElements.projectForm.addEventListener('submit', handleSaveProject);
+    if (appElements.reminderForm) appElements.reminderForm.addEventListener('submit', handleSaveReminder);
+    if (appElements.maintenanceForm) appElements.maintenanceForm.addEventListener('submit', handleSaveMaintenance);
+    if (appElements.homeInventoryForm) appElements.homeInventoryForm.addEventListener('submit', handleSaveHomeInventory);
 }
 
 /**
@@ -54,7 +58,7 @@ function handleNavClick(e) {
 
     if (newView && newView !== hjemmetState.currentView) {
         hjemmetState.currentView = newView;
-        hjemmetState.currentRoomTab = 'planter'; 
+        hjemmetState.currentRoomTab = 'projekter'; 
         renderHjemmetPage();
     }
 }
@@ -72,21 +76,18 @@ function handleMainContentClick(e) {
         return;
     }
     
-    if (e.target.closest('#add-plant-btn')) {
-        openPlantModal(hjemmetState.currentView);
-    }
+    // Knapper til at åbne modals
+    if (e.target.closest('#add-project-btn')) openProjectModal(hjemmetState.currentView);
+    if (e.target.closest('#add-plant-btn')) openPlantModal(hjemmetState.currentView);
+    if (e.target.closest('#add-reminder-btn')) openReminderModal(hjemmetState.currentView);
+    if (e.target.closest('#add-maintenance-btn')) openMaintenanceModal(hjemmetState.currentView);
+    if (e.target.closest('#add-home-inventory-btn')) openHomeInventoryModal(hjemmetState.currentView);
+    if (e.target.closest('#add-wish-btn')) openWishlistModal();
 
-    if (e.target.closest('#add-wish-btn')) {
-        openWishlistModal();
-    }
-
-    // OPDATERING: Håndter klik på "Vandet" knap
     const waterBtn = e.target.closest('.water-plant-btn');
     if (waterBtn) {
         const plantId = waterBtn.dataset.plantId;
-        if (plantId) {
-            markPlantAsWatered(plantId);
-        }
+        if (plantId) markPlantAsWatered(plantId);
     }
 }
 
@@ -219,7 +220,6 @@ function renderWateringWidget() {
                     <div class="item-status ${statusClass}">
                         <span>${statusText}</span>
                     </div>
-                    <!-- OPDATERING: Tilføjet "Vandet" knap -->
                     <button class="btn btn-secondary btn-small water-plant-btn" data-plant-id="${plant.id}">Vandet</button>
                 </li>
             `;
@@ -269,11 +269,23 @@ function renderRoomPage(roomName) {
 
     let tabContent = '';
     switch(hjemmetState.currentRoomTab) {
+        case 'projekter':
+            tabContent = renderRoomProjects(roomName);
+            break;
         case 'planter':
             tabContent = renderRoomPlants(roomName);
             break;
+        case 'påmindelser':
+            tabContent = renderRoomReminders(roomName);
+            break;
+        case 'vedligehold':
+            tabContent = renderRoomMaintenance(roomName);
+            break;
+        case 'inventar':
+            tabContent = renderRoomInventory(roomName);
+            break;
         default:
-            tabContent = `<p class="empty-state">Funktionalitet for "${hjemmetState.currentRoomTab}" er endnu ikke implementeret.</p>`;
+            tabContent = `<p class="empty-state">Noget gik galt.</p>`;
             break;
     }
 
@@ -290,43 +302,70 @@ function renderRoomPage(roomName) {
     `;
 }
 
-/**
- * Renderer indholdet for "Planter" fanebladet for et specifikt rum.
- * @param {string} roomName - Navnet på rummet.
- * @returns {string} HTML-strengen for plante-sektionen.
- */
-function renderRoomPlants(roomName) {
-    const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
-    
-    let plantsHTML = '';
-    if (plantsInRoom.length === 0) {
-        plantsHTML = `<p class="empty-state-small">Der er ingen planter i dette rum endnu.</p>`;
-    } else {
-        plantsHTML = '<div class="plant-list-grid">';
-        plantsInRoom.sort((a,b) => a.name.localeCompare(b.name)).forEach(plant => {
-            plantsHTML += `
-                <div class="plant-card-small" data-id="${plant.id}">
-                    <h5>${plant.name}</h5>
-                    <p>Vandes hver ${plant.wateringInterval}. dag</p>
-                    <p class="small-text">Sidst vandet: ${formatDate(plant.lastWatered)}</p>
-                </div>
-            `;
-        });
-        plantsHTML += '</div>';
-    }
+// --- RENDER FUNKTIONER FOR FANEBLADE ---
 
+function renderRoomProjects(roomName) {
+    const projectsInRoom = (appState.projects || []).filter(p => p.room === roomName);
+    const content = projectsInRoom.length === 0
+        ? `<p class="empty-state-small">Ingen projekter i dette rum.</p>`
+        : projectsInRoom.map(p => `<div class="hjemmet-card"><h5>${p.title}</h5><p>${p.status}</p></div>`).join('');
+    
     return `
-        <div class="tab-header">
-            <h3>Planter i ${roomName}</h3>
-            <button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button>
-        </div>
-        ${plantsHTML}
+        <div class="tab-header"><h3>Projekter i ${roomName}</h3><button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Projekt</button></div>
+        <div class="hjemmet-grid">${content}</div>
     `;
 }
 
-/**
- * Renderer den globale ønskeliste-side.
- */
+function renderRoomPlants(roomName) {
+    const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
+    const content = plantsInRoom.length === 0
+        ? `<p class="empty-state-small">Ingen planter i dette rum.</p>`
+        : plantsInRoom.map(p => `<div class="hjemmet-card"><h5>${p.name}</h5><p>Sidst vandet: ${formatDate(p.lastWatered)}</p></div>`).join('');
+
+    return `
+        <div class="tab-header"><h3>Planter i ${roomName}</h3><button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button></div>
+        <div class="hjemmet-grid">${content}</div>
+    `;
+}
+
+function renderRoomReminders(roomName) {
+    const remindersInRoom = (appState.reminders || []).filter(r => r.room === roomName);
+     const content = remindersInRoom.length === 0
+        ? `<p class="empty-state-small">Ingen påmindelser i dette rum.</p>`
+        : remindersInRoom.map(r => `<div class="hjemmet-card"><h5>${r.text}</h5></div>`).join('');
+
+    return `
+        <div class="tab-header"><h3>Påmindelser i ${roomName}</h3><button id="add-reminder-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Påmindelse</button></div>
+        <div class="hjemmet-grid">${content}</div>
+    `;
+}
+
+function renderRoomMaintenance(roomName) {
+    const maintenanceInRoom = (appState.maintenance || []).filter(m => m.room === roomName);
+    const content = maintenanceInRoom.length === 0
+        ? `<p class="empty-state-small">Intet vedligehold i dette rum.</p>`
+        : maintenanceInRoom.map(m => `<div class="hjemmet-card"><h5>${m.task}</h5><p>Interval: ${m.interval} dage</p></div>`).join('');
+
+    return `
+        <div class="tab-header"><h3>Vedligehold i ${roomName}</h3><button id="add-maintenance-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Opgave</button></div>
+        <div class="hjemmet-grid">${content}</div>
+    `;
+}
+
+function renderRoomInventory(roomName) {
+    const inventoryInRoom = (appState.home_inventory || []).filter(i => i.room === roomName);
+    const content = inventoryInRoom.length === 0
+        ? `<p class="empty-state-small">Intet inventar i dette rum.</p>`
+        : inventoryInRoom.map(i => `<div class="hjemmet-card"><h5>${i.name}</h5><p>Købt: ${formatDate(i.purchaseDate)}</p></div>`).join('');
+
+    return `
+        <div class="tab-header"><h3>Inventar i ${roomName}</h3><button id="add-home-inventory-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Inventar</button></div>
+        <div class="hjemmet-grid">${content}</div>
+    `;
+}
+
+// --- ØNSKELISTE & DIVERSE ---
+
 function renderWishlistPage() {
     const wishlist = appState.shoppingLists.wishlist || {};
     const items = Object.values(wishlist);
@@ -361,124 +400,9 @@ function renderWishlistPage() {
     `;
 }
 
-/**
- * Åbner modalen for at tilføje/redigere en plante.
- * @param {string} roomName - Navnet på det rum, planten tilhører.
- * @param {string|null} [plantId=null] - ID'et på planten, hvis den redigeres.
- */
-function openPlantModal(roomName, plantId = null) {
-    const modal = appElements.plantModal;
-    const form = appElements.plantForm;
-    form.reset();
-
-    document.getElementById('plant-room-hidden').value = roomName;
-    document.getElementById('plant-id').value = plantId || '';
-
-    if (plantId) {
-        // Logik for at redigere en plante (ikke implementeret endnu)
-    } else {
-        modal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
-        document.getElementById('plant-last-watered').value = formatDate(new Date());
-    }
-    modal.classList.remove('hidden');
-}
-
-/**
- * Gemmer en plante til Firestore.
- * @param {Event} e - Form submission event.
- */
-async function handleSavePlant(e) {
-    e.preventDefault();
-    const plantId = document.getElementById('plant-id').value;
-    
-    const plantData = {
-        name: document.getElementById('plant-name').value.trim(),
-        room: document.getElementById('plant-room-hidden').value,
-        lastWatered: document.getElementById('plant-last-watered').value,
-        wateringInterval: Number(document.getElementById('plant-watering-interval').value),
-        userId: appState.currentUser.uid,
-    };
-
-    if (!plantData.name || !plantData.room || !plantData.lastWatered || !plantData.wateringInterval) {
-        showNotification({ title: "Udfyld alle felter", message: "Alle felter skal være udfyldt." });
-        return;
-    }
-
-    try {
-        if (plantId) {
-            await updateDoc(doc(db, 'plants', plantId), plantData);
-        } else {
-            await addDoc(collection(db, 'plants'), plantData);
-        }
-        appElements.plantModal.classList.add('hidden');
-        showNotification({ title: "Gemt!", message: "Din plante er blevet gemt." });
-    } catch (error) {
-        handleError(error, "Planten kunne ikke gemmes.", "savePlant");
-    }
-}
-
-/**
- * Åbner modalen for at tilføje et nyt ønske.
- */
-function openWishlistModal() {
-    const modal = appElements.wishlistModal;
-    const form = appElements.wishlistForm;
-    form.reset();
-    
-    const roomSelect = document.getElementById('wish-room');
-    const roomNames = appState.references.rooms || [];
-    const populateDropdown = (select, options, placeholder) => {
-        select.innerHTML = `<option value="">${placeholder}</option>`;
-        options.sort().forEach(opt => select.add(new Option(opt, opt)));
-    };
-    populateDropdown(roomSelect, roomNames, 'Vælg et rum (valgfri)...');
-
-    modal.classList.remove('hidden');
-}
-
-/**
- * Gemmer et ønske til Firestore.
- * @param {Event} e - Form submission event.
- */
-async function handleSaveWish(e) {
-    e.preventDefault();
-    const wishName = document.getElementById('wish-name').value.trim();
-    if (!wishName) return;
-
-    const key = wishName.toLowerCase();
-    
-    const wishData = {
-        name: wishName,
-        price: Number(document.getElementById('wish-price').value) || null,
-        url: document.getElementById('wish-url').value.trim() || null,
-        roomId: document.getElementById('wish-room').value || null,
-        quantity_to_buy: 1,
-        unit: 'stk'
-    };
-
-    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
-    try {
-        await setDoc(shoppingListRef, {
-            wishlist: {
-                [key]: wishData
-            }
-        }, { merge: true });
-
-        appElements.wishlistModal.classList.add('hidden');
-        showNotification({ title: "Gemt!", message: "Dit ønske er blevet tilføjet til listen." });
-    } catch (error) {
-        handleError(error, "Ønsket kunne ikke gemmes.", "saveWish");
-    }
-}
-
-/**
- * Håndterer tilføjelse af et nyt rum via en prompt.
- */
 async function handleAddNewRoom() {
     const roomName = prompt("Hvad hedder det nye rum?");
-    if (!roomName || roomName.trim() === "") {
-        return;
-    }
+    if (!roomName || roomName.trim() === "") return;
 
     const trimmedName = roomName.trim();
     const existingRooms = (appState.references.rooms || []).map(r => r.toLowerCase());
@@ -490,29 +414,200 @@ async function handleAddNewRoom() {
 
     try {
         const ref = doc(db, 'references', appState.currentUser.uid);
-        await updateDoc(ref, {
-            rooms: arrayUnion(trimmedName)
-        });
-        showNotification({ title: "Rum Tilføjet", message: `"${trimmedName}" er blevet tilføjet til din liste over rum.` });
+        await updateDoc(ref, { rooms: arrayUnion(trimmedName) });
+        showNotification({ title: "Rum Tilføjet", message: `"${trimmedName}" er blevet tilføjet.` });
     } catch (error) {
         handleError(error, "Rummet kunne ikke tilføjes.", "addNewRoom");
     }
 }
 
-/**
- * OPDATERING: Opdaterer en plantes 'lastWatered' dato til i dag.
- * @param {string} plantId - ID'et på planten, der skal opdateres.
- */
-async function markPlantAsWatered(plantId) {
-    if (!plantId) return;
+// --- MODAL & SAVE FUNKTIONER ---
 
-    try {
-        const plantRef = doc(db, 'plants', plantId);
-        await updateDoc(plantRef, {
-            lastWatered: formatDate(new Date())
-        });
-        showNotification({ title: "Plante Vandet", message: "Datoen for sidste vanding er opdateret." });
-    } catch (error) {
-        handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered");
+// PLANTER
+function openPlantModal(roomName, plantId = null) {
+    appElements.plantForm.reset();
+    document.getElementById('plant-room-hidden').value = roomName;
+    document.getElementById('plant-id').value = plantId || '';
+    appElements.plantModal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
+    document.getElementById('plant-last-watered').value = formatDate(new Date());
+    appElements.plantModal.classList.remove('hidden');
+}
+
+async function handleSavePlant(e) {
+    e.preventDefault();
+    const plantId = document.getElementById('plant-id').value;
+    const plantData = {
+        name: document.getElementById('plant-name').value.trim(),
+        room: document.getElementById('plant-room-hidden').value,
+        lastWatered: document.getElementById('plant-last-watered').value,
+        wateringInterval: Number(document.getElementById('plant-watering-interval').value),
+        userId: appState.currentUser.uid,
+    };
+    if (!plantData.name || !plantData.wateringInterval) {
+        showNotification({ title: "Udfyld alle felter", message: "Navn og interval er påkrævet." });
+        return;
     }
+    try {
+        if (plantId) {
+            await updateDoc(doc(db, 'plants', plantId), plantData);
+        } else {
+            await addDoc(collection(db, 'plants'), plantData);
+        }
+        appElements.plantModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Planten kunne ikke gemmes.", "savePlant"); }
+}
+
+async function markPlantAsWatered(plantId) {
+    try {
+        await updateDoc(doc(db, 'plants', plantId), { lastWatered: formatDate(new Date()) });
+        showNotification({ title: "Plante Vandet", message: "Datoen for sidste vanding er opdateret." });
+    } catch (error) { handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered"); }
+}
+
+// ØNSKELISTE
+function openWishlistModal() {
+    appElements.wishlistForm.reset();
+    const roomSelect = document.getElementById('wish-room');
+    const roomNames = appState.references.rooms || [];
+    const populateDropdown = (select, options, placeholder) => {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        options.sort().forEach(opt => select.add(new Option(opt, opt)));
+    };
+    populateDropdown(roomSelect, roomNames, 'Vælg et rum (valgfri)...');
+    appElements.wishlistModal.classList.remove('hidden');
+}
+
+async function handleSaveWish(e) {
+    e.preventDefault();
+    const wishName = document.getElementById('wish-name').value.trim();
+    if (!wishName) return;
+    const key = wishName.toLowerCase();
+    const wishData = {
+        name: wishName,
+        price: Number(document.getElementById('wish-price').value) || null,
+        url: document.getElementById('wish-url').value.trim() || null,
+        roomId: document.getElementById('wish-room').value || null,
+    };
+    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+    try {
+        await setDoc(shoppingListRef, { wishlist: { [key]: wishData } }, { merge: true });
+        appElements.wishlistModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Ønsket kunne ikke gemmes.", "saveWish"); }
+}
+
+// PROJEKTER
+function openProjectModal(roomName, projectId = null) {
+    appElements.projectForm.reset();
+    document.getElementById('project-room-hidden').value = roomName;
+    document.getElementById('project-id').value = projectId || '';
+    appElements.projectModal.querySelector('h3').textContent = `Nyt Projekt i ${roomName}`;
+    appElements.projectModal.classList.remove('hidden');
+}
+
+async function handleSaveProject(e) {
+    e.preventDefault();
+    const projectId = document.getElementById('project-id').value;
+    const projectData = {
+        title: document.getElementById('project-title').value.trim(),
+        status: document.getElementById('project-status').value,
+        room: document.getElementById('project-room-hidden').value,
+        userId: appState.currentUser.uid,
+    };
+    if (!projectData.title) return;
+    try {
+        if (projectId) {
+            await updateDoc(doc(db, 'projects', projectId), projectData);
+        } else {
+            await addDoc(collection(db, 'projects'), projectData);
+        }
+        appElements.projectModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Projektet kunne ikke gemmes.", "saveProject"); }
+}
+
+// PÅMINDELSER
+function openReminderModal(roomName, reminderId = null) {
+    appElements.reminderForm.reset();
+    document.getElementById('reminder-room-hidden').value = roomName;
+    document.getElementById('reminder-id').value = reminderId || '';
+    appElements.reminderModal.querySelector('h3').textContent = `Ny Påmindelse i ${roomName}`;
+    appElements.reminderModal.classList.remove('hidden');
+}
+
+async function handleSaveReminder(e) {
+    e.preventDefault();
+    const reminderId = document.getElementById('reminder-id').value;
+    const reminderData = {
+        text: document.getElementById('reminder-text').value.trim(),
+        room: document.getElementById('reminder-room-hidden').value,
+        userId: appState.currentUser.uid,
+    };
+    if (!reminderData.text) return;
+    try {
+        if (reminderId) {
+            await updateDoc(doc(db, 'reminders', reminderId), reminderData);
+        } else {
+            await addDoc(collection(db, 'reminders'), reminderData);
+        }
+        appElements.reminderModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Påmindelsen kunne ikke gemmes.", "saveReminder"); }
+}
+
+// VEDLIGEHOLD
+function openMaintenanceModal(roomName, taskId = null) {
+    appElements.maintenanceForm.reset();
+    document.getElementById('maintenance-room-hidden').value = roomName;
+    document.getElementById('maintenance-id').value = taskId || '';
+    appElements.maintenanceModal.querySelector('h3').textContent = `Ny Vedligeholdelsesopgave i ${roomName}`;
+    appElements.maintenanceModal.classList.remove('hidden');
+}
+
+async function handleSaveMaintenance(e) {
+    e.preventDefault();
+    const taskId = document.getElementById('maintenance-id').value;
+    const maintenanceData = {
+        task: document.getElementById('maintenance-task').value.trim(),
+        interval: Number(document.getElementById('maintenance-interval').value),
+        room: document.getElementById('maintenance-room-hidden').value,
+        userId: appState.currentUser.uid,
+    };
+    if (!maintenanceData.task || !maintenanceData.interval) return;
+    try {
+        if (taskId) {
+            await updateDoc(doc(db, 'maintenance', taskId), maintenanceData);
+        } else {
+            await addDoc(collection(db, 'maintenance'), maintenanceData);
+        }
+        appElements.maintenanceModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Opgaven kunne ikke gemmes.", "saveMaintenance"); }
+}
+
+// INVENTAR
+function openHomeInventoryModal(roomName, itemId = null) {
+    appElements.homeInventoryForm.reset();
+    document.getElementById('home-inventory-room-hidden').value = roomName;
+    document.getElementById('home-inventory-id').value = itemId || '';
+    appElements.homeInventoryModal.querySelector('h3').textContent = `Nyt Inventar i ${roomName}`;
+    document.getElementById('home-inventory-purchaseDate').value = formatDate(new Date());
+    appElements.homeInventoryModal.classList.remove('hidden');
+}
+
+async function handleSaveHomeInventory(e) {
+    e.preventDefault();
+    const itemId = document.getElementById('home-inventory-id').value;
+    const inventoryData = {
+        name: document.getElementById('home-inventory-name').value.trim(),
+        purchaseDate: document.getElementById('home-inventory-purchaseDate').value,
+        manualUrl: document.getElementById('home-inventory-manualUrl').value.trim() || null,
+        room: document.getElementById('home-inventory-room-hidden').value,
+        userId: appState.currentUser.uid,
+    };
+    if (!inventoryData.name || !inventoryData.purchaseDate) return;
+    try {
+        if (itemId) {
+            await updateDoc(doc(db, 'home_inventory', itemId), inventoryData);
+        } else {
+            await addDoc(collection(db, 'home_inventory'), inventoryData);
+        }
+        appElements.homeInventoryModal.classList.add('hidden');
+    } catch (error) { handleError(error, "Inventar kunne ikke gemmes.", "saveHomeInventory"); }
 }
