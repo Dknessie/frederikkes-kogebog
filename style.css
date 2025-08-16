@@ -18,25 +18,29 @@
     --theme-light-blue: #E3F2FD;
     --theme-grey: #B0B0B0;
 
-    /* OPDATERING: Hjemmet Tema Farver */
-    --hjem-swedish-blue: #4a6c8c;
-    --hjem-swedish-white: #f8f8f8;
+    /* NEW: Bosch-inspirerede farver til Materialer */
+    --bosch-green: #007bc0;
+    --bosch-red: #c4002f;
+
+    /* NYT: Hjemmet Tema Farver (Moderne App Stil) */
+    --hjem-bg-color: #F9FAFB;
     --hjem-sidebar-bg: #FFFFFF;
     --hjem-sidebar-text: #6B7280;
+    --hjem-sidebar-active-bg: #F1F3FF;
+    --hjem-sidebar-active-text: #424874;
     --hjem-header-text: #111827;
     --hjem-subheader-text: #6B7280;
+    --hjem-widget-bg: #FFFFFF;
     --hjem-widget-border: #E5E7EB;
+    --hjem-primary-green: #10B981;
+    --hjem-primary-orange: #F59E0B;
+    --hjem-primary-red: #EF4444;
 
-    /* OPDATERING: Plante Tema Farver */
-    --plant-bg-color: #F0FDF4;
-    --plant-primary-color: #22C55E;
-    --plant-dark-green: #166534;
-    --plant-border-color: #BBF7D0;
-
-    /* OPDATERING: Projekt (Bosch) Tema Farver */
-    --project-bosch-blue: #005587;
-    --project-bosch-red: #e60000;
-    --project-bosch-bg: #F0F2F5;
+    /* NYT: Plante Tema Farver */
+    --plant-bg-color: #F0FDF4; /* Meget lys grøn */
+    --plant-primary-color: #22C55E; /* Livlig grøn */
+    --plant-dark-green: #166534; /* Mørk grøn til tekst */
+    --plant-border-color: #BBF7D0; /* Lys grøn kant */
 
     /* Statusfarver */
     --status-green: #4CAF50;
@@ -52,14 +56,14 @@
 
     /* Layout & Mellemrum */
     --border-radius: 6px;
-    --card-border-radius: 12px;
+    --card-border-radius: 12px; /* Lidt rundere kort */
     --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --strong-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --spacing-xs: 0.25rem;
-    --spacing-s: 0.5rem;
-    --spacing-m: 0.75rem;
-    --spacing-l: 1.25rem;
-    --spacing-xl: 2rem;
+    --spacing-xs: 0.25rem; /* 4px */
+    --spacing-s: 0.5rem;   /* 8px */
+    --spacing-m: 0.75rem;  /* 12px */
+    --spacing-l: 1.25rem;  /* 20px */
+    --spacing-xl: 2rem;    /* 32px */
     --mobile-tab-bar-height: 60px;
 }
 
@@ -2071,17 +2075,17 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 /* =================================================================
-   OPDATERING: HJEMMET TEMAER
+   NYT: HJEMMET TEMA
    ================================================================= */
 
 #hjem.page {
-    background-color: var(--hjem-swedish-white);
+    background-color: var(--hjem-bg-color);
 }
 #hjem .btn-primary {
-    background-color: var(--hjem-swedish-blue);
+    background-color: var(--hjem-sidebar-active-text);
 }
 #hjem .btn-primary:hover {
-    background-color: #3b5974;
+    background-color: #35385e;
 }
 
 .hjemmet-layout {
@@ -2093,36 +2097,196 @@ input:checked + .slider:before { transform: translateX(22px); }
 .hjemmet-sidebar {
     background-color: var(--hjem-sidebar-bg);
     border-radius: var(--card-border-radius);
+    box-shadow: none;
     border: 1px solid var(--hjem-widget-border);
     padding: var(--spacing-m);
     position: sticky;
     top: calc(65px + var(--spacing-l));
 }
+.hjemmet-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+.hjemmet-nav-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+.hjemmet-nav-header {
+    font-size: 0.75rem;
+    color: var(--hjem-subheader-text);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+}
+.hjemmet-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    text-decoration: none;
+    color: var(--hjem-sidebar-text);
+    font-weight: 500;
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.hjemmet-nav-link:hover {
+    background-color: var(--hjem-bg-color);
+    color: var(--hjem-header-text);
+}
 .hjemmet-nav-link.active {
-    background-color: var(--hjem-swedish-blue);
-    color: var(--white-color);
+    background-color: var(--hjem-sidebar-active-bg);
+    color: var(--hjem-sidebar-active-text);
     font-weight: 600;
 }
+.add-new-room-btn {
+    color: var(--hjem-sidebar-text);
+    font-style: normal;
+}
+.add-new-room-btn:hover {
+    background-color: var(--hjem-bg-color);
+    color: var(--hjem-header-text);
+}
+
+.hjemmet-oversigt-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--spacing-l);
+}
+
+.hjemmet-widget {
+    background-color: var(--hjem-widget-bg);
+    border-radius: var(--card-border-radius);
+    border: 1px solid var(--hjem-widget-border);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-l);
+}
+.hjemmet-widget h4 {
+    color: var(--hjem-header-text);
+    font-family: var(--body-font);
+    font-weight: 600;
+    font-size: 1rem;
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: var(--spacing-m);
+}
+.hjemmet-widget h4 i {
+    font-size: 0.9em;
+}
+.hjemmet-widget h4 .fa-tint { color: var(--hjem-primary-green); }
+.hjemmet-widget h4 .fa-bell { color: var(--hjem-primary-orange); }
+.hjemmet-widget h4 .fa-tools { color: var(--hjem-subheader-text); }
+.hjemmet-widget h4 .fa-tasks { color: var(--hjem-sidebar-active-text); }
+.hjemmet-widget h4 .fa-gift { color: var(--hjem-primary-red); }
+
+.widget-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.widget-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--hjem-widget-border);
+    font-size: var(--small-font-size);
+}
+.widget-list-item:last-child {
+    border-bottom: none;
+}
+
+.widget-list-item .item-main-info .item-title {
+    font-weight: 500;
+    color: var(--hjem-text-color);
+}
+.widget-list-item .item-main-info .item-subtitle {
+    color: var(--hjem-subheader-text);
+}
+.widget-list-item .item-status {
+    font-weight: 500;
+    color: var(--hjem-subheader-text);
+}
+.widget-list-item .item-status.status-red {
+    color: var(--hjem-primary-red);
+    font-weight: 600;
+}
+.widget-list-item .item-status.status-yellow {
+    color: var(--hjem-primary-orange);
+    font-weight: 600;
+}
+
+.room-header {
+    margin-bottom: var(--spacing-s);
+}
 .room-header h2 {
-    color: var(--hjem-swedish-blue);
+    color: var(--hjem-header-text);
     font-family: var(--body-font);
     font-size: 1.8rem;
     font-weight: 700;
 }
+.room-header p {
+    color: var(--hjem-subheader-text);
+    margin-top: -10px;
+}
+
+.room-tabs {
+    border-bottom: 1px solid var(--hjem-widget-border);
+    margin-bottom: var(--spacing-l);
+    padding-bottom: var(--spacing-l);
+    display: flex;
+    gap: var(--spacing-m);
+    flex-wrap: wrap;
+}
+.room-tab {
+    background-color: var(--hjem-widget-bg);
+    border: 1px solid var(--hjem-widget-border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-s) var(--spacing-m);
+    color: var(--hjem-subheader-text);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--body-font);
+    font-size: var(--small-font-size);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.room-tab:hover:not(.active) {
+    background-color: var(--hjem-bg-color);
+    color: var(--hjem-header-text);
+    border-color: #d1d5db;
+}
 .room-tab.active {
-    background-color: var(--hjem-swedish-blue);
+    background-color: var(--hjem-sidebar-active-text);
     color: var(--white-color);
-    border-color: var(--hjem-swedish-blue);
+    border-color: var(--hjem-sidebar-active-text);
     font-weight: 600;
 }
+
+.tab-header h3 {
+    color: var(--hjem-header-text);
+}
+
+.hjemmet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-l);
+}
+
 .hjemmet-card {
-    background-color: var(--white-color);
+    background-color: var(--hjem-widget-bg);
+    border-color: var(--hjem-widget-border);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-l);
     border: 1px solid var(--hjem-widget-border);
     border-radius: var(--border-radius);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    padding: var(--spacing-l);
-    border-left: 5px solid var(--hjem-widget-border);
 }
 .hjemmet-card:hover {
     box-shadow: var(--strong-shadow);
@@ -2134,10 +2298,15 @@ input:checked + .slider:before { transform: translateX(22px); }
     margin-top: 0;
 }
 
-/* Tema: Planter */
-.hjemmet-card.plant-card {
-    border-left-color: var(--plant-primary-color);
+.wishlist-page-grid .wishlist-item-card {
+    background-color: var(--hjem-widget-bg);
+    border-color: var(--hjem-widget-border);
 }
+.wishlist-page-grid .wishlist-item-price {
+    color: var(--hjem-primary-green);
+}
+
+/* OPDATERING: Nyt tema til plante-modal */
 .plant-modal-theme {
     background-color: var(--plant-bg-color);
 }
@@ -2171,31 +2340,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 .plant-modal-theme .image-upload-container img {
     border: 4px solid var(--white-color);
     box-shadow: var(--shadow);
-}
-
-/* Tema: Projekter (Bosch) */
-.hjemmet-card.project-card {
-    border-left-color: var(--project-bosch-blue);
-}
-.project-modal-theme {
-    background-color: var(--project-bosch-bg);
-}
-.project-modal-theme h3 {
-    color: var(--project-bosch-blue);
-    font-family: var(--body-font);
-    font-weight: 700;
-}
-.project-modal-theme .btn-primary {
-    background-color: var(--project-bosch-blue);
-}
-.project-modal-theme .btn-primary:hover {
-    background-color: #003e63;
-}
-.project-modal-theme .btn-danger {
-    background-color: var(--project-bosch-red);
-}
-.project-modal-theme .btn-danger:hover {
-    background-color: #b80000;
 }
 
 
