@@ -267,23 +267,79 @@
     </div>
 
     <div id="plant-edit-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
+        <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3>Ny Plante</h3>
+            <h3 id="plant-modal-title">Ny Plante</h3>
             <form id="plant-form">
                 <input type="hidden" id="plant-id">
                 <input type="hidden" id="plant-room-hidden">
-                <div class="input-group">
-                    <label for="plant-name">Navn på plante</label>
-                    <input type="text" id="plant-name" required>
+                <div class="form-grid-2-col">
+                    <div>
+                        <h4>Basis Info</h4>
+                        <div class="input-group">
+                            <label for="plant-name">Navn på plante</label>
+                            <input type="text" id="plant-name" required>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-watering-interval">Vandingsinterval (dage)</label>
+                                <input type="number" id="plant-watering-interval" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-last-watered">Sidst vandet</label>
+                                <input type="date" id="plant-last-watered" required>
+                            </div>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-fertilizer-interval">Gødningsinterval (dage)</label>
+                                <input type="number" id="plant-fertilizer-interval">
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-last-fertilized">Sidst gødet</label>
+                                <input type="date" id="plant-last-fertilized">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Anbefalinger</h4>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-light">Lysforhold</label>
+                                <select id="plant-light">
+                                    <option value="">Vælg...</option>
+                                    <option value="Direkte sol">Direkte sol</option>
+                                    <option value="Indirekte lys">Indirekte lys</option>
+                                    <option value="Skygge">Skygge</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-humidity">Luftfugtighed</label>
+                                <select id="plant-humidity">
+                                    <option value="">Vælg...</option>
+                                    <option value="Høj">Høj</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Lav">Lav</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-soil">Jordtype</label>
+                            <input type="text" id="plant-soil" placeholder="F.eks. Kaktusjord, pottemuld med perlite">
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-pot">Pottetype</label>
+                            <input type="text" id="plant-pot" placeholder="F.eks. Terrakotta med dræn, selvvandingspotte">
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-dormancy">Dvaleperiode</label>
+                            <input type="text" id="plant-dormancy" placeholder="F.eks. Vinter (reducer vanding)">
+                        </div>
+                    </div>
                 </div>
                 <div class="input-group">
-                    <label for="plant-watering-interval">Vandingsinterval (dage)</label>
-                    <input type="number" id="plant-watering-interval" required>
-                </div>
-                <div class="input-group">
-                    <label for="plant-last-watered">Sidst vandet</label>
-                    <input type="date" id="plant-last-watered" required>
+                    <label for="plant-care-guide">Plantevejledning</label>
+                    <textarea id="plant-care-guide" rows="4" placeholder="Generelle noter om pasning, omplantning, etc."></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="delete-plant-btn" class="btn btn-danger hidden">Slet</button>
