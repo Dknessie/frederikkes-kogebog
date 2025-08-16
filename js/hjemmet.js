@@ -7,6 +7,7 @@ import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
+let plantFormImage = { type: null, data: null }; // Tilføjet for at håndtere billede-upload
 
 // Lokal state for Hjemmet-siden
 const hjemmetState = {
@@ -46,6 +47,12 @@ export function initHjemmet(state, elements) {
     if (appElements.deleteReminderBtn) appElements.deleteReminderBtn.addEventListener('click', handleDeleteReminder);
     if (appElements.deleteMaintenanceBtn) appElements.deleteMaintenanceBtn.addEventListener('click', handleDeleteMaintenance);
     if (appElements.deleteHomeInventoryBtn) appElements.deleteHomeInventoryBtn.addEventListener('click', handleDeleteHomeInventory);
+
+    // Listener til billedupload for planter
+    const plantImageUpload = document.getElementById('plant-image-upload');
+    if (plantImageUpload) {
+        plantImageUpload.addEventListener('change', handlePlantImageUpload);
+    }
 }
 
 /**
@@ -388,8 +395,10 @@ function renderRoomPlants(roomName) {
         : plantsInRoom.map(p => {
             const nextWatering = new Date(p.lastWatered);
             nextWatering.setDate(nextWatering.getDate() + p.wateringInterval);
+            const imageUrl = p.imageBase64 || 'https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';
             return `
-                <div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}">
+                <div class="hjemmet-card plant-card" data-id="${p.id}" data-type="plant" data-room="${p.room}">
+                    <img src="${imageUrl}" class="plant-card-image" alt="${p.name}">
                     <h5>${p.name}</h5>
                     <p>Vandes: ${nextWatering.toLocaleDateString('da-DK', {day: '2-digit', month: 'short'})}</p>
                     <p class="small-text">${p.light || ''}</p>
@@ -506,6 +515,10 @@ function openPlantModal(roomName, plantId = null) {
     document.getElementById('plant-room-hidden').value = roomName;
     document.getElementById('plant-id').value = plantId || '';
     document.getElementById('delete-plant-btn').classList.toggle('hidden', !plantId);
+    
+    const imagePreview = document.getElementById('plant-image-preview');
+    imagePreview.src = 'https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede';
+    plantFormImage = { type: null, data: null };
 
     if (plantId) {
         const plant = appState.plants.find(p => p.id === plantId);
@@ -521,6 +534,11 @@ function openPlantModal(roomName, plantId = null) {
         document.getElementById('plant-pot').value = plant.pot || '';
         document.getElementById('plant-dormancy').value = plant.dormancy || '';
         document.getElementById('plant-care-guide').value = plant.careGuide || '';
+        
+        if (plant.imageBase64) {
+            imagePreview.src = plant.imageBase64;
+            plantFormImage = { type: 'base64', data: plant.imageBase64 };
+        }
     } else {
         modal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
         document.getElementById('plant-last-watered').value = formatDate(new Date());
@@ -544,6 +562,7 @@ async function handleSavePlant(e) {
         pot: document.getElementById('plant-pot').value.trim() || null,
         dormancy: document.getElementById('plant-dormancy').value.trim() || null,
         careGuide: document.getElementById('plant-care-guide').value.trim() || null,
+        imageBase64: plantFormImage.type === 'base64' ? plantFormImage.data : null,
         userId: appState.currentUser.uid,
     };
 
@@ -570,6 +589,18 @@ async function handleDeletePlant() {
             await deleteDoc(doc(db, 'plants', plantId));
             document.getElementById('plant-edit-modal').classList.add('hidden');
         } catch (error) { handleError(error, "Planten kunne ikke slettes.", "deletePlant"); }
+    }
+}
+
+function handlePlantImageUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            document.getElementById('plant-image-preview').src = event.target.result;
+            plantFormImage = { type: 'base64', data: event.target.result };
+        };
+        reader.readAsDataURL(file);
     }
 }
 
