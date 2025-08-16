@@ -40,7 +40,8 @@ export function initHjemmet(state, elements) {
     if (appElements.homeInventoryForm) appElements.homeInventoryForm.addEventListener('submit', handleSaveHomeInventory);
 
     // Lyt efter slet-knapper i modals
-    if (appElements.deletePlantBtn) appElements.deletePlantBtn.addEventListener('click', handleDeletePlant);
+    const deletePlantBtn = document.getElementById('delete-plant-btn');
+    if (deletePlantBtn) deletePlantBtn.addEventListener('click', handleDeletePlant);
     if (appElements.deleteProjectBtn) appElements.deleteProjectBtn.addEventListener('click', handleDeleteProject);
     if (appElements.deleteReminderBtn) appElements.deleteReminderBtn.addEventListener('click', handleDeleteReminder);
     if (appElements.deleteMaintenanceBtn) appElements.deleteMaintenanceBtn.addEventListener('click', handleDeleteMaintenance);
@@ -140,25 +141,27 @@ function renderSidebar() {
         `).join('');
 
     appElements.hjemmetSidebar.innerHTML = `
-        <div class="hjemmet-nav-section">
-             <h4 class="hjemmet-nav-header">Mit Hjem</h4>
-            <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'oversigt' ? 'active' : ''}" data-view="oversigt">
-                <i class="fas fa-home"></i>
-                <span>Oversigt</span>
-            </a>
-            <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'onskeliste' ? 'active' : ''}" data-view="onskeliste">
-                <i class="fas fa-gift"></i>
-                <span>Ønskeliste</span>
-            </a>
-        </div>
-        <div class="hjemmet-nav-section">
-            <h4 class="hjemmet-nav-header">Rum</h4>
-            ${roomLinks}
-            <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
-                <i class="fas fa-plus-circle"></i>
-                <span>Tilføj Rum</span>
-            </a>
-        </div>
+        <nav class="hjemmet-nav">
+            <div class="hjemmet-nav-section">
+                 <h4 class="hjemmet-nav-header">Mit Hjem</h4>
+                <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'oversigt' ? 'active' : ''}" data-view="oversigt">
+                    <i class="fas fa-home"></i>
+                    <span>Oversigt</span>
+                </a>
+                <a href="#" class="hjemmet-nav-link ${hjemmetState.currentView === 'onskeliste' ? 'active' : ''}" data-view="onskeliste">
+                    <i class="fas fa-gift"></i>
+                    <span>Ønskeliste</span>
+                </a>
+            </div>
+            <div class="hjemmet-nav-section">
+                <h4 class="hjemmet-nav-header">Rum</h4>
+                ${roomLinks}
+                <a href="#" class="hjemmet-nav-link add-new-room-btn" data-view="add_room">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Tilføj Rum</span>
+                </a>
+            </div>
+        </nav>
     `;
 }
 
@@ -382,7 +385,17 @@ function renderRoomPlants(roomName) {
     const plantsInRoom = (appState.plants || []).filter(p => p.room === roomName);
     const content = plantsInRoom.length === 0
         ? `<p class="empty-state-small">Ingen planter i dette rum.</p>`
-        : plantsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}"><h5>${p.name}</h5><p>Sidst vandet: ${new Date(p.lastWatered).toLocaleDateString('da-DK')}</p></div>`).join('');
+        : plantsInRoom.map(p => {
+            const nextWatering = new Date(p.lastWatered);
+            nextWatering.setDate(nextWatering.getDate() + p.wateringInterval);
+            return `
+                <div class="hjemmet-card" data-id="${p.id}" data-type="plant" data-room="${p.room}">
+                    <h5>${p.name}</h5>
+                    <p>Vandes: ${nextWatering.toLocaleDateString('da-DK', {day: '2-digit', month: 'short'})}</p>
+                    <p class="small-text">${p.light || ''}</p>
+                </div>
+            `;
+        }).join('');
 
     return `
         <div class="tab-header"><h3>Planter i ${roomName}</h3><button id="add-plant-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Plante</button></div>
@@ -487,12 +500,12 @@ async function handleAddNewRoom() {
 
 // PLANTER
 function openPlantModal(roomName, plantId = null) {
-    const modal = appElements.plantModal;
-    const form = appElements.plantForm;
+    const modal = document.getElementById('plant-edit-modal');
+    const form = document.getElementById('plant-form');
     form.reset();
     document.getElementById('plant-room-hidden').value = roomName;
     document.getElementById('plant-id').value = plantId || '';
-    appElements.deletePlantBtn.classList.toggle('hidden', !plantId);
+    document.getElementById('delete-plant-btn').classList.toggle('hidden', !plantId);
 
     if (plantId) {
         const plant = appState.plants.find(p => p.id === plantId);
@@ -500,6 +513,14 @@ function openPlantModal(roomName, plantId = null) {
         document.getElementById('plant-name').value = plant.name;
         document.getElementById('plant-watering-interval').value = plant.wateringInterval;
         document.getElementById('plant-last-watered').value = plant.lastWatered;
+        document.getElementById('plant-fertilizer-interval').value = plant.fertilizerInterval || '';
+        document.getElementById('plant-last-fertilized').value = plant.lastFertilized || '';
+        document.getElementById('plant-light').value = plant.light || '';
+        document.getElementById('plant-humidity').value = plant.humidity || '';
+        document.getElementById('plant-soil').value = plant.soil || '';
+        document.getElementById('plant-pot').value = plant.pot || '';
+        document.getElementById('plant-dormancy').value = plant.dormancy || '';
+        document.getElementById('plant-care-guide').value = plant.careGuide || '';
     } else {
         modal.querySelector('h3').textContent = `Ny Plante i ${roomName}`;
         document.getElementById('plant-last-watered').value = formatDate(new Date());
@@ -513,12 +534,21 @@ async function handleSavePlant(e) {
     const plantData = {
         name: document.getElementById('plant-name').value.trim(),
         room: document.getElementById('plant-room-hidden').value,
-        lastWatered: document.getElementById('plant-last-watered').value,
         wateringInterval: Number(document.getElementById('plant-watering-interval').value),
+        lastWatered: document.getElementById('plant-last-watered').value,
+        fertilizerInterval: Number(document.getElementById('plant-fertilizer-interval').value) || null,
+        lastFertilized: document.getElementById('plant-last-fertilized').value || null,
+        light: document.getElementById('plant-light').value || null,
+        humidity: document.getElementById('plant-humidity').value || null,
+        soil: document.getElementById('plant-soil').value.trim() || null,
+        pot: document.getElementById('plant-pot').value.trim() || null,
+        dormancy: document.getElementById('plant-dormancy').value.trim() || null,
+        careGuide: document.getElementById('plant-care-guide').value.trim() || null,
         userId: appState.currentUser.uid,
     };
+
     if (!plantData.name || !plantData.wateringInterval) {
-        showNotification({ title: "Udfyld alle felter", message: "Navn og interval er påkrævet." });
+        showNotification({ title: "Udfyld alle felter", message: "Navn og vandingsinterval er påkrævet." });
         return;
     }
     try {
@@ -527,7 +557,7 @@ async function handleSavePlant(e) {
         } else {
             await addDoc(collection(db, 'plants'), plantData);
         }
-        appElements.plantModal.classList.add('hidden');
+        document.getElementById('plant-edit-modal').classList.add('hidden');
     } catch (error) { handleError(error, "Planten kunne ikke gemmes.", "savePlant"); }
 }
 
@@ -538,7 +568,7 @@ async function handleDeletePlant() {
     if (confirmed) {
         try {
             await deleteDoc(doc(db, 'plants', plantId));
-            appElements.plantModal.classList.add('hidden');
+            document.getElementById('plant-edit-modal').classList.add('hidden');
         } catch (error) { handleError(error, "Planten kunne ikke slettes.", "deletePlant"); }
     }
 }
