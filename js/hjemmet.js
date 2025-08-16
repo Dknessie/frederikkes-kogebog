@@ -408,7 +408,8 @@ function renderRoomProjects(roomName) {
     const projectsInRoom = (appState.projects || []).filter(p => p.room === roomName);
     const content = projectsInRoom.length === 0
         ? `<p class="empty-state-small">Ingen projekter i dette rum.</p>`
-        : projectsInRoom.map(p => `<div class="hjemmet-card" data-id="${p.id}" data-type="project" data-room="${p.room}"><h5>${p.title}</h5><p>${p.status}</p></div>`).join('');
+        // OPDATERING: Tilføjet 'project-card' klasse for unik styling
+        : projectsInRoom.map(p => `<div class="hjemmet-card project-card" data-id="${p.id}" data-type="project" data-room="${p.room}"><h5>${p.title}</h5><p>${p.status}</p></div>`).join('');
     
     return `
         <div class="tab-header"><h3>Projekter i ${roomName}</h3><button id="add-project-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Projekt</button></div>
@@ -425,6 +426,7 @@ function renderRoomPlants(roomName) {
             nextWatering.setDate(nextWatering.getDate() + p.wateringInterval);
             const imageUrl = p.imageBase64 || 'https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';
             return `
+                <!-- OPDATERING: Tilføjet 'plant-card' klasse for unik styling -->
                 <div class="hjemmet-card plant-card" data-id="${p.id}" data-type="plant" data-room="${p.room}">
                     <img src="${imageUrl}" class="plant-card-image" alt="${p.name}">
                     <h5>${p.name}</h5>
