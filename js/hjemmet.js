@@ -289,22 +289,50 @@ function renderRemindersWidget() {
 }
 
 /**
- * NYT: Renderer "Ønskeliste" widget.
+ * OPDATERET: Renderer "Ønskeliste" widget med flere detaljer og total værdi.
  */
 function renderWishlistWidget() {
     const container = document.getElementById('wishlist-widget');
     if (!container) return;
-    const wishlistItems = Object.values(appState.shoppingLists.wishlist || {}).slice(0, 5);
+    
+    const allWishlistItems = Object.values(appState.shoppingLists.wishlist || {});
+    const itemsToDisplay = allWishlistItems.slice(0, 4); // Viser op til 4 for at give plads til total
+    
+    // Beregn den samlede værdi af hele ønskelisten
+    const totalValue = allWishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
 
-    let content = '<h4><i class="fas fa-gift"></i> Seneste Ønsker</h4>';
-    if(wishlistItems.length === 0) {
+    // Opdater overskriften
+    let content = '<h4><i class="fas fa-gift"></i> Ønskeliste</h4>';
+    
+    if (itemsToDisplay.length === 0) {
         content += `<p class="empty-state-small">Ønskelisten er tom.</p>`;
     } else {
         content += '<ul class="widget-list">';
-        wishlistItems.forEach(item => {
-            content += `<li class="widget-list-item"><div class="item-main-info"><span class="item-title">${item.name}</span></div></li>`;
+        itemsToDisplay.forEach(item => {
+            const priceText = item.price ? `${item.price.toFixed(2).replace('.', ',')} kr.` : '';
+            const roomText = item.roomId || 'Generelt';
+
+            content += `
+                <li class="widget-list-item">
+                    <div class="item-main-info">
+                        <span class="item-title">${item.name}</span>
+                        <span class="item-subtitle" style="font-size: 0.8em; color: #6B7280; display: block; margin-top: 2px;">${roomText}</span>
+                    </div>
+                    <div class="item-status" style="font-weight: 500;">
+                        <span>${priceText}</span>
+                    </div>
+                </li>
+            `;
         });
         content += '</ul>';
+
+        // Tilføj footer med total værdi
+        content += `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-weight: 600; font-size: 0.875rem;">
+                <span>Total Værdi:</span>
+                <span>${totalValue.toFixed(2).replace('.', ',')} kr.</span>
+            </div>
+        `;
     }
     container.innerHTML = content;
 }
