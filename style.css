@@ -36,6 +36,12 @@
     --hjem-primary-orange: #F59E0B;
     --hjem-primary-red: #EF4444;
 
+    /* NYT: Plante Tema Farver */
+    --plant-bg-color: #F0FDF4; /* Meget lys grøn */
+    --plant-primary-color: #22C55E; /* Livlig grøn */
+    --plant-dark-green: #166534; /* Mørk grøn til tekst */
+    --plant-border-color: #BBF7D0; /* Lys grøn kant */
+
     /* Statusfarver */
     --status-green: #4CAF50;
     --status-yellow: #FFC107;
@@ -2299,6 +2305,43 @@ input:checked + .slider:before { transform: translateX(22px); }
 .wishlist-page-grid .wishlist-item-price {
     color: var(--hjem-primary-green);
 }
+
+/* OPDATERING: Nyt tema til plante-modal */
+.plant-modal-theme {
+    background-color: var(--plant-bg-color);
+}
+.plant-modal-theme h3, .plant-modal-theme h4 {
+    color: var(--plant-dark-green);
+    font-family: var(--body-font);
+    font-weight: 600;
+}
+.plant-modal-theme .input-group label {
+    color: var(--plant-dark-green);
+}
+.plant-modal-theme .input-group input,
+.plant-modal-theme .input-group textarea,
+.plant-modal-theme .input-group select {
+    border-color: var(--plant-border-color);
+    background-color: var(--white-color);
+}
+.plant-modal-theme .input-group input:focus,
+.plant-modal-theme .input-group textarea:focus,
+.plant-modal-theme .input-group select:focus {
+    border-color: var(--plant-primary-color);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+.plant-modal-theme .btn-primary {
+    background-color: var(--plant-primary-color);
+    color: var(--white-color);
+}
+.plant-modal-theme .btn-primary:hover {
+    background-color: var(--plant-dark-green);
+}
+.plant-modal-theme .image-upload-container img {
+    border: 4px solid var(--white-color);
+    box-shadow: var(--shadow);
+}
+
 
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 992px) {
