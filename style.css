@@ -2437,3 +2437,152 @@ input:checked + .slider:before { transform: translateX(22px); }
         grid-template-columns: 1fr;
     }
 }
+/* =================================================================
+   NYT: Referencer Side Layout
+   ================================================================= */
+
+.references-page-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: var(--spacing-xl);
+    align-items: flex-start;
+}
+
+.references-sidebar {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-m);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
+}
+
+.references-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+}
+
+.references-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.references-nav-link:hover {
+    background-color: var(--secondary-color);
+}
+
+.references-nav-link.active {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+
+.references-content-area .reference-category-content {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Genbrug af eksisterende reference-card styling */
+.reference-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+.reference-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.reference-item:last-child {
+    border-bottom: none;
+}
+.reference-actions {
+    display: flex;
+    align-items: center;
+}
+.edit-container {
+    display: flex;
+    flex-grow: 1;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.edit-reference-input {
+    flex-grow: 1;
+    padding: var(--spacing-s);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+}
+.add-reference-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-m);
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--spacing-m);
+}
+.add-reference-form .input-group {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+.category-item {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    width: 100%;
+}
+.subcategory-list {
+    list-style: none;
+    padding-left: var(--spacing-l);
+    margin-top: var(--spacing-s);
+    width: 100%;
+}
+.subcategory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+.add-subcategory-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-s);
+    padding-left: var(--spacing-l);
+}
+
+/* Responsive justering for det nye layout */
+@media (max-width: 992px) {
+    .references-page-layout {
+        grid-template-columns: 1fr;
+    }
+    .references-sidebar {
+        position: static;
+        margin-bottom: var(--spacing-l);
+    }
+    .references-nav-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
