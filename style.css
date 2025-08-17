@@ -2586,3 +2586,96 @@ input:checked + .slider:before { transform: translateX(22px); }
         flex-wrap: wrap;
     }
 }
+
+.wishlist-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-l);
+}
+
+.wishlist-item-card {
+    background-color: var(--hjem-widget-bg);
+    border: 1px solid var(--hjem-widget-border);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wishlist-item-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--strong-shadow);
+}
+
+.wishlist-item-card a {
+    text-decoration: none;
+    color: inherit;
+    display: flex; /* Gør hele kortet til et flex-container */
+    flex-direction: column;
+    height: 100%;
+}
+
+.wishlist-item-image-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 75%; /* Aspect ratio 4:3 */
+    background-color: #f3f4f6;
+    flex-shrink: 0;
+}
+
+.wishlist-item-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.wishlist-item-content {
+    padding: var(--spacing-m);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.wishlist-item-title {
+    font-weight: 600;
+    color: var(--hjem-header-text);
+    margin-bottom: var(--spacing-s);
+}
+
+.wishlist-item-subtitle {
+    font-size: 0.875rem;
+    color: var(--hjem-subheader-text);
+    margin-bottom: var(--spacing-m);
+}
+
+.wishlist-item-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: var(--spacing-s);
+}
+
+.wishlist-item-price {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--hjem-primary-green);
+}
+
+.wishlist-item-actions {
+    display: flex;
+    gap: var(--spacing-s);
+}
+
+.wishlist-item-actions .btn-icon {
+    color: #9ca3af;
+}
+.wishlist-item-actions .btn-icon:hover {
+    color: var(--primary-color);
+}
+
