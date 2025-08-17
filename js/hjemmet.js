@@ -1,7 +1,7 @@
 // js/hjemmet.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
 
@@ -34,6 +34,11 @@ export function initHjemmet(state, elements) {
 
     const deletePlantBtn = document.getElementById('delete-plant-btn');
     if (deletePlantBtn) deletePlantBtn.addEventListener('click', handleDeletePlant);
+    
+    // OPDATERET: Tilføjet listener for slet-knap i ønskeliste-modal
+    const deleteWishBtn = document.getElementById('delete-wish-btn');
+    if (deleteWishBtn) deleteWishBtn.addEventListener('click', handleDeleteWish);
+
     if (appElements.deleteProjectBtn) appElements.deleteProjectBtn.addEventListener('click', handleDeleteProject);
     if (appElements.deleteReminderBtn) appElements.deleteReminderBtn.addEventListener('click', handleDeleteReminder);
     if (appElements.deleteMaintenanceBtn) appElements.deleteMaintenanceBtn.addEventListener('click', handleDeleteMaintenance);
@@ -86,7 +91,24 @@ function handleMainContentClick(e) {
         if (plantId) markPlantAsWatered(plantId);
     }
 
-    const card = e.target.closest('.hjemmet-card, .wishlist-item-card');
+    // OPDATERET: Håndterer klik på rediger/slet knapper på ønskeliste-kort
+    const editWishBtn = e.target.closest('.edit-wish-btn');
+    if (editWishBtn) {
+        e.preventDefault(); // Forhindrer anker-tagget i at navigere
+        const wishName = editWishBtn.closest('.wishlist-item-card').dataset.name;
+        openWishlistModal(wishName);
+        return;
+    }
+
+    const deleteWishBtn = e.target.closest('.delete-wish-btn');
+    if (deleteWishBtn) {
+        e.preventDefault(); // Forhindrer anker-tagget i at navigere
+        const wishName = deleteWishBtn.closest('.wishlist-item-card').dataset.name;
+        handleDeleteWish(wishName); // Kalder slet-funktionen direkte
+        return;
+    }
+
+    const card = e.target.closest('.hjemmet-card');
     if (card && card.dataset.id) {
         const id = card.dataset.id;
         const type = card.dataset.type;
@@ -420,20 +442,17 @@ function renderRoomInventory(roomName) {
     `;
 }
 
-// OPDATERET: renderWishlistPage bruger nu det nye card-design
 function renderWishlistPage() {
     const wishlist = appState.shoppingLists.wishlist || {};
     const items = Object.values(wishlist);
 
     let itemsHTML = '';
     if (items.length === 0) {
-        itemsHTML = `<p class="empty-state">Ønskelisten er tom.</p>`;
+        itemsHTML = `<p class="empty-state" style="grid-column: 1 / -1;">Ønskelisten er tom.</p>`;
     } else {
-        itemsHTML = '<div class="wishlist-page-grid">';
         items.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             itemsHTML += createWishlistItemCard(item);
         });
-        itemsHTML += '</div>';
     }
     
     appElements.hjemmetMainContent.innerHTML = `
@@ -441,11 +460,11 @@ function renderWishlistPage() {
             <h2>Ønskeliste</h2>
             <button id="add-wish-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Ønske</button>
         </div>
-        ${itemsHTML}
+        <div class="wishlist-page-grid">${itemsHTML}</div>
     `;
 }
 
-// NY FUNKTION: Skaber HTML for et enkelt ønskeliste-kort
+// OPDATERET: createWishlistItemCard med separate knapper
 function createWishlistItemCard(item) {
     const imageUrl = item.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(item.name)}`;
     const priceHTML = item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2).replace('.',',')} kr.</span>` : '<span></span>';
@@ -456,18 +475,18 @@ function createWishlistItemCard(item) {
                 <div class="wishlist-item-image-wrapper">
                     <img src="${imageUrl}" alt="${item.name}" class="wishlist-item-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
                 </div>
-                <div class="wishlist-item-content">
-                    <span class="wishlist-item-title">${item.name}</span>
-                    <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
-                    <div class="wishlist-item-footer">
-                        ${priceHTML}
-                        <div class="wishlist-item-actions">
-                            <button class="btn-icon" title="Rediger"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon" title="Slet"><i class="fas fa-trash"></i></button>
-                        </div>
+            </a>
+            <div class="wishlist-item-content">
+                <span class="wishlist-item-title">${item.name}</span>
+                <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
+                <div class="wishlist-item-footer">
+                    ${priceHTML}
+                    <div class="wishlist-item-actions">
+                        <button class="btn-icon edit-wish-btn" title="Rediger"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete-wish-btn" title="Slet"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
-            </a>
+            </div>
         </div>
     `;
 }
@@ -493,8 +512,6 @@ async function handleAddNewRoom() {
         handleError(error, "Rummet kunne ikke tilføjes.", "addNewRoom");
     }
 }
-
-// --- MODAL & SAVE FUNKTIONER (uændret) ---
 
 function openPlantModal(roomName, plantId = null) {
     const modal = document.getElementById('plant-edit-modal');
@@ -599,36 +616,102 @@ async function markPlantAsWatered(plantId) {
     } catch (error) { handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered"); }
 }
 
-function openWishlistModal() {
-    appElements.wishlistForm.reset();
+// OPDATERET: openWishlistModal kan nu håndtere redigering
+function openWishlistModal(wishName = null) {
+    const modal = appElements.wishlistModal;
+    const form = appElements.wishlistForm;
+    form.reset();
+    
+    const isEditing = wishName !== null;
+    const wishKey = isEditing ? wishName.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+    const wish = isEditing ? appState.shoppingLists.wishlist[wishKey] : null;
+
+    modal.querySelector('h3').textContent = isEditing ? 'Rediger Ønske' : 'Nyt Ønske';
+    document.getElementById('delete-wish-btn').classList.toggle('hidden', !isEditing);
+    document.getElementById('wish-original-name-key').value = isEditing ? wishKey : '';
+
+    if (isEditing && wish) {
+        document.getElementById('wish-name').value = wish.name;
+        document.getElementById('wish-price').value = wish.price || '';
+        document.getElementById('wish-image-url').value = wish.imageUrl || '';
+        document.getElementById('wish-url').value = wish.url || '';
+        document.getElementById('wish-room').value = wish.roomId || '';
+    }
+
     const roomSelect = document.getElementById('wish-room');
     const roomNames = appState.references.rooms || [];
-    const populateDropdown = (select, options, placeholder) => {
+    const populateDropdown = (select, options, placeholder, selected) => {
         select.innerHTML = `<option value="">${placeholder}</option>`;
         options.sort().forEach(opt => select.add(new Option(opt, opt)));
+        select.value = selected || '';
     };
-    populateDropdown(roomSelect, roomNames, 'Vælg et rum (valgfri)...');
-    appElements.wishlistModal.classList.remove('hidden');
+    populateDropdown(roomSelect, roomNames, 'Vælg et rum (valgfri)...', wish?.roomId);
+    
+    modal.classList.remove('hidden');
 }
 
+// OPDATERET: handleSaveWish kan nu håndtere både oprettelse og opdatering
 async function handleSaveWish(e) {
     e.preventDefault();
+    const originalKey = document.getElementById('wish-original-name-key').value;
     const wishName = document.getElementById('wish-name').value.trim();
     if (!wishName) return;
-    const key = wishName.toLowerCase().replace(/[^a-z0-9]/g, ''); // Sikrer en valid Firestore key
+
+    const newKey = wishName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
     const wishData = {
         name: wishName,
         price: Number(document.getElementById('wish-price').value) || null,
+        imageUrl: document.getElementById('wish-image-url').value.trim() || null,
         url: document.getElementById('wish-url').value.trim() || null,
         roomId: document.getElementById('wish-room').value || null,
     };
+    
     const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+    
     try {
-        // Bruger dot notation for at opdatere et specifikt felt i et map
-        await updateDoc(shoppingListRef, { [`wishlist.${key}`]: wishData });
+        const batch = writeBatch(db);
+
+        // Hvis det er en redigering, og navnet (og dermed nøglen) er ændret, skal det gamle slettes.
+        if (originalKey && originalKey !== newKey) {
+            batch.update(shoppingListRef, { [`wishlist.${originalKey}`]: deleteField() });
+        }
+        
+        // Sæt/opdater det nye ønske
+        batch.update(shoppingListRef, { [`wishlist.${newKey}`]: wishData });
+        
+        await batch.commit();
         appElements.wishlistModal.classList.add('hidden');
     } catch (error) { handleError(error, "Ønsket kunne ikke gemmes.", "saveWish"); }
 }
+
+// NY FUNKTION: Håndterer sletning af et ønske
+async function handleDeleteWish(wishNameToDelete) {
+    const wishKey = wishNameToDelete.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    const confirmed = await showNotification({
+        title: "Slet Ønske",
+        message: `Er du sikker på, at du vil slette "${wishNameToDelete}"?`,
+        type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
+    try {
+        await updateDoc(shoppingListRef, {
+            [`wishlist.${wishKey}`]: deleteField()
+        });
+        showNotification({ title: "Slettet", message: "Ønsket er blevet fjernet." });
+        // Lukker modalen, hvis den var åben for dette ønske
+        if (document.getElementById('wish-original-name-key').value === wishKey) {
+            appElements.wishlistModal.classList.add('hidden');
+        }
+    } catch (error) {
+        handleError(error, "Ønsket kunne ikke slettes.", "deleteWish");
+    }
+}
+
 
 function openProjectModal(roomName, projectId = null) {
     appElements.projectForm.reset();
