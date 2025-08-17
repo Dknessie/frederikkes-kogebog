@@ -6,269 +6,215 @@ import { showNotification, handleError } from './ui.js';
 
 let appState;
 let appElements;
+let currentCategoryKey = 'householdMembers'; // Start med en standardkategori
+
+// Definition af referencekategorier for at styre UI'en
+const referenceCategories = {
+    householdMembers: {
+        title: 'Husstandsmedlemmer',
+        icon: 'fa-users',
+        description: 'Opret navne her, som kan bruges i budgettet. Disse navne er ikke rigtige brugerkonti.',
+        isSimpleList: true
+    },
+    budgetCategories: {
+        title: 'Budgetkategorier',
+        icon: 'fa-money-bill-wave',
+        isHierarchical: true
+    },
+    itemCategories: {
+        title: 'Varekategorier',
+        icon: 'fa-tags',
+        isHierarchical: true
+    },
+    itemLocations: {
+        title: 'Placeringer i Hjemmet',
+        icon: 'fa-map-marker-alt',
+        isSimpleList: true
+    },
+    stores: {
+        title: 'Butikker',
+        icon: 'fa-store',
+        isSimpleList: true
+    },
+    assetTypes: {
+        title: 'Aktivtyper',
+        icon: 'fa-building',
+        isSimpleList: true
+    },
+    liabilityTypes: {
+        title: 'Gældstyper',
+        icon: 'fa-file-invoice-dollar',
+        isSimpleList: true
+    }
+};
 
 export function initReferences(state, elements) {
     appState = state;
-    appElements = elements;
+    appElements = {
+        ...elements,
+        referencesNavList: document.getElementById('references-nav-list'),
+        referencesContentArea: document.getElementById('references-content-area'),
+    };
 
-    if (appElements.referencesContainer) {
-        appElements.referencesContainer.addEventListener('click', handleListClick);
-        appElements.referencesContainer.addEventListener('submit', handleFormSubmit);
+    if (appElements.referencesNavList) {
+        appElements.referencesNavList.addEventListener('click', handleNavClick);
     }
-    
-    const addMemberForm = document.getElementById('add-member-form');
-    if (addMemberForm) {
-        addMemberForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const nameInput = addMemberForm.querySelector('#new-member-name');
-            const name = nameInput.value.trim();
-            if (name) {
-                addHouseholdMember(name);
-                nameInput.value = '';
-            }
-        });
-    }
-    
-    if (appElements.householdMembersList) {
-        appElements.householdMembersList.addEventListener('click', e => {
-            if (e.target.closest('.delete-member-btn')) {
-                const memberName = e.target.closest('[data-member-name]').dataset.memberName;
-                deleteHouseholdMember(memberName);
-            }
-        });
+    if (appElements.referencesContentArea) {
+        appElements.referencesContentArea.addEventListener('click', handleContentClick);
+        appElements.referencesContentArea.addEventListener('submit', handleFormSubmit);
     }
 }
 
-export function renderReferencesPage() {
-    const dynamicCards = appElements.referencesContainer.querySelectorAll('.reference-card:not(.household-members-card)');
-    dynamicCards.forEach(card => card.remove());
-    
-    const referenceData = {
-        budgetCategories: {
-            title: 'Budgetkategorier',
-            items: appState.references.budgetCategories || [],
-            isHierarchical: true
-        },
-        assetTypes: {
-            title: 'Aktivtyper',
-            items: appState.references.assetTypes || [],
-            isSimpleList: true
-        },
-        liabilityTypes: {
-            title: 'Gældstyper',
-            items: appState.references.liabilityTypes || [],
-            isSimpleList: true
-        },
-        itemCategories: {
-            title: 'Varekategorier',
-            items: appState.references.itemCategories || [],
-            isHierarchical: true
-        },
-        itemLocations: {
-            title: 'Placeringer i Hjemmet',
-            items: appState.references.itemLocations || [],
-            isSimpleList: true
-        },
-        stores: {
-            title: 'Butikker',
-            items: appState.references.stores || [],
-            isSimpleList: true
-        }
-    };
-    
-    for (const key in referenceData) {
-        const data = referenceData[key];
-        const card = document.createElement('div');
-        card.className = 'reference-card';
-        card.dataset.key = key;
+function handleNavClick(e) {
+    const link = e.target.closest('.references-nav-link');
+    if (!link) return;
 
-        if (data.isSimpleList) {
-            const listItemsHTML = (data.items || []).sort((a,b) => a.localeCompare(b)).map(item => `
-                <li class="reference-item" data-value="${item}">
-                    <span class="reference-name">${item}</span>
+    e.preventDefault();
+    currentCategoryKey = link.dataset.category;
+    renderReferencesPage();
+}
+
+export function renderReferencesPage() {
+    if (!appElements.referencesNavList || !appElements.referencesContentArea) return;
+
+    renderSidebarNav();
+    renderCategoryContent();
+}
+
+function renderSidebarNav() {
+    const navList = appElements.referencesNavList;
+    navList.innerHTML = '';
+    for (const key in referenceCategories) {
+        const category = referenceCategories[key];
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <a href="#" class="references-nav-link ${currentCategoryKey === key ? 'active' : ''}" data-category="${key}">
+                <i class="fas ${category.icon}"></i>
+                <span>${category.title}</span>
+            </a>
+        `;
+        navList.appendChild(li);
+    }
+}
+
+function renderCategoryContent() {
+    const contentArea = appElements.referencesContentArea;
+    const categoryConfig = referenceCategories[currentCategoryKey];
+    const data = appState.references[currentCategoryKey] || [];
+
+    let itemsHTML = '';
+    if (categoryConfig.isSimpleList) {
+        itemsHTML = [...data].sort((a, b) => a.localeCompare(b)).map(item => `
+            <li class="reference-item" data-value="${item}">
+                <span class="reference-name">${item}</span>
+                <div class="reference-actions">
+                    <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                </div>
+            </li>
+        `).join('');
+    } else if (categoryConfig.isHierarchical) {
+        const categories = [...data].map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+        itemsHTML = categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => `
+            <li class="category-item" data-value="${cat.name}">
+                <div class="category-header">
+                    <span class="reference-name">${cat.name}</span>
                     <div class="reference-actions">
                         <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
                     </div>
-                </li>
-            `).join('');
-            card.innerHTML = `
-                <h4>${data.title}</h4>
-                <ul class="reference-list">${listItemsHTML}</ul>
-                <form class="add-reference-form">
-                    <div class="input-group">
-                        <input type="text" placeholder="Tilføj ny..." required>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+                </div>
+                <ul class="subcategory-list">
+                    ${(cat.subcategories || []).sort().map(sub => `
+                        <li class="subcategory-item" data-value="${sub}">
+                            <span>${sub}</span>
+                            <div class="reference-actions">
+                                <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+                <form class="add-subcategory-form">
+                    <input type="text" placeholder="Tilføj underkategori..." required>
+                    <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
                 </form>
-            `;
-        } else if (data.isHierarchical) {
-            const listItemsHTML = (data.items || [])
-                .map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat))
-                .sort((a,b) => a.name.localeCompare(b.name))
-                .map(cat => `
-                <li class="category-item" data-value="${cat.name}">
-                    <div class="category-header">
-                        <span class="reference-name">${cat.name}</span>
-                        <div class="reference-actions">
-                            <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                    <ul class="subcategory-list">
-                        ${(cat.subcategories || []).sort().map(sub => `
-                            <li class="subcategory-item" data-value="${sub}">
-                                <span>${sub}</span>
-                                <div class="reference-actions">
-                                    <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
-                                    <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
-                                </div>
-                            </li>
-                        `).join('')}
-                    </ul>
-                    <form class="add-subcategory-form">
-                        <input type="text" placeholder="Tilføj underkategori..." required>
-                        <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-                    </form>
-                </li>
-            `).join('');
-            card.innerHTML = `
-                <h4>${data.title}</h4>
-                <ul class="reference-list">${listItemsHTML}</ul>
-                <form class="add-reference-form">
-                    <div class="input-group">
-                        <input type="text" placeholder="Tilføj ny overkategori..." required>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-                </form>
-            `;
-        }
-        
-        appElements.referencesContainer.appendChild(card);
+            </li>
+        `).join('');
     }
-    
-    renderHouseholdMembers();
+
+    contentArea.innerHTML = `
+        <div class="reference-category-content" data-key="${currentCategoryKey}">
+            <h4>${categoryConfig.title}</h4>
+            ${categoryConfig.description ? `<p class="small-text">${categoryConfig.description}</p>` : ''}
+            <ul class="reference-list">${itemsHTML || '<p class="empty-state-small">Ingen elementer tilføjet endnu.</p>'}</ul>
+            <form class="add-reference-form">
+                <div class="input-group">
+                    <input type="text" placeholder="Tilføj ny..." required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+            </form>
+        </div>
+    `;
 }
 
-export function renderHouseholdMembers() {
-    const list = appElements.householdMembersList;
-    if (!list) return;
-
-    list.innerHTML = '';
-    const members = appState.references.householdMembers || [];
-    
-    if (members.length === 0) {
-        list.innerHTML = `<li class="empty-state-small">Ingen medlemmer tilføjet.</li>`;
-        return;
-    }
-
-    members.sort().forEach(name => {
-        const memberRow = document.createElement('li');
-        memberRow.className = 'reference-item';
-        memberRow.dataset.memberName = name;
-
-        memberRow.innerHTML = `
-            <span class="reference-name">${name}</span>
-            <div class="reference-actions">
-                <button class="btn-icon delete-member-btn" title="Fjern medlem"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-        list.appendChild(memberRow);
-    });
-}
-
-async function addHouseholdMember(name) {
-    const members = appState.references.householdMembers || [];
-    if (members.map(m => m.toLowerCase()).includes(name.toLowerCase())) {
-        showNotification({title: "Navn findes allerede", message: `"${name}" er allerede på listen.`});
-        return;
-    }
-
-    try {
-        const ref = doc(db, 'references', appState.currentUser.uid);
-        await setDoc(ref, { householdMembers: arrayUnion(name) }, { merge: true });
-        showNotification({title: "Tilføjet!", message: `"${name}" er nu tilføjet til listen.`});
-    } catch (error) {
-        handleError(error, "Kunne ikke tilføje navn.", "addHouseholdMember");
-    }
-}
-
-async function deleteHouseholdMember(name) {
-    const confirmed = await showNotification({
-        title: "Slet Husstandsmedlem",
-        message: `Er du sikker på, at du vil slette "${name}"? Det vil fjerne navnet fra budget-dropdowns.`,
-        type: 'confirm'
-    });
-
-    if (!confirmed) return;
-
-    try {
-        const ref = doc(db, 'references', appState.currentUser.uid);
-        await updateDoc(ref, { householdMembers: arrayRemove(name) });
-        showNotification({title: "Slettet", message: "Navnet er blevet slettet."});
-    } catch (error) {
-        handleError(error, "Kunne ikke slette navn.", "deleteHouseholdMember");
-    }
-}
-
-
-async function handleListClick(e) {
-    const target = e.target;
-    const key = e.target.closest('.reference-card')?.dataset.key;
+function handleContentClick(e) {
+    const key = e.target.closest('.reference-category-content')?.dataset.key;
     if (!key) return;
 
-    if (target.closest('.delete-reference-item')) {
-        const itemElement = target.closest('.reference-item, .category-item');
+    if (e.target.closest('.delete-reference-item')) {
+        const itemElement = e.target.closest('.reference-item, .category-item');
         const value = itemElement.dataset.value;
-        await deleteReferenceItem(key, value);
-    } else if (target.closest('.edit-reference-item')) {
-        const itemElement = target.closest('.reference-item, .category-item');
+        deleteReferenceItem(key, value);
+    } else if (e.target.closest('.edit-reference-item')) {
+        const itemElement = e.target.closest('.reference-item, .category-item');
         toggleEditMode(itemElement, true);
-    } else if (target.closest('.cancel-edit-reference')) {
-        const itemElement = target.closest('.reference-item, .category-item, .subcategory-item');
+    } else if (e.target.closest('.cancel-edit-reference')) {
+        const itemElement = e.target.closest('.reference-item, .category-item, .subcategory-item');
         toggleEditMode(itemElement, false);
-    } else if (target.closest('.save-reference-item')) {
-        const itemElement = target.closest('.reference-item, .category-item');
+    } else if (e.target.closest('.save-reference-item')) {
+        const itemElement = e.target.closest('.reference-item, .category-item');
         const oldValue = itemElement.dataset.value;
         const newValue = itemElement.querySelector('.edit-reference-input').value.trim();
-        await saveReferenceUpdate(key, oldValue, newValue);
-    } else if (target.closest('.delete-subcategory-item')) {
-        const subCatItem = target.closest('.subcategory-item');
-        const mainCatItem = target.closest('.category-item');
+        saveReferenceUpdate(key, oldValue, newValue);
+    } else if (e.target.closest('.delete-subcategory-item')) {
+        const subCatItem = e.target.closest('.subcategory-item');
+        const mainCatItem = e.target.closest('.category-item');
         const subCatValue = subCatItem.dataset.value;
         const mainCatValue = mainCatItem.dataset.value;
-        await deleteSubCategory(key, mainCatValue, subCatValue);
+        deleteSubCategory(key, mainCatValue, subCatValue);
     }
 }
 
-async function handleFormSubmit(e) {
+function handleFormSubmit(e) {
     e.preventDefault();
-    const key = e.target.closest('.reference-card')?.dataset.key;
+    const key = e.target.closest('.reference-category-content')?.dataset.key;
+    if (!key) return;
 
     if (e.target.classList.contains('add-reference-form')) {
         const input = e.target.querySelector('input');
         const value = input.value.trim();
         if (!value) return;
 
-        if (key === 'itemCategories' || key === 'budgetCategories') {
-            await addMainCategory(key, value);
+        if (referenceCategories[key].isHierarchical) {
+            addMainCategory(key, value);
         } else {
-            await addSimpleReference(key, value);
+            addSimpleReference(key, value);
         }
         input.value = '';
     } else if (e.target.classList.contains('add-subcategory-form')) {
         const input = e.target.querySelector('input');
-        const key = e.target.closest('.reference-card').dataset.key;
         const mainCategory = e.target.closest('.category-item').dataset.value;
         const subCategory = input.value.trim();
         if (!subCategory) return;
-        await addSubCategory(key, mainCategory, subCategory);
+        addSubCategory(key, mainCategory, subCategory);
         input.value = '';
     }
 }
 
 async function addSimpleReference(key, value) {
-    if (appState.references[key] && appState.references[key].map(v => v.toLowerCase()).includes(value.toLowerCase())) {
+    const currentList = appState.references[key] || [];
+    if (currentList.map(v => v.toLowerCase()).includes(value.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `"${value}" findes allerede.`});
         return;
     }
@@ -326,7 +272,7 @@ async function deleteReferenceItem(key, value) {
 
     const ref = doc(db, 'references', appState.currentUser.uid);
     
-    if (key === 'itemCategories' || key === 'budgetCategories') {
+    if (referenceCategories[key].isHierarchical) {
         const categoryToDelete = (appState.references[key] || [])
             .find(cat => (typeof cat === 'object' ? cat.name : cat) === value);
         
@@ -334,15 +280,13 @@ async function deleteReferenceItem(key, value) {
             await updateDoc(ref, { [key]: arrayRemove(categoryToDelete) });
         }
     } else {
-        const batch = writeBatch(db);
-        batch.update(ref, { [key]: arrayRemove(value) });
-        await batch.commit();
-        showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
+        await updateDoc(ref, { [key]: arrayRemove(value) });
     }
+    showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
 }
 
 function toggleEditMode(itemElement, isEditing) {
-    const nameSpan = itemElement.querySelector('.reference-name');
+    const nameSpan = itemElement.querySelector('.reference-name, .category-header > .reference-name');
     const actionsDiv = itemElement.querySelector('.reference-actions');
 
     if (isEditing) {
@@ -362,7 +306,7 @@ function toggleEditMode(itemElement, isEditing) {
         `;
         
         actionsDiv.style.display = 'none';
-        itemElement.prepend(editContainer);
+        nameSpan.insertAdjacentElement('afterend', editContainer);
         editContainer.querySelector('input').focus();
 
     } else { // Cancel editing
@@ -382,19 +326,18 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     
     const ref = doc(db, 'references', appState.currentUser.uid);
     
-    if (key === 'itemCategories' || key === 'budgetCategories') {
+    if (referenceCategories[key].isHierarchical) {
         const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
         const catToUpdate = categories.find(cat => cat.name === oldValue);
         if (catToUpdate) {
             catToUpdate.name = newValue;
             await updateDoc(ref, { [key]: categories });
-            showNotification({title: "Opdateret!", message: `Kategorien er blevet omdøbt.`});
         }
     } else {
         const batch = writeBatch(db);
         batch.update(ref, { [key]: arrayRemove(oldValue) });
         batch.update(ref, { [key]: arrayUnion(newValue) });
         await batch.commit();
-        showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
     }
+    showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
 }
