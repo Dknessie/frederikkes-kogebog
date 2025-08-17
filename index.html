@@ -213,18 +213,16 @@
             <section id="references" class="page hidden">
                 <h2>Referencer</h2>
                 <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
-                <div id="references-container" class="references-layout">
-                    <div class="reference-card household-members-card">
-                        <h4>Husstandsmedlemmer</h4>
-                        <p class="small-text">Opret navne her, som kan bruges i budgettet. Disse navne er kun for opdeling og er ikke rigtige brugerkonti.</p>
-                        <ul id="household-members-list" class="reference-list"></ul>
-                        <form id="add-member-form" class="add-reference-form">
-                            <div class="input-group">
-                                <input type="text" id="new-member-name" placeholder="Tilføj nyt navn..." required>
-                            </div>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i></button>
-                        </form>
-                    </div>
+                <!-- OPDATERET: Nyt layout med sidebar og content area -->
+                <div class="references-page-layout">
+                    <aside class="references-sidebar">
+                        <ul id="references-nav-list" class="references-nav-list">
+                            <!-- Navigation links indsættes af JS -->
+                        </ul>
+                    </aside>
+                    <main id="references-content-area" class="references-content-area">
+                        <!-- Indhold for den valgte kategori indsættes af JS -->
+                    </main>
                 </div>
             </section>
         </main>
