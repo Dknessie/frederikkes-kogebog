@@ -7,24 +7,17 @@ import { formatDate } from './utils.js';
 
 let appState;
 let appElements;
-let plantFormImage = { type: null, data: null }; // Tilføjet for at håndtere billede-upload
+let plantFormImage = { type: null, data: null };
 
-// Lokal state for Hjemmet-siden
 const hjemmetState = {
-    currentView: 'oversigt', // 'oversigt', 'onskeliste', eller et rum-navn
-    currentRoomTab: 'projekter', // Aktiv fane for en rum-side
+    currentView: 'oversigt',
+    currentRoomTab: 'projekter',
 };
 
-/**
- * Initialiserer Hjemmet-modulet.
- * @param {object} state - Den centrale state for applikationen.
- * @param {object} elements - Cachede DOM-elementer.
- */
 export function initHjemmet(state, elements) {
     appState = state;
     appElements = elements;
 
-    // Lyt efter klik i sidebaren og hovedindholdet
     if (appElements.hjemmetSidebar) {
         appElements.hjemmetSidebar.addEventListener('click', handleNavClick);
     }
@@ -32,7 +25,6 @@ export function initHjemmet(state, elements) {
         appElements.hjemmetMainContent.addEventListener('click', handleMainContentClick);
     }
     
-    // Lyt efter form submissions fra modals
     if (appElements.plantForm) appElements.plantForm.addEventListener('submit', handleSavePlant);
     if (appElements.wishlistForm) appElements.wishlistForm.addEventListener('submit', handleSaveWish);
     if (appElements.projectForm) appElements.projectForm.addEventListener('submit', handleSaveProject);
@@ -40,7 +32,6 @@ export function initHjemmet(state, elements) {
     if (appElements.maintenanceForm) appElements.maintenanceForm.addEventListener('submit', handleSaveMaintenance);
     if (appElements.homeInventoryForm) appElements.homeInventoryForm.addEventListener('submit', handleSaveHomeInventory);
 
-    // Lyt efter slet-knapper i modals
     const deletePlantBtn = document.getElementById('delete-plant-btn');
     if (deletePlantBtn) deletePlantBtn.addEventListener('click', handleDeletePlant);
     if (appElements.deleteProjectBtn) appElements.deleteProjectBtn.addEventListener('click', handleDeleteProject);
@@ -48,17 +39,12 @@ export function initHjemmet(state, elements) {
     if (appElements.deleteMaintenanceBtn) appElements.deleteMaintenanceBtn.addEventListener('click', handleDeleteMaintenance);
     if (appElements.deleteHomeInventoryBtn) appElements.deleteHomeInventoryBtn.addEventListener('click', handleDeleteHomeInventory);
 
-    // Listener til billedupload for planter
     const plantImageUpload = document.getElementById('plant-image-upload');
     if (plantImageUpload) {
         plantImageUpload.addEventListener('change', handlePlantImageUpload);
     }
 }
 
-/**
- * Håndterer klik på navigationslinks i sidebaren.
- * @param {Event} e - Klik-eventen.
- */
 function handleNavClick(e) {
     e.preventDefault();
     const navLink = e.target.closest('.hjemmet-nav-link');
@@ -78,10 +64,6 @@ function handleNavClick(e) {
     }
 }
 
-/**
- * Håndterer klik inde i hovedindholdet.
- * @param {Event} e - Klik-eventen.
- */
 function handleMainContentClick(e) {
     const tab = e.target.closest('.room-tab');
     if (tab) {
@@ -91,7 +73,6 @@ function handleMainContentClick(e) {
         return;
     }
     
-    // Knapper til at åbne "opret ny" modals
     if (e.target.closest('#add-project-btn')) openProjectModal(hjemmetState.currentView);
     if (e.target.closest('#add-plant-btn')) openPlantModal(hjemmetState.currentView);
     if (e.target.closest('#add-reminder-btn')) openReminderModal(hjemmetState.currentView);
@@ -99,15 +80,13 @@ function handleMainContentClick(e) {
     if (e.target.closest('#add-home-inventory-btn')) openHomeInventoryModal(hjemmetState.currentView);
     if (e.target.closest('#add-wish-btn')) openWishlistModal();
 
-    // Interaktioner
     const waterBtn = e.target.closest('.water-plant-btn');
     if (waterBtn) {
         const plantId = waterBtn.dataset.plantId;
         if (plantId) markPlantAsWatered(plantId);
     }
 
-    // Klik på et kort for at redigere
-    const card = e.target.closest('.hjemmet-card');
+    const card = e.target.closest('.hjemmet-card, .wishlist-item-card');
     if (card && card.dataset.id) {
         const id = card.dataset.id;
         const type = card.dataset.type;
@@ -122,9 +101,6 @@ function handleMainContentClick(e) {
     }
 }
 
-/**
- * Renderer hele Hjemmet-siden.
- */
 export function renderHjemmetPage() {
     if (!appState.currentUser || !appElements.hjemmetSidebar || !appElements.hjemmetMainContent) return;
 
@@ -132,9 +108,6 @@ export function renderHjemmetPage() {
     renderMainContent();
 }
 
-/**
- * Bygger og renderer navigationsmenuen i sidebaren.
- */
 function renderSidebar() {
     const rooms = appState.references.rooms || [];
     
@@ -172,9 +145,6 @@ function renderSidebar() {
     `;
 }
 
-/**
- * Renderer hovedindholdet baseret på det aktive view.
- */
 function renderMainContent() {
     const view = hjemmetState.currentView;
 
@@ -191,9 +161,6 @@ function renderMainContent() {
     }
 }
 
-/**
- * Bygger skelettet til Oversigt-dashboardet.
- */
 function renderOversigtDashboard() {
     const today = new Date();
     const dateString = today.toLocaleDateString('da-DK', { day: 'numeric', month: 'long' });
@@ -215,9 +182,6 @@ function renderOversigtDashboard() {
     renderActiveProjectsWidget();
 }
 
-/**
- * Renderer "Kommende vanding" widget.
- */
 function renderWateringWidget() {
     const container = document.getElementById('watering-widget');
     if (!container) return;
@@ -267,9 +231,6 @@ function renderWateringWidget() {
     container.innerHTML = content;
 }
 
-/**
- * Renderer "Påmindelser" widget.
- */
 function renderRemindersWidget() {
     const container = document.getElementById('reminders-widget');
     if (!container) return;
@@ -288,20 +249,14 @@ function renderRemindersWidget() {
     container.innerHTML = content;
 }
 
-/**
- * OPDATERET: Renderer "Ønskeliste" widget med flere detaljer og total værdi.
- */
 function renderWishlistWidget() {
     const container = document.getElementById('wishlist-widget');
     if (!container) return;
     
     const allWishlistItems = Object.values(appState.shoppingLists.wishlist || {});
-    const itemsToDisplay = allWishlistItems.slice(0, 4); // Viser op til 4 for at give plads til total
-    
-    // Beregn den samlede værdi af hele ønskelisten
+    const itemsToDisplay = allWishlistItems.slice(0, 4);
     const totalValue = allWishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
 
-    // Opdater overskriften
     let content = '<h4><i class="fas fa-gift"></i> Ønskeliste</h4>';
     
     if (itemsToDisplay.length === 0) {
@@ -326,7 +281,6 @@ function renderWishlistWidget() {
         });
         content += '</ul>';
 
-        // Tilføj footer med total værdi
         content += `
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-between; font-weight: 600; font-size: 0.875rem;">
                 <span>Total Værdi:</span>
@@ -337,10 +291,6 @@ function renderWishlistWidget() {
     container.innerHTML = content;
 }
 
-
-/**
- * Renderer "Aktive Projekter" widget.
- */
 function renderActiveProjectsWidget() {
     const container = document.getElementById('active-projects-widget');
     if (!container) return;
@@ -359,10 +309,6 @@ function renderActiveProjectsWidget() {
     container.innerHTML = content;
 }
 
-/**
- * Renderer en specifik rum-side med faneblade.
- * @param {string} roomName - Navnet på det rum, der skal vises.
- */
 function renderRoomPage(roomName) {
     const tabs = ['Projekter', 'Planter', 'Påmindelser', 'Vedligehold', 'Inventar'];
     const tabIcons = {
@@ -401,8 +347,6 @@ function renderRoomPage(roomName) {
         </div>
     `;
 }
-
-// --- RENDER FUNKTIONER FOR FANEBLADE ---
 
 function renderRoomProjects(roomName) {
     const projectsInRoom = (appState.projects || []).filter(p => p.room === roomName);
@@ -476,8 +420,7 @@ function renderRoomInventory(roomName) {
     `;
 }
 
-// --- ØNSKELISTE & DIVERSE ---
-
+// OPDATERET: renderWishlistPage bruger nu det nye card-design
 function renderWishlistPage() {
     const wishlist = appState.shoppingLists.wishlist || {};
     const items = Object.values(wishlist);
@@ -488,29 +431,47 @@ function renderWishlistPage() {
     } else {
         itemsHTML = '<div class="wishlist-page-grid">';
         items.sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
-            itemsHTML += `
-                <div class="wishlist-item-card" data-name="${item.name}">
-                    <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer">
-                        <div class="wishlist-item-content">
-                            <span class="wishlist-item-title">${item.name}</span>
-                            <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
-                        </div>
-                        ${item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2).replace('.',',')} kr.</span>` : ''}
-                    </a>
-                </div>
-            `;
+            itemsHTML += createWishlistItemCard(item);
         });
         itemsHTML += '</div>';
     }
     
     appElements.hjemmetMainContent.innerHTML = `
         <div class="tab-header">
-            <h2>Global Ønskeliste</h2>
+            <h2>Ønskeliste</h2>
             <button id="add-wish-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Nyt Ønske</button>
         </div>
         ${itemsHTML}
     `;
 }
+
+// NY FUNKTION: Skaber HTML for et enkelt ønskeliste-kort
+function createWishlistItemCard(item) {
+    const imageUrl = item.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(item.name)}`;
+    const priceHTML = item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2).replace('.',',')} kr.</span>` : '<span></span>';
+
+    return `
+        <div class="wishlist-item-card" data-name="${item.name}">
+            <a href="${item.url || '#'}" target="_blank" rel="noopener noreferrer">
+                <div class="wishlist-item-image-wrapper">
+                    <img src="${imageUrl}" alt="${item.name}" class="wishlist-item-image" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+                </div>
+                <div class="wishlist-item-content">
+                    <span class="wishlist-item-title">${item.name}</span>
+                    <span class="wishlist-item-subtitle">${item.roomId || 'Generelt'}</span>
+                    <div class="wishlist-item-footer">
+                        ${priceHTML}
+                        <div class="wishlist-item-actions">
+                            <button class="btn-icon" title="Rediger"><i class="fas fa-edit"></i></button>
+                            <button class="btn-icon" title="Slet"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    `;
+}
+
 
 async function handleAddNewRoom() {
     const roomName = prompt("Hvad hedder det nye rum?");
@@ -533,9 +494,8 @@ async function handleAddNewRoom() {
     }
 }
 
-// --- MODAL & SAVE FUNKTIONER ---
+// --- MODAL & SAVE FUNKTIONER (uændret) ---
 
-// PLANTER
 function openPlantModal(roomName, plantId = null) {
     const modal = document.getElementById('plant-edit-modal');
     const form = document.getElementById('plant-form');
@@ -639,7 +599,6 @@ async function markPlantAsWatered(plantId) {
     } catch (error) { handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered"); }
 }
 
-// ØNSKELISTE
 function openWishlistModal() {
     appElements.wishlistForm.reset();
     const roomSelect = document.getElementById('wish-room');
@@ -656,7 +615,7 @@ async function handleSaveWish(e) {
     e.preventDefault();
     const wishName = document.getElementById('wish-name').value.trim();
     if (!wishName) return;
-    const key = wishName.toLowerCase();
+    const key = wishName.toLowerCase().replace(/[^a-z0-9]/g, ''); // Sikrer en valid Firestore key
     const wishData = {
         name: wishName,
         price: Number(document.getElementById('wish-price').value) || null,
@@ -665,12 +624,12 @@ async function handleSaveWish(e) {
     };
     const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
     try {
-        await setDoc(shoppingListRef, { wishlist: { [key]: wishData } }, { merge: true });
+        // Bruger dot notation for at opdatere et specifikt felt i et map
+        await updateDoc(shoppingListRef, { [`wishlist.${key}`]: wishData });
         appElements.wishlistModal.classList.add('hidden');
     } catch (error) { handleError(error, "Ønsket kunne ikke gemmes.", "saveWish"); }
 }
 
-// PROJEKTER
 function openProjectModal(roomName, projectId = null) {
     appElements.projectForm.reset();
     document.getElementById('project-room-hidden').value = roomName;
@@ -719,7 +678,6 @@ async function handleDeleteProject() {
     }
 }
 
-// PÅMINDELSER
 function openReminderModal(roomName, reminderId = null) {
     appElements.reminderForm.reset();
     document.getElementById('reminder-room-hidden').value = roomName;
@@ -766,7 +724,6 @@ async function handleDeleteReminder() {
     }
 }
 
-// VEDLIGEHOLD
 function openMaintenanceModal(roomName, taskId = null) {
     appElements.maintenanceForm.reset();
     document.getElementById('maintenance-room-hidden').value = roomName;
@@ -815,7 +772,6 @@ async function handleDeleteMaintenance() {
     }
 }
 
-// INVENTAR
 function openHomeInventoryModal(roomName, itemId = null) {
     appElements.homeInventoryForm.reset();
     document.getElementById('home-inventory-room-hidden').value = roomName;
