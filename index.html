@@ -213,7 +213,6 @@
             <section id="references" class="page hidden">
                 <h2>Referencer</h2>
                 <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
-                <!-- OPDATERET: Nyt layout med sidebar og content area -->
                 <div class="references-page-layout">
                     <aside class="references-sidebar">
                         <ul id="references-nav-list" class="references-nav-list">
@@ -265,7 +264,6 @@
     </div>
 
     <div id="plant-edit-modal" class="modal-overlay hidden">
-        <!-- OPDATERING: Tilføjet 'plant-modal-theme' klasse for unik styling -->
         <div class="modal-content plant-modal-theme">
             <button class="close-modal-btn">&times;</button>
             <h3 id="plant-modal-title">Ny Plante</h3>
@@ -353,11 +351,13 @@
         </div>
     </div>
 
+    <!-- OPDATERET: Wishlist Modal med billede-URL og slet-knap -->
     <div id="wishlist-item-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
             <h3>Nyt Ønske</h3>
             <form id="wishlist-item-form">
+                <input type="hidden" id="wish-original-name-key">
                 <div class="input-group">
                     <label for="wish-name">Navn på ønske</label>
                     <input type="text" id="wish-name" required>
@@ -367,7 +367,11 @@
                     <input type="number" id="wish-price" step="0.01">
                 </div>
                 <div class="input-group">
-                    <label for="wish-url">Link (valgfri)</label>
+                    <label for="wish-image-url">Billede URL (valgfri)</label>
+                    <input type="url" id="wish-image-url" placeholder="https://...">
+                </div>
+                <div class="input-group">
+                    <label for="wish-url">Link til produkt (valgfri)</label>
                     <input type="url" id="wish-url" placeholder="https://...">
                 </div>
                 <div class="input-group">
@@ -375,6 +379,7 @@
                     <select id="wish-room"></select>
                 </div>
                 <div class="form-actions">
+                    <button type="button" id="delete-wish-btn" class="btn btn-danger hidden">Slet</button>
                     <button type="submit" class="btn btn-primary">Gem Ønske</button>
                 </div>
             </form>
