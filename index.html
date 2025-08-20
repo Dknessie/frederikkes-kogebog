@@ -351,7 +351,6 @@
         </div>
     </div>
 
-    <!-- OPDATERET: Wishlist Modal med billede-URL og slet-knap -->
     <div id="wishlist-item-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -509,7 +508,7 @@
                 </div>
                 <div class="input-group">
                     <label for="asset-value">Nuværende Værdi (kr.)</label>
-                    <input type="number" id="asset-value" step="1000" required>
+                    <input type="number" id="asset-value" step="any" required>
                 </div>
                 <div class="input-group">
                     <label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
@@ -539,12 +538,12 @@
                 </div>
                 <div class="input-group">
                     <label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
-                    <input type="number" id="liability-current-balance" step="1000" required>
+                    <input type="number" id="liability-current-balance" step="any" required>
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="liability-monthly-payment">Md. Afdrag (valgfri)</label>
-                        <input type="number" id="liability-monthly-payment" step="100">
+                        <input type="number" id="liability-monthly-payment" step="any">
                     </div>
                     <div class="input-group">
                         <label for="liability-interest-rate">Rente % (valgfri)</label>
@@ -1051,16 +1050,20 @@
     <div id="edit-budget-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3>Rediger Månedligt Budget</h3>
+            <h3>Rediger Månedligt Opsparingsmål</h3>
             <form id="edit-budget-form">
                 <div class="input-group">
-                    <label for="monthly-budget-input">Budget (kr.)</label>
+                    <label for="monthly-savings-goal-input">Månedlig opsparing (kr.)</label>
                     <div class="price-input-wrapper">
-                        <input type="number" id="monthly-budget-input" min="0" step="100" required>
+                        <input type="number" id="monthly-savings-goal-input" min="0" step="any" required>
                     </div>
                 </div>
+                <div class="input-group">
+                    <label for="linked-savings-asset">Tilknyt til Opsparingsaktiv</label>
+                    <select id="linked-savings-asset" required></select>
+                </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Budget</button>
+                    <button type="submit" class="btn btn-primary">Gem Mål</button>
                 </div>
             </form>
         </div>
