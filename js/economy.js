@@ -1,7 +1,7 @@
 // js/economy.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 // Lokal state for økonomisiden
@@ -323,7 +323,6 @@ export function renderEconomyPage() {
         return true;
     });
 
-    // Tilføj det månedlige opsparingsmål som en fast udgift
     const savingsGoal = appState.economySettings.monthlySavingsGoal || 0;
     if (savingsGoal > 0) {
         activeFixedPosts.push({
@@ -383,7 +382,6 @@ function calculateProjectedValues(targetDate) {
                 }
             });
             
-            // Håndter automatisk opsparing
             const savingsGoal = appState.economySettings.monthlySavingsGoal || 0;
             const linkedAssetId = appState.economySettings.linkedSavingsAssetId;
             if (savingsGoal > 0 && linkedAssetId) {
@@ -516,7 +514,8 @@ function renderSpendingCategories(fixedExpenses) {
 
     const categories = {};
     fixedSpending.forEach(exp => {
-        const key = exp.subCategory ? `${exp.mainCategory} / ${exp.subCategory}` : exp.mainCategory;
+        // TILBAGE TIL KUN AT GRUPPERE PÅ HOVEDKATEGORI
+        const key = exp.mainCategory;
         if (!categories[key]) categories[key] = 0;
         categories[key] += exp.amount;
     });
