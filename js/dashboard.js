@@ -17,7 +17,6 @@ export function initDashboard(state, elements) {
         quickActionsContainer: document.getElementById('quick-actions-widget'),
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
         groceriesCount: document.getElementById('groceries-count'),
-        // NYT: Elementer til wishlist widget
         wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
         wishlistCount: document.getElementById('wishlist-count'),
         wishlistTotal: document.getElementById('wishlist-total'),
@@ -28,8 +27,12 @@ export function initDashboard(state, elements) {
     };
 
     if (appElements.groceriesSummaryWidget) appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
-    // NYT: Event listener for wishlist widget
-    if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => switchToHjemmetView('onskeliste'));
+    if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => {
+        // Skifter hash og lader app.js's hashchange listener kalde renderHjemmetPage
+        window.location.hash = '#hjem'; 
+        // Sikrer at den korrekte fane i Hjemmet er valgt
+        switchToHjemmetView('onskeliste'); 
+    });
     
     if (appElements.quickActionsContainer) appElements.quickActionsContainer.addEventListener('click', handleQuickActionClick);
     if (appElements.addEventBtn) appElements.addEventBtn.addEventListener('click', () => openEventModal());
@@ -130,13 +133,10 @@ function getIconForCategory(eventData) {
 }
 
 
-// OPDATERET: Viser nu også data for ønskelisten
 function renderShoppingListWidgets() {
-    // Dagligvarer
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
     appElements.groceriesCount.textContent = `${groceriesCount} vare${groceriesCount !== 1 ? 'r' : ''}`;
     
-    // Ønskeliste
     const wishlistItems = Object.values(appState.shoppingLists.wishlist || {});
     const wishlistCount = wishlistItems.length;
     const wishlistTotal = wishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
