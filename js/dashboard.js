@@ -2,6 +2,7 @@
 import { showNotification, handleError } from './ui.js';
 import { openShoppingListModal } from './shoppingList.js';
 import { openEventModal } from './events.js';
+import { switchToHjemmetView } from './hjemmet.js'; // Importer den nye funktion
 
 let appState;
 let appElements;
@@ -13,11 +14,13 @@ export function initDashboard(state, elements) {
         welcomeTitle: document.getElementById('welcome-title'),
         welcomeSummary: document.getElementById('welcome-summary'),
         addEventBtn: document.getElementById('add-event-btn'),
-        // FJERNEDE projectsFocusContent
         quickActionsContainer: document.getElementById('quick-actions-widget'),
         groceriesSummaryWidget: document.getElementById('widget-groceries-summary'),
-        // FJERNEDE materials og wishlist widgets
         groceriesCount: document.getElementById('groceries-count'),
+        // NYT: Elementer til wishlist widget
+        wishlistSummaryWidget: document.getElementById('widget-wishlist-summary'),
+        wishlistCount: document.getElementById('wishlist-count'),
+        wishlistTotal: document.getElementById('wishlist-total'),
         timelineBirthdays: document.getElementById('timeline-birthdays'),
         timelineEvents: document.getElementById('timeline-events'),
         timelineTodos: document.getElementById('timeline-todos'),
@@ -25,7 +28,9 @@ export function initDashboard(state, elements) {
     };
 
     if (appElements.groceriesSummaryWidget) appElements.groceriesSummaryWidget.addEventListener('click', () => openShoppingListModal('groceries'));
-    // FJERNEDE event listeners for materials og wishlist
+    // NYT: Event listener for wishlist widget
+    if (appElements.wishlistSummaryWidget) appElements.wishlistSummaryWidget.addEventListener('click', () => switchToHjemmetView('onskeliste'));
+    
     if (appElements.quickActionsContainer) appElements.quickActionsContainer.addEventListener('click', handleQuickActionClick);
     if (appElements.addEventBtn) appElements.addEventBtn.addEventListener('click', () => openEventModal());
 }
@@ -46,7 +51,6 @@ function handleQuickActionClick(e) {
     e.preventDefault();
     const action = actionBtn.dataset.action;
     if (action === 'add-recipe') document.getElementById('add-recipe-btn').click();
-    // FJERNEDE 'add-project' logik
     else if (action === 'add-inventory') document.getElementById('add-inventory-item-btn').click();
     else if (action === 'add-expense') {
         const addExpenseModal = document.getElementById('add-expense-modal');
@@ -126,10 +130,19 @@ function getIconForCategory(eventData) {
 }
 
 
+// OPDATERET: Viser nu også data for ønskelisten
 function renderShoppingListWidgets() {
+    // Dagligvarer
     const groceriesCount = Object.keys(appState.shoppingLists.groceries || {}).length;
     appElements.groceriesCount.textContent = `${groceriesCount} vare${groceriesCount !== 1 ? 'r' : ''}`;
-    // FJERNEDE logik for materials og wishlist
+    
+    // Ønskeliste
+    const wishlistItems = Object.values(appState.shoppingLists.wishlist || {});
+    const wishlistCount = wishlistItems.length;
+    const wishlistTotal = wishlistItems.reduce((sum, item) => sum + (item.price || 0), 0);
+    
+    appElements.wishlistCount.textContent = `${wishlistCount} ønske${wishlistCount !== 1 ? 'r' : ''}`;
+    appElements.wishlistTotal.textContent = `${wishlistTotal.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.`;
 }
 
 function renderWelcomeWidget() {
@@ -142,7 +155,6 @@ function renderWelcomeWidget() {
     else if (hours < 18) greeting = "Goddag";
     else greeting = "Godaften";
     appElements.welcomeTitle.textContent = `${greeting}, ${capitalizedName}`;
-    // Opdaterede velkomstbeskeden til ikke at nævne projekter
     const recipeCount = appState.recipes.length;
     appElements.welcomeSummary.innerHTML = `Du har <strong>${recipeCount}</strong> opskrifter i din kogebog.`;
 }
@@ -180,7 +192,6 @@ function renderNetWorthWidget() {
     }).join('');
 }
 
-// Helper function used by handleQuickActionClick
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
     if (!selectElement) return;
     selectElement.innerHTML = `<option value="">${placeholder}</option>`;
@@ -188,7 +199,6 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     selectElement.value = currentValue || "";
 }
 
-// Helper function used by handleQuickActionClick
 function formatDate(date) {
     if (!(date instanceof Date) || isNaN(date)) return '';
     const year = date.getFullYear();
