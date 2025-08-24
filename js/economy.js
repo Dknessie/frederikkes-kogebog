@@ -1,7 +1,7 @@
 // js/economy.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 // Lokal state for økonomisiden
@@ -344,7 +344,6 @@ export function renderEconomyPage() {
         return true;
     });
 
-    // BEREGNING AF RÅDERUM UDEN OPSPARING
     const totalFixedIncome = activeFixedPosts.filter(fp => fp.type === 'income').reduce((sum, p) => sum + p.amount, 0);
     const totalFixedExpense = activeFixedPosts.filter(fp => fp.type === 'expense').reduce((sum, p) => sum + p.amount, 0);
     const totalVariableIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
@@ -369,6 +368,7 @@ export function renderEconomyPage() {
     renderSavingsVsWishlistWidget(projected.assets);
 }
 
+// OPDATERET: calculateProjectedValues med intelligent gældsafvikling
 function calculateProjectedValues(targetDate) {
     const today = new Date();
     today.setHours(0,0,0,0);
@@ -383,10 +383,18 @@ function calculateProjectedValues(targetDate) {
         
         while (currentDate <= target) {
             projectedLiabilities.forEach(liability => {
-                if (liability.monthlyPayment && liability.interestRate) {
+                // Kun afdrag hvis der er gæld tilbage
+                if (liability.currentBalance > 0 && liability.monthlyPayment && liability.interestRate) {
                     const monthlyInterest = (liability.currentBalance * (liability.interestRate / 100)) / 12;
-                    const principalPayment = liability.monthlyPayment - monthlyInterest;
+                    let principalPayment = liability.monthlyPayment - monthlyInterest;
+
+                    // Hvis den sidste betaling er mindre end et normalt afdrag
+                    if (liability.currentBalance < principalPayment) {
+                        principalPayment = liability.currentBalance;
+                    }
+                    
                     liability.currentBalance -= principalPayment;
+                    liability.currentBalance = Math.max(0, liability.currentBalance); // Sikrer den ikke går under 0
                 }
             });
             
@@ -489,17 +497,15 @@ function renderFixedPostsWidget(fixedPosts) {
     const container = document.getElementById('fixed-posts-list-widget');
     if (!container) return;
 
-    // Sortering
     const sortedPosts = [...fixedPosts].sort((a, b) => {
         const order = economyState.fixedPostsSort.order === 'asc' ? 1 : -1;
         if (economyState.fixedPostsSort.key === 'description') {
             return a.description.localeCompare(b.description) * order;
-        } else { // amount
+        } else {
             return (a.amount - b.amount) * order;
         }
     });
 
-    // Opdater UI for aktive sorteringsknapper
     document.querySelectorAll('.sort-fixed-posts-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.sortKey === economyState.fixedPostsSort.key);
     });
