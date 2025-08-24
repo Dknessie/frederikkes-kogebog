@@ -1,7 +1,7 @@
 // js/hjemmet.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, setDoc, arrayUnion, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { formatDate } from './utils.js';
 
@@ -35,9 +35,8 @@ export function initHjemmet(state, elements) {
     const deletePlantBtn = document.getElementById('delete-plant-btn');
     if (deletePlantBtn) deletePlantBtn.addEventListener('click', handleDeletePlant);
     
-    // OPDATERET: Tilføjet listener for slet-knap i ønskeliste-modal
     const deleteWishBtn = document.getElementById('delete-wish-btn');
-    if (deleteWishBtn) deleteWishBtn.addEventListener('click', handleDeleteWish);
+    if (deleteWishBtn) deleteWishBtn.addEventListener('click', () => handleDeleteWish());
 
     if (appElements.deleteProjectBtn) appElements.deleteProjectBtn.addEventListener('click', handleDeleteProject);
     if (appElements.deleteReminderBtn) appElements.deleteReminderBtn.addEventListener('click', handleDeleteReminder);
@@ -48,6 +47,12 @@ export function initHjemmet(state, elements) {
     if (plantImageUpload) {
         plantImageUpload.addEventListener('change', handlePlantImageUpload);
     }
+}
+
+// NY Funktion: Eksporteres så dashboard kan skifte view
+export function switchToHjemmetView(view) {
+    hjemmetState.currentView = view;
+    window.location.hash = '#hjem'; // Dette vil trigge hashchange-event og rendere den korrekte side
 }
 
 function handleNavClick(e) {
@@ -63,9 +68,7 @@ function handleNavClick(e) {
     }
 
     if (newView && newView !== hjemmetState.currentView) {
-        hjemmetState.currentView = newView;
-        hjemmetState.currentRoomTab = 'projekter'; 
-        renderHjemmetPage();
+        switchToHjemmetView(newView);
     }
 }
 
@@ -91,10 +94,9 @@ function handleMainContentClick(e) {
         if (plantId) markPlantAsWatered(plantId);
     }
 
-    // OPDATERET: Håndterer klik på rediger/slet knapper på ønskeliste-kort
     const editWishBtn = e.target.closest('.edit-wish-btn');
     if (editWishBtn) {
-        e.preventDefault(); // Forhindrer anker-tagget i at navigere
+        e.preventDefault();
         const wishName = editWishBtn.closest('.wishlist-item-card').dataset.name;
         openWishlistModal(wishName);
         return;
@@ -102,9 +104,9 @@ function handleMainContentClick(e) {
 
     const deleteWishBtn = e.target.closest('.delete-wish-btn');
     if (deleteWishBtn) {
-        e.preventDefault(); // Forhindrer anker-tagget i at navigere
+        e.preventDefault();
         const wishName = deleteWishBtn.closest('.wishlist-item-card').dataset.name;
-        handleDeleteWish(wishName); // Kalder slet-funktionen direkte
+        handleDeleteWish(wishName);
         return;
     }
 
@@ -464,7 +466,6 @@ function renderWishlistPage() {
     `;
 }
 
-// OPDATERET: createWishlistItemCard med separate knapper
 function createWishlistItemCard(item) {
     const imageUrl = item.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(item.name)}`;
     const priceHTML = item.price ? `<span class="wishlist-item-price">${item.price.toFixed(2).replace('.',',')} kr.</span>` : '<span></span>';
@@ -616,7 +617,6 @@ async function markPlantAsWatered(plantId) {
     } catch (error) { handleError(error, "Kunne ikke opdatere planten.", "markPlantAsWatered"); }
 }
 
-// OPDATERET: openWishlistModal kan nu håndtere redigering
 function openWishlistModal(wishName = null) {
     const modal = appElements.wishlistModal;
     const form = appElements.wishlistForm;
@@ -650,7 +650,6 @@ function openWishlistModal(wishName = null) {
     modal.classList.remove('hidden');
 }
 
-// OPDATERET: handleSaveWish kan nu håndtere både oprettelse og opdatering
 async function handleSaveWish(e) {
     e.preventDefault();
     const originalKey = document.getElementById('wish-original-name-key').value;
@@ -672,12 +671,10 @@ async function handleSaveWish(e) {
     try {
         const batch = writeBatch(db);
 
-        // Hvis det er en redigering, og navnet (og dermed nøglen) er ændret, skal det gamle slettes.
         if (originalKey && originalKey !== newKey) {
             batch.update(shoppingListRef, { [`wishlist.${originalKey}`]: deleteField() });
         }
         
-        // Sæt/opdater det nye ønske
         batch.update(shoppingListRef, { [`wishlist.${newKey}`]: wishData });
         
         await batch.commit();
@@ -685,13 +682,17 @@ async function handleSaveWish(e) {
     } catch (error) { handleError(error, "Ønsket kunne ikke gemmes.", "saveWish"); }
 }
 
-// NY FUNKTION: Håndterer sletning af et ønske
+// OPDATERET: Kan nu kaldes med og uden argument
 async function handleDeleteWish(wishNameToDelete) {
-    const wishKey = wishNameToDelete.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Hvis funktionen kaldes uden argument (fra modal-knappen), hentes navnet fra inputfeltet.
+    const name = wishNameToDelete || document.getElementById('wish-name').value;
+    if (!name) return;
+
+    const wishKey = name.toLowerCase().replace(/[^a-z0-9]/g, '');
     
     const confirmed = await showNotification({
         title: "Slet Ønske",
-        message: `Er du sikker på, at du vil slette "${wishNameToDelete}"?`,
+        message: `Er du sikker på, at du vil slette "${name}"?`,
         type: 'confirm'
     });
 
@@ -703,7 +704,7 @@ async function handleDeleteWish(wishNameToDelete) {
             [`wishlist.${wishKey}`]: deleteField()
         });
         showNotification({ title: "Slettet", message: "Ønsket er blevet fjernet." });
-        // Lukker modalen, hvis den var åben for dette ønske
+        
         if (document.getElementById('wish-original-name-key').value === wishKey) {
             appElements.wishlistModal.classList.add('hidden');
         }
