@@ -49,10 +49,9 @@ export function initHjemmet(state, elements) {
     }
 }
 
-// NY Funktion: Eksporteres så dashboard kan skifte view
 export function switchToHjemmetView(view) {
     hjemmetState.currentView = view;
-    window.location.hash = '#hjem'; // Dette vil trigge hashchange-event og rendere den korrekte side
+    renderHjemmetPage();
 }
 
 function handleNavClick(e) {
@@ -682,9 +681,7 @@ async function handleSaveWish(e) {
     } catch (error) { handleError(error, "Ønsket kunne ikke gemmes.", "saveWish"); }
 }
 
-// OPDATERET: Kan nu kaldes med og uden argument
 async function handleDeleteWish(wishNameToDelete) {
-    // Hvis funktionen kaldes uden argument (fra modal-knappen), hentes navnet fra inputfeltet.
     const name = wishNameToDelete || document.getElementById('wish-name').value;
     if (!name) return;
 
