@@ -1,13 +1,17 @@
 // js/economy.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 // Lokal state for økonomisiden
 let appState;
 let economyState = {
-    currentDate: new Date(), // Start med den nuværende måned
+    currentDate: new Date(),
+    fixedPostsSort: {
+        key: 'description', // 'description' or 'amount'
+        order: 'asc' // 'asc' or 'desc'
+    }
 };
 
 // --- HJÆLPEFUNKTIONER ---
@@ -188,7 +192,7 @@ function buildPageSkeleton(container) {
             </div>
 
             <div class="economy-sidebar">
-                <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
+                 <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
                     <!-- Indhold tilføjes af JS -->
                 </div>
                 <div id="net-worth-widget" class="economy-sidebar-widget">
@@ -202,7 +206,13 @@ function buildPageSkeleton(container) {
                     </div>
                 </div>
                  <div class="economy-sidebar-widget">
-                    <h5>Faste Poster</h5>
+                    <div class="widget-header">
+                        <h5>Faste Poster</h5>
+                        <div class="sort-controls">
+                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="description" title="Sortér efter navn"><i class="fas fa-font"></i></button>
+                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="amount" title="Sortér efter beløb"><i class="fas fa-coins"></i></button>
+                        </div>
+                    </div>
                      <div id="fixed-posts-list-widget"></div>
                     <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
                 </div>
@@ -243,6 +253,17 @@ function attachEventListeners(container) {
         const transactionRow = e.target.closest('#transactions-table tbody tr[data-id]');
         if(transactionRow) openTransactionEditModal(transactionRow.dataset.id);
 
+        const sortBtn = e.target.closest('.sort-fixed-posts-btn');
+        if (sortBtn) {
+            const newSortKey = sortBtn.dataset.sortKey;
+            if (economyState.fixedPostsSort.key === newSortKey) {
+                economyState.fixedPostsSort.order = economyState.fixedPostsSort.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                economyState.fixedPostsSort.key = newSortKey;
+                economyState.fixedPostsSort.order = 'asc';
+            }
+            renderEconomyPage();
+        }
     });
 
     const transactionForm = container.querySelector('#transaction-form');
@@ -323,24 +344,11 @@ export function renderEconomyPage() {
         return true;
     });
 
-    const savingsGoal = appState.economySettings.monthlySavingsGoal || 0;
-    if (savingsGoal > 0) {
-        activeFixedPosts.push({
-            id: 'savings-goal',
-            description: 'Månedlig Opsparing',
-            amount: savingsGoal,
-            type: 'expense',
-            mainCategory: 'Opsparing',
-            subCategory: 'Fast Overførsel'
-        });
-    }
-
+    // BEREGNING AF RÅDERUM UDEN OPSPARING
     const totalFixedIncome = activeFixedPosts.filter(fp => fp.type === 'income').reduce((sum, p) => sum + p.amount, 0);
     const totalFixedExpense = activeFixedPosts.filter(fp => fp.type === 'expense').reduce((sum, p) => sum + p.amount, 0);
-
     const totalVariableIncome = monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalVariableExpense = monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-
     const totalIncome = totalVariableIncome + totalFixedIncome;
     const totalExpense = totalVariableExpense + totalFixedExpense;
     const monthlyDisposable = totalIncome - totalExpense;
@@ -356,7 +364,7 @@ export function renderEconomyPage() {
     renderAssetsListWidget(projected.assets);
     renderLiabilitiesListWidget(projected.liabilities);
     renderSpendingCategories(activeFixedPosts);
-    renderFixedPostsWidget(activeFixedPosts.filter(p => p.id !== 'savings-goal'));
+    renderFixedPostsWidget(activeFixedPosts);
     renderSavingsGoalWidget();
     renderSavingsVsWishlistWidget(projected.assets);
 }
@@ -480,12 +488,28 @@ function renderLiabilitiesListWidget(liabilitiesToRender) {
 function renderFixedPostsWidget(fixedPosts) {
     const container = document.getElementById('fixed-posts-list-widget');
     if (!container) return;
+
+    // Sortering
+    const sortedPosts = [...fixedPosts].sort((a, b) => {
+        const order = economyState.fixedPostsSort.order === 'asc' ? 1 : -1;
+        if (economyState.fixedPostsSort.key === 'description') {
+            return a.description.localeCompare(b.description) * order;
+        } else { // amount
+            return (a.amount - b.amount) * order;
+        }
+    });
+
+    // Opdater UI for aktive sorteringsknapper
+    document.querySelectorAll('.sort-fixed-posts-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.sortKey === economyState.fixedPostsSort.key);
+    });
+
     container.innerHTML = '';
-    if (!fixedPosts || fixedPosts.length === 0) {
+    if (!sortedPosts || sortedPosts.length === 0) {
         container.innerHTML = '<p class="empty-state-small">Ingen faste poster endnu.</p>';
         return;
     }
-    fixedPosts.forEach(post => {
+    sortedPosts.forEach(post => {
         const row = document.createElement('div');
         row.className = 'economy-item-row';
         row.dataset.fixedId = post.id;
@@ -514,7 +538,6 @@ function renderSpendingCategories(fixedExpenses) {
 
     const categories = {};
     fixedSpending.forEach(exp => {
-        // TILBAGE TIL KUN AT GRUPPERE PÅ HOVEDKATEGORI
         const key = exp.mainCategory;
         if (!categories[key]) categories[key] = 0;
         categories[key] += exp.amount;
