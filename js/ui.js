@@ -24,19 +24,26 @@ export function initUI(state, elements) {
  */
 export function navigateTo(hash) {
     const effectiveHash = hash || '#dashboard';
+    // RETTELSE: Fjerner '#' fra hashet for at matche elementets ID direkte.
+    const targetId = effectiveHash.substring(1); 
 
-    // FIX: Hide all pages by ADDING the 'hidden' class.
-    UIElements.pages.forEach(page => page.classList.add('hidden'));
+    // Skjul alle sider
+    UIElements.pages.forEach(page => {
+        if (!page.classList.contains('hidden')) {
+            page.classList.add('hidden');
+        }
+    });
     
-    // FIX: Find the target page by its ID and show it by REMOVING the 'hidden' class.
-    const targetPage = document.querySelector(effectiveHash);
+    // Find og vis den korrekte side
+    const targetPage = document.getElementById(targetId);
     if (targetPage) {
         targetPage.classList.remove('hidden');
     } else {
-        document.getElementById('dashboard').classList.remove('hidden'); // Fallback to dashboard
+        // Fallback til dashboard hvis siden ikke findes
+        document.getElementById('dashboard').classList.remove('hidden');
     }
     
-    // FIX: Update active link in navigations. The .active class goes on the link itself, not a parent.
+    // Opdater aktive links i navigationen
     UIElements.navLinks.forEach(link => {
         link.classList.toggle('active', link.getAttribute('href') === effectiveHash);
     });
