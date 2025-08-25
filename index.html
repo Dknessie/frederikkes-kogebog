@@ -1,1111 +1,1102 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frederikkes Kogebog</title>
-    <title>Vores hjem</title>
-<link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Placeholder favicon to prevent 404 error -->
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Placeholder favicon to prevent 404 error -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<main id="login-page" class="page">
-<div class="login-container">
+    <main id="login-page" class="page">
+        <div class="login-container">
             <h1 class="app-title">Frederikkes Kogebog</h1>
-            <h1 class="app-title">Vores hjem</h1>
-<p class="app-subtitle">Din digitale assistent til hele huset</p>
-<form id="login-form">
-<div class="input-group">
-<label for="email">Email</label>
+            <p class="app-subtitle">Din digitale assistent til hele huset</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Email</label>
                     <input type="email" id="email" value="frederikke@hjem.dk" required>
-                    <input type="email" id="email" required>
-</div>
-<div class="input-group">
-<label for="password">Adgangskode</label>
-                    <input type="password" id="password" value="password123" required>
-                    <input type="password" id="password" required>
                 </div>
-                <div class="input-group-inline remember-me">
-                    <input type="checkbox" id="remember-me">
-                    <label for="remember-me">Husk mig</label>
-</div>
-<button type="submit" class="btn btn-primary">Log ind</button>
-<p id="login-error" class="error-message"></p>
-</form>
-</div>
-</main>
+                <div class="input-group">
+                    <label for="password">Adgangskode</label>
+                    <input type="password" id="password" value="password123" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Log ind</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+    </main>
 
-<div id="app-container" class="hidden">
-<header>
-<div class="header-content">
+    <div id="app-container" class="hidden">
+        <header>
+            <div class="header-content">
                 <a href="#dashboard" class="header-title-link"><span id="header-title" class="header-title">Frederikkes Kogebog</span></a>
-                <a href="#dashboard" class="header-title-link"><span id="header-title" class="header-title">Vores hjem</span></a>
-<nav class="desktop-nav">
-<a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-<a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
-<a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjemmet</a>
-<a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
-<a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
-<a href="#oekonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
-<a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
-</nav>
-<button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
-</div>
-</header>
+                <nav class="desktop-nav">
+                    <a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                    <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
+                    <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjemmet</a>
+                    <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
+                    <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
+                    <a href="#oekonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
+                    <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
+                </nav>
+                 <button id="logout-btn-header" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </header>
 
-<main id="app-main-content">
-<section id="dashboard" class="page">
-<div class="dashboard-layout">
-<!-- Venstre Kolonne: Primær Information -->
-<div class="dashboard-main-column">
-<div id="welcome-widget" class="dashboard-widget">
-<h2 id="welcome-title">Velkommen</h2>
-<p id="welcome-summary">Laster data...</p>
-</div>
-<div id="net-worth-widget" class="dashboard-widget">
-<h3>Formue Overblik</h3>
-<div id="net-worth-widget-content"></div>
-</div>
-<div id="timeline-widget" class="dashboard-widget">
-<div class="widget-header">
-<h3>Min Tidslinje</h3>
-<button id="add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
-</div>
-<div class="timeline-grid">
-<div id="timeline-birthdays" class="timeline-column">
-<h4>Fødselsdage</h4>
-<p class="empty-state-small">Ingen fødselsdage fundet.</p>
-</div>
-<div id="timeline-events" class="timeline-column">
-<h4>Begivenheder</h4>
-<p class="empty-state-small">Ingen begivenheder fundet.</p>
-</div>
-<div id="timeline-todos" class="timeline-column">
-<h4>To-do</h4>
-<p class="empty-state-small">Ingen to-do's fundet.</p>
-</div>
-</div>
-</div>
-</div>
+        <main id="app-main-content">
+            <section id="dashboard" class="page">
+                <div class="dashboard-layout">
+                    <!-- Venstre Kolonne: Primær Information -->
+                    <div class="dashboard-main-column">
+                        <div id="welcome-widget" class="dashboard-widget">
+                            <h2 id="welcome-title">Velkommen</h2>
+                            <p id="welcome-summary">Laster data...</p>
+                        </div>
+                        <div id="net-worth-widget" class="dashboard-widget">
+                            <h3>Formue Overblik</h3>
+                            <div id="net-worth-widget-content"></div>
+                        </div>
+                        <div id="timeline-widget" class="dashboard-widget">
+                            <div class="widget-header">
+                                <h3>Min Tidslinje</h3>
+                                <button id="add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj</button>
+                            </div>
+                            <div class="timeline-grid">
+                                <div id="timeline-birthdays" class="timeline-column">
+                                    <h4>Fødselsdage</h4>
+                                    <p class="empty-state-small">Ingen fødselsdage fundet.</p>
+                                </div>
+                                <div id="timeline-events" class="timeline-column">
+                                    <h4>Begivenheder</h4>
+                                    <p class="empty-state-small">Ingen begivenheder fundet.</p>
+                                </div>
+                                <div id="timeline-todos" class="timeline-column">
+                                    <h4>To-do</h4>
+                                    <p class="empty-state-small">Ingen to-do's fundet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-<!-- Højre Kolonne: Widgets & Hurtig Adgang -->
-<div class="dashboard-sidebar-column">
-<div id="shopping-widget" class="dashboard-widget">
-<h3><i class="fas fa-shopping-cart"></i> Indkøb</h3>
-<div class="shopping-widget-container">
-<div id="widget-groceries-summary" class="shopping-widget-item groceries clickable">
-<div class="shopping-widget-title">
-<i class="fas fa-carrot"></i> Dagligvarer
-</div>
-<div class="shopping-widget-content">
-<span id="groceries-count">0 varer</span>
-</div>
-</div>
-<div id="widget-wishlist-summary" class="shopping-widget-item wishlist clickable">
-<div class="shopping-widget-title">
-<i class="fas fa-gift"></i> Ønskeliste
-</div>
-<div class="shopping-widget-content">
-<span id="wishlist-count">0 ønsker</span>
-<span id="wishlist-total" class="widget-price">0,00 kr.</span>
-</div>
-</div>
-</div>
-</div>
-<div id="quick-actions-widget" class="dashboard-widget">
-<h3>Hurtig Adgang</h3>
-<div class="quick-actions-container">
-<a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
-<a href="#oekonomi" data-action="add-expense" class="quick-action-btn" disabled><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
-<a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
-</div>
-</div>
-</div>
-</div>
-</section>
+                    <!-- Højre Kolonne: Widgets & Hurtig Adgang -->
+                    <div class="dashboard-sidebar-column">
+                        <div id="shopping-widget" class="dashboard-widget">
+                            <h3><i class="fas fa-shopping-cart"></i> Indkøb</h3>
+                            <div class="shopping-widget-container">
+                                <div id="widget-groceries-summary" class="shopping-widget-item groceries clickable">
+                                    <div class="shopping-widget-title">
+                                        <i class="fas fa-carrot"></i> Dagligvarer
+                                    </div>
+                                    <div class="shopping-widget-content">
+                                        <span id="groceries-count">0 varer</span>
+                                    </div>
+                                </div>
+                                <div id="widget-wishlist-summary" class="shopping-widget-item wishlist clickable">
+                                    <div class="shopping-widget-title">
+                                        <i class="fas fa-gift"></i> Ønskeliste
+                                    </div>
+                                    <div class="shopping-widget-content">
+                                        <span id="wishlist-count">0 ønsker</span>
+                                        <span id="wishlist-total" class="widget-price">0,00 kr.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="quick-actions-widget" class="dashboard-widget">
+                            <h3>Hurtig Adgang</h3>
+                            <div class="quick-actions-container">
+                                <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
+                                <a href="#oekonomi" data-action="add-expense" class="quick-action-btn" disabled><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
+                                <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-<section id="calendar" class="page hidden">
-<div class="calendar-main-container">
-<div class="calendar-header">
-<div class="calendar-nav">
-<button id="prev-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-<div class="calendar-title-wrapper">
-<h2 id="calendar-title"></h2>
-</div>
-<button id="next-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
-</div>
-<div class="calendar-view-toggle">
-<button id="week-view-btn" class="btn btn-secondary active">Uge</button>
-<button id="month-view-btn" class="btn btn-secondary">Måned</button>
-</div>
-<div class="calendar-actions">
-<button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
-<button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
-</div>
-</div>
-<div id="calendar-week-view" class="calendar-view active">
-<div class="calendar-week-header"></div>
-<div id="calendar-grid" class="calendar-grid"></div>
-</div>
-<div id="calendar-month-view" class="calendar-view">
-<div class="calendar-month-header"></div>
-<div id="calendar-month-grid" class="calendar-month-grid"></div>
-</div>
-</div>
-</section>
+            <section id="calendar" class="page hidden">
+                <div class="calendar-main-container">
+                    <div class="calendar-header">
+                        <div class="calendar-nav">
+                            <button id="prev-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
+                            <div class="calendar-title-wrapper">
+                                <h2 id="calendar-title"></h2>
+                            </div>
+                            <button id="next-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        <div class="calendar-view-toggle">
+                            <button id="week-view-btn" class="btn btn-secondary active">Uge</button>
+                            <button id="month-view-btn" class="btn btn-secondary">Måned</button>
+                        </div>
+                        <div class="calendar-actions">
+                            <button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
+                            <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
+                        </div>
+                    </div>
+                    <div id="calendar-week-view" class="calendar-view active">
+                        <div class="calendar-week-header"></div>
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                    <div id="calendar-month-view" class="calendar-view">
+                        <div class="calendar-month-header"></div>
+                        <div id="calendar-month-grid" class="calendar-month-grid"></div>
+                    </div>
+                </div>
+            </section>
 
-<section id="hjem" class="page hidden">
-<div class="hjemmet-layout">
-<aside id="hjemmet-sidebar" class="hjemmet-sidebar"></aside>
-<main id="hjemmet-main-content" class="hjemmet-main-content"></main>
-</div>
-</section>
+            <section id="hjem" class="page hidden">
+                <div class="hjemmet-layout">
+                    <aside id="hjemmet-sidebar" class="hjemmet-sidebar"></aside>
+                    <main id="hjemmet-main-content" class="hjemmet-main-content"></main>
+                </div>
+            </section>
 
-<section id="recipes" class="page hidden">
-<h2>Kogebog</h2>
-<div class="actions-bar recipe-actions-bar">
-<button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
-<div class="switch-group">
-<label for="sort-by-stock-toggle">Vis retter jeg kan lave først</label>
-<label class="switch">
-<input type="checkbox" id="sort-by-stock-toggle">
-<span class="slider round"></span>
-</label>
-</div>
-</div>
-<div id="recipe-filter-container" class="filter-container"></div>
-<div id="recipe-grid" class="recipe-grid"></div>
-</section>
+            <section id="recipes" class="page hidden">
+                <h2>Kogebog</h2>
+                <div class="actions-bar recipe-actions-bar">
+                    <button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
+                    <div class="switch-group">
+                        <label for="sort-by-stock-toggle">Vis retter jeg kan lave først</label>
+                        <label class="switch">
+                            <input type="checkbox" id="sort-by-stock-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+                <div id="recipe-filter-container" class="filter-container"></div>
+                <div id="recipe-grid" class="recipe-grid"></div>
+            </section>
 
-<section id="inventory" class="page hidden">
-<h2>Varelager</h2>
-<div class="actions-bar">
-<button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
-<button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
-<button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
-</div>
-<div class="inventory-dashboard">
-<div class="inventory-summary-bar">
-<span>Total Lagerværdi:</span>
-<span id="inventory-total-value">0,00 kr.</span>
-</div>
-<div class="inventory-controls">
-<div class="search-bar">
-<input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
-<i class="fas fa-search"></i>
-</div>
-</div>
-<div class="inventory-filters">
-<div class="input-group">
-<label for="inventory-filter-main-category">Overkategori</label>
-<select id="inventory-filter-main-category"></select>
-</div>
-<div class="input-group">
-<label for="inventory-filter-sub-category">Underkategori</label>
-<select id="inventory-filter-sub-category"></select>
-</div>
-<div class="input-group">
-<label for="inventory-filter-stock-status">Status</label>
-<select id="inventory-filter-stock-status">
-<option value="">Alle</option>
-<option value="in_stock">På lager</option>
-<option value="low_stock">Lav beholdning</option>
-</select>
-</div>
-<button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
-</div>
-<div id="inventory-list-container"></div>
-</div>
-</section>
+            <section id="inventory" class="page hidden">
+                <h2>Varelager</h2>
+                 <div class="actions-bar">
+                    <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
+                    <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
+                    <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
+                </div>
+                <div class="inventory-dashboard">
+                    <div class="inventory-summary-bar">
+                        <span>Total Lagerværdi:</span>
+                        <span id="inventory-total-value">0,00 kr.</span>
+                    </div>
+                    <div class="inventory-controls">
+                        <div class="search-bar">
+                            <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                    <div class="inventory-filters">
+                        <div class="input-group">
+                            <label for="inventory-filter-main-category">Overkategori</label>
+                            <select id="inventory-filter-main-category"></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-filter-sub-category">Underkategori</label>
+                            <select id="inventory-filter-sub-category"></select>
+                        </div>
+                         <div class="input-group">
+                            <label for="inventory-filter-stock-status">Status</label>
+                            <select id="inventory-filter-stock-status">
+                                <option value="">Alle</option>
+                                <option value="in_stock">På lager</option>
+                                <option value="low_stock">Lav beholdning</option>
+                            </select>
+                        </div>
+                        <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
+                    </div>
+                    <div id="inventory-list-container"></div>
+                </div>
+            </section>
+            
+            <section id="oekonomi" class="page hidden">
+                <!-- Indhold for økonomi-siden. -->
+            </section>
 
-<section id="oekonomi" class="page hidden">
-<!-- Indhold for økonomi-siden. -->
-</section>
 
+            <section id="references" class="page hidden">
+                <h2>Referencer</h2>
+                <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
+                <div class="references-page-layout">
+                    <aside class="references-sidebar">
+                        <ul id="references-nav-list" class="references-nav-list">
+                            <!-- Navigation links indsættes af JS -->
+                        </ul>
+                    </aside>
+                    <main id="references-content-area" class="references-content-area">
+                        <!-- Indhold for den valgte kategori indsættes af JS -->
+                    </main>
+                </div>
+            </section>
+        </main>
 
-<section id="references" class="page hidden">
-<h2>Referencer</h2>
-<p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
-<div class="references-page-layout">
-<aside class="references-sidebar">
-<ul id="references-nav-list" class="references-nav-list">
-<!-- Navigation links indsættes af JS -->
-</ul>
-</aside>
-<main id="references-content-area" class="references-content-area">
-<!-- Indhold for den valgte kategori indsættes af JS -->
-</main>
-</div>
-</section>
-</main>
+        <nav id="mobile-tab-bar" class="mobile-tab-bar hidden">
+            <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+            <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
+            <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjemmet</span></a>
+            <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
+            <a href="#oekonomi" class="mobile-tab-link" data-page="oekonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
+        </nav>
+    </div>
 
-<nav id="mobile-tab-bar" class="mobile-tab-bar hidden">
-<a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-<a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
-<a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjemmet</span></a>
-<a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
-<a href="#oekonomi" class="mobile-tab-link" data-page="oekonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
-</nav>
-</div>
+    <!-- MODALS -->
+    <div id="project-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Nyt Projekt</h3>
+            <form id="project-form">
+                <input type="hidden" id="project-id">
+                <input type="hidden" id="project-room-hidden">
+                <div class="input-group">
+                    <label for="project-title">Projekttitel</label>
+                    <input type="text" id="project-title" required>
+                </div>
+                <div class="input-group">
+                    <label for="project-status">Status</label>
+                    <select id="project-status">
+                        <option value="Planlagt">Planlagt</option>
+                        <option value="Igangværende" selected>Igangværende</option>
+                        <option value="Afsluttet">Afsluttet</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-project-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Projekt</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<!-- MODALS -->
-<div id="project-edit-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Nyt Projekt</h3>
-<form id="project-form">
-<input type="hidden" id="project-id">
-<input type="hidden" id="project-room-hidden">
-<div class="input-group">
-<label for="project-title">Projekttitel</label>
-<input type="text" id="project-title" required>
-</div>
-<div class="input-group">
-<label for="project-status">Status</label>
-<select id="project-status">
-<option value="Planlagt">Planlagt</option>
-<option value="Igangværende" selected>Igangværende</option>
-<option value="Afsluttet">Afsluttet</option>
-</select>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-project-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Projekt</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="plant-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content plant-modal-theme">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="plant-modal-title">Ny Plante</h3>
+            <form id="plant-form">
+                <input type="hidden" id="plant-id">
+                <input type="hidden" id="plant-room-hidden">
+                <div class="form-grid-2-col">
+                    <div>
+                        <div class="image-upload-container">
+                            <img id="plant-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af plante">
+                            <label for="plant-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
+                            <input type="file" id="plant-image-upload" accept="image/*" class="hidden">
+                        </div>
+                        <h4>Basis Info</h4>
+                        <div class="input-group">
+                            <label for="plant-name">Navn på plante</label>
+                            <input type="text" id="plant-name" required>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-watering-interval">Vandingsinterval (dage)</label>
+                                <input type="number" id="plant-watering-interval" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-last-watered">Sidst vandet</label>
+                                <input type="date" id="plant-last-watered" required>
+                            </div>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-fertilizer-interval">Gødningsinterval (dage)</label>
+                                <input type="number" id="plant-fertilizer-interval">
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-last-fertilized">Sidst gødet</label>
+                                <input type="date" id="plant-last-fertilized">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4>Anbefalinger</h4>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="plant-light">Lysforhold</label>
+                                <select id="plant-light">
+                                    <option value="">Vælg...</option>
+                                    <option value="Direkte sol">Direkte sol</option>
+                                    <option value="Indirekte lys">Indirekte lys</option>
+                                    <option value="Skygge">Skygge</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="plant-humidity">Luftfugtighed</label>
+                                <select id="plant-humidity">
+                                    <option value="">Vælg...</option>
+                                    <option value="Høj">Høj</option>
+                                    <option value="Medium">Medium</option>
+                                    <option value="Lav">Lav</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-soil">Jordtype</label>
+                            <input type="text" id="plant-soil" placeholder="F.eks. Kaktusjord, pottemuld med perlite">
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-pot">Pottetype</label>
+                            <input type="text" id="plant-pot" placeholder="F.eks. Terrakotta med dræn, selvvandingspotte">
+                        </div>
+                        <div class="input-group">
+                            <label for="plant-dormancy">Dvaleperiode</label>
+                            <input type="text" id="plant-dormancy" placeholder="F.eks. Vinter (reducer vanding)">
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="plant-care-guide">Plantevejledning</label>
+                    <textarea id="plant-care-guide" rows="4" placeholder="Generelle noter om pasning, omplantning, etc."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-plant-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Plante</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="plant-edit-modal" class="modal-overlay hidden">
-<div class="modal-content plant-modal-theme">
-<button class="close-modal-btn">&times;</button>
-<h3 id="plant-modal-title">Ny Plante</h3>
-<form id="plant-form">
-<input type="hidden" id="plant-id">
-<input type="hidden" id="plant-room-hidden">
-<div class="form-grid-2-col">
-<div>
-<div class="image-upload-container">
-<img id="plant-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af plante">
-<label for="plant-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
-<input type="file" id="plant-image-upload" accept="image/*" class="hidden">
-</div>
-<h4>Basis Info</h4>
-<div class="input-group">
-<label for="plant-name">Navn på plante</label>
-<input type="text" id="plant-name" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="plant-watering-interval">Vandingsinterval (dage)</label>
-<input type="number" id="plant-watering-interval" required>
-</div>
-<div class="input-group">
-<label for="plant-last-watered">Sidst vandet</label>
-<input type="date" id="plant-last-watered" required>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="plant-fertilizer-interval">Gødningsinterval (dage)</label>
-<input type="number" id="plant-fertilizer-interval">
-</div>
-<div class="input-group">
-<label for="plant-last-fertilized">Sidst gødet</label>
-<input type="date" id="plant-last-fertilized">
-</div>
-</div>
-</div>
-<div>
-<h4>Anbefalinger</h4>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="plant-light">Lysforhold</label>
-<select id="plant-light">
-<option value="">Vælg...</option>
-<option value="Direkte sol">Direkte sol</option>
-<option value="Indirekte lys">Indirekte lys</option>
-<option value="Skygge">Skygge</option>
-</select>
-</div>
-<div class="input-group">
-<label for="plant-humidity">Luftfugtighed</label>
-<select id="plant-humidity">
-<option value="">Vælg...</option>
-<option value="Høj">Høj</option>
-<option value="Medium">Medium</option>
-<option value="Lav">Lav</option>
-</select>
-</div>
-</div>
-<div class="input-group">
-<label for="plant-soil">Jordtype</label>
-<input type="text" id="plant-soil" placeholder="F.eks. Kaktusjord, pottemuld med perlite">
-</div>
-<div class="input-group">
-<label for="plant-pot">Pottetype</label>
-<input type="text" id="plant-pot" placeholder="F.eks. Terrakotta med dræn, selvvandingspotte">
-</div>
-<div class="input-group">
-<label for="plant-dormancy">Dvaleperiode</label>
-<input type="text" id="plant-dormancy" placeholder="F.eks. Vinter (reducer vanding)">
-</div>
-</div>
-</div>
-<div class="input-group">
-<label for="plant-care-guide">Plantevejledning</label>
-<textarea id="plant-care-guide" rows="4" placeholder="Generelle noter om pasning, omplantning, etc."></textarea>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-plant-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Plante</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="wishlist-item-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Nyt Ønske</h3>
+            <form id="wishlist-item-form">
+                <input type="hidden" id="wish-original-name-key">
+                <div class="input-group">
+                    <label for="wish-name">Navn på ønske</label>
+                    <input type="text" id="wish-name" required>
+                </div>
+                <div class="input-group">
+                    <label for="wish-price">Pris (valgfri)</label>
+                    <input type="number" id="wish-price" step="0.01">
+                </div>
+                <div class="input-group">
+                    <label for="wish-image-url">Billede URL (valgfri)</label>
+                    <input type="url" id="wish-image-url" placeholder="https://...">
+                </div>
+                <div class="input-group">
+                    <label for="wish-url">Link til produkt (valgfri)</label>
+                    <input type="url" id="wish-url" placeholder="https://...">
+                </div>
+                <div class="input-group">
+                    <label for="wish-room">Tilknyt til rum (valgfri)</label>
+                    <select id="wish-room"></select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-wish-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Ønske</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="reminder-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Ny Påmindelse</h3>
+            <form id="reminder-form">
+                <input type="hidden" id="reminder-id">
+                <input type="hidden" id="reminder-room-hidden">
+                <div class="input-group">
+                    <label for="reminder-text">Påmindelse</label>
+                    <textarea id="reminder-text" rows="3" required></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-reminder-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Påmindelse</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="wishlist-item-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Nyt Ønske</h3>
-<form id="wishlist-item-form">
-<input type="hidden" id="wish-original-name-key">
-<div class="input-group">
-<label for="wish-name">Navn på ønske</label>
-<input type="text" id="wish-name" required>
-</div>
-<div class="input-group">
-<label for="wish-price">Pris (valgfri)</label>
-<input type="number" id="wish-price" step="0.01">
-</div>
-<div class="input-group">
-<label for="wish-image-url">Billede URL (valgfri)</label>
-<input type="url" id="wish-image-url" placeholder="https://...">
-</div>
-<div class="input-group">
-<label for="wish-url">Link til produkt (valgfri)</label>
-<input type="url" id="wish-url" placeholder="https://...">
-</div>
-<div class="input-group">
-<label for="wish-room">Tilknyt til rum (valgfri)</label>
-<select id="wish-room"></select>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-wish-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Ønske</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="maintenance-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Ny Vedligeholdelsesopgave</h3>
+            <form id="maintenance-form">
+                <input type="hidden" id="maintenance-id">
+                <input type="hidden" id="maintenance-room-hidden">
+                <div class="input-group">
+                    <label for="maintenance-task">Opgave</label>
+                    <input type="text" id="maintenance-task" required>
+                </div>
+                <div class="input-group">
+                    <label for="maintenance-interval">Interval (dage)</label>
+                    <input type="number" id="maintenance-interval" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-maintenance-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Opgave</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="reminder-edit-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Ny Påmindelse</h3>
-<form id="reminder-form">
-<input type="hidden" id="reminder-id">
-<input type="hidden" id="reminder-room-hidden">
-<div class="input-group">
-<label for="reminder-text">Påmindelse</label>
-<textarea id="reminder-text" rows="3" required></textarea>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-reminder-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Påmindelse</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="home-inventory-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Nyt Inventar</h3>
+            <form id="home-inventory-form">
+                <input type="hidden" id="home-inventory-id">
+                <input type="hidden" id="home-inventory-room-hidden">
+                <div class="input-group">
+                    <label for="home-inventory-name">Navn/Model</label>
+                    <input type="text" id="home-inventory-name" required>
+                </div>
+                <div class="input-group">
+                    <label for="home-inventory-purchaseDate">Købsdato</label>
+                    <input type="date" id="home-inventory-purchaseDate" required>
+                </div>
+                <div class="input-group">
+                    <label for="home-inventory-manualUrl">Link til manual (valgfri)</label>
+                    <input type="url" id="home-inventory-manualUrl" placeholder="https://...">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-home-inventory-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Inventar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="maintenance-edit-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Ny Vedligeholdelsesopgave</h3>
-<form id="maintenance-form">
-<input type="hidden" id="maintenance-id">
-<input type="hidden" id="maintenance-room-hidden">
-<div class="input-group">
-<label for="maintenance-task">Opgave</label>
-<input type="text" id="maintenance-task" required>
-</div>
-<div class="input-group">
-<label for="maintenance-interval">Interval (dage)</label>
-<input type="number" id="maintenance-interval" required>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-maintenance-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Opgave</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="add-expense-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="add-expense-modal-title">Registrer Køb</h3>
+            <form id="add-expense-form">
+                <div class="input-group">
+                    <label for="add-expense-amount">Beløb (kr.)</label>
+                    <input type="number" id="add-expense-amount" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="add-expense-date">Dato</label>
+                    <input type="date" id="add-expense-date" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="add-expense-main-category">Hovedkategori</label>
+                        <select id="add-expense-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="add-expense-sub-category">Underkategori</label>
+                        <select id="add-expense-sub-category"></select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="add-expense-description">Beskrivelse</label>
+                    <input type="text" id="add-expense-description" required>
+                </div>
+                <div class="input-group-inline">
+                    <input type="checkbox" id="add-expense-is-impulse" checked>
+                    <label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Udgift</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="home-inventory-edit-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Nyt Inventar</h3>
-<form id="home-inventory-form">
-<input type="hidden" id="home-inventory-id">
-<input type="hidden" id="home-inventory-room-hidden">
-<div class="input-group">
-<label for="home-inventory-name">Navn/Model</label>
-<input type="text" id="home-inventory-name" required>
-</div>
-<div class="input-group">
-<label for="home-inventory-purchaseDate">Købsdato</label>
-<input type="date" id="home-inventory-purchaseDate" required>
-</div>
-<div class="input-group">
-<label for="home-inventory-manualUrl">Link til manual (valgfri)</label>
-<input type="url" id="home-inventory-manualUrl" placeholder="https://...">
-</div>
-<div class="form-actions">
-<button type="button" id="delete-home-inventory-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Inventar</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="asset-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="asset-modal-title">Administrer Aktiv</h3>
+            <form id="asset-form">
+                <input type="hidden" id="asset-id">
+                <div class="input-group">
+                    <label for="asset-name">Navn på aktiv</label>
+                    <input type="text" id="asset-name" required placeholder="F.eks. Andelsbolig, Volvo V60">
+                </div>
+                <div class="input-group">
+                    <label for="asset-type">Type</label>
+                    <select id="asset-type" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="asset-value">Nuværende Værdi (kr.)</label>
+                    <input type="number" id="asset-value" step="any" required>
+                </div>
+                <div class="input-group">
+                    <label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
+                    <select id="asset-linked-liability" multiple></select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-asset-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Aktiv</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="add-expense-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3 id="add-expense-modal-title">Registrer Køb</h3>
-<form id="add-expense-form">
-<div class="input-group">
-<label for="add-expense-amount">Beløb (kr.)</label>
-<input type="number" id="add-expense-amount" step="0.01" required>
-</div>
-<div class="input-group">
-<label for="add-expense-date">Dato</label>
-<input type="date" id="add-expense-date" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="add-expense-main-category">Hovedkategori</label>
-<select id="add-expense-main-category" required></select>
-</div>
-<div class="input-group">
-<label for="add-expense-sub-category">Underkategori</label>
-<select id="add-expense-sub-category"></select>
-</div>
-</div>
-<div class="input-group">
-<label for="add-expense-description">Beskrivelse</label>
-<input type="text" id="add-expense-description" required>
-</div>
-<div class="input-group-inline">
-<input type="checkbox" id="add-expense-is-impulse" checked>
-<label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
-</div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Gem Udgift</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="liability-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="liability-modal-title">Administrer Gæld</h3>
+            <form id="liability-form">
+                <input type="hidden" id="liability-id">
+                <div class="input-group">
+                    <label for="liability-name">Navn på lån</label>
+                    <input type="text" id="liability-name" required placeholder="F.eks. Boliglån, Billån">
+                </div>
+                <div class="input-group">
+                    <label for="liability-type">Type</label>
+                    <select id="liability-type" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
+                    <input type="number" id="liability-current-balance" step="any" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="liability-monthly-payment">Md. Afdrag (valgfri)</label>
+                        <input type="number" id="liability-monthly-payment" step="any">
+                    </div>
+                    <div class="input-group">
+                        <label for="liability-interest-rate">Rente % (valgfri)</label>
+                        <input type="number" id="liability-interest-rate" step="0.01">
+                    </div>
+                </div>
+                <div class="form-actions">
+                     <button type="button" id="delete-liability-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Gæld</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="asset-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3 id="asset-modal-title">Administrer Aktiv</h3>
-<form id="asset-form">
-<input type="hidden" id="asset-id">
-<div class="input-group">
-<label for="asset-name">Navn på aktiv</label>
-<input type="text" id="asset-name" required placeholder="F.eks. Andelsbolig, Volvo V60">
-</div>
-<div class="input-group">
-<label for="asset-type">Type</label>
-<select id="asset-type" required></select>
-</div>
-<div class="input-group">
-<label for="asset-value">Nuværende Værdi (kr.)</label>
-<input type="number" id="asset-value" step="any" required>
-</div>
-<div class="input-group">
-<label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
-<select id="asset-linked-liability" multiple></select>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-asset-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Aktiv</button>
-</div>
-</form>
-</div>
-</div>
+    <div id="fixed-expense-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Administrer Fast Post</h3>
+            <form id="fixed-expense-form">
+                <input type="hidden" id="fixed-expense-id-edit">
+                <div class="input-group">
+                    <label for="fixed-expense-description">Beskrivelse</label>
+                    <input type="text" id="fixed-expense-description" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-amount">Beløb (kr.)</label>
+                        <input type="number" id="fixed-expense-amount" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-type">Type</label>
+                        <select id="fixed-expense-type" required>
+                            <option value="expense">Udgift</option>
+                            <option value="income">Indkomst</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-main-category">Hovedkategori</label>
+                        <select id="fixed-expense-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-sub-category">Underkategori</label>
+                        <select id="fixed-expense-sub-category"></select>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-start-date-edit">Startdato</label>
+                        <input type="date" id="fixed-expense-start-date-edit" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-end-date-edit">Slutdato (valgfri)</label>
+                        <input type="date" id="fixed-expense-end-date-edit">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-fixed-expense-btn" class="btn btn-danger hidden">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Fast Post</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="transaction-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Rediger Postering</h3>
+            <form id="transaction-edit-form">
+                <input type="hidden" id="transaction-edit-id">
+                <div class="input-group">
+                    <label for="transaction-edit-description">Beskrivelse</label>
+                    <input type="text" id="transaction-edit-description" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="transaction-edit-amount">Beløb (kr.)</label>
+                        <input type="number" id="transaction-edit-amount" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="transaction-edit-type">Type</label>
+                        <select id="transaction-edit-type" required>
+                            <option value="expense">Udgift</option>
+                            <option value="income">Indkomst</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="transaction-edit-category">Overkategori</label>
+                        <select id="transaction-edit-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="transaction-edit-person">Person</label>
+                        <select id="transaction-edit-person" required></select>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="transaction-edit-date">Dato</label>
+                    <input type="date" id="transaction-edit-date" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="delete-transaction-btn" class="btn btn-danger">Slet</button>
+                    <button type="submit" class="btn btn-primary">Gem Ændringer</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="liability-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3 id="liability-modal-title">Administrer Gæld</h3>
-<form id="liability-form">
-<input type="hidden" id="liability-id">
-<div class="input-group">
-<label for="liability-name">Navn på lån</label>
-<input type="text" id="liability-name" required placeholder="F.eks. Boliglån, Billån">
-</div>
-<div class="input-group">
-<label for="liability-type">Type</label>
-<select id="liability-type" required></select>
-</div>
-<div class="input-group">
-<label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
-<input type="number" id="liability-current-balance" step="any" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="liability-monthly-payment">Md. Afdrag (valgfri)</label>
-<input type="number" id="liability-monthly-payment" step="any">
-</div>
-<div class="input-group">
-<label for="liability-interest-rate">Rente % (valgfri)</label>
-<input type="number" id="liability-interest-rate" step="0.01">
-</div>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-liability-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Gæld</button>
-</div>
-</form>
-</div>
-</div>
+    <!-- Other Modals -->
+    <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
+        <div class="modal-content large">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Registrer Indkøb</h3>
+            <p>Udfyld detaljer for de varer, du har købt. Varer uden antal eller pris vil ikke blive tilføjet til lageret.</p>
+            <form id="bulk-add-form">
+                <div id="bulk-add-list-container"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem alle og opdater lager</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="event-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="event-modal-title">Tilføj Begivenhed</h3>
+            <form id="event-form">
+                <input type="hidden" id="event-id">
+                <div class="input-group">
+                    <label for="event-date">Dato</label>
+                    <input type="date" id="event-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="event-type">Kategori</label>
+                    <select id="event-type" required>
+                        <option value="">Vælg type...</option>
+                        <option value="To-do">To-do</option>
+                        <option value="Aftale">Aftale</option>
+                        <option value="Fødselsdag">Fødselsdag</option>
+                        <option value="Udgivelse">Udgivelse</option>
+                        <option value="Andet">Andet</option>
+                    </select>
+                </div>
+                <div id="event-title-group" class="input-group">
+                    <label for="event-title">Titel</label>
+                    <input type="text" id="event-title" required>
+                </div>
+                <div id="event-type-specific-fields"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="day-details-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="day-details-title"></h3>
+            <div id="day-details-content"></div>
+            <div class="form-actions">
+                <button id="day-details-add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Begivenhed</button>
+            </div>
+        </div>
+    </div>
+    <div id="shopping-list-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="shopping-list-header">
+                <h3 id="shopping-list-modal-title">Indkøbsliste</h3>
+                <button class="close-modal-btn">&times;</button>
+            </div>
+            <div id="shopping-list-modal-content-wrapper"></div>
+        </div>
+    </div>
+    <div id="inventory-item-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="inventory-item-modal-title">Administrér Vare</h3>
+            <form id="inventory-item-form">
+                <input type="hidden" id="inventory-item-id">
+                <div class="form-section-box">
+                    <h4>Generel Vareinformation</h4>
+                    <p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
+                    <div class="input-group">
+                        <label for="inventory-item-name">Varenavn (generisk)</label>
+                        <input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
+                    </div>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="inventory-item-main-category">Overkategori</label>
+                            <select id="inventory-item-main-category" required></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-item-sub-category">Underkategori</label>
+                            <select id="inventory-item-sub-category" required></select>
+                        </div>
+                    </div>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="inventory-item-location">Placering i hjemmet</label>
+                            <select id="inventory-item-location" required></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-item-default-unit">Standard Måleenhed (for total)</label>
+                            <select id="inventory-item-default-unit" required>
+                                <option value="g">Gram (g)</option>
+                                <option value="ml">Milliliter (ml)</option>
+                                <option value="stk">Styk (stk)</option>
+                            </select>
+                        </div>
+                    </div>
+                     <div class="input-group">
+                        <label for="inventory-item-reorder-point">Genbestillingspunkt (valgfri)</label>
+                        <input type="number" id="inventory-item-reorder-point" placeholder="F.eks. 500 (i standardenhed)">
+                    </div>
+                </div>
+                <div class="form-section-box">
+                    <h4>Konverteringsregler</h4>
+                    <p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
+                    <div id="conversion-rules-container"></div>
+                    <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
+                </div>
+                <div class="form-section-box">
+                    <div class="section-header">
+                        <h4>Batches på Lager</h4>
+                        <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Nyt Batch</button>
+                    </div>
+                    <p class="small-text">Dette er de specifikke indkøb af varen. Et batch repræsenterer én eller flere enheder fra samme indkøb.</p>
+                    <div id="batch-list-container"></div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="delete-inventory-item-btn">Slet Hele Varen</button>
+                    <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem Vare</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="batch-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="batch-edit-modal-title">Rediger Batch</h3>
+            <form id="batch-edit-form">
+                <input type="hidden" id="batch-edit-item-id">
+                <input type="hidden" id="batch-edit-batch-id">
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="batch-edit-purchase-date">Indkøbsdato</label>
+                        <input type="date" id="batch-edit-purchase-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-expiry-date">Udløbsdato (valgfri)</label>
+                        <input type="date" id="batch-edit-expiry-date">
+                    </div>
+                </div>
+                <div class="form-grid-3-col">
+                    <div class="input-group">
+                        <label for="batch-edit-quantity">Antal</label>
+                        <input type="number" id="batch-edit-quantity" min="0" value="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-size">Vægt/størrelse pr. enhed</label>
+                        <div class="unit-input-wrapper">
+                             <input type="number" id="batch-edit-size" min="0" step="any" required>
+                             <span id="batch-edit-size-unit"></span>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-unit">Enhedstype</label>
+                        <input type="text" id="batch-edit-unit" required>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="batch-edit-price">Pris (total for batch)</label>
+                        <div class="price-input-wrapper">
+                            <input type="number" id="batch-edit-price" min="0" step="0.01">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="batch-edit-store">Butik</label>
+                        <select id="batch-edit-store" required></select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
+                    <button type="submit" class="btn btn-primary">Gem Batch</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="impulse-purchase-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Hurtigt Køb</h3>
+            <p>Søg efter en vare for at tilføje et nyt batch, eller opret en ny vare, hvis den ikke findes.</p>
+            <form id="impulse-purchase-form">
+                <div class="input-group">
+                    <label for="impulse-item-search">Søg eller opret vare</label>
+                    <div class="search-bar">
+                        <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at søge..." autocomplete="off">
+                        <i class="fas fa-search"></i>
+                        <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="impulse-action-btn" disabled>Vælg en handling</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="recipe-edit-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="recipe-edit-modal-title">Rediger opskrift</h3>
+            <form id="recipe-form">
+                <input type="hidden" id="recipe-id">
+                <div class="image-upload-container">
+                    <img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                </div>
+                <div class="image-options">
+                    <label for="recipe-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
+                    <input type="file" id="recipe-image-upload" accept="image/*" class="hidden">
+                    <span class="image-option-divider">eller</span>
+                    <div class="input-group">
+                        <label for="recipe-imageUrl">Indsæt billede URL</label>
+                        <input type="url" id="recipe-imageUrl" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="recipe-title">Titel</label>
+                        <input type="text" id="recipe-title" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="recipe-category">Kategori</label>
+                        <select id="recipe-category">
+                            <option value="">Vælg kategori...</option>
+                            <option value="Aftensmad">Aftensmad</option>
+                            <option value="Frokost">Frokost</option>
+                            <option value="Morgenmad">Morgenmad</option>
+                            <option value="Bagværk">Bagværk</option>
+                            <option value="Dessert">Dessert</option>
+                            <option value="Salat">Salat</option>
+                            <option value="Andet">Andet</option>
+                        </select>
+                    </div>
+                     <div class="input-group">
+                        <label for="recipe-portions">Antal portioner</label>
+                        <input type="number" id="recipe-portions" placeholder="f.eks. 4">
+                    </div>
+                    <div class="input-group">
+                        <label for="recipe-time">Tid (minutter)</label>
+                        <input type="number" id="recipe-time" placeholder="f.eks. 30">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-tags">Tags (separer med komma)</label>
+                    <input type="text" id="recipe-tags" placeholder="f.eks. nemt, hurtigt, vegetar">
+                </div>
+                <div class="input-group">
+                    <label for="recipe-introduction">Introduktion</label>
+                    <textarea id="recipe-introduction" rows="4"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-notes">Noter (valgfri)</label>
+                    <textarea id="recipe-notes" rows="4" placeholder="F.eks. tips til servering eller variationer"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-instructions">Fremgangsmåde</label>
+                    <textarea id="recipe-instructions" rows="8"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="recipe-source-url">Kilde URL (valgfri)</label>
+                    <input type="url" id="recipe-source-url" placeholder="https://...">
+                </div>
+                <hr>
+                <div id="import-section">
+                    <h4>Importer Fuld Opskrift eller Ingredienser</h4>
+                    <div class="input-group">
+                        <label for="recipe-import-textarea">Indsæt tekst her</label>
+                        <textarea id="recipe-import-textarea" rows="8" placeholder="Indsæt fuld opskriftstekst eller kun en ingrediensliste..."></textarea>
+                    </div>
+                    <button id="import-recipe-btn" class="btn btn-secondary">Importér</button>
+                </div>
+                <hr>
+                <h4>Ingredienser</h4>
+                <div id="ingredients-container"></div>
+                <button id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="recipe-read-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <div id="recipe-read-view-content">
+                <img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <h3 id="read-view-title"></h3>
+                <div class="read-view-meta">
+                    <span id="read-view-category"></span>
+                    <span id="read-view-time"><i class="fas fa-clock"></i></span>
+                    <span id="read-view-portions"><i class="fas fa-users"></i></span>
+                    <span id="read-view-price"><i class="fas fa-coins"></i></span>
+                </div>
+                 <div id="read-view-tags" class="recipe-card-tags"></div>
+                <div class="read-view-actions">
+                    <button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
+                    <button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-hat-chef"></i> Markér som lavet</button>
+                    <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
+                    <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
+                </div>
+                <hr>
+                <p id="read-view-introduction" class="read-view-introduction"></p>
+                <div class="read-view-main-content">
+                    <div class="read-view-ingredients">
+                        <h4>Ingredienser</h4>
+                        <ul id="read-view-ingredients-list"></ul>
+                    </div>
+                    <div class="read-view-instructions">
+                        <h4>Fremgangsmåde</h4>
+                        <div id="read-view-instructions-text"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="notification-modal" class="modal-overlay hidden">
+        <div class="modal-content modal-notification">
+             <h3 id="notification-title"></h3>
+             <p id="notification-message"></p>
+             <div id="notification-actions" class="form-actions"></div>
+        </div>
+    </div>
+    <div id="plan-meal-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="plan-meal-modal-title">Planlæg Måltid</h3>
+            <form id="plan-meal-form">
+                <input type="hidden" id="plan-meal-recipe-id">
+                <div class="input-group">
+                    <label for="plan-meal-date">Vælg dato</label>
+                    <input type="date" id="plan-meal-date" required>
+                </div>
+                <div class="input-group">
+                    <label>Vælg måltid</label>
+                    <div class="meal-type-selector">
+                        <button type="button" class="btn btn-secondary" data-meal="breakfast">Morgen</button>
+                        <button type="button" class="btn btn-secondary" data-meal="lunch">Frokost</button>
+                        <button type="button" class="btn btn-secondary" data-meal="dinner">Aften</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="plan-meal-portions">Antal portioner</label>
+                    <input type="number" id="plan-meal-portions" min="1" step="1" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="add-calendar-event-modal" class="modal-overlay hidden">
+        <div class="modal-content large">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="calendar-event-modal-title">Tilføj til Kalender</h3>
+            <div id="calendar-event-view-chooser">
+                <p>Hvad vil du tilføje til denne dag?</p>
+                <div class="quick-actions-container">
+                    <button class="quick-action-btn" data-view="recipe"><i class="fas fa-utensils"></i><span>Madplan</span></button>
+                    <button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Vedligehold</span></button>
+                </div>
+            </div>
+            <div id="calendar-event-view-recipe" class="calendar-event-view hidden">
+                <h4>Vælg Opskrift</h4>
+                <div class="search-bar">
+                    <input type="text" id="calendar-recipe-search" placeholder="Søg i dine opskrifter...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <ul id="calendar-recipe-list" class="selection-list"></ul>
+            </div>
+             <div id="calendar-event-view-project" class="calendar-event-view hidden">
+                <h4>Vælg Projekt</h4>
+                <ul id="calendar-project-list" class="selection-list"></ul>
+            </div>
+             <div id="calendar-event-view-task" class="calendar-event-view hidden">
+                <h4>Vælg Opgave</h4>
+                <div class="search-bar">
+                    <input type="text" id="calendar-task-search" placeholder="Søg eller skriv ny opgave...">
+                    <i class="fas fa-search"></i>
+                </div>
+                <ul id="calendar-task-list" class="selection-list"></ul>
+                <form id="calendar-task-form">
+                    <input type="hidden" id="calendar-task-name-hidden">
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Tilføj Opgave</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="edit-budget-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Rediger Månedligt Opsparingsmål</h3>
+            <form id="edit-budget-form">
+                <div class="input-group">
+                    <label for="monthly-savings-goal-input">Månedlig opsparing (kr.)</label>
+                    <div class="price-input-wrapper">
+                        <input type="number" id="monthly-savings-goal-input" min="0" step="any" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="linked-savings-asset">Tilknyt til Opsparingsaktiv</label>
+                    <select id="linked-savings-asset" required></select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem Mål</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="reorder-assistant-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Genbestillings-assistent</h3>
+            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
+            <form id="reorder-form">
+                <div id="reorder-list-container"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-<div id="fixed-expense-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3>Administrer Fast Post</h3>
-<form id="fixed-expense-form">
-<input type="hidden" id="fixed-expense-id-edit">
-<div class="input-group">
-<label for="fixed-expense-description">Beskrivelse</label>
-<input type="text" id="fixed-expense-description" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="fixed-expense-amount">Beløb (kr.)</label>
-<input type="number" id="fixed-expense-amount" step="0.01" required>
-</div>
-<div class="input-group">
-<label for="fixed-expense-type">Type</label>
-<select id="fixed-expense-type" required>
-<option value="expense">Udgift</option>
-<option value="income">Indkomst</option>
-</select>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="fixed-expense-main-category">Hovedkategori</label>
-<select id="fixed-expense-main-category" required></select>
-</div>
-<div class="input-group">
-<label for="fixed-expense-sub-category">Underkategori</label>
-<select id="fixed-expense-sub-category"></select>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="fixed-expense-start-date-edit">Startdato</label>
-<input type="date" id="fixed-expense-start-date-edit" required>
-</div>
-<div class="input-group">
-<label for="fixed-expense-end-date-edit">Slutdato (valgfri)</label>
-<input type="date" id="fixed-expense-end-date-edit">
-</div>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-fixed-expense-btn" class="btn btn-danger hidden">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Fast Post</button>
-</div>
-</form>
-</div>
-</div>
+    <!-- Third-party libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 
-<div id="transaction-edit-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3>Rediger Postering</h3>
-<form id="transaction-edit-form">
-<input type="hidden" id="transaction-edit-id">
-<div class="input-group">
-<label for="transaction-edit-description">Beskrivelse</label>
-<input type="text" id="transaction-edit-description" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="transaction-edit-amount">Beløb (kr.)</label>
-<input type="number" id="transaction-edit-amount" step="0.01" required>
-</div>
-<div class="input-group">
-<label for="transaction-edit-type">Type</label>
-<select id="transaction-edit-type" required>
-<option value="expense">Udgift</option>
-<option value="income">Indkomst</option>
-</select>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="transaction-edit-category">Overkategori</label>
-<select id="transaction-edit-category" required></select>
-</div>
-<div class="input-group">
-<label for="transaction-edit-person">Person</label>
-<select id="transaction-edit-person" required></select>
-</div>
-</div>
-<div class="input-group">
-<label for="transaction-edit-date">Dato</label>
-<input type="date" id="transaction-edit-date" required>
-</div>
-<div class="form-actions">
-<button type="button" id="delete-transaction-btn" class="btn btn-danger">Slet</button>
-<button type="submit" class="btn btn-primary">Gem Ændringer</button>
-</div>
-</form>
-</div>
-</div>
-
-<!-- Other Modals -->
-<div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
-<div class="modal-content large">
-<button class="close-modal-btn">&times;</button>
-<h3>Registrer Indkøb</h3>
-<p>Udfyld detaljer for de varer, du har købt. Varer uden antal eller pris vil ikke blive tilføjet til lageret.</p>
-<form id="bulk-add-form">
-<div id="bulk-add-list-container"></div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem alle og opdater lager</button>
-</div>
-</form>
-</div>
-</div>
-<div id="event-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3 id="event-modal-title">Tilføj Begivenhed</h3>
-<form id="event-form">
-<input type="hidden" id="event-id">
-<div class="input-group">
-<label for="event-date">Dato</label>
-<input type="date" id="event-date" required>
-</div>
-<div class="input-group">
-<label for="event-type">Kategori</label>
-<select id="event-type" required>
-<option value="">Vælg type...</option>
-<option value="To-do">To-do</option>
-<option value="Aftale">Aftale</option>
-<option value="Fødselsdag">Fødselsdag</option>
-<option value="Udgivelse">Udgivelse</option>
-<option value="Andet">Andet</option>
-</select>
-</div>
-<div id="event-title-group" class="input-group">
-<label for="event-title">Titel</label>
-<input type="text" id="event-title" required>
-</div>
-<div id="event-type-specific-fields"></div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Gem Begivenhed</button>
-</div>
-</form>
-</div>
-</div>
-<div id="day-details-modal" class="modal-overlay hidden">
-<div class="modal-content small">
-<button class="close-modal-btn">&times;</button>
-<h3 id="day-details-title"></h3>
-<div id="day-details-content"></div>
-<div class="form-actions">
-<button id="day-details-add-event-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Begivenhed</button>
-</div>
-</div>
-</div>
-<div id="shopping-list-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<div class="shopping-list-header">
-<h3 id="shopping-list-modal-title">Indkøbsliste</h3>
-<button class="close-modal-btn">&times;</button>
-</div>
-<div id="shopping-list-modal-content-wrapper"></div>
-</div>
-</div>
-<div id="inventory-item-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3 id="inventory-item-modal-title">Administrér Vare</h3>
-<form id="inventory-item-form">
-<input type="hidden" id="inventory-item-id">
-<div class="form-section-box">
-<h4>Generel Vareinformation</h4>
-<p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
-<div class="input-group">
-<label for="inventory-item-name">Varenavn (generisk)</label>
-<input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="inventory-item-main-category">Overkategori</label>
-<select id="inventory-item-main-category" required></select>
-</div>
-<div class="input-group">
-<label for="inventory-item-sub-category">Underkategori</label>
-<select id="inventory-item-sub-category" required></select>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="inventory-item-location">Placering i hjemmet</label>
-<select id="inventory-item-location" required></select>
-</div>
-<div class="input-group">
-<label for="inventory-item-default-unit">Standard Måleenhed (for total)</label>
-<select id="inventory-item-default-unit" required>
-<option value="g">Gram (g)</option>
-<option value="ml">Milliliter (ml)</option>
-<option value="stk">Styk (stk)</option>
-</select>
-</div>
-</div>
-<div class="input-group">
-<label for="inventory-item-reorder-point">Genbestillingspunkt (valgfri)</label>
-<input type="number" id="inventory-item-reorder-point" placeholder="F.eks. 500 (i standardenhed)">
-</div>
-</div>
-<div class="form-section-box">
-<h4>Konverteringsregler</h4>
-<p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
-<div id="conversion-rules-container"></div>
-<button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
-</div>
-<div class="form-section-box">
-<div class="section-header">
-<h4>Batches på Lager</h4>
-<button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Nyt Batch</button>
-</div>
-<p class="small-text">Dette er de specifikke indkøb af varen. Et batch repræsenterer én eller flere enheder fra samme indkøb.</p>
-<div id="batch-list-container"></div>
-</div>
-<div class="form-actions">
-<button type="button" class="btn btn-danger" id="delete-inventory-item-btn">Slet Hele Varen</button>
-<button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem Vare</button>
-</div>
-</form>
-</div>
-</div>
-<div id="batch-edit-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3 id="batch-edit-modal-title">Rediger Batch</h3>
-<form id="batch-edit-form">
-<input type="hidden" id="batch-edit-item-id">
-<input type="hidden" id="batch-edit-batch-id">
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="batch-edit-purchase-date">Indkøbsdato</label>
-<input type="date" id="batch-edit-purchase-date" required>
-</div>
-<div class="input-group">
-<label for="batch-edit-expiry-date">Udløbsdato (valgfri)</label>
-<input type="date" id="batch-edit-expiry-date">
-</div>
-</div>
-<div class="form-grid-3-col">
-<div class="input-group">
-<label for="batch-edit-quantity">Antal</label>
-<input type="number" id="batch-edit-quantity" min="0" value="1" required>
-</div>
-<div class="input-group">
-<label for="batch-edit-size">Vægt/størrelse pr. enhed</label>
-<div class="unit-input-wrapper">
-<input type="number" id="batch-edit-size" min="0" step="any" required>
-<span id="batch-edit-size-unit"></span>
-</div>
-</div>
-<div class="input-group">
-<label for="batch-edit-unit">Enhedstype</label>
-<input type="text" id="batch-edit-unit" required>
-</div>
-</div>
-<div class="form-grid-2-col">
-<div class="input-group">
-<label for="batch-edit-price">Pris (total for batch)</label>
-<div class="price-input-wrapper">
-<input type="number" id="batch-edit-price" min="0" step="0.01">
-</div>
-</div>
-<div class="input-group">
-<label for="batch-edit-store">Butik</label>
-<select id="batch-edit-store" required></select>
-</div>
-</div>
-<div class="form-actions">
-<button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
-<button type="submit" class="btn btn-primary">Gem Batch</button>
-</div>
-</form>
-</div>
-</div>
-<div id="impulse-purchase-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3>Hurtigt Køb</h3>
-<p>Søg efter en vare for at tilføje et nyt batch, eller opret en ny vare, hvis den ikke findes.</p>
-<form id="impulse-purchase-form">
-<div class="input-group">
-<label for="impulse-item-search">Søg eller opret vare</label>
-<div class="search-bar">
-<input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at søge..." autocomplete="off">
-<i class="fas fa-search"></i>
-<div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
-</div>
-</div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary" id="impulse-action-btn" disabled>Vælg en handling</button>
-</div>
-</form>
-</div>
-</div>
-<div id="recipe-edit-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3 id="recipe-edit-modal-title">Rediger opskrift</h3>
-<form id="recipe-form">
-<input type="hidden" id="recipe-id">
-<div class="image-upload-container">
-<img id="recipe-image-preview" src="https://placehold.co/600x400/f3f0e9/d1603d?text=Vælg+billede" alt="Billede af opskrift" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
-</div>
-<div class="image-options">
-<label for="recipe-image-upload" class="btn btn-secondary"><i class="fas fa-upload"></i> Upload billede</label>
-<input type="file" id="recipe-image-upload" accept="image/*" class="hidden">
-<span class="image-option-divider">eller</span>
-<div class="input-group">
-<label for="recipe-imageUrl">Indsæt billede URL</label>
-<input type="url" id="recipe-imageUrl" placeholder="https://...">
-</div>
-</div>
-<div class="form-grid">
-<div class="input-group">
-<label for="recipe-title">Titel</label>
-<input type="text" id="recipe-title" required>
-</div>
-<div class="input-group">
-<label for="recipe-category">Kategori</label>
-<select id="recipe-category">
-<option value="">Vælg kategori...</option>
-<option value="Aftensmad">Aftensmad</option>
-<option value="Frokost">Frokost</option>
-<option value="Morgenmad">Morgenmad</option>
-<option value="Bagværk">Bagværk</option>
-<option value="Dessert">Dessert</option>
-<option value="Salat">Salat</option>
-<option value="Andet">Andet</option>
-</select>
-</div>
-<div class="input-group">
-<label for="recipe-portions">Antal portioner</label>
-<input type="number" id="recipe-portions" placeholder="f.eks. 4">
-</div>
-<div class="input-group">
-<label for="recipe-time">Tid (minutter)</label>
-<input type="number" id="recipe-time" placeholder="f.eks. 30">
-</div>
-</div>
-<div class="input-group">
-<label for="recipe-tags">Tags (separer med komma)</label>
-<input type="text" id="recipe-tags" placeholder="f.eks. nemt, hurtigt, vegetar">
-</div>
-<div class="input-group">
-<label for="recipe-introduction">Introduktion</label>
-<textarea id="recipe-introduction" rows="4"></textarea>
-</div>
-<div class="input-group">
-<label for="recipe-notes">Noter (valgfri)</label>
-<textarea id="recipe-notes" rows="4" placeholder="F.eks. tips til servering eller variationer"></textarea>
-</div>
-<div class="input-group">
-<label for="recipe-instructions">Fremgangsmåde</label>
-<textarea id="recipe-instructions" rows="8"></textarea>
-</div>
-<div class="input-group">
-<label for="recipe-source-url">Kilde URL (valgfri)</label>
-<input type="url" id="recipe-source-url" placeholder="https://...">
-</div>
-<hr>
-<div id="import-section">
-<h4>Importer Fuld Opskrift eller Ingredienser</h4>
-<div class="input-group">
-<label for="recipe-import-textarea">Indsæt tekst her</label>
-<textarea id="recipe-import-textarea" rows="8" placeholder="Indsæt fuld opskriftstekst eller kun en ingrediensliste..."></textarea>
-</div>
-<button id="import-recipe-btn" class="btn btn-secondary">Importér</button>
-</div>
-<hr>
-<h4>Ingredienser</h4>
-<div id="ingredients-container"></div>
-<button id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
-</div>
-</form>
-</div>
-</div>
-<div id="recipe-read-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<div id="recipe-read-view-content">
-<img id="read-view-image" src="" alt="Billede af opskrift" class="read-view-image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
-<h3 id="read-view-title"></h3>
-<div class="read-view-meta">
-<span id="read-view-category"></span>
-<span id="read-view-time"><i class="fas fa-clock"></i></span>
-<span id="read-view-portions"><i class="fas fa-users"></i></span>
-<span id="read-view-price"><i class="fas fa-coins"></i></span>
-</div>
-<div id="read-view-tags" class="recipe-card-tags"></div>
-<div class="read-view-actions">
-<button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
-<button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-hat-chef"></i> Markér som lavet</button>
-<button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
-<button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
-</div>
-<hr>
-<p id="read-view-introduction" class="read-view-introduction"></p>
-<div class="read-view-main-content">
-<div class="read-view-ingredients">
-<h4>Ingredienser</h4>
-<ul id="read-view-ingredients-list"></ul>
-</div>
-<div class="read-view-instructions">
-<h4>Fremgangsmåde</h4>
-<div id="read-view-instructions-text"></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div id="notification-modal" class="modal-overlay hidden">
-<div class="modal-content modal-notification">
-<h3 id="notification-title"></h3>
-<p id="notification-message"></p>
-<div id="notification-actions" class="form-actions"></div>
-</div>
-</div>
-<div id="plan-meal-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3 id="plan-meal-modal-title">Planlæg Måltid</h3>
-<form id="plan-meal-form">
-<input type="hidden" id="plan-meal-recipe-id">
-<div class="input-group">
-<label for="plan-meal-date">Vælg dato</label>
-<input type="date" id="plan-meal-date" required>
-</div>
-<div class="input-group">
-<label>Vælg måltid</label>
-<div class="meal-type-selector">
-<button type="button" class="btn btn-secondary" data-meal="breakfast">Morgen</button>
-<button type="button" class="btn btn-secondary" data-meal="lunch">Frokost</button>
-<button type="button" class="btn btn-secondary" data-meal="dinner">Aften</button>
-</div>
-</div>
-<div class="input-group">
-<label for="plan-meal-portions">Antal portioner</label>
-<input type="number" id="plan-meal-portions" min="1" step="1" required>
-</div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Tilføj til Madplan</button>
-</div>
-</form>
-</div>
-</div>
-<div id="add-calendar-event-modal" class="modal-overlay hidden">
-<div class="modal-content large">
-<button class="close-modal-btn">&times;</button>
-<h3 id="calendar-event-modal-title">Tilføj til Kalender</h3>
-<div id="calendar-event-view-chooser">
-<p>Hvad vil du tilføje til denne dag?</p>
-<div class="quick-actions-container">
-<button class="quick-action-btn" data-view="recipe"><i class="fas fa-utensils"></i><span>Madplan</span></button>
-<button class="quick-action-btn" data-view="task"><i class="fas fa-broom"></i><span>Rengøring/Vedligehold</span></button>
-</div>
-</div>
-<div id="calendar-event-view-recipe" class="calendar-event-view hidden">
-<h4>Vælg Opskrift</h4>
-<div class="search-bar">
-<input type="text" id="calendar-recipe-search" placeholder="Søg i dine opskrifter...">
-<i class="fas fa-search"></i>
-</div>
-<ul id="calendar-recipe-list" class="selection-list"></ul>
-</div>
-<div id="calendar-event-view-project" class="calendar-event-view hidden">
-<h4>Vælg Projekt</h4>
-<ul id="calendar-project-list" class="selection-list"></ul>
-</div>
-<div id="calendar-event-view-task" class="calendar-event-view hidden">
-<h4>Vælg Opgave</h4>
-<div class="search-bar">
-<input type="text" id="calendar-task-search" placeholder="Søg eller skriv ny opgave...">
-<i class="fas fa-search"></i>
-</div>
-<ul id="calendar-task-list" class="selection-list"></ul>
-<form id="calendar-task-form">
-<input type="hidden" id="calendar-task-name-hidden">
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Tilføj Opgave</button>
-</div>
-</form>
-</div>
-</div>
-</div>
-<div id="edit-budget-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3>Rediger Månedligt Opsparingsmål</h3>
-<form id="edit-budget-form">
-<div class="input-group">
-<label for="monthly-savings-goal-input">Månedlig opsparing (kr.)</label>
-<div class="price-input-wrapper">
-<input type="number" id="monthly-savings-goal-input" min="0" step="any" required>
-</div>
-</div>
-<div class="input-group">
-<label for="linked-savings-asset">Tilknyt til Opsparingsaktiv</label>
-<select id="linked-savings-asset" required></select>
-</div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Gem Mål</button>
-</div>
-</form>
-</div>
-</div>
-<div id="reorder-assistant-modal" class="modal-overlay hidden">
-<div class="modal-content">
-<button class="close-modal-btn">&times;</button>
-<h3>Genbestillings-assistent</h3>
-<p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
-<form id="reorder-form">
-<div id="reorder-list-container"></div>
-<div class="form-actions">
-<button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
-</div>
-</form>
-</div>
-</div>
-
-<!-- Third-party libraries -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/justgage@1.3.5/justgage.min.js"></script>
-<script src="https://d3js.org/d3.v7.min.js"></script>
-
-<script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js"></script>
 
 </body>
 </html>
