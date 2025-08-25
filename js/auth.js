@@ -5,10 +5,7 @@
 import { 
     onAuthStateChanged, 
     signInWithEmailAndPassword, 
-    signOut,
-    setPersistence,
-    browserLocalPersistence,
-    browserSessionPersistence
+    signOut 
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { auth } from './firebase.js';
 import { handleError } from './ui.js';
@@ -19,15 +16,6 @@ import { handleError } from './ui.js';
  * @param {Function} onLogout - Callback function to execute on user logout.
  */
 export function initAuth(onLogin, onLogout) {
-    // Check for a remembered email when the app loads
-    const rememberedEmail = localStorage.getItem('rememberedEmail');
-    if (rememberedEmail) {
-        const emailInput = document.getElementById('email');
-        if (emailInput) {
-            emailInput.value = rememberedEmail;
-        }
-    }
-
     onAuthStateChanged(auth, (user) => {
         if (user) {
             onLogin(user);
@@ -43,35 +31,20 @@ export function initAuth(onLogin, onLogout) {
  */
 export function setupAuthEventListeners(elements) {
     if (elements.loginForm) {
-        elements.loginForm.addEventListener('submit', async (e) => {
+        elements.loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const rememberMe = document.getElementById('remember-me').checked;
-            const loginError = elements.loginForm.querySelector('#login-error');
-            loginError.textContent = ''; // Clear previous errors
-
-            try {
-                // Set session persistence based on the "Remember me" checkbox
-                const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-                await setPersistence(auth, persistence);
-
-                // Handle remembering the email address
-                if (rememberMe) {
-                    localStorage.setItem('rememberedEmail', email);
-                } else {
-                    localStorage.removeItem('rememberedEmail');
-                }
-
-                // Sign in the user
-                await signInWithEmailAndPassword(auth, email, password);
-
-            } catch (error) {
-                console.error("Login Fejl:", error.code);
-                if (loginError) {
-                    loginError.textContent = 'Login fejlede. Tjek email og adgangskode.';
-                }
-            }
+            // RETTELSE: Hent login-error elementet direkte via dets ID for at sikre, at det altid findes.
+            const loginError = document.getElementById('login-error');
+            
+            signInWithEmailAndPassword(auth, email, password)
+                .catch((error) => {
+                    console.error("Login Fejl:", error.code);
+                    if (loginError) {
+                        loginError.textContent = 'Login fejlede. Tjek email og adgangskode.';
+                    }
+                });
         });
     }
 
