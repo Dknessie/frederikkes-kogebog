@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.c
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
-import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
+import { initInventory, renderInventory } from './inventory.js';
 import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
@@ -67,21 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
         hjemmetMainContent: document.getElementById('hjemmet-main-content'),
 
         // Inventory
-        inventoryItemModal: document.getElementById('inventory-item-modal'),
-        inventoryItemForm: document.getElementById('inventory-item-form'),
         addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
-        inventoryModalTitle: document.getElementById('inventory-item-modal-title'),
         reorderAssistantBtn: document.getElementById('reorder-assistant-btn'),
-        reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
-        reorderListContainer: document.getElementById('reorder-list-container'),
-        reorderForm: document.getElementById('reorder-form'),
+        impulsePurchaseBtn: document.getElementById('impulse-purchase-btn'),
+        openShoppingListBtn: document.getElementById('open-shopping-list-btn'),
+        inventorySidebar: document.getElementById('inventory-sidebar'),
+        locationNavList: document.getElementById('location-nav-list'),
+        allItemsView: document.getElementById('all-items-view'),
+        freezerView: document.getElementById('freezer-view'),
         inventorySearchInput: document.getElementById('inventory-search-input'),
-        inventoryListContainer: document.getElementById('inventory-list-container'),
-        clearInventoryFiltersBtn: document.getElementById('clear-inventory-filters-btn'),
         inventoryFilterMainCategory: document.getElementById('inventory-filter-main-category'),
         inventoryFilterSubCategory: document.getElementById('inventory-filter-sub-category'),
-        inventoryFilterStockStatus: document.getElementById('inventory-filter-stock-status'),
-        impulsePurchaseBtn: document.getElementById('impulse-purchase-btn'),
+        inventoryItemModal: document.getElementById('inventory-item-modal'),
+        inventoryItemForm: document.getElementById('inventory-item-form'),
+        inventoryModalTitle: document.getElementById('inventory-item-modal-title'),
         impulsePurchaseModal: document.getElementById('impulse-purchase-modal'),
         impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
 
@@ -158,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // OPDATERING: Tilføjet elementer for Hjemmet modals
+        // Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         deletePlantBtn: document.getElementById('delete-plant-btn'),
@@ -293,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.addExpenseBtn
                     ];
                      buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
-                     setReferencesLoaded(true);
                 }
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
@@ -331,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addExpenseBtn
         ];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
-        setReferencesLoaded(false);
     }
 
     function handleNavigation(hash) {
