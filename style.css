@@ -2777,5 +2777,24 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--hjem-header-text);
     font-size: 1.1em;
 }
+/* ===== NYT: Styling for "Husk mig" checkbox ===== */
+.remember-me {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Juster til venstre */
+    gap: var(--spacing-s);
+    margin-bottom: var(--spacing-l); /* Lidt mere plads før knappen */
+}
+.remember-me label {
+    margin-bottom: 0; /* Fjerner standard margin fra label */
+    font-weight: normal; /* Gør teksten mindre fed */
+    color: var(--text-color);
+    cursor: pointer;
+}
+.remember-me input[type="checkbox"] {
+    width: auto; /* Lader browseren bestemme størrelsen */
+    margin: 0;
+}
+
 
 
