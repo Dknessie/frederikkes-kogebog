@@ -35,8 +35,7 @@ export function setupAuthEventListeners(elements) {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            // RETTELSE: Hent login-error elementet direkte via dets ID for at sikre, at det altid findes.
-            const loginError = document.getElementById('login-error');
+            const loginError = elements.loginForm.querySelector('#login-error');
             
             signInWithEmailAndPassword(auth, email, password)
                 .catch((error) => {
