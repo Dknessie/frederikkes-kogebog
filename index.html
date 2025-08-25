@@ -178,43 +178,68 @@
             </section>
 
             <section id="inventory" class="page hidden">
-                <h2>Varelager</h2>
-                 <div class="actions-bar">
-                    <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
-                    <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
-                    <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
-                </div>
-                <div class="inventory-dashboard">
-                    <div class="inventory-summary-bar">
-                        <span>Total Lagerværdi:</span>
-                        <span id="inventory-total-value">0,00 kr.</span>
-                    </div>
-                    <div class="inventory-controls">
-                        <div class="search-bar">
-                            <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
-                            <i class="fas fa-search"></i>
+                <div class="inventory-page-layout">
+                    <aside id="inventory-sidebar" class="inventory-sidebar">
+                        <ul id="location-nav-list" class="location-nav-list">
+                            <!-- Navigation links indsættes af JS -->
+                        </ul>
+                    </aside>
+            
+                    <main class="inventory-main-content">
+                        <div class="actions-bar">
+                            <button id="add-inventory-item-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj ny vare</button>
+                            <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
+                            <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
+                            <button id="open-shopping-list-btn" class="btn btn-secondary"><i class="fas fa-shopping-cart"></i> Vis Indkøbsliste</button>
                         </div>
-                    </div>
-                    <div class="inventory-filters">
-                        <div class="input-group">
-                            <label for="inventory-filter-main-category">Overkategori</label>
-                            <select id="inventory-filter-main-category"></select>
+            
+                        <div class="inventory-filters">
+                            <div class="search-bar">
+                                <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="filter-dropdowns">
+                                <select id="inventory-filter-main-category">
+                                    <option value="">Vælg overkategori...</option>
+                                </select>
+                                <select id="inventory-filter-sub-category" disabled>
+                                    <option value="">Vælg underkategori...</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label for="inventory-filter-sub-category">Underkategori</label>
-                            <select id="inventory-filter-sub-category"></select>
+            
+                        <div id="all-items-view" class="inventory-container">
+                            <h3 style="padding: 0.75rem 1.25rem 0;">Alle Varer</h3>
+                            <table id="inventory-table-all" class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th class="sortable" data-sort-key="name">Varenavn <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Placering</th>
+                                        <th class="sortable" data-sort-key="stock">Total Lager <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Handlinger</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
-                         <div class="input-group">
-                            <label for="inventory-filter-stock-status">Status</label>
-                            <select id="inventory-filter-stock-status">
-                                <option value="">Alle</option>
-                                <option value="in_stock">På lager</option>
-                                <option value="low_stock">Lav beholdning</option>
-                            </select>
+            
+                        <div id="freezer-view" class="inventory-container hidden">
+                             <h3 style="padding: 0.75rem 1.25rem 0;">Fryseroversigt</h3>
+                            <table id="inventory-table-freezer" class="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-sort-key="name">Varenavn <i class="fas fa-sort sort-icon"></i></th>
+                                        <th class="sortable" data-sort-key="frozenDate">Nedfrosset Dato <i class="fas fa-sort sort-icon"></i></th>
+                                        <th class="sortable" data-sort-key="expiryDate">Holdbar Til <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Antal</th>
+                                        <th>Handlinger</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
                         </div>
-                        <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
-                    </div>
-                    <div id="inventory-list-container"></div>
+                    </main>
                 </div>
             </section>
             
