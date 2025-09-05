@@ -128,6 +128,11 @@ function buildPageSkeleton(container) {
                     <div id="spending-categories-content"></div>
                 </div>
 
+                <div class="spending-accounts-summary">
+                    <h4>Overførsler til Konti (Faste Udgifter)</h4>
+                    <div id="spending-accounts-content"></div>
+                </div>
+
                 <div class="new-transaction-form">
                     <h4>Ny Postering</h4>
                     <form id="transaction-form">
@@ -366,6 +371,7 @@ export function renderEconomyPage() {
     renderFixedPostsWidget(activeFixedPosts);
     renderSavingsGoalWidget();
     renderSavingsVsWishlistWidget(projected.assets);
+    renderSpendingAccounts(activeFixedPosts);
 }
 
 // OPDATERET: calculateProjectedValues med intelligent gældsafvikling
@@ -552,6 +558,41 @@ function renderSpendingCategories(fixedExpenses) {
     const sortedCategories = Object.entries(categories).sort(([,a],[,b]) => b-a);
 
     container.innerHTML = sortedCategories.map(([name, amount]) => {
+        const percentage = (amount / totalFixed) * 100;
+        return `
+            <div class="category-summary-item">
+                <span class="category-name" title="${name}">${name}</span>
+                <div class="category-bar-container">
+                    <div class="category-bar" style="width: ${percentage}%;"></div>
+                </div>
+                <span class="category-amount">${amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderSpendingAccounts(fixedExpenses) {
+    const container = document.getElementById('spending-accounts-content');
+    if (!container) return;
+
+    const fixedSpending = (fixedExpenses || []).filter(exp => exp.type === 'expense');
+    const totalFixed = fixedSpending.reduce((sum, exp) => sum + exp.amount, 0);
+
+    if (totalFixed === 0) {
+        container.innerHTML = '<p class="empty-state-small">Ingen faste udgifter at vise.</p>';
+        return;
+    }
+
+    const accounts = {};
+    fixedSpending.forEach(exp => {
+        const key = exp.account || 'Ikke tildelt';
+        if (!accounts[key]) accounts[key] = 0;
+        accounts[key] += exp.amount;
+    });
+
+    const sortedAccounts = Object.entries(accounts).sort(([,a],[,b]) => b-a);
+
+    container.innerHTML = sortedAccounts.map(([name, amount]) => {
         const percentage = (amount / totalFixed) * 100;
         return `
             <div class="category-summary-item">
@@ -795,6 +836,7 @@ function openFixedExpenseModal(expenseId = null) {
     modal.querySelector('h3').textContent = isEditing ? 'Rediger Fast Post' : 'Ny Fast Post';
     document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
 
+    populateReferenceDropdown(document.getElementById('fixed-expense-account'), appState.references.accounts, 'Vælg konto...', expense?.account);
     populateMainCategoryDropdown(document.getElementById('fixed-expense-main-category'), expense?.mainCategory);
     populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), expense?.mainCategory, expense?.subCategory);
 
@@ -818,6 +860,7 @@ async function handleSaveFixedExpense(e) {
         description: document.getElementById('fixed-expense-description').value.trim(),
         amount: parseFloat(document.getElementById('fixed-expense-amount').value),
         type: document.getElementById('fixed-expense-type').value,
+        account: document.getElementById('fixed-expense-account').value,
         mainCategory: document.getElementById('fixed-expense-main-category').value,
         subCategory: document.getElementById('fixed-expense-sub-category').value,
         startDate: document.getElementById('fixed-expense-start-date-edit').value,
@@ -825,8 +868,8 @@ async function handleSaveFixedExpense(e) {
         userId: appState.currentUser.uid,
     };
 
-    if (!expenseData.description || isNaN(expenseData.amount) || !expenseData.mainCategory) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Beskrivelse, beløb og kategori er påkrævet."});
+    if (!expenseData.description || isNaN(expenseData.amount) || !expenseData.mainCategory || !expenseData.account) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Beskrivelse, beløb, konto og kategori er påkrævet."});
         return;
     }
 
@@ -964,3 +1007,4 @@ async function handleSaveSavingsGoal(e) {
         handleError(error, "Kunne ikke gemme opsparingsmål.", "saveSavingsGoal");
     }
 }
+
