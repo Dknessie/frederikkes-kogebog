@@ -16,6 +16,12 @@ const referenceCategories = {
         description: 'Opret navne her, som kan bruges i budgettet. Disse navne er ikke rigtige brugerkonti.',
         isSimpleList: true
     },
+    accounts: {
+        title: 'Konti',
+        icon: 'fa-wallet',
+        description: 'Administrer de konti, som faste udgifter trækkes fra (f.eks. Budget, Madkonto).',
+        isSimpleList: true
+    },
     budgetCategories: {
         title: 'Budgetkategorier',
         icon: 'fa-money-bill-wave',
@@ -341,3 +347,4 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
     }
     showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
 }
+
