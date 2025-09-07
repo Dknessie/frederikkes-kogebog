@@ -2787,3 +2787,5 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--hjem-header-text);
     font-size: 1.1em;
 }
+" in the document that I have open.
+
