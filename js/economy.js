@@ -133,6 +133,22 @@ function buildPageSkeleton(container) {
                     <div id="spending-accounts-content"></div>
                 </div>
 
+                <div class="transactions-list">
+                    <h4>Bevægelser for Måneden</h4>
+                    <table id="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>DATO</th>
+                                <th>POST</th>
+                                <th>PERSON</th>
+                                <th>KATEGORI</th>
+                                <th class="text-right">BELØB</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
                 <div class="new-transaction-form">
                     <h4>Ny Postering</h4>
                     <form id="transaction-form">
@@ -177,22 +193,6 @@ function buildPageSkeleton(container) {
                             <button type="submit" class="btn btn-primary">Tilføj</button>
                         </div>
                     </form>
-                </div>
-
-                <div class="transactions-list">
-                    <h4>Bevægelser for Måneden</h4>
-                    <table id="transactions-table">
-                        <thead>
-                            <tr>
-                                <th>DATO</th>
-                                <th>POST</th>
-                                <th>PERSON</th>
-                                <th>KATEGORI</th>
-                                <th class="text-right">BELØB</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
                 </div>
             </div>
 
@@ -445,7 +445,7 @@ function renderTransactionsTable(transactions) {
     tableBody.innerHTML = transactions
         .sort((a, b) => b.date.toDate() - a.date.toDate())
         .map(t => `
-            <tr data-id="${t.id}">
+            <tr data-id="${t.id}" class="clickable-row">
                 <td>${t.date.toDate().toLocaleDateString('da-DK', { day: '2-digit', month: 'short' })}</td>
                 <td>${t.description}</td>
                 <td>${t.person || 'Fælles'}</td>
