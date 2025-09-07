@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.c
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
-import { initRecipes, renderRecipesPage } from './recipes.js';
+import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
@@ -86,11 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
         impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
 
         // Recipes
-        recipePage: document.getElementById('recipes'),
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
+        recipeGrid: document.querySelector('#recipes .recipe-grid'),
         ingredientsContainer: document.getElementById('ingredients-container'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
@@ -98,6 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
         recipeImageUploadInput: document.getElementById('recipe-image-upload'),
+        recipeFilterContainer: document.getElementById('recipe-filter-container'),
+        sortByStockToggle: document.getElementById('sort-by-stock-toggle'),
         recipeReadModal: document.getElementById('recipe-read-modal'),
         readViewPlanBtn: document.getElementById('read-view-plan-btn'),
         readViewCookBtn: document.getElementById('read-view-cook-btn'),
@@ -105,19 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
-        // Calendar
-        calendarGrid: document.getElementById('calendar-grid'),
-        calendarTitle: document.getElementById('calendar-title'),
-        prevPeriodBtn: document.getElementById('prev-period-btn'),
-        nextPeriodBtn: document.getElementById('next-period-btn'),
-        weekViewBtn: document.getElementById('week-view-btn'),
-        monthViewBtn: document.getElementById('month-view-btn'),
-        calendarWeekView: document.getElementById('calendar-week-view'),
-        calendarMonthView: document.getElementById('calendar-month-grid'),
-        calendarWeekHeader: document.querySelector('.calendar-week-header'),
-        calendarMonthGrid: document.getElementById('calendar-month-grid'),
-        clearMealPlanBtn: document.getElementById('clear-meal-plan-btn'),
-        generateGroceriesBtn: document.getElementById('generate-groceries-btn'),
+        // NYE KALENDER "Uge-Hub" ELEMENTER
+        hubPrevWeekBtn: document.getElementById('hub-prev-week-btn'),
+        hubNextWeekBtn: document.getElementById('hub-next-week-btn'),
+        hubTitle: document.getElementById('hub-title'),
+        hubClearWeekBtn: document.getElementById('hub-clear-week-btn'),
+        hubGenerateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
+        mealPlanSection: document.getElementById('meal-plan-section'),
+        sidebarSection: document.getElementById('sidebar-section'),
         
         // Modals related to calendar
         planMealModal: document.getElementById('plan-meal-modal'),
@@ -212,7 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderHjemmetPage();
                 break;
             case '#recipes':
-                renderRecipesPage();
+                renderPageTagFilters();
+                renderRecipes();
                 break;
             case '#inventory':
                 renderInventory();
@@ -285,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.addInventoryItemBtn, 
                         elements.reorderAssistantBtn, 
                         elements.addRecipeBtn, 
-                        elements.generateGroceriesBtn, 
+                        elements.hubGenerateGroceriesBtn, // OPDATERET
                         elements.impulsePurchaseBtn,
                         elements.addExpenseBtn
                     ];
@@ -323,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.addInventoryItemBtn, 
             elements.reorderAssistantBtn, 
             elements.addRecipeBtn, 
-            elements.generateGroceriesBtn, 
+            elements.hubGenerateGroceriesBtn, // OPDATERET
             elements.impulsePurchaseBtn,
             elements.addExpenseBtn
         ];
@@ -365,4 +363,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-
