@@ -1,7 +1,4 @@
 // js/recipes.js
-// Bemærk: Ingen ændringer var nødvendige i denne fil.
-// Det nye layout i index.html genbruger alle de ID'er (#recipe-flipper, #recipe-list-grid, osv.),
-// som dette script allerede bruger til at indsætte data. Logikken kan derfor køre uændret.
 
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -82,14 +79,16 @@ function renderFlipper() {
     const container = appElements.recipeFlipper;
     if (!container) return;
     container.innerHTML = '';
-    const favoriteRecipes = appState.recipes.filter(r => r.is_favorite).slice(0, 5); // Vis op til 5 favoritter
+    
+    // ÆNDRING: Viser nu alle opskrifter, sorteret alfabetisk, i stedet for kun favoritter.
+    const allRecipes = [...appState.recipes].sort((a, b) => a.title.localeCompare(b.title));
 
-    if (favoriteRecipes.length === 0) {
-        container.innerHTML = '<p class="empty-state">Marker opskrifter som favoritter for at se dem her.</p>';
+    if (allRecipes.length === 0) {
+        container.innerHTML = '<p class="empty-state">Du har endnu ikke tilføjet nogen opskrifter.</p>';
         return;
     }
 
-    favoriteRecipes.forEach((recipe) => {
+    allRecipes.forEach((recipe) => {
         const wrapper = document.createElement('div');
         wrapper.className = 'recipe-card-wrapper';
         wrapper.dataset.id = recipe.id;
@@ -204,7 +203,6 @@ function renderListFilterTags() {
     });
 
     container.innerHTML = '';
-    // Tilføj en "Alle" knap
     const allButton = document.createElement('button');
     allButton.className = `filter-tag ${cookbookState.activeListFilterTags.size === 0 ? 'active' : ''}`;
     allButton.textContent = 'Alle';
@@ -226,33 +224,54 @@ function renderSidebarWidgets() {
     renderUpcomingMealPlanWidget();
 }
 
+// ÆNDRING: Omskrevet til at gruppere opskrifter
 function renderWhatCanIMakeWidget() {
     const list = appElements.whatCanIMakeWidget.querySelector('.widget-list');
     if (!list) return;
     list.innerHTML = '';
 
     const recipesWithMatch = appState.recipes
-        .map(recipe => calculateRecipeMatch(recipe, appState.inventory))
-        .sort((a, b) => a.missingCount - b.missingCount)
-        .slice(0, 5);
+        .map(recipe => calculateRecipeMatch(recipe, appState.inventory));
+        
+    const canMakeNow = recipesWithMatch
+        .filter(r => r.missingCount === 0)
+        .sort((a,b) => a.title.localeCompare(b.title));
 
-    if (recipesWithMatch.length === 0) {
-        list.innerHTML = `<li class="empty-state-small">Ingen opskrifter.</li>`;
-        return;
+    const almostThere = recipesWithMatch
+        .filter(r => r.missingCount > 0)
+        .sort((a, b) => a.missingCount - b.missingCount || a.title.localeCompare(b.title))
+        .slice(0, 5); // Vis kun de 5, du er tættest på at kunne lave
+
+    let html = '';
+
+    if (canMakeNow.length > 0) {
+        html += `<h6>Kan laves nu</h6>`;
+        canMakeNow.forEach(recipe => {
+            html += `
+                <li class="widget-list-item">
+                    <span><span class="status-indicator status-green"></span>${recipe.title}</span>
+                </li>
+            `;
+        });
     }
 
-    recipesWithMatch.forEach(recipe => {
-        let statusClass = 'status-green';
-        if (recipe.missingCount > 0) statusClass = 'status-yellow';
-        
-        const li = document.createElement('li');
-        li.className = 'widget-list-item';
-        li.innerHTML = `
-            <span><span class="status-indicator ${statusClass}"></span>${recipe.title}</span>
-            <small>Mangler ${recipe.missingCount}</small>
-        `;
-        list.appendChild(li);
-    });
+    if (almostThere.length > 0) {
+        html += `<h6 style="margin-top: 1rem;">Næsten klar</h6>`;
+        almostThere.forEach(recipe => {
+            html += `
+                <li class="widget-list-item">
+                    <span><span class="status-indicator status-yellow"></span>${recipe.title}</span>
+                    <small>Mangler ${recipe.missingCount}</small>
+                </li>
+            `;
+        });
+    }
+
+    if (html === '') {
+        html = `<li class="empty-state-small">Ingen opskrifter fundet.</li>`;
+    }
+
+    list.innerHTML = html;
 }
 
 function renderUpcomingMealPlanWidget() {
@@ -269,7 +288,7 @@ function renderUpcomingMealPlanWidget() {
         const dateString = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
         
         if (appState.mealPlan[dateString] && appState.mealPlan[dateString].dinner) {
-            const dinnerPlan = appState.mealPlan[dateString].dinner[0]; // Assuming one dinner
+            const dinnerPlan = appState.mealPlan[dateString].dinner[0];
             if (dinnerPlan && dinnerPlan.recipeId) {
                 const recipe = appState.recipes.find(r => r.id === dinnerPlan.recipeId);
                 if (recipe) {
@@ -298,7 +317,6 @@ function handleFilterTagClick(e) {
     if (!tagButton) return;
 
     const tag = tagButton.dataset.tag;
-
     if (tag === 'all') {
         cookbookState.activeListFilterTags.clear();
     } else {
@@ -337,9 +355,12 @@ async function handleGridClick(e) {
 
     if (e.target.closest('.favorite-icon')) {
         e.stopPropagation();
-        const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('favorited');
+        const icon = e.target.closest('.favorite-icon');
+        const isCurrentlyFavorite = icon.classList.contains('favorited');
         try {
             await updateDoc(doc(db, 'recipes', recipeId), { is_favorite: !isCurrentlyFavorite });
+            // ÆNDRING: Giver øjeblikkelig feedback til brugeren.
+            showNotification({title: "Favorit opdateret!", message: `"${recipe.title}" er ${!isCurrentlyFavorite ? 'tilføjet til' : 'fjernet fra'} favoritter.`});
         } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus.", "toggleFavorite"); }
     } else {
         renderReadView(recipe);
@@ -754,13 +775,11 @@ function calculateRecipeMatch(recipe, inventory) {
 
         const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
         if (conversion.error) {
-            // If conversion fails, we assume we don't have it.
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        // Check if total stock in base unit is sufficient
         if (conversion.grams > (inventoryItem.totalStock || 0)) {
             missingCount++;
             canBeMade = false;
@@ -768,3 +787,4 @@ function calculateRecipeMatch(recipe, inventory) {
     });
     return { ...recipe, missingCount, canBeMade };
 }
+
