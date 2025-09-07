@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.c
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
-import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
+import { initRecipes, renderRecipesPage } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
@@ -86,11 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
         impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
 
         // Recipes
+        recipePage: document.getElementById('recipes'),
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         addRecipeBtn: document.getElementById('add-recipe-btn'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
-        recipeGrid: document.querySelector('#recipes .recipe-grid'),
         ingredientsContainer: document.getElementById('ingredients-container'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
@@ -98,8 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
         recipeImageUploadInput: document.getElementById('recipe-image-upload'),
-        recipeFilterContainer: document.getElementById('recipe-filter-container'),
-        sortByStockToggle: document.getElementById('sort-by-stock-toggle'),
         recipeReadModal: document.getElementById('recipe-read-modal'),
         readViewPlanBtn: document.getElementById('read-view-plan-btn'),
         readViewCookBtn: document.getElementById('read-view-cook-btn'),
@@ -214,8 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderHjemmetPage();
                 break;
             case '#recipes':
-                renderPageTagFilters();
-                renderRecipes();
+                renderRecipesPage();
                 break;
             case '#inventory':
                 renderInventory();
@@ -368,3 +365,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
