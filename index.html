@@ -120,33 +120,36 @@
                 </div>
             </section>
 
+            <!-- NYT KALENDER LAYOUT ("Uge-Hub") -->
             <section id="calendar" class="page hidden">
-                <div class="calendar-main-container">
-                    <div class="calendar-header">
-                        <div class="calendar-nav">
-                            <button id="prev-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i></button>
-                            <div class="calendar-title-wrapper">
-                                <h2 id="calendar-title"></h2>
-                            </div>
-                            <button id="next-period-btn" class="btn btn-secondary"><i class="fas fa-chevron-right"></i></button>
+                <div class="weekly-hub-container">
+                    <!-- Header med navigation og handlinger -->
+                    <header class="hub-header">
+                        <div class="hub-navigation">
+                            <button id="hub-prev-week-btn" class="btn btn-secondary"><i class="fas fa-chevron-left"></i> Forrige Uge</button>
                         </div>
-                        <div class="calendar-view-toggle">
-                            <button id="week-view-btn" class="btn btn-secondary active">Uge</button>
-                            <button id="month-view-btn" class="btn btn-secondary">Måned</button>
+                        <h2 id="hub-title" class="hub-title"></h2>
+                        <div class="hub-navigation">
+                            <button id="hub-next-week-btn" class="btn btn-secondary">Næste Uge <i class="fas fa-chevron-right"></i></button>
                         </div>
-                        <div class="calendar-actions">
-                            <button id="generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
-                            <button id="clear-meal-plan-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Uge</button>
+                        <div class="hub-actions">
+                            <button id="hub-clear-week-btn" class="btn btn-secondary"><i class="fas fa-sync-alt"></i> Ryd Uge</button>
+                            <button id="hub-generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
                         </div>
-                    </div>
-                    <div id="calendar-week-view" class="calendar-view active">
-                        <div class="calendar-week-header"></div>
-                        <div id="calendar-grid" class="calendar-grid"></div>
-                    </div>
-                    <div id="calendar-month-view" class="calendar-view">
-                        <div class="calendar-month-header"></div>
-                        <div id="calendar-month-grid" class="calendar-month-grid"></div>
-                    </div>
+                    </header>
+
+                    <!-- Hovedlayout med madplan og widgets -->
+                    <main class="hub-main-layout">
+                        <!-- Venstre sektion: Madplan (genereres af JS) -->
+                        <section id="meal-plan-section" class="meal-plan-section">
+                            <!-- Indhold indsættes dynamisk af mealPlanner.js -->
+                        </section>
+
+                        <!-- Højre sektion: Widgets (genereres af JS) -->
+                        <aside id="sidebar-section" class="sidebar-section">
+                            <!-- Indhold indsættes dynamisk af mealPlanner.js -->
+                        </aside>
+                    </main>
                 </div>
             </section>
 
@@ -158,62 +161,20 @@
             </section>
 
             <section id="recipes" class="page hidden">
-                 <div class="cookbook-layout">
-                    <main class="cookbook-main">
-                        <div class="cookbook-header">
-                            <h2>Min Kogebog</h2>
-                            <p>Find inspiration, planlæg dine måltider og genopdag dine favoritter.</p>
-                            <div class="actions">
-                                <button id="add-recipe-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Opskrift</button>
-                            </div>
-                        </div>
-
-                        <div id="recipe-flipper" class="recipe-flipper">
-                            <!-- Indhold genereres af JS -->
-                        </div>
-                        
-                        <div class="flipper-nav">
-                            <button id="prev-recipe-btn" class="btn-icon" title="Forrige"><i class="fas fa-chevron-left"></i></button>
-                            <button id="next-recipe-btn" class="btn-icon" title="Næste"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-                        
-                        <div class="recipe-list-container">
-                            <h3>Alle Mine Opskrifter</h3>
-                            <div id="list-filter-tags" class="list-filter-tags">
-                                <!-- Indhold genereres af JS -->
-                            </div>
-                            <div id="recipe-list-grid" class="recipe-list-grid">
-                                <!-- Indhold genereres af JS -->
-                            </div>
-                        </div>
-                    </main>
-
-                    <aside class="cookbook-sidebar">
-                        <div class="cookbook-widget">
-                            <h5><i class="fas fa-search"></i> Find en opskrift</h5>
-                            <div class="search-bar">
-                                <input id="recipe-search-input" type="text" placeholder="Søg efter titel...">
-                            </div>
-                        </div>
-
-                        <div class="cookbook-widget">
-                            <h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave</h5>
-                            <ul id="what-can-i-make-list" class="widget-list">
-                                <!-- Indhold genereres af JS -->
-                            </ul>
-                        </div>
-
-                         <div class="cookbook-widget">
-                            <h5><i class="fas fa-calendar-day"></i> Kommende Madplan</h5>
-                            <ul id="upcoming-meal-plan-list" class="widget-list">
-                                <!-- Indhold genereres af JS -->
-                            </ul>
-                            <a href="#calendar" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Se hele madplanen</a>
-                        </div>
-                    </aside>
+                <h2>Kogebog</h2>
+                <div class="actions-bar recipe-actions-bar">
+                    <button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
+                    <div class="switch-group">
+                        <label for="sort-by-stock-toggle">Vis retter jeg kan lave først</label>
+                        <label class="switch">
+                            <input type="checkbox" id="sort-by-stock-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
                 </div>
+                <div id="recipe-filter-container" class="filter-container"></div>
+                <div id="recipe-grid" class="recipe-grid"></div>
             </section>
-
 
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
@@ -287,6 +248,7 @@
     </div>
 
     <!-- MODALS -->
+    <!-- ... Eksisterende modals forbliver uændrede ... -->
     <div id="project-edit-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -632,11 +594,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-grid-3-col">
-                    <div class="input-group">
-                        <label for="fixed-expense-account">Konto</label>
-                        <select id="fixed-expense-account" required></select>
-                    </div>
+                <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="fixed-expense-main-category">Hovedkategori</label>
                         <select id="fixed-expense-main-category" required></select>
@@ -693,19 +651,13 @@
                         <select id="transaction-edit-category" required></select>
                     </div>
                     <div class="input-group">
-                        <label for="transaction-edit-sub-category">Underkategori</label>
-                        <select id="transaction-edit-sub-category"></select>
-                    </div>
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
                         <label for="transaction-edit-person">Person</label>
                         <select id="transaction-edit-person" required></select>
                     </div>
-                    <div class="input-group">
-                        <label for="transaction-edit-date">Dato</label>
-                        <input type="date" id="transaction-edit-date" required>
-                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="transaction-edit-date">Dato</label>
+                    <input type="date" id="transaction-edit-date" required>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="delete-transaction-btn" class="btn btn-danger">Slet</button>
@@ -1152,4 +1104,3 @@
 
 </body>
 </html>
-
