@@ -112,6 +112,28 @@ function handlePageClick(e) {
         toggleFavorite(card.dataset.id);
         return;
     }
+    
+    // Plan button on Flipper card
+    const planBtn = e.target.closest('.recipe-display-card .plan-recipe-btn');
+    if (planBtn) {
+        const card = planBtn.closest('.recipe-card-wrapper');
+        if (card && card.dataset.id) {
+            openPlanMealModal(card.dataset.id);
+        }
+        return;
+    }
+    
+    // Edit button on Flipper card
+    const editBtn = e.target.closest('.recipe-display-card .edit-recipe-btn');
+    if (editBtn) {
+        const card = editBtn.closest('.recipe-card-wrapper');
+        if (card && card.dataset.id) {
+            appState.currentlyViewedRecipeId = card.dataset.id;
+            openEditRecipeModal();
+        }
+        return;
+    }
+
     // Open Read View from Flipper or List Card
     const card = e.target.closest('.recipe-card-wrapper, .recipe-list-card');
     if (card && card.dataset.id) {
@@ -244,28 +266,43 @@ function renderSidebarWidgets() {
     if (upcomingList) {
         const upcomingMeals = [];
         let today = new Date();
-        for(let i=0; i<5; i++) {
-            const dateStr = formatDate(today);
+        let nextWeek = new Date(today.setDate(today.getDate() + 7));
+        let startOfNextWeek = getStartOfWeek(nextWeek);
+
+        for(let i=0; i<7; i++) {
+            const dayDate = new Date(startOfNextWeek);
+            dayDate.setDate(startOfNextWeek.getDate() + i);
+            const dateStr = formatDate(dayDate);
             const dayPlan = appState.mealPlan[dateStr];
-            if (dayPlan && (dayPlan.dinner || dayPlan.lunch)) {
-                const meal = (dayPlan.dinner || dayPlan.lunch)[0];
-                if (meal && meal.type === 'recipe') {
-                    const recipe = appState.recipes.find(r => r.id === meal.recipeId);
+
+            if (dayPlan) {
+                const dinner = dayPlan.dinner && dayPlan.dinner[0];
+                const lunch = dayPlan.lunch && dayPlan.lunch[0];
+                
+                if (dinner && dinner.type === 'recipe') {
+                    const recipe = appState.recipes.find(r => r.id === dinner.recipeId);
                     if (recipe) {
                         upcomingMeals.push({
-                            day: i === 0 ? 'I dag' : (i === 1 ? 'I morgen' : today.toLocaleDateString('da-DK', {weekday: 'long'})),
+                            day: dayDate.toLocaleDateString('da-DK', {weekday: 'long'}),
+                            recipeTitle: recipe.title
+                        });
+                    }
+                } else if (lunch && lunch.type === 'recipe') {
+                     const recipe = appState.recipes.find(r => r.id === lunch.recipeId);
+                     if (recipe) {
+                        upcomingMeals.push({
+                            day: dayDate.toLocaleDateString('da-DK', {weekday: 'long'}),
                             recipeTitle: recipe.title
                         });
                     }
                 }
             }
-            today.setDate(today.getDate() + 1);
         }
 
         if (upcomingMeals.length === 0) {
-            upcomingList.innerHTML = '<li class="empty-state-small">Madplanen er tom.</li>';
+            upcomingList.innerHTML = '<li class="empty-state-small">Madplanen for næste uge er tom.</li>';
         } else {
-             upcomingList.innerHTML = upcomingMeals.map(m => `
+             upcomingList.innerHTML = upcomingMeals.slice(0, 5).map(m => `
                 <li class="widget-list-item">
                     <span class="meal-plan-day">${m.day}</span>
                     <span class="meal-plan-recipe">${m.recipeTitle}</span>
