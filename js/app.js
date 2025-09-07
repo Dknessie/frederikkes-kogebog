@@ -85,12 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
         impulsePurchaseModal: document.getElementById('impulse-purchase-modal'),
         impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
 
-        // Recipes
+        // Recipes (New Structure)
+        cookbookAddRecipeBtn: document.getElementById('cookbook-add-recipe-btn'),
+        recipeFlipper: document.getElementById('recipe-flipper'),
+        prevRecipeBtn: document.getElementById('prev-recipe-btn'),
+        nextRecipeBtn: document.getElementById('next-recipe-btn'),
+        recipeListGrid: document.getElementById('recipe-list-grid'),
+        listFilterTagsContainer: document.getElementById('list-filter-tags-container'),
+        recipeSearchInputSidebar: document.getElementById('recipe-search-input-sidebar'),
+        whatCanIMakeWidget: document.getElementById('what-can-i-make-widget'),
+        upcomingMealPlanWidget: document.getElementById('upcoming-meal-plan-widget'),
+        goToCalendarBtn: document.getElementById('go-to-calendar-btn'),
+        
+        // Modals (beholdes for nu)
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
-        addRecipeBtn: document.getElementById('add-recipe-btn'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
-        recipeGrid: document.querySelector('#recipes .recipe-grid'),
         ingredientsContainer: document.getElementById('ingredients-container'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
@@ -98,8 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeImagePreview: document.getElementById('recipe-image-preview'),
         recipeImageUrlInput: document.getElementById('recipe-imageUrl'),
         recipeImageUploadInput: document.getElementById('recipe-image-upload'),
-        recipeFilterContainer: document.getElementById('recipe-filter-container'),
-        sortByStockToggle: document.getElementById('sort-by-stock-toggle'),
         recipeReadModal: document.getElementById('recipe-read-modal'),
         readViewPlanBtn: document.getElementById('read-view-plan-btn'),
         readViewCookBtn: document.getElementById('read-view-cook-btn'),
@@ -107,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
-        // NYE KALENDER "Uge-Hub" ELEMENTER
+        // KALENDER "Uge-Hub" ELEMENTER
         hubPrevWeekBtn: document.getElementById('hub-prev-week-btn'),
         hubNextWeekBtn: document.getElementById('hub-next-week-btn'),
         hubTitle: document.getElementById('hub-title'),
@@ -115,8 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hubGenerateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
         mealPlanSection: document.getElementById('meal-plan-section'),
         sidebarSection: document.getElementById('sidebar-section'),
-        
-        // Bevarer denne for bagudkompatibilitet med shoppingList.js, men peger på det nye ID
         generateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
 
         // Modals related to calendar
@@ -156,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // OPDATERING: Tilføjet elementer for Hjemmet modals
+        // Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         deletePlantBtn: document.getElementById('delete-plant-btn'),
@@ -212,7 +218,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderHjemmetPage();
                 break;
             case '#recipes':
-                renderPageTagFilters();
                 renderRecipes();
                 break;
             case '#inventory':
@@ -285,8 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
                      const buttonsToEnable = [
                         elements.addInventoryItemBtn, 
                         elements.reorderAssistantBtn, 
-                        elements.addRecipeBtn, 
-                        elements.hubGenerateGroceriesBtn, // OPDATERET
+                        elements.cookbookAddRecipeBtn, // OPDATERET
+                        elements.hubGenerateGroceriesBtn,
                         elements.impulsePurchaseBtn,
                         elements.addExpenseBtn
                     ];
@@ -323,8 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const buttonsToDisable = [
             elements.addInventoryItemBtn, 
             elements.reorderAssistantBtn, 
-            elements.addRecipeBtn, 
-            elements.hubGenerateGroceriesBtn, // OPDATERET
+            elements.cookbookAddRecipeBtn, // OPDATERET
+            elements.hubGenerateGroceriesBtn,
             elements.impulsePurchaseBtn,
             elements.addExpenseBtn
         ];
