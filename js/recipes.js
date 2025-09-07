@@ -3,12 +3,17 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, convertToGrams } from './utils.js';
+import { normalizeUnit, convertToGrams, getStartOfWeek, formatDate } from './utils.js';
 import { openPlanMealModal } from './mealPlanner.js';
 import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
+let recipePageState = {
+    flipperIndex: 0,
+    filteredRecipes: [],
+    searchTerm: '',
+};
 
 const lazyImageObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach(entry => {
@@ -23,17 +28,24 @@ const lazyImageObserver = new IntersectionObserver((entries, observer) => {
 
 export function initRecipes(state, elements) {
     appState = state;
-    appElements = {
-        ...elements,
-        importRecipeBtn: document.getElementById('import-recipe-btn')
-    };
+    appElements = elements;
 
-    appElements.sortByStockToggle.addEventListener('change', renderRecipes);
-    appElements.addRecipeBtn.addEventListener('click', openAddRecipeModal);
+    // Main page listeners
+    if (appElements.recipePage) {
+        appElements.recipePage.addEventListener('click', handlePageClick);
+    }
+    const searchInput = document.getElementById('recipe-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            recipePageState.searchTerm = e.target.value.toLowerCase();
+            renderRecipesPage();
+        });
+    }
+
+    // Modal listeners
     appElements.addIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
-    appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
+    document.getElementById('import-recipe-btn').addEventListener('click', handleRecipeImport);
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
-    appElements.recipeGrid.addEventListener('click', handleGridClick);
     
     appElements.recipeEditModal.addEventListener('click', (e) => {
         if (e.target.closest('.remove-ingredient-btn')) {
@@ -43,7 +55,7 @@ export function initRecipes(state, elements) {
     appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
     appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
 
-    // Updated Read View Actions
+    // Read View Actions
     appElements.readViewPlanBtn.addEventListener('click', () => {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
@@ -62,11 +74,57 @@ export function initRecipes(state, elements) {
     appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
 }
 
-export function renderRecipes() {
-    const fragment = document.createDocumentFragment();
-    appElements.recipeGrid.innerHTML = '';
-    
-    let recipesToRender = appState.recipes.map(recipe => calculateRecipeMatch(recipe, appState.inventory));
+function handlePageClick(e) {
+    // Add Recipe Button
+    const addBtn = e.target.closest('#add-recipe-btn');
+    if (addBtn) {
+        openAddRecipeModal();
+        return;
+    }
+    // Flipper Navigation
+    const prevBtn = e.target.closest('#prev-recipe-btn');
+    if (prevBtn) {
+        navigateFlipper(-1);
+        return;
+    }
+    const nextBtn = e.target.closest('#next-recipe-btn');
+    if (nextBtn) {
+        navigateFlipper(1);
+        return;
+    }
+     // Filter Tag
+    const filterTag = e.target.closest('.list-filter-tags .filter-tag');
+    if (filterTag) {
+        const tag = filterTag.dataset.tag;
+        if (appState.activeRecipeFilterTags.has(tag)) {
+            appState.activeRecipeFilterTags.delete(tag);
+        } else {
+            appState.activeRecipeFilterTags.add(tag);
+        }
+        renderRecipesPage();
+        return;
+    }
+    // Favorite Icon on List Card
+    const favoriteIcon = e.target.closest('.recipe-list-card .favorite-icon');
+    if (favoriteIcon) {
+        e.stopPropagation();
+        const card = favoriteIcon.closest('.recipe-list-card');
+        toggleFavorite(card.dataset.id);
+        return;
+    }
+    // Open Read View from Flipper or List Card
+    const card = e.target.closest('.recipe-card-wrapper, .recipe-list-card');
+    if (card && card.dataset.id) {
+        const recipe = appState.recipes.find(r => r.id === card.dataset.id);
+        if (recipe) renderReadView(recipe);
+    }
+}
+
+export function renderRecipesPage() {
+    // Filter and sort all recipes first
+    let recipesToRender = appState.recipes
+        .map(recipe => calculateRecipeMatch(recipe, appState.inventory))
+        .filter(r => r.title.toLowerCase().includes(recipePageState.searchTerm));
 
     if (appState.activeRecipeFilterTags.size > 0) {
         recipesToRender = recipesToRender.filter(r => {
@@ -75,94 +133,185 @@ export function renderRecipes() {
         });
     }
     
-    if (appElements.sortByStockToggle.checked) {
-        recipesToRender.sort((a, b) => {
-            if (a.missingCount !== b.missingCount) return a.missingCount - b.missingCount;
-            return a.title.localeCompare(b.title);
-        });
-    } else {
-        recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
+    recipePageState.filteredRecipes = recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
+    
+    // Ensure flipper index is valid
+    if (recipePageState.flipperIndex >= recipePageState.filteredRecipes.length) {
+        recipePageState.flipperIndex = 0;
     }
 
-    if (recipesToRender.length === 0) {
-        appElements.recipeGrid.innerHTML = `<p class="empty-state">Ingen opskrifter matcher dine valg.</p>`;
+    renderFlipper();
+    renderSidebarWidgets();
+    renderRecipeList();
+}
+
+
+function renderFlipper() {
+    const flipperContainer = document.getElementById('recipe-flipper');
+    if (!flipperContainer) return;
+    flipperContainer.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
+    if (recipePageState.filteredRecipes.length === 0) {
+        flipperContainer.innerHTML = '<p class="empty-state">Ingen opskrifter fundet.</p>';
         return;
     }
 
-    recipesToRender.forEach(recipe => {
-        const card = createRecipeCard(recipe);
-        fragment.appendChild(card);
+    recipePageState.filteredRecipes.forEach((recipe, index) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'recipe-card-wrapper';
+        wrapper.dataset.id = recipe.id;
+
+        const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        const recipePrice = calculateRecipePrice(recipe, appState.inventory);
+
+        wrapper.innerHTML = `
+            <div class="recipe-display-card">
+                <img src="${imageUrl}" alt="${recipe.title}" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
+                <div class="recipe-content">
+                    <h3>${recipe.title}</h3>
+                    <div class="recipe-meta">
+                        <span><i class="fas fa-clock"></i> ${recipe.time || '?'} min.</span>
+                        <span><i class="fas fa-users"></i> ${recipe.portions || '?'} portioner</span>
+                        <span><i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}</span>
+                    </div>
+                    <p class="recipe-intro">${recipe.introduction || ''}</p>
+                    <div class="recipe-card-actions">
+                        <button class="btn btn-secondary plan-recipe-btn"><i class="fas fa-calendar-plus"></i> Planlæg</button>
+                        <button class="btn btn-secondary edit-recipe-btn"><i class="fas fa-edit"></i> Rediger</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        fragment.appendChild(wrapper);
     });
-    appElements.recipeGrid.appendChild(fragment);
+
+    flipperContainer.appendChild(fragment);
+    updateFlipperCards();
+}
+
+function updateFlipperCards() {
+    const cards = document.querySelectorAll('#recipe-flipper .recipe-card-wrapper');
+    const total = cards.length;
+    if (total === 0) return;
+
+    cards.forEach((card, i) => {
+        card.classList.remove('active', 'previous', 'next');
+        if (i === recipePageState.flipperIndex) {
+            card.classList.add('active');
+        } else if (i === (recipePageState.flipperIndex - 1 + total) % total) {
+            card.classList.add('previous');
+        } else if (i === (recipePageState.flipperIndex + 1) % total) {
+            card.classList.add('next');
+        }
+    });
+}
+
+function navigateFlipper(direction) {
+    const total = recipePageState.filteredRecipes.length;
+    if (total === 0) return;
+    recipePageState.flipperIndex = (recipePageState.flipperIndex + direction + total) % total;
+    updateFlipperCards();
+}
+
+function renderSidebarWidgets() {
+    // What can I make
+    const whatCanIMakeList = document.getElementById('what-can-i-make-list');
+    if (whatCanIMakeList) {
+        const makableRecipes = appState.recipes
+            .map(r => calculateRecipeMatch(r, appState.inventory))
+            .filter(r => r.missingCount <= 1)
+            .sort((a,b) => a.missingCount - b.missingCount)
+            .slice(0, 5);
+        
+        if (makableRecipes.length === 0) {
+            whatCanIMakeList.innerHTML = '<li class="empty-state-small">Tjek dit varelager.</li>';
+        } else {
+            whatCanIMakeList.innerHTML = makableRecipes.map(r => `
+                <li class="widget-list-item">
+                    <span>
+                        <span class="status-indicator ${r.missingCount === 0 ? 'status-green' : 'status-yellow'}"></span>
+                        ${r.title}
+                    </span>
+                    <small>Mangler ${r.missingCount}</small>
+                </li>
+            `).join('');
+        }
+    }
+
+    // Upcoming meal plan
+    const upcomingList = document.getElementById('upcoming-meal-plan-list');
+    if (upcomingList) {
+        const upcomingMeals = [];
+        let today = new Date();
+        for(let i=0; i<5; i++) {
+            const dateStr = formatDate(today);
+            const dayPlan = appState.mealPlan[dateStr];
+            if (dayPlan && (dayPlan.dinner || dayPlan.lunch)) {
+                const meal = (dayPlan.dinner || dayPlan.lunch)[0];
+                if (meal && meal.type === 'recipe') {
+                    const recipe = appState.recipes.find(r => r.id === meal.recipeId);
+                    if (recipe) {
+                        upcomingMeals.push({
+                            day: i === 0 ? 'I dag' : (i === 1 ? 'I morgen' : today.toLocaleDateString('da-DK', {weekday: 'long'})),
+                            recipeTitle: recipe.title
+                        });
+                    }
+                }
+            }
+            today.setDate(today.getDate() + 1);
+        }
+
+        if (upcomingMeals.length === 0) {
+            upcomingList.innerHTML = '<li class="empty-state-small">Madplanen er tom.</li>';
+        } else {
+             upcomingList.innerHTML = upcomingMeals.map(m => `
+                <li class="widget-list-item">
+                    <span class="meal-plan-day">${m.day}</span>
+                    <span class="meal-plan-recipe">${m.recipeTitle}</span>
+                </li>
+            `).join('');
+        }
+    }
+}
+
+function renderRecipeList() {
+    const grid = document.getElementById('recipe-list-grid');
+    const tagsContainer = document.getElementById('list-filter-tags');
+    if (!grid || !tagsContainer) return;
+
+    // Render filter tags
+    const allTags = new Set(appState.recipes.flatMap(r => r.tags || []));
+    tagsContainer.innerHTML = [...allTags].sort().map(tag => `
+        <button class="filter-tag ${appState.activeRecipeFilterTags.has(tag) ? 'active' : ''}" data-tag="${tag}">
+            ${tag}
+        </button>
+    `).join('');
+    
+    // Render recipe cards
+    if (recipePageState.filteredRecipes.length === 0) {
+        grid.innerHTML = `<p class="empty-state">Ingen opskrifter matcher dine filtre.</p>`;
+        return;
+    }
+    grid.innerHTML = recipePageState.filteredRecipes.map(recipe => {
+        const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
+        return `
+            <div class="recipe-list-card" data-id="${recipe.id}">
+                <img data-src="${imageUrl}" alt="${recipe.title}" class="lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
+                <div class="list-card-content">
+                    <h4>${recipe.title}</h4>
+                    <span class="list-card-category">${recipe.category || 'Ukategoriseret'}</span>
+                </div>
+                <i class="fa-heart favorite-icon ${recipe.is_favorite ? 'fas favorited' : 'far'}"></i>
+            </div>
+        `;
+    }).join('');
+
     document.querySelectorAll('.lazy-load').forEach(img => lazyImageObserver.observe(img));
 }
 
-function createRecipeCard(recipe) {
-    const card = document.createElement('div');
-    card.className = 'recipe-card';
-    card.dataset.id = recipe.id;
-    
-    let statusClass = 'status-red';
-    let statusTitle = `Mangler ${recipe.missingCount} ingrediens(er)`;
-    if (recipe.missingCount === 0) {
-        statusClass = 'status-green';
-        statusTitle = 'Du har alle ingredienser';
-    } else if (recipe.missingCount === 1) {
-        statusClass = 'status-yellow';
-        statusTitle = 'Mangler 1 ingrediens';
-    }
 
-    const isFavoriteClass = recipe.is_favorite ? 'fas is-favorite' : 'far';
-    const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/400x300/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
-    const tagsHTML = (recipe.tags && recipe.tags.length > 0) 
-        ? recipe.tags.map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('')
-        : '';
-
-    card.innerHTML = `
-        <div class="status-indicator ${statusClass}" title="${statusTitle}"></div>
-        <img data-src="${imageUrl}" alt="Billede af ${recipe.title}" class="recipe-card-image lazy-load" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/400x300/f3f0e9/d1603d?text=Billede+mangler';">
-        <div class="recipe-card-content">
-            <span class="recipe-card-category">${recipe.category || 'Ukategoriseret'}</span>
-            <h4>${recipe.title}</h4>
-            <div class="recipe-card-tags">${tagsHTML}</div>
-        </div>
-        <div class="recipe-card-actions">
-            <i class="${isFavoriteClass} fa-heart favorite-icon" title="Marker som favorit"></i>
-            <button class="btn-icon add-to-plan-btn" title="Føj til madplan"><i class="fas fa-calendar-plus"></i></button>
-            <button class="btn-icon delete-recipe-btn" title="Slet opskrift"><i class="fas fa-trash"></i></button>
-        </div>`;
-    return card;
-}
-
-export function renderPageTagFilters() {
-    const container = appElements.recipeFilterContainer;
-    const allTags = new Set();
-    appState.recipes.forEach(r => {
-        if (r.tags) r.tags.forEach(tag => allTags.add(tag));
-    });
-
-    container.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    
-    [...allTags].sort().forEach(tag => {
-        const tagButton = document.createElement('button');
-        const isActive = appState.activeRecipeFilterTags.has(tag);
-        tagButton.className = `filter-tag ${isActive ? 'active' : ''}`;
-        tagButton.innerHTML = isActive ? `<i class="fas fa-check"></i> ${tag}` : tag;
-        
-        tagButton.addEventListener('click', () => {
-            if (appState.activeRecipeFilterTags.has(tag)) {
-                appState.activeRecipeFilterTags.delete(tag);
-            } else {
-                appState.activeRecipeFilterTags.add(tag);
-            }
-            renderPageTagFilters();
-            renderRecipes();
-        });
-        fragment.appendChild(tagButton);
-    });
-    container.appendChild(fragment);
-}
+// --- Modal & Data Handling ---
 
 function renderReadView(recipe) {
     const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
@@ -177,46 +326,22 @@ function renderReadView(recipe) {
     appElements.readViewPrice.innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
 
     const tagsContainer = document.getElementById('read-view-tags');
-    tagsContainer.innerHTML = '';
-    if (recipe.tags && recipe.tags.length > 0) {
-        recipe.tags.forEach(tag => {
-            const tagEl = document.createElement('span');
-            tagEl.className = 'recipe-card-tag';
-            tagEl.textContent = tag;
-            tagsContainer.appendChild(tagEl);
-        });
-    }
+    tagsContainer.innerHTML = (recipe.tags || []).map(tag => `<span class="recipe-card-tag">${tag}</span>`).join('');
     
     document.getElementById('read-view-introduction').textContent = recipe.introduction || '';
     
     const ingredientsList = document.getElementById('read-view-ingredients-list');
-    ingredientsList.innerHTML = '';
-    if (recipe.ingredients && recipe.ingredients.length > 0) {
-        recipe.ingredients.forEach(ing => {
-            const li = document.createElement('li');
-            const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] }, appState.inventory);
-            
-            const statusIcon = canBeMade 
-                ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>`
-                : `<span class="ingredient-stock-status out-of-stock"><i class="fas fa-times-circle"></i></span>`;
-
-            const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
-
-            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span> ${statusIcon}`;
-            ingredientsList.appendChild(li);
-        });
-    }
+    ingredientsList.innerHTML = (recipe.ingredients || []).map(ing => {
+        const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] }, appState.inventory);
+        const statusIcon = canBeMade 
+            ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>`
+            : `<span class="ingredient-stock-status out-of-stock"><i class="fas fa-times-circle"></i></span>`;
+        const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
+        return `<li><span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span> ${statusIcon}</li>`;
+    }).join('');
     
     const instructionsContainer = document.getElementById('read-view-instructions-text');
-    instructionsContainer.innerHTML = '';
-    const instructions = recipe.instructions || '';
-    instructions.split('\n').forEach(line => {
-        if (line.trim() !== '') {
-            const p = document.createElement('p');
-            p.textContent = line;
-            instructionsContainer.appendChild(p);
-        }
-    });
+    instructionsContainer.innerHTML = (recipe.instructions || '').split('\n').map(line => `<p>${line}</p>`).join('');
     
     appState.currentlyViewedRecipeId = recipe.id;
     appElements.recipeReadModal.classList.remove('hidden');
@@ -236,20 +361,14 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     container.appendChild(row);
 
     const nameInput = row.querySelector('.ingredient-name');
-    const removeAutocomplete = () => {
-        const suggestions = row.querySelector('.autocomplete-suggestions');
-        if (suggestions) suggestions.remove();
-    };
+    const removeAutocomplete = () => row.querySelector('.autocomplete-suggestions')?.remove();
     
     nameInput.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
         removeAutocomplete();
         if (value.length < 1) return;
 
-        const suggestions = appState.inventoryItems.filter(item => 
-            item.name.toLowerCase().startsWith(value)
-        );
-
+        const suggestions = appState.inventoryItems.filter(item => item.name.toLowerCase().startsWith(value));
         if (suggestions.length > 0) {
             const suggestionsContainer = document.createElement('div');
             suggestionsContainer.className = 'autocomplete-suggestions';
@@ -257,9 +376,7 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
                 const suggestionDiv = document.createElement('div');
                 suggestionDiv.className = 'autocomplete-suggestion';
                 suggestionDiv.innerHTML = item.name.replace(new RegExp(`^${value}`, 'i'), `<strong>$&</strong>`);
-                
-                suggestionDiv.addEventListener('mousedown', (event) => {
-                    event.preventDefault();
+                suggestionDiv.addEventListener('mousedown', () => {
                     nameInput.value = item.name;
                     row.querySelector('.ingredient-unit').value = item.defaultUnit || 'g';
                     removeAutocomplete();
@@ -372,7 +489,7 @@ function parseFullRecipeText(text) {
 }
 
 function handleRecipeImport() {
-    const text = appElements.recipeImportTextarea.value;
+    const text = document.getElementById('recipe-import-textarea').value;
     if (!text) return;
 
     const fullRecipeData = parseFullRecipeText(text);
@@ -407,7 +524,7 @@ function handleRecipeImport() {
         showNotification({ title: "Importeret!", message: "Ingredienslisten er blevet opdateret." });
     }
 
-    appElements.recipeImportTextarea.value = '';
+    document.getElementById('recipe-import-textarea').value = '';
 }
 
 
@@ -467,42 +584,12 @@ async function handleSaveRecipe(e) {
     }
 }
 
-async function handleGridClick(e) {
-    const card = e.target.closest('.recipe-card');
-    if (!card) return;
-    const docId = card.dataset.id;
-    
-    if (e.target.closest('.favorite-icon')) {
-        const isCurrentlyFavorite = e.target.closest('.favorite-icon').classList.contains('is-favorite');
-        try {
-            await updateDoc(doc(db, 'recipes', docId), { is_favorite: !isCurrentlyFavorite });
-        } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus.", "toggleFavorite"); }
-        return;
-    }
-    
-    if (e.target.closest('.add-to-plan-btn')) {
-        openPlanMealModal(docId);
-        return;
-    }
-
-    if (e.target.closest('.delete-recipe-btn')) {
-        e.stopPropagation(); 
-        const confirmed = await showNotification({title: "Slet Opskrift", message: "Er du sikker på, du vil slette denne opskrift?", type: 'confirm'});
-        if(confirmed) {
-            try {
-                await deleteDoc(doc(db, 'recipes', docId));
-                showNotification({title: "Slettet", message: "Opskriften er blevet slettet."});
-            } catch (error) {
-                handleError(error, "Opskriften kunne ikke slettes.", "deleteRecipe");
-            }
-        }
-        return;
-    }
-
-    const recipe = appState.recipes.find(r => r.id === docId);
-    if (recipe) {
-        renderReadView(recipe);
-    }
+async function toggleFavorite(recipeId) {
+    const recipe = appState.recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+    try {
+        await updateDoc(doc(db, 'recipes', recipeId), { is_favorite: !recipe.is_favorite });
+    } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus.", "toggleFavorite"); }
 }
 
 function handleImageUpload(e) {
@@ -611,13 +698,11 @@ export function calculateRecipeMatch(recipe, inventory) {
 
         const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
         if (conversion.error) {
-            // If conversion fails, we assume we don't have it.
             missingCount++;
             canBeMade = false;
             return;
         }
 
-        // Check if total stock in base unit is sufficient
         if (conversion.grams > (inventoryItem.totalStock || 0)) {
             missingCount++;
             canBeMade = false;
@@ -635,7 +720,6 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     recipe.ingredients.forEach(ing => {
         const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
         if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
-            // Find the cheapest batch based on price per base unit (g/ml/stk)
             const cheapestBatch = inventoryItem.batches
                 .filter(b => b.price && b.size > 0 && b.quantity > 0)
                 .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
@@ -653,3 +737,4 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     });
     return totalPrice;
 }
+
