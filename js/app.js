@@ -116,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
         mealPlanSection: document.getElementById('meal-plan-section'),
         sidebarSection: document.getElementById('sidebar-section'),
         
+        // Bevarer denne for bagudkompatibilitet med shoppingList.js, men peger på det nye ID
+        generateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
+
         // Modals related to calendar
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
@@ -363,3 +366,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
