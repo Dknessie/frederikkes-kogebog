@@ -42,6 +42,9 @@
     --plant-dark-green: #166534; /* Mørk grøn til tekst */
     --plant-border-color: #BBF7D0; /* Lys grøn kant */
 
+    /* NYT: Kogebog Tema Farver */
+    --kogebog-bg-color: #F8F7F5;
+
     /* Statusfarver */
     --status-green: #4CAF50;
     --status-yellow: #FFC107;
@@ -55,8 +58,8 @@
     --small-font-size: 0.875rem; /* 14px */
 
     /* Layout & Mellemrum */
-    --border-radius: 8px; /* Forøget for et blødere look */
-    --card-border-radius: 12px;
+    --border-radius: 6px;
+    --card-border-radius: 12px; /* Lidt rundere kort */
     --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --strong-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --spacing-xs: 0.25rem; /* 4px */
@@ -325,257 +328,252 @@ header {
     padding-bottom: calc(var(--mobile-tab-bar-height) + var(--spacing-m));
 }
 
-
-/* ===== 5. NYT Kalender "Uge-Hub" Design ===== */
-.weekly-hub-container {
+/* ===== 5. NEW CALENDAR DESIGN ===== */
+#calendar .page {
+    padding: 0;
+}
+.calendar-main-container {
+    background-color: var(--theme-bg);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--strong-shadow);
     display: flex;
     flex-direction: column;
     gap: var(--spacing-l);
 }
-
-.hub-header {
+.calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--spacing-m);
 }
-
-.hub-navigation {
+.calendar-nav {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
+    flex-grow: 1; /* Allow nav to take space */
 }
-
-.hub-title {
-    font-size: 2rem;
-    margin: 0;
-    text-align: center;
+.calendar-title-wrapper {
     flex-grow: 1;
+    text-align: center;
 }
-
-.hub-actions {
+.calendar-title-wrapper h2 {
+    margin: 0;
+}
+.calendar-nav .btn {
+    flex-shrink: 0; /* Prevent buttons from shrinking */
+}
+.calendar-view-toggle {
+    display: flex;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+.calendar-view-toggle .btn {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+.calendar-view-toggle .btn.active {
+    background-color: var(--white-color);
+    box-shadow: var(--shadow);
+}
+.calendar-actions {
     display: flex;
     gap: var(--spacing-m);
 }
+.calendar-view { display: none; }
+.calendar-view.active { display: block; }
 
-.hub-main-layout {
+/* Week View */
+.calendar-week-header {
     display: grid;
-    grid-template-columns: 2.5fr 1fr;
-    gap: var(--spacing-l);
-    align-items: flex-start;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-s);
+    padding: 0 var(--spacing-s);
 }
-
-.meal-plan-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
+.calendar-week-day-header {
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-color);
 }
-
-.day-card {
+.calendar-week-day-header .date-number {
+    font-size: var(--small-font-size);
+    color: #777;
+    margin-left: var(--spacing-s);
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-m);
+}
+.calendar-day-card {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
-}
-
-.day-header {
-    display: flex;
-    align-items: baseline;
-    gap: var(--spacing-m);
-    margin-bottom: var(--spacing-m);
-    padding-bottom: var(--spacing-m);
-    border-bottom: 1px solid var(--border-color);
-}
-.day-header h3 {
-    font-size: 1.5rem;
-    margin: 0;
-}
-.day-header .date-string {
-    font-size: 0.9rem;
-    color: #777;
-    font-weight: 500;
-}
-
-.meal-slots-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-l);
-}
-
-.meal-slot {
-    background-color: var(--light-bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: var(--spacing-m);
-    min-height: 120px;
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-}
-.meal-slot h4 {
-    font-family: var(--body-font);
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: var(--text-color);
-    margin: 0 0 var(--spacing-m) 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    min-height: 400px;
+    position: relative;
+    transition: all 0.2s ease-in-out;
 }
 
-.meal-card {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    background-color: var(--white-color);
+/* NEW: Style for current day ring */
+.calendar-day-card.is-today {
+    box-shadow: 0 0 0 4px var(--accent-color);
+    border: 2px solid var(--accent-color);
+}
+.meal-slot {
+    flex: 1;
     padding: var(--spacing-s);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: transform 0.2s ease;
+    border-bottom: 1px dashed var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+    position: relative;
 }
-.meal-card:hover {
-    transform: scale(1.05);
+.meal-slot[data-meal="events"] {
+    flex: 0 0 auto;
+    min-height: 60px;
+    border-bottom: 1px solid var(--border-color);
 }
-
-.meal-card img {
-    width: 40px;
-    height: 40px;
+.meal-slot:last-child {
+    border-bottom: none;
+}
+.meal-slot.drag-over {
+    background-color: var(--theme-light-blue);
+}
+.add-event-to-slot-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
-    object-fit: cover;
-}
-.meal-card span {
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.empty-meal-slot {
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px dashed var(--border-color);
-    border-radius: var(--border-radius);
-    height: 100%;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    flex-grow: 1;
+    opacity: 0;
+    transition: all 0.2s ease;
 }
-.empty-meal-slot:hover {
-    background-color: var(--secondary-color);
+.meal-slot:hover .add-event-to-slot-btn {
+    opacity: 1;
 }
-.empty-meal-slot .fa-plus {
-    color: #ccc;
-}
-
-.sidebar-section {
-    position: sticky;
-    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-
-.widget-card {
+.add-event-to-slot-btn:hover {
+    transform: translate(-50%, -50%) scale(1.1);
     background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
 }
 
-.widget-card h4 {
-    font-size: 1.2rem;
-    margin: 0 0 var(--spacing-m) 0;
+.calendar-event {
+    padding: var(--spacing-s);
+    border-radius: var(--border-radius);
+    font-size: var(--small-font-size);
+    cursor: grab;
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: var(--spacing-s);
+    border-left: 4px solid;
+    background-color: var(--light-bg-color);
 }
-.widget-card h4 i {
-    color: var(--accent-color);
+.calendar-event.is-dragging {
+    opacity: 0.5;
 }
-
-.widget-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.calendar-event .event-content {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.calendar-event .event-actions {
     display: flex;
-    flex-direction: column;
-    gap: var(--spacing-m);
+    opacity: 0;
+    transition: opacity 0.2s ease;
 }
+.calendar-event:hover .event-actions {
+    opacity: 1;
+}
+.calendar-event.recipe { border-color: var(--primary-color); }
+.calendar-event.project { border-color: var(--accent-color); }
+.calendar-event.task { border-color: var(--theme-grey); }
+.calendar-event.fødselsdag { border-color: #E91E63; }
+.calendar-event.aftale { border-color: #2196F3; }
+.calendar-event.udgivelse { border-color: #9C27B0; }
 
-.widget-list-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-}
-
-.widget-list-item .icon {
-    color: var(--primary-color);
-}
-
-.widget-list-item .content .title {
-    font-weight: 500;
-}
-.widget-list-item .content .subtitle {
-    font-size: 0.8rem;
-    color: #888;
-}
-
-/* Custom Checkbox for To-Do */
-.todo-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-}
-.todo-item input[type="checkbox"] {
-    display: none;
-}
-.todo-item label {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    font-weight: 500;
-}
-.todo-item .custom-checkbox {
-    width: 20px;
-    height: 20px;
-    border: 2px solid var(--border-color);
-    border-radius: 4px;
-    display: inline-block;
-    position: relative;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-}
-.todo-item input[type="checkbox"]:checked + .custom-checkbox {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-}
-.todo-item input[type="checkbox"]:checked + .custom-checkbox::after {
-    content: '\f00c'; /* Font Awesome check icon */
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    color: white;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 12px;
-}
-.todo-item input[type="checkbox"]:checked ~ .todo-text {
+.calendar-event.is-cooked {
+    opacity: 0.6;
     text-decoration: line-through;
-    color: #aaa;
+}
+#day-details-content .calendar-event {
+    cursor: pointer;
+}
+#day-details-content .calendar-event:hover {
+    background-color: var(--secondary-color);
 }
 
-.shopping-list-widget {
+/* Month View */
+.calendar-month-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
     text-align: center;
+    font-weight: 600;
+    margin-bottom: var(--spacing-m);
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--border-color);
 }
-.shopping-list-widget p {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin: 0 0 var(--spacing-l) 0;
+.calendar-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: var(--spacing-s);
 }
-.shopping-list-widget .btn {
-    width: 100%;
+.calendar-month-day {
+    background-color: var(--white-color);
+    border-radius: var(--border-radius);
+    min-height: 100px;
+    padding: var(--spacing-s);
+    cursor: pointer;
+    transition: box-shadow 0.2s ease;
 }
+.calendar-month-day:hover {
+    box-shadow: var(--strong-shadow);
+}
+.calendar-month-day.is-today .month-day-number {
+    background-color: var(--theme-light-blue);
+    color: var(--text-color);
+    border-radius: 50%;
+}
+.month-day-number {
+    font-weight: 600;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.event-dots-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: var(--spacing-s);
+}
+.event-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.event-dot.recipe { background-color: var(--primary-color); }
+.event-dot.project { background-color: var(--accent-color); }
+.event-dot.task { background-color: var(--theme-grey); }
+.event-dot.fødselsdag { background-color: #E91E63; }
+.event-dot.aftale { background-color: #2196F3; }
+.event-dot.udgivelse { background-color: #9C27B0; }
+
 
 /* ===== 6. Indkøbsliste Modal & Temaer ===== */
 .shopping-list-header {
@@ -743,7 +741,259 @@ header {
     color: inherit;
 }
 
-/* ===== 7. Kogebog, Hjem & Referencer Sider ===== */
+/* =================================================================
+   NYT: Kogebog Side Nyt Design
+   ================================================================= */
+
+#recipes.page {
+    background-color: var(--kogebog-bg-color);
+    padding-top: var(--spacing-xl);
+}
+
+.kogebog-layout {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: var(--spacing-xl);
+    align-items: flex-start;
+}
+
+.kogebog-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.kogebog-header {
+    padding: var(--spacing-l);
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+}
+
+.kogebog-header h2, .kogebog-header p {
+    font-family: var(--body-font);
+    margin: 0;
+}
+
+.kogebog-header h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.kogebog-header p {
+    color: #777;
+    margin-top: var(--spacing-s);
+    margin-bottom: var(--spacing-l);
+}
+
+.featured-recipe-card {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    overflow: hidden;
+}
+
+.featured-recipe-image {
+    width: 100%;
+    height: 350px;
+    object-fit: cover;
+}
+
+.featured-recipe-content {
+    padding: var(--spacing-l);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-l);
+}
+.featured-recipe-info h3 {
+    font-family: var(--heading-font);
+    font-size: 2.5rem;
+    color: var(--text-color);
+    margin: 0 0 var(--spacing-s) 0;
+}
+.featured-recipe-meta {
+    display: flex;
+    gap: var(--spacing-l);
+    color: #777;
+    margin: var(--spacing-m) 0;
+}
+.featured-recipe-description {
+    color: var(--text-color);
+    font-style: italic;
+}
+.featured-recipe-actions {
+    display: flex;
+    gap: var(--spacing-m);
+    flex-shrink: 0;
+    margin-top: var(--spacing-s);
+}
+
+.all-recipes-container {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-l);
+}
+.all-recipes-container h3 {
+    font-family: var(--body-font);
+    color: var(--text-color);
+    font-weight: 700;
+    margin-top: 0;
+}
+.filter-container {
+    margin-bottom: var(--spacing-l);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-m);
+}
+.filter-tag {
+    background-color: #f0f0f0;
+    color: #555;
+    border: none;
+    padding: var(--spacing-s) var(--spacing-m);
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--small-font-size);
+    transition: background-color 0.2s ease;
+}
+.filter-tag:hover {
+    background-color: #e0e0e0;
+}
+.filter-tag.active {
+    background-color: var(--accent-color);
+    color: var(--white-color);
+}
+
+.recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-l);
+}
+
+/* Redesignet recipe-card */
+.recipe-card {
+    background: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+.recipe-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: var(--strong-shadow);
+}
+.recipe-card-image-wrapper {
+    position: relative;
+}
+.recipe-card-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+.recipe-card-content {
+    padding: var(--spacing-m);
+    flex-grow: 1;
+}
+.recipe-card h4 { 
+    margin: 0;
+    color: var(--text-color); 
+    font-family: var(--body-font);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.recipe-card-category { 
+    font-size: 0.8rem;
+    color: #888;
+    margin-top: var(--spacing-xs);
+    display: block;
+}
+.recipe-card .favorite-icon { 
+    position: absolute;
+    top: var(--spacing-m);
+    right: var(--spacing-m);
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 2;
+}
+.recipe-card .favorite-icon.is-favorite { 
+    color: #E91E63; 
+}
+/* Fjern overflødige elementer fra det gamle kort-design */
+.recipe-card-tags, .recipe-card-actions, .recipe-card .status-indicator {
+    display: none;
+}
+
+
+.kogebog-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+    position: sticky;
+    top: calc(65px + var(--spacing-l));
+}
+.widget-card {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--shadow);
+}
+.widget-card h4 {
+    margin-top: 0;
+    font-family: var(--body-font);
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.widget-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+}
+.widget-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: var(--small-font-size);
+}
+.widget-list-item:last-child {
+    border-bottom: none;
+}
+.widget-list-item-name {
+    color: var(--text-color);
+}
+.widget-list-item-detail {
+    color: #888;
+}
+.widget-card .btn {
+    width: 100%;
+    margin-top: var(--spacing-m);
+}
+
+/* Tilpasning af search-bar til widget-kort */
+.widget-card .search-bar input {
+    background-color: #f8f7f5;
+}
+
+/* Slut på Kogebog Nyt Design */
+
+
+/* ===== 7. Varelager, Hjem & Referencer Sider ===== */
+
 .actions-bar {
     margin-bottom: var(--spacing-l);
     display: flex;
@@ -754,73 +1004,6 @@ header {
     justify-content: space-between;
     align-items: center;
 }
-
-.filter-container {
-    margin-bottom: var(--spacing-l);
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-m);
-}
-.filter-tag {
-    background-color: var(--white-color);
-    border: 1px solid var(--border-color);
-    padding: var(--spacing-s) var(--spacing-m);
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: var(--small-font-size);
-}
-.filter-tag.active {
-    background-color: var(--accent-color);
-    color: var(--white-color);
-    border-color: var(--accent-color);
-}
-
-.recipe-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: var(--spacing-l);
-}
-
-.recipe-card {
-    background: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-}
-.recipe-card:hover { transform: translateY(-5px); }
-
-.recipe-card-image {
-    width: 100%;
-    height: 180px;
-    object-fit: cover;
-}
-
-.recipe-card-content { padding: var(--spacing-m); flex-grow: 1; cursor: pointer; }
-.recipe-card-category { font-size: 0.75rem; font-weight: 600; color: var(--primary-color); }
-.recipe-card h4 { margin: var(--spacing-xs) 0 var(--spacing-s); color: var(--text-color); }
-.recipe-card-tags { margin-top: auto; padding-top: var(--spacing-s); display: flex; flex-wrap: wrap; gap: var(--spacing-s); }
-.recipe-card-tag { background-color: #eee; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.7rem; }
-.recipe-card-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--spacing-s); padding: var(--spacing-s) var(--spacing-m); border-top: 1px solid #eee; }
-.favorite-icon { font-size: 1.2rem; color: #ddd; cursor: pointer; }
-.favorite-icon.is-favorite { color: #E91E63; }
-
-.status-indicator {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid var(--white-color);
-}
-.status-indicator.status-green { background-color: var(--status-green); }
-.status-indicator.status-yellow { background-color: var(--status-yellow); }
-.status-indicator.status-red { background-color: var(--status-red); }
 
 /* Varelager Dashboard Styling */
 .inventory-dashboard {
@@ -2273,15 +2456,8 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-weight: 600;
 }
 
-.tab-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-l);
-}
 .tab-header h3 {
     color: var(--hjem-header-text);
-    margin: 0;
 }
 
 .hjemmet-grid {
@@ -2308,13 +2484,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--hjem-header-text);
     font-weight: 600;
     margin-top: 0;
-}
-.hjemmet-card.plant-card img {
-    width: 100%;
-    height: 150px;
-    object-fit: cover;
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-m);
 }
 
 .wishlist-page-grid .wishlist-item-card {
@@ -2364,10 +2533,20 @@ input:checked + .slider:before { transform: translateX(22px); }
 
 /* ===== 12. Responsive Design ===== */
 @media (max-width: 1200px) {
-    .hub-main-layout {
-        grid-template-columns: 1.8fr 1fr;
+    .kogebog-layout {
+        grid-template-columns: 1fr;
+    }
+    .kogebog-sidebar {
+        position: static;
+        flex-direction: row;
+        gap: var(--spacing-l);
+        flex-wrap: wrap;
+    }
+    .kogebog-sidebar .widget-card {
+        flex: 1 1 300px;
     }
 }
+
 
 @media (max-width: 992px) {
     .desktop-nav {
@@ -2384,6 +2563,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     header {
         padding: 0 var(--spacing-m);
+    }
+    .calendar-week-day-header .date-number {
+        display: block;
     }
     .inventory-filters {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -2412,15 +2594,6 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
     .hjemmet-sidebar {
         position: static;
-    }
-    /* Kalender responsive */
-    .hub-main-layout {
-        grid-template-columns: 1fr;
-    }
-    .sidebar-section {
-        position: static;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
 }
 
@@ -2467,9 +2640,9 @@ input:checked + .slider:before { transform: translateX(22px); }
     .savings-dashboard-grid {
         grid-template-columns: 1fr;
     }
-    /* Kalender responsive */
-    .meal-slots-container {
-        grid-template-columns: 1fr;
+    .featured-recipe-content {
+        flex-direction: column;
+        align-items: stretch;
     }
 }
 /* =================================================================
