@@ -158,20 +158,62 @@
             </section>
 
             <section id="recipes" class="page hidden">
-                <h2>Kogebog</h2>
-                <div class="actions-bar recipe-actions-bar">
-                    <button id="add-recipe-btn" class="btn btn-primary">Tilføj ny opskrift</button>
-                    <div class="switch-group">
-                        <label for="sort-by-stock-toggle">Vis retter jeg kan lave først</label>
-                        <label class="switch">
-                            <input type="checkbox" id="sort-by-stock-toggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
+                 <div class="cookbook-layout">
+                    <main class="cookbook-main">
+                        <div class="cookbook-header">
+                            <h2>Min Kogebog</h2>
+                            <p>Find inspiration, planlæg dine måltider og genopdag dine favoritter.</p>
+                            <div class="actions">
+                                <button id="add-recipe-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Opskrift</button>
+                            </div>
+                        </div>
+
+                        <div id="recipe-flipper" class="recipe-flipper">
+                            <!-- Indhold genereres af JS -->
+                        </div>
+                        
+                        <div class="flipper-nav">
+                            <button id="prev-recipe-btn" class="btn-icon" title="Forrige"><i class="fas fa-chevron-left"></i></button>
+                            <button id="next-recipe-btn" class="btn-icon" title="Næste"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                        
+                        <div class="recipe-list-container">
+                            <h3>Alle Mine Opskrifter</h3>
+                            <div id="list-filter-tags" class="list-filter-tags">
+                                <!-- Indhold genereres af JS -->
+                            </div>
+                            <div id="recipe-list-grid" class="recipe-list-grid">
+                                <!-- Indhold genereres af JS -->
+                            </div>
+                        </div>
+                    </main>
+
+                    <aside class="cookbook-sidebar">
+                        <div class="cookbook-widget">
+                            <h5><i class="fas fa-search"></i> Find en opskrift</h5>
+                            <div class="search-bar">
+                                <input id="recipe-search-input" type="text" placeholder="Søg efter titel...">
+                            </div>
+                        </div>
+
+                        <div class="cookbook-widget">
+                            <h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave</h5>
+                            <ul id="what-can-i-make-list" class="widget-list">
+                                <!-- Indhold genereres af JS -->
+                            </ul>
+                        </div>
+
+                         <div class="cookbook-widget">
+                            <h5><i class="fas fa-calendar-day"></i> Kommende Madplan</h5>
+                            <ul id="upcoming-meal-plan-list" class="widget-list">
+                                <!-- Indhold genereres af JS -->
+                            </ul>
+                            <a href="#calendar" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Se hele madplanen</a>
+                        </div>
+                    </aside>
                 </div>
-                <div id="recipe-filter-container" class="filter-container"></div>
-                <div id="recipe-grid" class="recipe-grid"></div>
             </section>
+
 
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
