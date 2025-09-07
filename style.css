@@ -157,6 +157,7 @@ hr {
     justify-content: center;
     text-decoration: none;
     box-shadow: var(--shadow);
+    box-sizing: border-box; /* Sørger for at padding er inkluderet i bredden */
 }
 .btn:hover:not(:disabled) {
     transform: translateY(-2px);
@@ -796,6 +797,7 @@ header {
     padding-right: calc(var(--spacing-m) * 2 + 1em);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
+    box-sizing: border-box;
 }
 
 
@@ -2343,15 +2345,40 @@ header {
     width: 100%;
     height: 280px;
     object-fit: cover;
+    flex-shrink: 0;
 }
-.recipe-content { padding: var(--spacing-l); flex-grow: 1; display: flex; flex-direction: column; }
+.recipe-content { 
+    padding: var(--spacing-l); 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column;
+    overflow: hidden; /* Forhindrer indhold i at flyde ud */
+}
 .recipe-content h3 { font-family: var(--heading-font); margin: 0 0 var(--spacing-m) 0; color: var(--text-color); font-size: 1.8rem; }
 .recipe-meta { display: flex; gap: var(--spacing-l); color: #777; margin-bottom: var(--spacing-m); }
 .recipe-meta span { display: flex; align-items: center; gap: var(--spacing-s); }
 .recipe-tags { display: flex; gap: var(--spacing-s); flex-wrap: wrap; margin-bottom: var(--spacing-m); }
 .recipe-tag { background-color: #eee; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.8rem; }
-.recipe-intro { font-style: italic; color: #555; border-left: 3px solid var(--primary-color); padding-left: var(--spacing-m); }
-.recipe-card-actions { margin-top: auto; padding-top: var(--spacing-m); display: flex; justify-content: flex-end; gap: var(--spacing-m); }
+
+.recipe-intro {
+    font-style: italic;
+    color: #555;
+    border-left: 3px solid var(--primary-color);
+    padding-left: var(--spacing-m);
+    /* Truncate text after 4 lines */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+}
+.recipe-card-actions { 
+    margin-top: auto; /* Pushes to the bottom */
+    padding-top: var(--spacing-m); 
+    display: flex; 
+    justify-content: flex-end; 
+    gap: var(--spacing-m); 
+    flex-shrink: 0;
+}
 
 .flipper-nav {
     display: flex;
@@ -2377,6 +2404,13 @@ header {
     align-items: center;
     gap: var(--spacing-s);
 }
+.search-bar input {
+    width: 100%;
+    padding: var(--spacing-m);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+}
 .widget-list { list-style: none; padding: 0; margin: var(--spacing-m) 0 0 0; }
 .widget-list-item {
     display: flex;
@@ -2399,6 +2433,7 @@ header {
 .meal-plan-day { font-weight: 600; color: var(--text-color); flex-shrink: 0; width: 80px; }
 .meal-plan-recipe { color: #555; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 
+/* --- NYE STYLES FOR OPSKRIFTSLISTE --- */
 .recipe-list-container {
     margin-top: var(--spacing-xl);
     background-color: var(--white-color);
