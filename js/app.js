@@ -6,7 +6,7 @@ import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.c
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
 import { initInventory, renderInventory, setReferencesLoaded } from './inventory.js';
-import { initRecipes, renderRecipes, renderPageTagFilters } from './recipes.js';
+import { initRecipes, renderRecipes } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
