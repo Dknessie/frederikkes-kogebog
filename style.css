@@ -1945,7 +1945,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 .new-transaction-form,
 .transactions-list,
 .economy-sidebar-widget,
-.spending-categories-summary {
+.spending-categories-summary,
+.spending-accounts-summary {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
     padding: var(--spacing-l);
@@ -1969,7 +1970,8 @@ input:checked + .slider:before { transform: translateX(22px); }
 .new-transaction-form h4,
 .transactions-list h4,
 .economy-sidebar-widget h5,
-.spending-categories-summary h4 {
+.spending-categories-summary h4,
+.spending-accounts-summary h4 {
     margin-top: 0;
     color: var(--text-color);
     font-family: var(--body-font);
@@ -2002,6 +2004,14 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: var(--status-green);
     font-weight: 600;
 }
+.transactions-list tbody tr.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.transactions-list tbody tr.clickable-row:hover {
+    background-color: var(--secondary-color);
+}
+
 
 .economy-sidebar-widget .btn {
     width: 100%;
@@ -2716,3 +2726,64 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: 1.1em;
 }
 
+/* Styling for sorteringsikoner i sidebar widget */
+.economy-sidebar-widget .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m);
+}
+.economy-sidebar-widget .widget-header h5 {
+    margin: 0;
+}
+.sort-controls {
+    display: flex;
+    gap: var(--spacing-s);
+}
+.sort-controls .btn-icon {
+    font-size: 1rem;
+    color: #ccc;
+    transition: color 0.2s ease;
+}
+.sort-controls .btn-icon:hover,
+.sort-controls .btn-icon.active {
+    color: var(--primary-color);
+}
+
+
+/* Forbedret visning af underkategorier i forbrugsoversigt */
+.spending-categories-summary .category-name {
+    white-space: normal;
+    word-break: break-word;
+}
+
+/* Styling for den nye Opsparing vs. Ønskeliste widget */
+.savings-vs-wishlist-summary {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--small-font-size);
+    margin-top: var(--spacing-s);
+    color: var(--hjem-subheader-text);
+}
+
+.savings-progress-bar {
+    width: 100%;
+    height: 12px;
+    background-color: var(--hjem-widget-border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: var(--spacing-m);
+}
+
+.savings-progress-bar-inner {
+    height: 100%;
+    background-color: var(--hjem-primary-green);
+    border-radius: 6px;
+    transition: width 0.5s ease-in-out;
+}
+
+/* Justering af Opsparingsmål widget */
+#savings-goal-summary strong {
+    color: var(--hjem-header-text);
+    font-size: 1.1em;
+}
