@@ -443,11 +443,12 @@ header {
     padding: var(--spacing-s);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
-    cursor: pointer;
-    transition: transform 0.2s ease;
+    cursor: grab;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 .meal-card:hover {
     transform: scale(1.05);
+    box-shadow: var(--strong-shadow);
 }
 
 .meal-card img {
@@ -455,10 +456,12 @@ header {
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
+    pointer-events: none; /* Forhindrer billedet i at blive trukket separat */
 }
 .meal-card span {
     font-weight: 500;
     font-size: 0.9rem;
+    pointer-events: none;
 }
 
 .empty-meal-slot {
@@ -477,6 +480,7 @@ header {
 }
 .empty-meal-slot .fa-plus {
     color: #ccc;
+    pointer-events: none;
 }
 
 .sidebar-section {
@@ -2865,4 +2869,25 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
 }
 
+/* ===== 13. NYE STYLES: Træk-og-slip i Kalender ===== */
 
+/* Stil for det element, der bliver trukket */
+.meal-card.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg) scale(1.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+    cursor: grabbing;
+}
+
+/* Stil for de områder, hvor man kan slippe et element */
+.meal-slot.drag-over,
+.empty-meal-slot.drag-over {
+    background-color: var(--accent-color) !important;
+    border-color: #4a7553;
+    border-style: solid;
+}
+
+.meal-slot.drag-over > *,
+.empty-meal-slot.drag-over > * {
+    pointer-events: none; /* Forhindrer at ikoner/tekst forstyrrer drop event */
+}
