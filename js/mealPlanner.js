@@ -1,18 +1,20 @@
 // js/mealPlanner.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch, deleteField, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, writeBatch, deleteField, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
-import { confirmAndDeductIngredients } from './kitchenCounter.js';
-import { openEventModal } from './events.js';
 import { openShoppingListModal } from './shoppingList.js';
+// OPDATERING: Importer funktioner til at vise opskrifter og håndtere events
+import { renderReadView } from './recipes.js';
 
 let appState;
 let appElements;
+// NY: Variabel til at holde data om det element, der trækkes
+let draggedMealData = null;
 
 /**
- * Initialiserer kalender-modulet med det nye "Uge-Hub" design.
+ * Initialiserer kalender-modulet.
  * @param {object} state - Den globale app state.
  * @param {object} elements - De cachede DOM elementer.
  */
@@ -30,6 +32,13 @@ export function initMealPlanner(state, elements) {
     // Event delegation for dynamisk indhold
     if (appElements.mealPlanSection) {
         appElements.mealPlanSection.addEventListener('click', handleMealPlanClick);
+        
+        // NYE: Event listeners til træk-og-slip
+        appElements.mealPlanSection.addEventListener('dragstart', handleDragStart);
+        appElements.mealPlanSection.addEventListener('dragover', handleDragOver);
+        appElements.mealPlanSection.addEventListener('dragleave', handleDragLeave);
+        appElements.mealPlanSection.addEventListener('drop', handleDrop);
+        appElements.mealPlanSection.addEventListener('dragend', handleDragEnd);
     }
     if (appElements.sidebarSection) {
         appElements.sidebarSection.addEventListener('click', handleSidebarClick);
@@ -119,6 +128,7 @@ function createDayCard(date) {
 
 /**
  * Skaber HTML for en enkelt måltids-slot (f.eks. Frokost).
+ * OPDATERING: Gør måltidskort "trækbare" og tilføjer data-attributter.
  * @param {string} title - Titlen (f.eks. "Morgenmad").
  * @param {Array} mealData - Array af måltider for denne slot.
  * @param {string} dateString - Datoen (YYYY-MM-DD).
@@ -128,12 +138,19 @@ function createDayCard(date) {
 function createMealSlotHTML(title, mealData, dateString, mealType) {
     let content = '';
     if (mealData && mealData.length > 0) {
-        const meal = mealData[0]; // Viser kun det første måltid i oversigten for nu
+        const meal = mealData[0];
         const recipe = appState.recipes.find(r => r.id === meal.recipeId);
         if (recipe) {
             const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/80x80/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title[0])}`;
+            // OPDATERING: Gør kortet trækbar og tilføj data-attributter til at identificere måltidet
             content = `
-                <div class="meal-card" data-recipe-id="${recipe.id}" title="Klik for at se opskrift">
+                <div class="meal-card" 
+                     draggable="true" 
+                     data-recipe-id="${recipe.id}" 
+                     data-meal-id="${meal.id}"
+                     data-source-date="${dateString}"
+                     data-source-meal-type="${mealType}"
+                     title="Klik for at se, træk for at flytte">
                     <img src="${imageUrl}" alt="${recipe.title}">
                     <span>${recipe.title}</span>
                 </div>
@@ -141,20 +158,20 @@ function createMealSlotHTML(title, mealData, dateString, mealType) {
         }
     } else {
         content = `
-            <div class="empty-meal-slot" data-date="${dateString}" data-meal="${mealType}" title="Tilføj ${mealType.toLowerCase()}">
+            <div class="empty-meal-slot" data-date="${dateString}" data-meal-type="${mealType}" title="Tilføj ${mealType.toLowerCase()}">
                 <i class="fas fa-plus fa-2x"></i>
             </div>
         `;
     }
 
+    // OPDATERING: Tilføj data-attributter til selve slottet for at identificere drop-target.
     return `
-        <div class="meal-slot">
+        <div class="meal-slot" data-date="${dateString}" data-meal-type="${mealType}">
             <h4>${title}</h4>
             ${content}
         </div>
     `;
 }
-
 
 /**
  * Renderer hele sidebarssektionen med alle widgets.
@@ -164,7 +181,7 @@ function renderSidebarSection(startOfWeek) {
     const sidebar = appElements.sidebarSection;
     sidebar.innerHTML = `
         ${createWeeklyEventsWidgetHTML(startOfWeek)}
-        ${createWeeklyTodosWidgetHTML(startOfWeek)}
+        ${createWeeklyTodosWidgetHTML()}
         ${createShoppingListWidgetHTML()}
     `;
 }
@@ -212,7 +229,6 @@ function createWeeklyEventsWidgetHTML(startOfWeek) {
 
 /**
  * Skaber HTML for "Ugens To-Do's" widget.
- * Viser de næste 5 uafsluttede to-do's.
  * @returns {string} - HTML-strengen for widget'en.
  */
 function createWeeklyTodosWidgetHTML() {
@@ -226,7 +242,7 @@ function createWeeklyTodosWidgetHTML() {
         listItems = upcomingTodos.map(todo => `
             <li class="todo-item" data-id="${todo.id}">
                 <label>
-                    <input type="checkbox">
+                    <input type="checkbox" ${todo.isComplete ? 'checked' : ''}>
                     <span class="custom-checkbox"></span>
                     <span class="todo-text">${todo.title}</span>
                 </label>
@@ -267,21 +283,14 @@ function handleMealPlanClick(e) {
 
     if (emptySlot) {
         const date = emptySlot.dataset.date;
-        const mealType = emptySlot.dataset.meal;
-        // Åbn en modal for at vælge en opskrift at tilføje
-        // Denne funktionalitet kan genbruges fra `openAddCalendarEventModal`
-        console.log(`Tilføj til ${date}, ${mealType}`);
+        const mealType = emptySlot.dataset.mealType;
         openPlanMealModal(null, date, mealType);
     } else if (mealCard) {
+        // OPDATERING: Åbn opskrift-modal direkte i stedet for at navigere
         const recipeId = mealCard.dataset.recipeId;
-        // Åbn read-view modal for opskriften
-        window.location.hash = `#recipes/view/${recipeId}`; // Simulerer navigation for at genbruge eksisterende logik
-        // OBS: Dette er en forenkling. En bedre løsning ville være at kalde en funktion fra recipe.js direkte.
         const recipe = appState.recipes.find(r => r.id === recipeId);
         if (recipe) {
-            // Antager at `renderReadView` er eksporteret fra recipes.js, hvilket det ikke er.
-            // For nu, logger vi bare. Skal rettes til.
-            console.log("Vis opskrift:", recipe.title);
+            renderReadView(recipe);
         }
     }
 }
@@ -295,15 +304,22 @@ async function handleSidebarClick(e) {
         openShoppingListModal('groceries');
     }
 
+    // FEJLRETTELSE: To-do checkbox logik
     const todoCheckbox = e.target.closest('.todo-item input[type="checkbox"]');
     if (todoCheckbox) {
         const todoId = todoCheckbox.closest('.todo-item').dataset.id;
         try {
+            // Opdater databasen
             await updateDoc(doc(db, 'events', todoId), { isComplete: todoCheckbox.checked });
+            
+            // Vis en diskret notifikation
             showNotification({ title: "To-do Opdateret", message: "Din opgave er blevet opdateret." });
+            
+            // UI vil blive opdateret automatisk af onSnapshot-listeneren i app.js
         } catch (error) {
+            // Hvis opdateringen fejler, vis en fejlbesked og rul ændringen tilbage
             handleError(error, "Kunne ikke opdatere to-do.", "updateTodo");
-            todoCheckbox.checked = !todoCheckbox.checked; // Revert ved fejl
+            todoCheckbox.checked = !todoCheckbox.checked; 
         }
     }
 }
@@ -342,7 +358,6 @@ async function handleClearMealPlan() {
 
 /**
  * Gemmer et valgt måltid til kalenderen fra modal'en.
- * @param {Event} e - Submit-event fra formularen.
  */
 async function handlePlanMealSubmit(e) {
     e.preventDefault();
@@ -385,15 +400,10 @@ async function handlePlanMealSubmit(e) {
 
 /**
  * Åbner modal'en for at planlægge et måltid.
- * @param {string|null} recipeId - ID på opskriften (hvis valgt fra kogebog).
- * @param {string|null} date - Dato (hvis valgt fra tomt slot).
- * @param {string|null} mealType - Måltidstype (hvis valgt fra tomt slot).
  */
 export function openPlanMealModal(recipeId, date = null, mealType = null) {
     const form = appElements.planMealForm;
     form.reset();
-
-    // Ryd aktiv status fra knapper
     form.querySelectorAll('.meal-type-selector .btn').forEach(btn => btn.classList.remove('active'));
 
     let recipe;
@@ -404,11 +414,9 @@ export function openPlanMealModal(recipeId, date = null, mealType = null) {
         document.getElementById('plan-meal-recipe-id').value = recipeId;
         document.getElementById('plan-meal-portions').value = recipe.portions || 1;
     } else {
-        // Her skal vi have en måde at vælge en opskrift på.
-        // Dette kræver en ny UI-komponent i modal'en. Foreløbigt en placeholder.
         appElements.planMealModalTitle.textContent = 'Vælg og Planlæg Måltid';
-        // Simpel prompt indtil UI er bygget:
         const recipeName = prompt("Hvilken opskrift vil du tilføje? (skriv præcist navn)");
+        if (!recipeName) return;
         recipe = appState.recipes.find(r => r.title.toLowerCase() === recipeName.toLowerCase());
         if (!recipe) {
             showNotification({title: "Fejl", message: "Opskrift ikke fundet."});
@@ -426,4 +434,123 @@ export function openPlanMealModal(recipeId, date = null, mealType = null) {
     }
 
     appElements.planMealModal.classList.remove('hidden');
+}
+
+// --- NYE FUNKTIONER TIL TRÆK-OG-SLIP ---
+
+/**
+ * Håndterer starten af et træk af et måltidskort.
+ * @param {DragEvent} e - dragstart event.
+ */
+function handleDragStart(e) {
+    const mealCard = e.target.closest('.meal-card');
+    if (!mealCard) return;
+
+    // Gem data om det måltid, der trækkes
+    draggedMealData = {
+        mealId: mealCard.dataset.mealId,
+        recipeId: mealCard.dataset.recipeId,
+        sourceDate: mealCard.dataset.sourceDate,
+        sourceMealType: mealCard.dataset.sourceMealType,
+    };
+    
+    // Tilføj en klasse for visuel feedback
+    e.target.classList.add('dragging');
+    // Nødvendigt for Firefox
+    e.dataTransfer.setData('text/plain', mealCard.dataset.recipeId);
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+/**
+ * Håndterer når et element trækkes hen over et gyldigt drop-target.
+ * @param {DragEvent} e - dragover event.
+ */
+function handleDragOver(e) {
+    const dropTarget = e.target.closest('.meal-slot, .empty-meal-slot');
+    if (dropTarget && draggedMealData) {
+        e.preventDefault(); // Tillad drop
+        dropTarget.classList.add('drag-over');
+    }
+}
+
+/**
+ * Håndterer når et element forlader et gyldigt drop-target.
+ * @param {DragEvent} e - dragleave event.
+ */
+function handleDragLeave(e) {
+    const dropTarget = e.target.closest('.meal-slot, .empty-meal-slot');
+    if (dropTarget) {
+        dropTarget.classList.remove('drag-over');
+    }
+}
+
+/**
+ * Håndterer når et element slippes på et gyldigt drop-target.
+ * @param {DragEvent} e - drop event.
+ */
+async function handleDrop(e) {
+    e.preventDefault();
+    const dropTarget = e.target.closest('.meal-slot, .empty-meal-slot');
+    if (!dropTarget || !draggedMealData) return;
+
+    dropTarget.classList.remove('drag-over');
+    
+    const targetDate = dropTarget.dataset.date;
+    const targetMealType = dropTarget.dataset.mealType;
+
+    // Undgå at gøre noget, hvis måltidet slippes på sin oprindelige plads
+    if (targetDate === draggedMealData.sourceDate && targetMealType === draggedMealData.sourceMealType) {
+        return;
+    }
+
+    await moveMealInFirestore(draggedMealData, { date: targetDate, mealType: targetMealType });
+}
+
+/**
+ * Rydder op efter et træk er afsluttet (uanset om det lykkedes eller ej).
+ * @param {DragEvent} e - dragend event.
+ */
+function handleDragEnd(e) {
+    if (e.target.classList.contains('meal-card')) {
+        e.target.classList.remove('dragging');
+    }
+    draggedMealData = null;
+    // Fjern eventuelle 'drag-over' klasser, hvis musen forlod vinduet
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+/**
+ * Flytter et måltid i Firestore-databasen.
+ * @param {object} source - Data om det oprindelige måltid { mealId, recipeId, sourceDate, sourceMealType }.
+ * @param {object} target - Data om den nye placering { date, mealType }.
+ */
+async function moveMealInFirestore(source, target) {
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
+    const sourcePath = `${source.sourceDate}.${source.sourceMealType}`;
+    const targetPath = `${target.date}.${target.mealType}`;
+
+    try {
+        const planDoc = await getDoc(mealPlanRef);
+        const planData = planDoc.data() || {};
+        
+        const sourceMeals = planData[source.sourceDate]?.[source.sourceMealType] || [];
+        const mealToMove = sourceMeals.find(m => m.id === source.mealId);
+
+        if (!mealToMove) {
+            throw new Error("Kunne ikke finde måltidet, der skulle flyttes.");
+        }
+
+        const batch = writeBatch(db);
+
+        // Fjern fra den gamle placering
+        batch.update(mealPlanRef, { [sourcePath]: arrayRemove(mealToMove) });
+        // Tilføj til den nye placering
+        batch.set(mealPlanRef, { [target.date]: { [target.mealType]: arrayUnion(mealToMove) } }, { merge: true });
+
+        await batch.commit();
+        showNotification({title: "Madplan opdateret", message: "Måltidet er blevet flyttet."});
+
+    } catch (error) {
+        handleError(error, "Kunne ikke flytte måltidet.", "moveMealInFirestore");
+    }
 }
