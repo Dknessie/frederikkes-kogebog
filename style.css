@@ -18,6 +18,7 @@
     --status-yellow: #FFC107;
     --status-red: #F44336;
     --deleted-color: #757575;
+    --favorite-yellow: #FFD700; /* NY VARIABEL */
 
     /* Typografi */
     --heading-font: 'Playfair Display', serif;
@@ -854,336 +855,9 @@ header {
 .status-indicator.status-yellow { background-color: var(--status-yellow); }
 .status-indicator.status-red { background-color: var(--status-red); }
 
-/* Varelager Dashboard Styling */
-.inventory-dashboard {
-    background: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: var(--spacing-l);
-}
-
-.inventory-summary-bar {
-    background-color: var(--secondary-color);
-    padding: var(--spacing-m) var(--spacing-l);
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-l);
-    display: flex;
-    justify-content: space-between;
-    font-weight: 600;
-}
-
-.inventory-controls {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--spacing-l);
-    margin-bottom: var(--spacing-m);
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.inventory-controls .search-bar {
-    flex-grow: 1;
-    min-width: 250px;
-    max-width: 400px;
-}
-
-/* UPDATED: Standardized Search Bar Styling */
-.search-bar {
-    position: relative;
-}
-.search-bar i {
-    position: absolute;
-    right: var(--spacing-m);
-    top: 50%;
-    transform: translateY(-50%);
-    color: #aaa;
-    pointer-events: none; /* So you can click through the icon */
-}
-.search-bar input {
-    width: 100%;
-    padding: var(--spacing-m);
-    padding-right: calc(var(--spacing-m) * 2 + 1em); /* Space for the icon */
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius); /* Ensure rounded corners */
-}
-
-
-.inventory-filters {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-m);
-    margin-bottom: var(--spacing-l);
-    padding-top: var(--spacing-m);
-    border-top: 1px solid var(--border-color);
-    align-items: flex-end;
-}
-.inventory-filters .input-group {
-    margin-bottom: 0;
-}
-.inventory-filters select {
-    width: 100%;
-    padding: var(--spacing-s);
-    border: 1px solid #ccc;
-    border-radius: var(--border-radius);
-    box-sizing: border-box;
-    font-size: 0.8rem;
-    height: 38px;
-    text-overflow: ellipsis;
-}
-.inventory-filters .btn {
-    height: 38px;
-    padding: var(--spacing-s) var(--spacing-m);
-    font-size: var(--small-font-size);
-    white-space: nowrap;
-}
-
-
-#inventory-list-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-s);
-}
-.inventory-category-group h3 {
-    margin-top: var(--spacing-l);
-    margin-bottom: var(--spacing-s);
-    padding-bottom: var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-}
-.inventory-category-group h4 {
-    margin-top: var(--spacing-m);
-    margin-bottom: var(--spacing-s);
-    color: var(--text-color);
-    font-size: 1rem;
-    font-family: var(--body-font);
-}
-
-.inventory-item {
-    background-color: var(--white-color);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border-color);
-    transition: box-shadow 0.2s ease-in-out;
-}
-.inventory-item.is-open {
-    box-shadow: var(--strong-shadow);
-}
-.inventory-item.is-open .expand-icon {
-    transform: rotate(180deg);
-}
-
-.inventory-item-header {
-    display: flex;
-    align-items: center;
-    padding: var(--spacing-s) var(--spacing-l);
-    cursor: pointer;
-    gap: var(--spacing-m);
-}
-
-.inventory-item-info {
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.inventory-item-title-group {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-}
-.inventory-item-location {
-    font-size: var(--small-font-size);
-    color: #777;
-    font-style: italic;
-}
-
-.inventory-item-header h5 {
-    margin: 0;
-    color: var(--text-color);
-    font-family: var(--body-font);
-    font-size: 1.1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.completeness-indicator {
-    font-size: 1rem;
-    cursor: help;
-    flex-shrink: 0;
-}
-.completeness-indicator.status-green { color: var(--status-green); }
-.completeness-indicator.status-yellow { color: var(--status-yellow); }
-.completeness-indicator.status-red { color: var(--status-red); }
-
-.inventory-item-stock-info {
-    flex-shrink: 0;
-    width: 140px;
-    text-align: right;
-    padding: 0 var(--spacing-m);
-}
-
-.inventory-item-actions {
-    flex-shrink: 0;
-}
-
-.expand-icon {
-    transition: transform 0.3s ease;
-    color: #aaa;
-}
-
-.batch-list {
-    padding: 0 var(--spacing-l);
-    background-color: var(--light-bg-color);
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
-}
-.inventory-item.is-open .batch-list {
-    max-height: 500px;
-    padding: var(--spacing-m) var(--spacing-l);
-    border-top: 1px solid var(--border-color);
-}
-
-.batch-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--spacing-m);
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: var(--small-font-size);
-    flex-wrap: wrap;
-}
-.batch-item:last-child {
-    border-bottom: none;
-}
-.batch-info {
-    color: #333;
-    white-space: nowrap;
-}
-.batch-info.status-red { color: var(--status-red); font-weight: 600; }
-.batch-info.status-yellow { color: var(--status-yellow); font-weight: 600; }
-.batch-item .edit-batch-btn {
-    margin-left: auto;
-}
-
-.empty-state, .empty-state-small {
-    font-style: italic;
-    color: #888;
-    padding: var(--spacing-m) 0;
-    text-align: center;
-}
-
-/* Referencer Side */
-.references-layout {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: var(--spacing-l);
-}
-.reference-card {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
-    padding: var(--spacing-l);
-    display: flex;
-    flex-direction: column;
-}
-.reference-card h4 {
-    margin-top: 0;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: var(--spacing-m);
-}
-.reference-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1;
-    overflow-y: auto;
-}
-.reference-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.reference-item:last-child {
-    border-bottom: none;
-}
-.reference-actions {
-    display: flex;
-    align-items: center;
-}
-.edit-container {
-    display: flex;
-    flex-grow: 1;
-    align-items: center;
-    gap: var(--spacing-s);
-}
-.edit-reference-input {
-    flex-grow: 1;
-    padding: var(--spacing-s);
-    border: 1px solid var(--primary-color);
-    border-radius: var(--border-radius);
-}
-.edit-actions {
-    display: flex;
-}
-.add-reference-form {
-    display: flex;
-    gap: var(--spacing-s);
-    margin-top: var(--spacing-m);
-    border-top: 1px solid var(--border-color);
-    padding-top: var(--spacing-m);
-}
-.add-reference-form .input-group {
-    flex-grow: 1;
-    margin-bottom: 0;
-}
-.add-reference-form input {
-    width: 100%;
-}
-.add-reference-form .btn {
-    padding: var(--spacing-m);
-}
-.category-item {
-    display: flex;
-    flex-direction: column;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-}
-.subcategory-list {
-    list-style: none;
-    padding-left: var(--spacing-l);
-    margin-top: var(--spacing-s);
-}
-.subcategory-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-xs) 0;
-}
-.add-subcategory-form {
-    display: flex;
-    gap: var(--spacing-s);
-    margin-top: var(--spacing-s);
-    padding-left: var(--spacing-l);
-}
-.household-members-card {
-    grid-column: 1 / -1;
-}
-.member-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
+/* GAMMEL VARELAGER-STYLING (Fjernes eller erstattes) */
+.inventory-dashboard { display: none; }
+.inventory-item { display: none; }
 
 
 /* ===== 8. Nyt Dashboard Layout ===== */
@@ -1910,6 +1584,176 @@ input:checked + .slider:before { transform: translateX(22px); }
 .conversion-rule-row .input-group {
     margin: 0;
 }
+
+/* =================================================================
+   NYT: VARELAGER REDESIGN
+   ================================================================= */
+
+#inventory.page {
+    background-color: #f9fafb;
+}
+
+.inventory-page-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    align-items: flex-start;
+}
+
+.inventory-sidebar {
+    position: sticky;
+    top: calc(var(--spacing-l) + 65px); /* Page padding + header height */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.sidebar-widget {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+    padding: 1.5rem;
+}
+
+.sidebar-widget h3 {
+    font-family: var(--body-font);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-widget .btn { width: 100%; }
+
+.summary-line { 
+    display: flex; 
+    justify-content: space-between; 
+    font-weight: 600; 
+    font-size: 0.9rem;
+}
+.summary-line .value { color: var(--accent-color); }
+
+.inventory-main-content h1 { 
+    font-family: var(--heading-font); 
+    color: var(--primary-color); 
+    font-size: 2.5rem; 
+    margin: 0 0 2rem 0; 
+}
+
+details.storage-location-card { 
+    background-color: var(--white-color); 
+    border-radius: var(--card-border-radius); 
+    box-shadow: var(--strong-shadow); 
+    margin-bottom: 2rem; 
+    transition: all 0.3s ease; 
+    border: 1px solid var(--border-color);
+}
+details summary { 
+    list-style: none; 
+    cursor: pointer; 
+    padding: 1.25rem 1.5rem; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+details summary::-webkit-details-marker { display: none; }
+details .storage-header { padding: 0; border-bottom: none; }
+details .storage-header h2 { 
+    margin: 0; 
+    font-family: var(--heading-font); 
+    font-size: 1.5rem; 
+    color: var(--text-color); 
+    display: flex; 
+    align-items: center; 
+    gap: 0.75rem; 
+}
+.storage-header .fa-snowflake { color: #3498db; }
+.storage-header .fa-door-closed { color: #a37b52; }
+.storage-header .fa-carrot { color: #e67e22; }
+
+.item-count { 
+    background-color: var(--secondary-color); 
+    color: var(--primary-color); 
+    padding: 0.25rem 0.75rem; 
+    border-radius: 1rem; 
+    font-size: 0.9rem; 
+    font-weight: 600; 
+}
+details summary .toggle-icon { transition: transform 0.3s ease; color: #aaa; }
+details[open] summary .toggle-icon { transform: rotate(180deg); }
+
+.storage-header-controls { 
+    display: flex; 
+    align-items: center; 
+    gap: 1rem; 
+}
+.sort-control select { 
+    font-size: 0.85rem; 
+    padding: 0.25rem 0.5rem; 
+    border-radius: 4px; 
+    border: 1px solid var(--border-color); 
+    background-color: var(--light-bg-color);
+}
+.item-table-container { 
+    padding: 0 1.5rem 1rem;
+    transition: all 0.3s ease-in-out; 
+}
+details:not([open]) .item-table-container {
+    padding: 0 1.5rem;
+}
+
+.item-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+.item-table th, .item-table td { 
+    text-align: left; 
+    padding: 0.85rem 1rem; 
+    border-bottom: 1px solid var(--border-color); 
+    vertical-align: middle; 
+}
+.item-table th { 
+    font-size: 0.8rem; 
+    color: #666; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+}
+.item-table tr:last-child td { border-bottom: none; }
+.item-table tr .actions-cell { opacity: 0; transition: opacity 0.2s ease; }
+.item-table tr:hover { background-color: #fcfbfa; }
+.item-table tr:hover .actions-cell { opacity: 1; }
+.item-table .item-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+.item-table .item-stock-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.item-table .item-name { font-weight: 600; }
+.quantity-cell { cursor: pointer; }
+.quantity-cell:hover { background-color: var(--secondary-color); border-radius: 4px; }
+.quantity-cell input { width: 100px; text-align: left; padding: 0.25rem; border: 1px solid var(--primary-color); border-radius: 4px; }
+.item-table .actions-cell { text-align: right; }
+.actions-cell .btn-icon { 
+    background: none; 
+    border: none; 
+    font-size: 1rem; 
+    color: #aaa; 
+    cursor: pointer; 
+    padding: 0.5rem; 
+    transition: color 0.2s ease; 
+    width: 32px; height: 32px;
+}
+.actions-cell .btn-icon:hover { color: var(--primary-color); background-color: var(--secondary-color); }
+.actions-cell .favorite-btn.is-favorite i { color: var(--favorite-yellow); }
+.actions-cell .favorite-btn.is-favorite:hover i { color: #eec400; }
+
+.status-red { color: var(--status-red); font-weight: 600; }
+.status-yellow { color: var(--status-yellow); font-weight: 600; }
+
+.empty-list-message { text-align: center; padding: 2rem; color: #888; font-style: italic; }
+
+.favorite-item-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.favorite-item { display: flex; align-items: center; justify-content: space-between; }
+.favorite-item-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
+.favorite-item-actions { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #666; }
+.favorite-item-actions .btn-icon { padding: 0.25rem; font-size: 0.9rem; color: var(--accent-color); width: 28px; height: 28px; }
 
 /* =================================================================
    NYT: ØKONOMI DASHBOARD TEMA
