@@ -19,6 +19,20 @@ export function initEvents(state) {
     if (eventTypeSelect) {
         eventTypeSelect.addEventListener('change', toggleEventTypeFields);
     }
+
+    // Tilføj event listener for den nye slet-knap i modalen
+    const deleteEventBtn = document.getElementById('delete-event-btn');
+    if (deleteEventBtn) {
+        deleteEventBtn.addEventListener('click', async () => {
+            const eventId = document.getElementById('event-id').value;
+            if (eventId) {
+                const success = await handleDeleteEvent(eventId);
+                if (success) {
+                    document.getElementById('event-modal').classList.add('hidden');
+                }
+            }
+        });
+    }
 }
 
 /**
@@ -31,8 +45,9 @@ export function openEventModal(date, eventData = null, defaultCategory = null) {
     const modal = document.getElementById('event-modal');
     const form = document.getElementById('event-form');
     const modalTitle = document.getElementById('event-modal-title');
+    const deleteBtn = document.getElementById('delete-event-btn');
 
-    if (!form || !modal || !modalTitle) {
+    if (!form || !modal || !modalTitle || !deleteBtn) {
         console.error("Event modal elements not found in the DOM.");
         return;
     }
@@ -46,12 +61,14 @@ export function openEventModal(date, eventData = null, defaultCategory = null) {
         document.getElementById('event-title').value = eventData.title;
         document.getElementById('event-date').value = eventData.date;
         document.getElementById('event-type').value = eventData.category;
+        deleteBtn.classList.remove('hidden');
         
     } else {
         // Ny begivenhed
         modalTitle.textContent = 'Tilføj Begivenhed';
         document.getElementById('event-id').value = '';
         document.getElementById('event-date').value = date || formatDate(new Date());
+        deleteBtn.classList.add('hidden');
         // Forudvælg kategori hvis angivet
         if (defaultCategory) {
             document.getElementById('event-type').value = defaultCategory;
@@ -197,3 +214,33 @@ async function handleSaveEvent(e) {
         handleError(error, "Begivenheden kunne ikke gemmes.", "saveEvent");
     }
 }
+
+/**
+ * NY FUNKTION: Håndterer sletning af en begivenhed.
+ * @param {string} eventId - ID'et på den begivenhed, der skal slettes.
+ * @returns {Promise<boolean>} - Returnerer true, hvis sletningen lykkedes.
+ */
+export async function handleDeleteEvent(eventId) {
+    if (!eventId) return false;
+
+    const eventToDelete = appState.events.find(e => e.id === eventId);
+    if (!eventToDelete) return false;
+
+    const confirmed = await showNotification({
+        title: "Slet Begivenhed",
+        message: `Er du sikker på, at du vil slette "${eventToDelete.title}"? Handlingen kan ikke fortrydes.`,
+        type: 'confirm'
+    });
+
+    if (!confirmed) return false;
+
+    try {
+        await deleteDoc(doc(db, 'events', eventId));
+        showNotification({ title: "Slettet!", message: "Begivenheden er blevet fjernet." });
+        return true;
+    } catch (error) {
+        handleError(error, "Begivenheden kunne ikke slettes.", "deleteEvent");
+        return false;
+    }
+}
+
