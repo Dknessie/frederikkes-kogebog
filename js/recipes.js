@@ -74,16 +74,6 @@ export function renderRecipes() {
     renderFlipper();
     renderRecipeListPage();
     renderSidebarWidgets();
-
-    // Tjek om der er et filter aktivt fra varelager-siden
-    if (appState.recipeFilter === 'canBeMade') {
-        const tagButton = document.querySelector('.list-filter-tags .filter-tag[data-tag="canBeMade"]');
-        if (tagButton) {
-            tagButton.click();
-        }
-        // Nulstil filteret efter brug
-        appState.recipeFilter = null;
-    }
 }
 
 function renderFlipper() {
@@ -152,10 +142,6 @@ function renderRecipeListPage() {
     }
     if (cookbookState.activeListFilterTags.size > 0) {
         recipesToRender = recipesToRender.filter(r => {
-            if (cookbookState.activeListFilterTags.has('canBeMade')) {
-                const { missingCount } = calculateRecipeMatch(r, appState.inventory);
-                return missingCount <= 1; // Tillad 1 manglende ingrediens
-            }
             if (!r.tags) return false;
             return [...cookbookState.activeListFilterTags].every(tag => r.tags.includes(tag));
         });
@@ -187,16 +173,20 @@ function renderListFilterTags() {
     if (!container) return;
     const allTags = new Set();
     appState.recipes.forEach(r => { if (r.tags) r.tags.forEach(tag => allTags.add(tag)); });
-    
-    let tagsHTML = `<button class="filter-tag ${cookbookState.activeListFilterTags.size === 0 ? 'active' : ''}" data-tag="all">Alle</button>`;
-    tagsHTML += `<button class="filter-tag ${cookbookState.activeListFilterTags.has('canBeMade') ? 'active' : ''}" data-tag="canBeMade"><i class="fas fa-utensils"></i> Kan Laves</button>`;
-    
+    container.innerHTML = '';
+    const allButton = document.createElement('button');
+    allButton.className = `filter-tag ${cookbookState.activeListFilterTags.size === 0 ? 'active' : ''}`;
+    allButton.textContent = 'Alle';
+    allButton.dataset.tag = 'all';
+    container.appendChild(allButton);
     [...allTags].sort().forEach(tag => {
         const isActive = cookbookState.activeListFilterTags.has(tag);
-        tagsHTML += `<button class="filter-tag ${isActive ? 'active' : ''}" data-tag="${tag}">${tag}</button>`;
+        const button = document.createElement('button');
+        button.className = `filter-tag ${isActive ? 'active' : ''}`;
+        button.dataset.tag = tag;
+        button.textContent = tag;
+        container.appendChild(button);
     });
-
-    container.innerHTML = tagsHTML;
 }
 
 function renderSidebarWidgets() {
@@ -417,6 +407,7 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
 }
 
+// OPDATERING: Gør funktionen tilgængelig for andre moduler ved at tilføje 'export'
 export function renderReadView(recipe) {
     if (!recipe) return;
     const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
