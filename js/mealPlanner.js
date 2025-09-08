@@ -1,7 +1,6 @@
 // js/mealPlanner.js
 
 import { db } from './firebase.js';
-// OPDATERING: Importer flere funktioner fra Firestore, inkl. runTransaction og updateDoc
 import { doc, setDoc, writeBatch, deleteField, arrayUnion, arrayRemove, getDoc, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
@@ -10,13 +9,8 @@ import { renderReadView } from './recipes.js';
 
 let appState;
 let appElements;
-let draggedMealData = null; // Holder data om det element, der trækkes
+let draggedMealData = null;
 
-/**
- * Initialiserer kalender-modulet med det nye "Uge-Hub" design.
- * @param {object} state - Den globale app state.
- * @param {object} elements - De cachede DOM elementer.
- */
 export function initMealPlanner(state, elements) {
     appState = state;
     appElements = elements;
@@ -28,11 +22,9 @@ export function initMealPlanner(state, elements) {
     // Hovedhandlinger
     if (appElements.hubClearWeekBtn) appElements.hubClearWeekBtn.addEventListener('click', handleClearMealPlan);
     
-    // Event delegation for dynamisk indhold
+    // Event delegation
     if (appElements.mealPlanSection) {
         appElements.mealPlanSection.addEventListener('click', handleMealPlanClick);
-        
-        // Træk-og-slip event listeners
         appElements.mealPlanSection.addEventListener('dragstart', handleDragStart);
         appElements.mealPlanSection.addEventListener('dragover', handleDragOver);
         appElements.mealPlanSection.addEventListener('dragleave', handleDragLeave);
@@ -86,6 +78,23 @@ function renderMealPlanSection(startOfWeek) {
     section.appendChild(fragment);
 }
 
+// HJÆLPEFUNKTION: Returnerer et ikon baseret på event-kategori
+function getIconForCategory(category) {
+    switch (category) {
+        case 'To-do': return 'fa-check-square';
+        case 'Aftale': return 'fa-calendar-check';
+        case 'Fødselsdag': return 'fa-birthday-cake';
+        case 'Udgivelse': return 'fa-book';
+        case 'Andet': return 'fa-info-circle';
+        default: return 'fa-star';
+    }
+}
+
+/**
+ * OPDATERET: Skaber HTML for et "dagskort" inklusiv begivenheder.
+ * @param {Date} date - Datoen for kortet.
+ * @returns {HTMLElement} - Det færdige div-element for dagen.
+ */
 function createDayCard(date) {
     const card = document.createElement('div');
     card.className = 'day-card';
@@ -93,12 +102,27 @@ function createDayCard(date) {
     const dayName = date.toLocaleDateString('da-DK', { weekday: 'long' });
     const dayAndMonth = date.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
 
+    // Find begivenheder for denne specifikke dag
+    const eventsForDay = (appState.events || []).filter(event => event.date === dateString);
+    let eventsHTML = '';
+    if (eventsForDay.length > 0) {
+        eventsHTML = eventsForDay.map(event => {
+            const icon = getIconForCategory(event.category);
+            return `<span class="day-event-pill event-${event.category.toLowerCase()}" title="${event.title}"><i class="fas ${icon}"></i> ${event.title}</span>`;
+        }).join('');
+    }
+
     const meals = appState.mealPlan[dateString] || {};
     
     card.innerHTML = `
         <div class="day-header">
-            <h3>${dayName}</h3>
-            <span class="date-string">${dayAndMonth}</span>
+            <div class="day-header-main">
+                 <h3>${dayName}</h3>
+                 <span class="date-string">${dayAndMonth}</span>
+            </div>
+            <div class="day-events-container">
+                ${eventsHTML}
+            </div>
         </div>
         <div class="meal-slots-container">
             ${createMealSlotHTML('Morgenmad', meals.breakfast, dateString, 'breakfast')}
@@ -109,6 +133,15 @@ function createDayCard(date) {
     return card;
 }
 
+
+/**
+ * OPDATERET: Skaber HTML for et måltids-slot med slette-knap.
+ * @param {string} title - Titlen (f.eks. "Morgenmad").
+ * @param {Array} mealData - Array af måltider.
+ * @param {string} dateString - Datoen (YYYY-MM-DD).
+ * @param {string} mealType - Typen af måltid ('breakfast', 'lunch', 'dinner').
+ * @returns {string} - HTML-strengen for måltids-slottet.
+ */
 function createMealSlotHTML(title, mealData, dateString, mealType) {
     let content = '';
     if (mealData && mealData.length > 0) {
@@ -126,6 +159,7 @@ function createMealSlotHTML(title, mealData, dateString, mealType) {
                      title="Klik for at se, træk for at flytte">
                     <img src="${imageUrl}" alt="${recipe.title}">
                     <span>${recipe.title}</span>
+                    <span class="delete-meal-btn" title="Fjern fra madplan"><i class="fas fa-times-circle"></i></span>
                 </div>
             `;
         }
@@ -228,11 +262,24 @@ function createShoppingListWidgetHTML() {
     `;
 }
 
+/**
+ * OPDATERET: Håndterer klik på sletteknap.
+ * @param {Event} e - Klik-event.
+ */
 function handleMealPlanClick(e) {
     const emptySlot = e.target.closest('.empty-meal-slot');
     const mealCard = e.target.closest('.meal-card');
+    const deleteBtn = e.target.closest('.delete-meal-btn');
 
-    if (emptySlot) {
+    if (deleteBtn) {
+        e.stopPropagation(); // Forhindrer at opskriften åbnes
+        const card = deleteBtn.closest('.meal-card');
+        handleDeleteMeal(
+            card.dataset.mealId, 
+            card.dataset.sourceDate, 
+            card.dataset.sourceMealType
+        );
+    } else if (emptySlot) {
         const date = emptySlot.dataset.date;
         const mealType = emptySlot.dataset.mealType;
         openPlanMealModal(null, date, mealType);
@@ -245,10 +292,6 @@ function handleMealPlanClick(e) {
     }
 }
 
-/**
- * FEJLRETTELSE: Event handler for klik i sidebar-sektionen (To-Do).
- * @param {Event} e - Klik-event.
- */
 async function handleSidebarClick(e) {
     if (e.target.closest('#widget-open-shopping-list-btn')) {
         openShoppingListModal('groceries');
@@ -260,10 +303,7 @@ async function handleSidebarClick(e) {
     const todoItemElement = todoCheckbox.closest('.todo-item');
     const todoId = todoItemElement?.dataset.id;
     
-    if (!todoId) {
-        console.error("To-do ID mangler på elementet.", todoCheckbox);
-        return;
-    }
+    if (!todoId) return;
 
     const isChecked = todoCheckbox.checked;
 
@@ -272,10 +312,12 @@ async function handleSidebarClick(e) {
         await updateDoc(eventRef, { isComplete: isChecked });
         showNotification({ title: "To-do Opdateret", message: "Din opgave er blevet opdateret." });
     } catch (error) {
-        todoCheckbox.checked = !isChecked; // Rul tilbage ved fejl
+        todoCheckbox.checked = !isChecked;
         handleError(error, "Kunne ikke opdatere to-do.", "updateTodo");
     }
 }
+
+// ... resten af filen er uændret ...
 
 async function handleClearMealPlan() {
     const confirmed = await showNotification({
@@ -379,7 +421,6 @@ export function openPlanMealModal(recipeId, date = null, mealType = null) {
     appElements.planMealModal.classList.remove('hidden');
 }
 
-// --- FUNKTIONER TIL TRÆK-OG-SLIP ---
 
 function handleDragStart(e) {
     const mealCard = e.target.closest('.meal-card');
@@ -437,11 +478,6 @@ function handleDragEnd(e) {
     document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
 }
 
-/**
- * FEJLRETTELSE: Flytter et måltid ved hjælp af en Firestore-transaktion for sikker datahåndtering.
- * @param {object} source - Data om det oprindelige måltid.
- * @param {object} target - Data om den nye placering.
- */
 async function moveMealInFirestore(source, target) {
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
 
@@ -450,20 +486,15 @@ async function moveMealInFirestore(source, target) {
             const mealPlanDoc = await transaction.get(mealPlanRef);
             const planData = mealPlanDoc.exists() ? mealPlanDoc.data() : {};
 
-            // 1. Find og hent måltidet fra kilden i den hentede data
             const sourceMeals = planData[source.sourceDate]?.[source.sourceMealType] || [];
             const mealIndex = sourceMeals.findIndex(m => m.id === source.mealId);
 
             if (mealIndex === -1) {
-                console.warn("Måltid ikke fundet. Det er måske allerede flyttet.");
-                return; // Afslut transaktionen sikkert
+                return;
             }
             
-            // Fjern måltidet fra kilde-arrayet og gem det
             const [mealToMove] = sourceMeals.splice(mealIndex, 1);
 
-            // 2. Forbered opdateret data-objekt i JavaScript
-            // Opdater kilden
             if (!planData[source.sourceDate]) planData[source.sourceDate] = {};
             planData[source.sourceDate][source.sourceMealType] = sourceMeals;
             if (planData[source.sourceDate][source.sourceMealType].length === 0) {
@@ -473,17 +504,53 @@ async function moveMealInFirestore(source, target) {
                 delete planData[source.sourceDate];
             }
             
-            // Opdater destination (erstatter eksisterende måltid)
             if (!planData[target.date]) planData[target.date] = {};
             planData[target.date][target.mealType] = [mealToMove];
 
-            // 3. Skriv hele det opdaterede plan-objekt tilbage til Firestore
             transaction.set(mealPlanRef, planData);
         });
 
         showNotification({title: "Madplan opdateret", message: "Måltidet er blevet flyttet."});
     } catch (error) {
         handleError(error, "Kunne ikke flytte måltidet.", "moveMealInFirestore");
+    }
+}
+
+/**
+ * NY: Funktion til at slette et måltid fra madplanen.
+ * @param {string} mealId - ID på måltidet, der skal slettes.
+ * @param {string} date - Datoen for måltidet.
+ * @param {string} mealType - Måltidstypen (f.eks. 'dinner').
+ */
+async function handleDeleteMeal(mealId, date, mealType) {
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
+
+    const confirmed = await showNotification({
+        title: "Fjern Måltid",
+        message: "Er du sikker på, at du vil fjerne dette måltid fra madplanen?",
+        type: 'confirm'
+    });
+
+    if (!confirmed) return;
+
+    try {
+        // Hent den nuværende madplan for at finde det specifikke måltidsobjekt
+        const mealPlanDoc = await getDoc(mealPlanRef);
+        if (!mealPlanDoc.exists()) return;
+
+        const planData = mealPlanDoc.data();
+        const mealsForSlot = planData[date]?.[mealType] || [];
+        const mealToRemove = mealsForSlot.find(m => m.id === mealId);
+
+        if (mealToRemove) {
+            // Brug arrayRemove til at fjerne det præcise objekt fra arrayet i Firestore
+            await updateDoc(mealPlanRef, {
+                [`${date}.${mealType}`]: arrayRemove(mealToRemove)
+            });
+            showNotification({ title: "Fjernet", message: "Måltidet er blevet fjernet fra madplanen." });
+        }
+    } catch (error) {
+        handleError(error, "Kunne ikke fjerne måltidet.", "handleDeleteMeal");
     }
 }
 
