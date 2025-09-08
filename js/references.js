@@ -6,19 +6,20 @@ import { showNotification, handleError } from './ui.js';
 
 let appState;
 let appElements;
-let currentCategoryKey = 'householdMembers';
+let currentCategoryKey = 'householdMembers'; // Start med en standardkategori
 
+// Definition af referencekategorier for at styre UI'en
 const referenceCategories = {
     householdMembers: {
         title: 'Husstandsmedlemmer',
         icon: 'fa-users',
-        description: 'Opret navne her, som kan bruges i budgettet.',
+        description: 'Opret navne her, som kan bruges i budgettet. Disse navne er ikke rigtige brugerkonti.',
         isSimpleList: true
     },
     accounts: {
         title: 'Konti',
         icon: 'fa-wallet',
-        description: 'Administrer de konti, som faste udgifter trækkes fra.',
+        description: 'Administrer de konti, som faste udgifter trækkes fra (f.eks. Budget, Madkonto).',
         isSimpleList: true
     },
     budgetCategories: {
@@ -34,7 +35,6 @@ const referenceCategories = {
     itemLocations: {
         title: 'Placeringer i Hjemmet',
         icon: 'fa-map-marker-alt',
-        description: 'Definerer hovedlokationer for varelager (f.eks. Køleskab, Fryser).',
         isSimpleList: true
     },
     stores: {
@@ -51,12 +51,6 @@ const referenceCategories = {
         title: 'Gældstyper',
         icon: 'fa-file-invoice-dollar',
         isSimpleList: true
-    },
-    freezerShelfLife: {
-        title: 'Holdbarhed i Fryser',
-        icon: 'fa-snowflake',
-        description: 'Sæt standard holdbarhed i måneder for forskellige varekategorier i fryseren.',
-        isKeyValue: true,
     }
 };
 
@@ -112,17 +106,47 @@ function renderSidebarNav() {
 function renderCategoryContent() {
     const contentArea = appElements.referencesContentArea;
     const categoryConfig = referenceCategories[currentCategoryKey];
-    const data = appState.references[currentCategoryKey] || (categoryConfig.isKeyValue ? {} : []);
+    const data = appState.references[currentCategoryKey] || [];
 
     let itemsHTML = '';
     if (categoryConfig.isSimpleList) {
-        itemsHTML = [...data].sort((a, b) => a.localeCompare(b)).map(item => createSimpleItemHTML(item)).join('');
+        itemsHTML = [...data].sort((a, b) => a.localeCompare(b)).map(item => `
+            <li class="reference-item" data-value="${item}">
+                <span class="reference-name">${item}</span>
+                <div class="reference-actions">
+                    <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                    <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                </div>
+            </li>
+        `).join('');
     } else if (categoryConfig.isHierarchical) {
         const categories = [...data].map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-        itemsHTML = categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => createHierarchicalItemHTML(cat)).join('');
-    } else if (categoryConfig.isKeyValue) {
-        const freezerCategories = appState.references.itemCategories?.find(c => c.name === 'Frostvarer')?.subcategories || [];
-        itemsHTML = freezerCategories.map(cat => createKeyValueItemHTML(cat, data[cat])).join('');
+        itemsHTML = categories.sort((a, b) => a.name.localeCompare(b.name)).map(cat => `
+            <li class="category-item" data-value="${cat.name}">
+                <div class="category-header">
+                    <span class="reference-name">${cat.name}</span>
+                    <div class="reference-actions">
+                        <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <ul class="subcategory-list">
+                    ${(cat.subcategories || []).sort().map(sub => `
+                        <li class="subcategory-item" data-value="${sub}">
+                            <span>${sub}</span>
+                            <div class="reference-actions">
+                                <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
+                                <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+                <form class="add-subcategory-form">
+                    <input type="text" placeholder="Tilføj underkategori..." required>
+                    <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+                </form>
+            </li>
+        `).join('');
     }
 
     contentArea.innerHTML = `
@@ -130,119 +154,45 @@ function renderCategoryContent() {
             <h4>${categoryConfig.title}</h4>
             ${categoryConfig.description ? `<p class="small-text">${categoryConfig.description}</p>` : ''}
             <ul class="reference-list">${itemsHTML || '<p class="empty-state-small">Ingen elementer tilføjet endnu.</p>'}</ul>
-            ${!categoryConfig.isKeyValue ? getAddFormHTML() : ''}
+            <form class="add-reference-form">
+                <div class="input-group">
+                    <input type="text" placeholder="Tilføj ny..." required>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
+            </form>
         </div>
     `;
 }
 
-function createSimpleItemHTML(item) {
-    return `
-        <li class="reference-item" data-value="${item}">
-            <span class="reference-name">${item}</span>
-            <div class="reference-actions">
-                <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
-                <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
-            </div>
-        </li>
-    `;
-}
-
-function createHierarchicalItemHTML(cat) {
-    return `
-        <li class="category-item" data-value="${cat.name}">
-            <div class="category-header">
-                <span class="reference-name">${cat.name}</span>
-                <div class="reference-actions">
-                    <button class="btn-icon edit-reference-item"><i class="fas fa-edit"></i></button>
-                    <button class="btn-icon delete-reference-item"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>
-            <ul class="subcategory-list">
-                ${(cat.subcategories || []).sort().map(sub => `
-                    <li class="subcategory-item" data-value="${sub}">
-                        <span>${sub}</span>
-                        <div class="reference-actions">
-                            <button class="btn-icon edit-subcategory-item"><i class="fas fa-edit"></i></button>
-                            <button class="btn-icon delete-subcategory-item"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </li>
-                `).join('')}
-            </ul>
-            <form class="add-subcategory-form">
-                <input type="text" placeholder="Tilføj underkategori..." required>
-                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-            </form>
-        </li>
-    `;
-}
-
-function createKeyValueItemHTML(key, value) {
-    return `
-        <li class="reference-item key-value-item" data-key="${key}">
-            <span class="reference-name">${key}</span>
-            <div class="key-value-input">
-                <input type="number" value="${value || ''}" placeholder="Måneder">
-                <span>mdr.</span>
-            </div>
-        </li>
-    `;
-}
-
-function getAddFormHTML() {
-    return `
-        <form class="add-reference-form">
-            <div class="input-group">
-                <input type="text" placeholder="Tilføj ny..." required>
-            </div>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i></button>
-        </form>
-    `;
-}
-
-async function handleContentClick(e) {
+function handleContentClick(e) {
     const key = e.target.closest('.reference-category-content')?.dataset.key;
     if (!key) return;
 
     if (e.target.closest('.delete-reference-item')) {
         const itemElement = e.target.closest('.reference-item, .category-item');
         const value = itemElement.dataset.value;
-        await deleteReferenceItem(key, value);
+        deleteReferenceItem(key, value);
     } else if (e.target.closest('.edit-reference-item')) {
-        toggleEditMode(e.target.closest('.reference-item, .category-item'), true);
+        const itemElement = e.target.closest('.reference-item, .category-item');
+        toggleEditMode(itemElement, true);
     } else if (e.target.closest('.cancel-edit-reference')) {
-        toggleEditMode(e.target.closest('.reference-item, .category-item, .subcategory-item'), false);
+        const itemElement = e.target.closest('.reference-item, .category-item, .subcategory-item');
+        toggleEditMode(itemElement, false);
     } else if (e.target.closest('.save-reference-item')) {
         const itemElement = e.target.closest('.reference-item, .category-item');
         const oldValue = itemElement.dataset.value;
         const newValue = itemElement.querySelector('.edit-reference-input').value.trim();
-        await saveReferenceUpdate(key, oldValue, newValue);
+        saveReferenceUpdate(key, oldValue, newValue);
     } else if (e.target.closest('.delete-subcategory-item')) {
-        const mainCatValue = e.target.closest('.category-item').dataset.value;
-        const subCatValue = e.target.closest('.subcategory-item').dataset.value;
-        await deleteSubCategory(key, mainCatValue, subCatValue);
-    } else if (e.target.matches('.key-value-input input')) {
-        // Gem automatisk ved ændring i key-value felter (med debounce)
-        debouncedSaveKeyValue(key, e.target.closest('.key-value-item').dataset.key, e.target.value);
+        const subCatItem = e.target.closest('.subcategory-item');
+        const mainCatItem = e.target.closest('.category-item');
+        const subCatValue = subCatItem.dataset.value;
+        const mainCatValue = mainCatItem.dataset.value;
+        deleteSubCategory(key, mainCatValue, subCatValue);
     }
 }
 
-const debouncedSaveKeyValue = debounce(async (categoryKey, itemKey, value) => {
-    const ref = doc(db, 'references', appState.currentUser.uid);
-    await updateDoc(ref, {
-        [`${categoryKey}.${itemKey}`]: Number(value) || null
-    });
-    showNotification({title: "Gemt", message: "Holdbarhed er opdateret."});
-}, 500);
-
-function debounce(func, delay) {
-    let timeout;
-    return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), delay);
-    };
-}
-
-async function handleFormSubmit(e) {
+function handleFormSubmit(e) {
     e.preventDefault();
     const key = e.target.closest('.reference-category-content')?.dataset.key;
     if (!key) return;
@@ -253,9 +203,9 @@ async function handleFormSubmit(e) {
         if (!value) return;
 
         if (referenceCategories[key].isHierarchical) {
-            await addMainCategory(key, value);
+            addMainCategory(key, value);
         } else {
-            await addSimpleReference(key, value);
+            addSimpleReference(key, value);
         }
         input.value = '';
     } else if (e.target.classList.contains('add-subcategory-form')) {
@@ -263,7 +213,7 @@ async function handleFormSubmit(e) {
         const mainCategory = e.target.closest('.category-item').dataset.value;
         const subCategory = input.value.trim();
         if (!subCategory) return;
-        await addSubCategory(key, mainCategory, subCategory);
+        addSubCategory(key, mainCategory, subCategory);
         input.value = '';
     }
 }
@@ -291,15 +241,17 @@ async function addMainCategory(key, name) {
 
 async function addSubCategory(key, mainCategoryName, subCategoryName) {
     const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = categories.find(cat => cat.name === mainCategoryName);
-    if (!mainCat) return;
+    const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
+    if (mainCatIndex === -1) return;
 
+    const mainCat = categories[mainCatIndex];
     if ((mainCat.subcategories || []).some(sub => sub.toLowerCase() === subCategoryName.toLowerCase())) {
         showNotification({title: "Eksisterer allerede", message: `Underkategorien "${subCategoryName}" findes allerede.`});
         return;
     }
     
-    mainCat.subcategories = [...(mainCat.subcategories || []), subCategoryName];
+    if (!mainCat.subcategories) mainCat.subcategories = [];
+    mainCat.subcategories.push(subCategoryName);
     
     const ref = doc(db, 'references', appState.currentUser.uid);
     await updateDoc(ref, { [key]: categories });
@@ -307,17 +259,21 @@ async function addSubCategory(key, mainCategoryName, subCategoryName) {
 
 async function deleteSubCategory(key, mainCategoryName, subCategoryName) {
     const categories = (appState.references[key] || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = categories.find(cat => cat.name === mainCategoryName);
+    const mainCatIndex = categories.findIndex(cat => cat.name === mainCategoryName);
+    if (mainCatIndex === -1) return;
 
-    if (mainCat && mainCat.subcategories) {
-        mainCat.subcategories = mainCat.subcategories.filter(sub => sub !== subCategoryName);
-        const ref = doc(db, 'references', appState.currentUser.uid);
-        await updateDoc(ref, { [key]: categories });
-    }
+    const mainCat = categories[mainCatIndex];
+    if (!mainCat || !mainCat.subcategories) return;
+
+    mainCat.subcategories = mainCat.subcategories.filter(sub => sub !== subCategoryName);
+    const ref = doc(db, 'references', appState.currentUser.uid);
+    await updateDoc(ref, { [key]: categories });
 }
 
 async function deleteReferenceItem(key, value) {
-    const confirmed = await showNotification({title: "Slet Reference", message: `Er du sikker på du vil slette "${value}"?`, type: 'confirm'});
+    if (!appState.currentUser || !key || !value) return;
+
+    const confirmed = await showNotification({title: "Slet Reference", message: `Er du sikker på du vil slette "${value}"? Dette kan ikke fortrydes.`, type: 'confirm'});
     if (!confirmed) return;
 
     const ref = doc(db, 'references', appState.currentUser.uid);
@@ -332,6 +288,7 @@ async function deleteReferenceItem(key, value) {
     } else {
         await updateDoc(ref, { [key]: arrayRemove(value) });
     }
+    showNotification({title: "Slettet", message: `Referencen "${value}" er blevet slettet.`});
 }
 
 function toggleEditMode(itemElement, isEditing) {
@@ -340,12 +297,14 @@ function toggleEditMode(itemElement, isEditing) {
 
     if (isEditing) {
         const originalValue = itemElement.dataset.value;
+        const inputHTML = `<input type="text" class="edit-reference-input" value="${originalValue}">`;
+        
         nameSpan.style.display = 'none';
 
         const editContainer = document.createElement('div');
         editContainer.className = 'edit-container';
         editContainer.innerHTML = `
-            <input type="text" class="edit-reference-input" value="${originalValue}">
+            ${inputHTML}
             <div class="edit-actions">
                 <button class="btn-icon save-reference-item" title="Gem"><i class="fas fa-check"></i></button>
                 <button class="btn-icon cancel-edit-reference" title="Annuller"><i class="fas fa-times"></i></button>
@@ -356,7 +315,7 @@ function toggleEditMode(itemElement, isEditing) {
         nameSpan.insertAdjacentElement('afterend', editContainer);
         editContainer.querySelector('input').focus();
 
-    } else {
+    } else { // Cancel editing
         const editContainer = itemElement.querySelector('.edit-container');
         if (editContainer) editContainer.remove();
         nameSpan.style.display = 'inline';
@@ -386,4 +345,5 @@ async function saveReferenceUpdate(key, oldValue, newValue) {
         batch.update(ref, { [key]: arrayUnion(newValue) });
         await batch.commit();
     }
+    showNotification({title: "Opdateret!", message: `Referencen er blevet omdøbt.`});
 }
