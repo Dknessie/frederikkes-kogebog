@@ -15,7 +15,7 @@ const cookbookState = {
     flipperIndex: 0,
     searchTerm: '',
     activeListFilterTags: new Set(),
-    selectedKeyIngredient: null, // NY: Til at styre den nye widget
+    selectedKeyIngredient: null,
 };
 
 export function initRecipes(state, elements) {
@@ -25,7 +25,6 @@ export function initRecipes(state, elements) {
         importRecipeBtn: document.getElementById('import-recipe-btn')
     };
 
-    // Event listeners for den nye struktur
     if (appElements.cookbookAddRecipeBtn) appElements.cookbookAddRecipeBtn.addEventListener('click', openAddRecipeModal);
     if (appElements.prevRecipeBtn) appElements.prevRecipeBtn.addEventListener('click', () => navigateFlipper(-1));
     if (appElements.nextRecipeBtn) appElements.nextRecipeBtn.addEventListener('click', () => navigateFlipper(1));
@@ -38,12 +37,10 @@ export function initRecipes(state, elements) {
     });
      if (appElements.goToCalendarBtn) appElements.goToCalendarBtn.addEventListener('click', () => window.location.hash = '#calendar');
 
-    // NY: Event listener for den nye interaktive widget
     if (appElements.whatCanIMakeWidget) {
         appElements.whatCanIMakeWidget.addEventListener('click', handleWhatCanIMakeClick);
     }
 
-    // Event listeners for den (stadig eksisterende) edit-modal
     appElements.addIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
     appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
@@ -55,7 +52,6 @@ export function initRecipes(state, elements) {
     appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
     appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
 
-    // Event listeners for den (stadig eksisterende) read-view modal
     appElements.readViewPlanBtn.addEventListener('click', () => {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
@@ -80,7 +76,6 @@ export function renderRecipes() {
     renderSidebarWidgets();
 }
 
-// --- FLIPPER FUNKTIONER (uændret) ---
 function renderFlipper() {
     const container = appElements.recipeFlipper;
     if (!container) return;
@@ -137,7 +132,6 @@ function navigateFlipper(direction) {
     updateFlipperCards();
 }
 
-// --- OPSKRIFTSLISTE FUNKTIONER (uændret) ---
 function renderRecipeListPage() {
     const container = appElements.recipeListGrid;
     if (!container) return;
@@ -195,13 +189,11 @@ function renderListFilterTags() {
     });
 }
 
-// --- SIDEBAR WIDGETS ---
 function renderSidebarWidgets() {
     renderWhatCanIMakeWidget();
     renderUpcomingMealPlanWidget();
 }
 
-// NY FUNKTION: Finder de mest relevante ingredienser fra lageret.
 function findKeyIngredients() {
     const ingredientFrequency = {};
     appState.recipes.forEach(recipe => {
@@ -212,31 +204,29 @@ function findKeyIngredients() {
     });
 
     return appState.inventory
-        .filter(item => item.totalStock > 0) // Kun varer på lager
+        .filter(item => item.totalStock > 0)
         .map(item => ({
             name: item.name,
             frequency: ingredientFrequency[item.name.toLowerCase()] || 0
         }))
-        .filter(item => item.frequency > 1) // Skal indgå i mere end én opskrift
-        .sort((a, b) => b.frequency - a.frequency) // Sorter efter hyppighed
-        .slice(0, 4); // Tag de 4 mest relevante
+        .filter(item => item.frequency > 1)
+        .sort((a, b) => b.frequency - a.frequency)
+        .slice(0, 4);
 }
 
-// NY FUNKTION: Håndterer klik i den nye widget
 function handleWhatCanIMakeClick(e) {
     const keyIngredientBtn = e.target.closest('.key-ingredient-btn');
     if (keyIngredientBtn) {
         const ingredientName = keyIngredientBtn.dataset.ingredient;
         if (cookbookState.selectedKeyIngredient === ingredientName) {
-            cookbookState.selectedKeyIngredient = null; // Fravælg ved at klikke igen
+            cookbookState.selectedKeyIngredient = null;
         } else {
             cookbookState.selectedKeyIngredient = ingredientName;
         }
-        renderWhatCanIMakeWidget(); // Gen-render widget for at vise resultater
+        renderWhatCanIMakeWidget();
     }
 }
 
-// ÆNDRING: Omskrevet til den nye interaktive version
 function renderWhatCanIMakeWidget() {
     const widget = appElements.whatCanIMakeWidget;
     if (!widget) return;
@@ -266,7 +256,6 @@ function renderWhatCanIMakeWidget() {
     `;
 }
 
-// NY FUNKTION: Renderer resultaterne når en nøgleingrediens er valgt.
 function renderKeyIngredientResults() {
     if (!cookbookState.selectedKeyIngredient) {
         return '<p class="empty-state-small">Vælg en ingrediens ovenfor.</p>';
@@ -329,7 +318,6 @@ function renderUpcomingMealPlanWidget() {
     });
 }
 
-// --- EVENT HANDLERS ---
 function handleFilterTagClick(e) {
     const tagButton = e.target.closest('.filter-tag');
     if (!tagButton) return;
@@ -349,12 +337,15 @@ function handleFlipperClick(e) {
     const card = e.target.closest('.recipe-card-wrapper');
     if (!card) return;
     const recipeId = card.dataset.id;
-    const recipe = appState.recipes.find(r => r.id === recipeId);
-    if (e.target.closest('.plan-recipe-btn')) openPlanMealModal(recipeId);
-    else if (e.target.closest('.edit-recipe-btn')) {
+    if (e.target.closest('.plan-recipe-btn')) {
+        openPlanMealModal(recipeId);
+    } else if (e.target.closest('.edit-recipe-btn')) {
         appState.currentlyViewedRecipeId = recipeId;
         openEditRecipeModal();
-    } else renderReadView(recipe);
+    } else {
+        const recipe = appState.recipes.find(r => r.id === recipeId);
+        if(recipe) renderReadView(recipe);
+    }
 }
 async function handleGridClick(e) {
     const card = e.target.closest('.recipe-list-card');
@@ -370,11 +361,10 @@ async function handleGridClick(e) {
             showNotification({title: "Favorit opdateret!", message: `"${recipe.title}" er ${!isCurrentlyFavorite ? 'tilføjet til' : 'fjernet fra'} favoritter.`});
         } catch (error) { handleError(error, "Kunne ikke opdatere favoritstatus.", "toggleFavorite"); }
     } else {
-        renderReadView(recipe);
+        if(recipe) renderReadView(recipe);
     }
 }
 
-// --- MODAL & FORM FUNKTIONER (uændret) ---
 function createIngredientRow(container, ingredient = { name: '', quantity: '', unit: '', note: '' }) {
     const row = document.createElement('div');
     row.className = 'ingredient-row';
@@ -416,7 +406,10 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     });
     nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
 }
-function renderReadView(recipe) {
+
+// OPDATERING: Gør funktionen tilgængelig for andre moduler ved at tilføje 'export'
+export function renderReadView(recipe) {
+    if (!recipe) return;
     const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
     document.getElementById('read-view-image').src = imageUrl;
     document.getElementById('read-view-title').textContent = recipe.title;
@@ -461,6 +454,7 @@ function renderReadView(recipe) {
     appState.currentlyViewedRecipeId = recipe.id;
     appElements.recipeReadModal.classList.remove('hidden');
 }
+
 function parseIngredientLine(line) {
     line = line.trim();
     if (!line) return null;
@@ -709,4 +703,3 @@ function calculateRecipeMatch(recipe, inventory) {
     });
     return { ...recipe, missingCount, canBeMade };
 }
-
