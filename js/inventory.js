@@ -1,673 +1,315 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { debounce, formatDate } from './utils.js';
 
 let appState;
 let appElements;
-let onBatchSaveSuccessCallback = null;
-let inventoryState = {
+let draggedItemData = null;
+
+// Lokal state for den nye varelager-side
+const inventoryState = {
+    currentView: 'dashboard', // 'dashboard' or a specific location like 'Fryser'
     searchTerm: '',
-    referencesLoaded: false,
-    selectedMainCategory: '',
-    selectedSubCategory: '',
-    selectedStockStatus: ''
 };
-// NEW: State for impulse purchase modal
-let impulseState = {
-    selectedItem: null,
-    searchTerm: ''
+
+// Mapning af lokations-ID'er til ikoner og navne
+const locationConfig = {
+    'Køleskab': { icon: 'fa-temperature-low', name: 'Køleskab' },
+    'Fryser': { icon: 'fa-snowflake', name: 'Fryser' },
+    'Tørvarelager': { icon: 'fa-box', name: 'Tørvarelager' },
 };
 
 export function initInventory(state, elements) {
     appState = state;
     appElements = elements;
-
-    // Event Listeners for main item modal
-    appElements.addInventoryItemBtn.addEventListener('click', () => openInventoryItemModal(null));
-    appElements.inventoryItemForm.addEventListener('submit', handleSaveInventoryItem);
     
-    const deleteBtn = document.getElementById('delete-inventory-item-btn');
-    if(deleteBtn) deleteBtn.addEventListener('click', handleDeleteInventoryItem);
-    
-    // Event Listeners for conversion rules
-    const addConversionBtn = document.getElementById('add-conversion-rule-btn');
-    const conversionRulesContainer = document.getElementById('conversion-rules-container');
-    if(addConversionBtn) addConversionBtn.addEventListener('click', () => addConversionRuleRow());
-    if(conversionRulesContainer) conversionRulesContainer.addEventListener('click', e => {
-        if (e.target.closest('.delete-rule-btn')) {
-            e.target.closest('.conversion-rule-row').remove();
-        }
-    });
-
-    // Event Listeners for filtering and searching
-    appElements.inventorySearchInput.addEventListener('input', debounce(e => {
-        inventoryState.searchTerm = e.target.value.toLowerCase();
-        renderInventory();
-    }, 300));
-    appElements.inventoryFilterMainCategory.addEventListener('change', (e) => {
-        inventoryState.selectedMainCategory = e.target.value;
-        inventoryState.selectedSubCategory = ''; // Reset sub-category filter
-        populateSubCategoryFilter();
-        renderInventory();
-    });
-    appElements.inventoryFilterSubCategory.addEventListener('change', (e) => {
-        inventoryState.selectedSubCategory = e.target.value;
-        renderInventory();
-    });
-    appElements.inventoryFilterStockStatus.addEventListener('change', e => {
-        inventoryState.selectedStockStatus = e.target.value;
-        renderInventory();
-    });
-    appElements.clearInventoryFiltersBtn.addEventListener('click', () => {
-        inventoryState.selectedMainCategory = '';
-        inventoryState.selectedSubCategory = '';
-        inventoryState.selectedStockStatus = '';
-        inventoryState.searchTerm = '';
-        appElements.inventoryFilterMainCategory.value = '';
-        appElements.inventoryFilterSubCategory.value = '';
-        appElements.inventoryFilterStockStatus.value = '';
-        appElements.inventorySearchInput.value = '';
-        populateSubCategoryFilter();
-        renderInventory();
-    });
-
-    // Event Listeners for the inventory list (expanding items, editing batches)
-    appElements.inventoryListContainer.addEventListener('click', e => {
-        const button = e.target.closest('button');
-        const header = e.target.closest('.inventory-item-header');
-
-        if (button && button.classList.contains('edit-item-btn')) {
-            e.stopPropagation();
-            openInventoryItemModal(button.dataset.id);
-        } else if (header) {
-            header.parentElement.classList.toggle('is-open');
-        }
-    });
-    
-    // Event Listeners for batch management
-    const addBatchBtn = document.getElementById('add-batch-btn');
-    const batchListContainer = document.getElementById('batch-list-container');
-    const batchEditModal = document.getElementById('batch-edit-modal');
-    const batchEditForm = document.getElementById('batch-edit-form');
-    const deleteBatchBtn = document.getElementById('delete-batch-btn');
-
-    if(addBatchBtn) addBatchBtn.addEventListener('click', () => {
-        const itemId = document.getElementById('inventory-item-id').value;
-        if (itemId) {
-            openBatchModal(itemId, null);
-        } else {
-            showNotification({title: "Gem Vare Først", message: "Du skal gemme varen, før du kan tilføje et batch."});
-        }
-    });
-    if(batchListContainer) batchListContainer.addEventListener('click', e => {
-        const editBtn = e.target.closest('.edit-batch-btn');
-        if (editBtn) {
-            const itemId = editBtn.dataset.itemId;
-            const batchId = editBtn.dataset.batchId;
-            openBatchModal(itemId, batchId);
-        }
-    });
-    if(batchEditForm) batchEditForm.addEventListener('submit', handleSaveBatch);
-    if(deleteBatchBtn) deleteBatchBtn.addEventListener('click', handleDeleteBatch);
-    if (batchEditModal) {
-        batchEditModal.addEventListener('click', (e) => {
-            if (e.target.matches('.modal-overlay') || e.target.matches('.close-modal-btn')) {
-                onBatchSaveSuccessCallback = null; // Reset callback if modal is closed manually
-            }
-        });
+    // Event delegation for den nye dynamiske side
+    const pageContainer = document.getElementById('inventory');
+    if (pageContainer) {
+        pageContainer.addEventListener('click', handleInventoryPageClick);
+        
+        // Drag and Drop event listeners
+        pageContainer.addEventListener('dragstart', handleDragStart);
+        pageContainer.addEventListener('dragover', handleDragOver);
+        pageContainer.addEventListener('dragleave', handleDragLeave);
+        pageContainer.addEventListener('drop', handleDrop);
+        pageContainer.addEventListener('dragend', handleDragEnd);
     }
-
-    // Event listener for category dropdowns in modal
-    const mainCategorySelect = document.getElementById('inventory-item-main-category');
-    if (mainCategorySelect) {
-        mainCategorySelect.addEventListener('change', () => {
-            populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), mainCategorySelect.value);
-        });
-    }
-
-    // REWRITTEN: Impulse Purchase
-    appElements.impulsePurchaseBtn.addEventListener('click', openImpulsePurchaseModal);
-    appElements.impulsePurchaseForm.addEventListener('submit', handleImpulseAction);
-    const impulseSearchInput = document.getElementById('impulse-item-search');
-    if (impulseSearchInput) {
-        impulseSearchInput.addEventListener('input', debounce(handleImpulseSearch, 200));
-        impulseSearchInput.addEventListener('blur', () => {
-            // Delay hiding suggestions to allow click event to register
-            setTimeout(() => {
-                document.getElementById('impulse-item-suggestions').innerHTML = '';
-            }, 150);
-        });
-    }
-}
-
-export function setReferencesLoaded(isLoaded) {
-    inventoryState.referencesLoaded = isLoaded;
-    if (document.querySelector('#inventory:not(.hidden)')) {
-        renderInventory();
-    }
-}
-
-function populateMainCategoryFilter() {
-    const mainCategories = (appState.references.itemCategories || [])
-        .map(cat => (typeof cat === 'string' ? cat : cat.name));
-    populateReferenceDropdown(appElements.inventoryFilterMainCategory, mainCategories, 'Alle Overkategorier', inventoryState.selectedMainCategory);
-}
-
-function populateSubCategoryFilter() {
-    const mainCatName = inventoryState.selectedMainCategory;
-    const allCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = allCategories.find(cat => cat.name === mainCatName);
-    const subCategories = mainCat ? mainCat.subcategories : [];
-    populateReferenceDropdown(appElements.inventoryFilterSubCategory, subCategories, 'Alle Underkategorier', inventoryState.selectedSubCategory);
-    appElements.inventoryFilterSubCategory.disabled = !mainCatName;
 }
 
 export function renderInventory() {
-    const container = appElements.inventoryListContainer;
-    container.innerHTML = '';
+    const pageContainer = document.getElementById('inventory-page-content');
+    if (!pageContainer) return;
 
-    populateMainCategoryFilter();
-    populateSubCategoryFilter();
-
-    let inventoryItems = [...appState.inventory];
-    let totalValue = 0;
-    inventoryItems.forEach(item => {
-        item.batches.forEach(batch => {
-            totalValue += batch.price || 0;
-        });
-    });
-    document.getElementById('inventory-total-value').textContent = `${totalValue.toFixed(2).replace('.',',')} kr.`;
-
-    // Apply filters
-    if (inventoryState.selectedMainCategory) {
-        inventoryItems = inventoryItems.filter(item => item.mainCategory === inventoryState.selectedMainCategory);
-    }
-    if (inventoryState.selectedSubCategory) {
-        inventoryItems = inventoryItems.filter(item => item.subCategory === inventoryState.selectedSubCategory);
-    }
-    if (inventoryState.searchTerm) {
-        const term = inventoryState.searchTerm;
-        inventoryItems = inventoryItems.filter(item => item.name.toLowerCase().includes(term));
-    }
-    if (inventoryState.selectedStockStatus) {
-        inventoryItems = inventoryItems.filter(item => {
-            const reorderPoint = item.reorderPoint || 0;
-            const totalStock = item.totalStock || 0;
-            if (inventoryState.selectedStockStatus === 'out_of_stock') return totalStock <= 0;
-            if (inventoryState.selectedStockStatus === 'low_stock') return totalStock > 0 && totalStock <= reorderPoint;
-            if (inventoryState.selectedStockStatus === 'in_stock') return totalStock > reorderPoint;
-            return true;
+    // Byg sidens skelet, hvis det ikke allerede eksisterer
+    if (!pageContainer.querySelector('.inventory-header')) {
+        pageContainer.innerHTML = `
+            <div class="inventory-header">
+                <div id="inventory-breadcrumb"></div>
+                <div class="search-bar">
+                    <input type="text" id="inventory-live-search" placeholder="Søg i hele varelageret...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+            <div id="inventory-main-view"></div>
+        `;
+        // Tilføj event listener til den nye søgebar
+        document.getElementById('inventory-live-search').addEventListener('input', (e) => {
+            inventoryState.searchTerm = e.target.value.toLowerCase();
+            renderCurrentView(); // Gen-render den aktuelle visning med søgefilteret
         });
     }
 
-    if (inventoryItems.length === 0) {
-        container.innerHTML = `<p class="empty-state">Ingen varer fundet, der matcher dine filtre.</p>`;
-        return;
+    renderCurrentView();
+}
+
+function renderCurrentView() {
+    updateBreadcrumb();
+    if (inventoryState.currentView === 'dashboard') {
+        renderDashboardView();
+    } else {
+        renderLocationDetailView(inventoryState.currentView);
     }
+}
 
-    inventoryItems.sort((a, b) => {
-        const catA = `${a.mainCategory || ''}-${a.subCategory || ''}`;
-        const catB = `${b.mainCategory || ''}-${b.subCategory || ''}`;
-        if (catA < catB) return -1;
-        if (catA > catB) return 1;
-        return a.name.localeCompare(b.name);
-    });
+function updateBreadcrumb() {
+    const breadcrumb = document.getElementById('inventory-breadcrumb');
+    if (!breadcrumb) return;
 
-    const fragment = document.createDocumentFragment();
-    let currentMainCategory = null;
-    let currentSubCategory = null;
+    if (inventoryState.currentView === 'dashboard') {
+        breadcrumb.innerHTML = `<h3>Mit Varelager</h3>`;
+    } else {
+        breadcrumb.innerHTML = `
+            <a href="#" class="inventory-breadcrumb-link" data-view="dashboard">Mit Varelager</a>
+            <i class="fas fa-chevron-right"></i>
+            <h3>${inventoryState.currentView}</h3>
+        `;
+    }
+}
+
+function renderDashboardView() {
+    const container = document.getElementById('inventory-main-view');
+    const locations = ['Køleskab', 'Fryser', 'Tørvarelager'];
     
-    inventoryItems.forEach(item => {
-        if (item.mainCategory !== currentMainCategory) {
-            currentMainCategory = item.mainCategory;
-            const h3 = document.createElement('h3');
-            h3.textContent = currentMainCategory || 'Ukategoriseret';
-            fragment.appendChild(h3);
-            currentSubCategory = null; // Reset sub-category when main changes
-        }
-        if (item.subCategory !== currentSubCategory) {
-            currentSubCategory = item.subCategory;
-            const h4 = document.createElement('h4');
-            h4.textContent = currentSubCategory || 'Ingen underkategori';
-            fragment.appendChild(h4);
-        }
+    let locationsHTML = locations.map(loc => {
+        const itemsInLocation = appState.inventory.filter(item => item.location === loc);
+        const expiringSoon = itemsInLocation.filter(item => {
+            const daysLeft = calculateDaysLeft(item);
+            return daysLeft !== null && daysLeft <= 7;
+        }).length;
 
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'inventory-item';
+        return `
+            <div class="location-widget" data-location="${loc}">
+                <div class="location-widget-header">
+                    <i class="fas ${locationConfig[loc].icon}"></i>
+                    <h4>${locationConfig[loc].name}</h4>
+                </div>
+                <div class="location-widget-content">
+                    <p><strong>${itemsInLocation.length}</strong> vare${itemsInLocation.length !== 1 ? 'r' : ''} i alt</p>
+                    ${expiringSoon > 0 ? `<p class="expiring-soon-warning">${expiringSoon} udløber snart!</p>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
 
-        const batchesHTML = (item.batches || []).map(b => {
-            const expiryDate = b.expiryDate ? new Date(b.expiryDate) : null;
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            let expiryClass = '';
-            if (expiryDate) {
-                const sevenDaysFromNow = new Date();
-                sevenDaysFromNow.setDate(today.getDate() + 7);
-                if (expiryDate < today) expiryClass = 'status-red';
-                else if (expiryDate <= sevenDaysFromNow) expiryClass = 'status-yellow';
-            }
-            
+    // Anvend søgefilter hvis der er en søgeterm
+    if (inventoryState.searchTerm) {
+        const filteredItems = appState.inventory.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm));
+        locationsHTML = `<div class="search-results-container">${renderItemCards(filteredItems)}</div>`;
+        if (filteredItems.length === 0) {
+             locationsHTML = `<p class="empty-state">Ingen varer matchede din søgning.</p>`;
+        }
+    }
+
+    container.innerHTML = `<div class="location-dashboard-grid">${locationsHTML}</div>`;
+}
+
+function renderLocationDetailView(locationName) {
+    const container = document.getElementById('inventory-main-view');
+    let itemsInLocation = appState.inventory.filter(item => item.location === locationName);
+    
+    if (inventoryState.searchTerm) {
+        itemsInLocation = itemsInLocation.filter(item => item.name.toLowerCase().includes(inventoryState.searchTerm));
+    }
+    
+    let contentHTML = '';
+
+    if (locationName === 'Fryser') {
+        const freezerDrawers = appState.references.itemCategories
+            .find(cat => cat.name === 'Kød' || cat.name === 'Frostvarer')?.subcategories || ['Brød', 'Oksekød', 'Svin', 'Kylling', 'Grøntsager', 'Is', 'Andet'];
+        
+        const groupedByDrawer = {};
+        freezerDrawers.forEach(drawer => groupedByDrawer[drawer] = []);
+        groupedByDrawer['Andet'] = groupedByDrawer['Andet'] || [];
+
+        itemsInLocation.forEach(item => {
+            const drawer = item.subCategory && freezerDrawers.includes(item.subCategory) ? item.subCategory : 'Andet';
+            groupedByDrawer[drawer].push(item);
+        });
+
+        contentHTML = Object.entries(groupedByDrawer).map(([drawerName, items]) => {
+            const shelfLife = appState.references.freezerShelfLife?.[drawerName];
+            const shelfLifeText = shelfLife ? `<span class="shelf-life-info">Est. holdbarhed: ${shelfLife} mdr.</span>` : '';
             return `
-                <div class="batch-item">
-                    <span class="batch-info">Indkøbt: ${formatDate(b.purchaseDate)}</span>
-                    <span class="batch-info ${expiryClass}">Udløber: ${b.expiryDate ? formatDate(b.expiryDate) : 'N/A'}</span>
-                    <span class="batch-info">Antal: ${b.quantity} x ${b.size}${b.unit}</span>
-                    <span class="batch-info">Butik: ${b.store || 'N/A'}</span>
-                    <span class="batch-info">Pris: ${b.price ? `${b.price.toFixed(2)} kr.` : 'N/A'}</span>
-                    <button class="btn-icon edit-batch-btn" data-item-id="${item.id}" data-batch-id="${b.id}" title="Rediger batch"><i class="fas fa-edit"></i></button>
+                <div class="freezer-drawer" data-location="${locationName}" data-subcategory="${drawerName}">
+                    <div class="freezer-drawer-header">
+                        <h5>${drawerName}</h5>
+                        ${shelfLifeText}
+                    </div>
+                    <div class="inventory-item-grid">
+                        ${items.length > 0 ? renderItemCards(items) : '<p class="empty-state-small">Tom skuffe</p>'}
+                    </div>
                 </div>
             `;
         }).join('');
 
-        const totalStockDisplay = `${item.totalStock.toFixed(0)} ${item.defaultUnit}`;
-        
-        let stockStatusClass = 'status-green';
-        const reorderPoint = item.reorderPoint || 0;
-        if (item.totalStock <= 0) stockStatusClass = 'status-red';
-        else if (reorderPoint > 0 && item.totalStock <= reorderPoint) stockStatusClass = 'status-yellow';
+    } else {
+        contentHTML = `<div class="inventory-item-grid">${renderItemCards(itemsInLocation)}</div>`;
+    }
 
-        itemDiv.innerHTML = `
-            <div class="inventory-item-header" data-id="${item.id}">
-                <div class="inventory-item-info">
-                    <div class="inventory-item-title-group">
-                        <span class="completeness-indicator status-indicator ${stockStatusClass}" title="Lagerstatus"></span>
-                        <div>
-                            <h5>${item.name}</h5>
-                            <div class="inventory-item-location">${item.location || ''}</div>
-                        </div>
-                    </div>
+    container.innerHTML = contentHTML;
+}
+
+function renderItemCards(items) {
+    if (items.length === 0 && !inventoryState.searchTerm) {
+        return `<p class="empty-state">Der er ingen varer her.</p>`;
+    }
+    return items.map(item => {
+        const daysLeft = calculateDaysLeft(item);
+        let expiryStatus = 'ok';
+        let expiryText = '';
+
+        if (daysLeft !== null) {
+            if (daysLeft <= 0) {
+                expiryStatus = 'expired';
+                expiryText = `Udløbet for ${Math.abs(daysLeft)} dage siden`;
+            } else if (daysLeft <= 7) {
+                expiryStatus = 'soon';
+                expiryText = `Udløber om ${daysLeft} dage`;
+            } else {
+                expiryText = `Udløber ${item.batches[0].expiryDate}`;
+            }
+        }
+        
+        return `
+            <div class="inventory-item-card" draggable="true" data-item-id="${item.id}">
+                <div class="item-card-border item-card-border-${expiryStatus}"></div>
+                <div class="item-card-content">
+                    <span class="item-card-name">${item.name}</span>
+                    <span class="item-card-quantity">${item.totalStock.toFixed(0)} ${item.defaultUnit}</span>
+                    <span class="item-card-expiry">${expiryText}</span>
                 </div>
-                <div class="inventory-item-stock-info">
-                    <span>Total lager:</span>
-                    <span class="inventory-item-stock-amount">${totalStockDisplay}</span>
-                </div>
-                <div class="inventory-item-actions">
-                    <button class="btn-icon edit-item-btn" data-id="${item.id}" title="Rediger generel vareinfo"><i class="fas fa-edit"></i></button>
-                    <i class="fas fa-chevron-down expand-icon"></i>
-                </div>
-            </div>
-            <div class="batch-list">
-                ${batchesHTML || '<p class="empty-state-small">Ingen batches registreret for denne vare.</p>'}
             </div>
         `;
-        fragment.appendChild(itemDiv);
-    });
-
-    container.appendChild(fragment);
+    }).join('');
 }
 
-function openInventoryItemModal(itemId, prefillName = '') {
-    const form = appElements.inventoryItemForm;
-    form.reset();
-    document.getElementById('conversion-rules-container').innerHTML = '';
-    document.getElementById('batch-list-container').innerHTML = '';
+function calculateDaysLeft(item) {
+    if (!item.batches || item.batches.length === 0) return null;
+
+    // Find den tidligste udløbsdato
+    const earliestExpiry = item.batches
+        .map(b => b.expiryDate)
+        .filter(Boolean)
+        .sort()[0];
+
+    if (earliestExpiry) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(earliestExpiry);
+        return Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+    }
     
-    const item = itemId ? appState.inventory.find(p => p.id === itemId) : null;
-
-    const mainCategorySelect = document.getElementById('inventory-item-main-category');
-    const subCategorySelect = document.getElementById('inventory-item-sub-category');
-
-    if (item) {
-        appElements.inventoryModalTitle.textContent = 'Rediger Vare';
-        document.getElementById('inventory-item-id').value = item.id;
-        document.getElementById('inventory-item-name').value = item.name;
-        document.getElementById('inventory-item-default-unit').value = item.defaultUnit;
-        document.getElementById('inventory-item-reorder-point').value = item.reorderPoint || '';
-        document.getElementById('delete-inventory-item-btn').style.display = 'inline-flex';
-        document.getElementById('add-batch-btn').style.display = 'inline-flex';
-
-        if (item.conversion_rules) {
-            for (const unit in item.conversion_rules) {
-                addConversionRuleRow({ unit, value: item.conversion_rules[unit] });
-            }
+    // Hvis ingen udløbsdato, og varen er i fryseren, beregn estimat
+    if (item.location === 'Fryser') {
+        const shelfLifeMonths = appState.references.freezerShelfLife?.[item.subCategory];
+        if (shelfLifeMonths) {
+            const purchaseDate = new Date(item.batches[0].purchaseDate);
+            const estimatedExpiry = new Date(purchaseDate.setMonth(purchaseDate.getMonth() + shelfLifeMonths));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return Math.ceil((estimatedExpiry - today) / (1000 * 60 * 60 * 24));
         }
-        renderBatchListInModal(item.batches);
-    } else {
-        appElements.inventoryModalTitle.textContent = 'Opret Ny Vare';
-        document.getElementById('inventory-item-id').value = '';
-        document.getElementById('inventory-item-name').value = prefillName; // Prefill name for new items
-        document.getElementById('delete-inventory-item-btn').style.display = 'none';
-        document.getElementById('add-batch-btn').style.display = 'none';
-        document.getElementById('batch-list-container').innerHTML = '<p class="empty-state-small">Gem varen for at kunne tilføje batches.</p>';
     }
-    
-    populateMainCategoryDropdown(mainCategorySelect, item?.mainCategory);
-    populateSubCategoryDropdown(subCategorySelect, item?.mainCategory, item?.subCategory);
-    populateReferenceDropdown(document.getElementById('inventory-item-location'), appState.references.itemLocations, 'Vælg placering...', item?.location);
-    
-    appElements.inventoryItemModal.classList.remove('hidden');
+
+    return null;
 }
 
-function renderBatchListInModal(batches) {
-    const container = document.getElementById('batch-list-container');
-    if (!batches || batches.length === 0) {
-        container.innerHTML = '<p class="empty-state-small">Ingen batches registreret.</p>';
-        return;
-    }
-    container.innerHTML = batches.map(b => `
-         <div class="batch-item">
-            <span class="batch-info">Udløber: ${b.expiryDate ? formatDate(b.expiryDate) : 'N/A'}</span>
-            <span class="batch-info">Antal: ${b.quantity} x ${b.size}${b.unit}</span>
-            <button class="btn-icon edit-batch-btn" data-item-id="${b.itemId}" data-batch-id="${b.id}" title="Rediger batch"><i class="fas fa-edit"></i></button>
-        </div>
-    `).join('');
-}
-
-async function handleSaveInventoryItem(e) {
-    e.preventDefault();
-    const itemId = document.getElementById('inventory-item-id').value;
-    const userId = appState.currentUser.uid;
-    const itemName = document.getElementById('inventory-item-name').value.trim();
-
-    const conversionRules = {};
-    document.getElementById('conversion-rules-container').querySelectorAll('.conversion-rule-row').forEach(row => {
-        const unit = row.querySelector('.rule-unit-select').value;
-        const value = parseFloat(row.querySelector('.rule-value-input').value);
-        if (unit && value > 0) {
-            conversionRules[unit] = value;
-        }
-    });
-
-    const itemData = {
-        name: itemName,
-        mainCategory: document.getElementById('inventory-item-main-category').value,
-        subCategory: document.getElementById('inventory-item-sub-category').value,
-        location: document.getElementById('inventory-item-location').value,
-        defaultUnit: document.getElementById('inventory-item-default-unit').value,
-        reorderPoint: Number(document.getElementById('inventory-item-reorder-point').value) || null,
-        conversion_rules: conversionRules,
-        userId: userId
-    };
-
-    if (!itemData.name || !itemData.mainCategory || !itemData.subCategory) {
-        handleError(new Error("Udfyld venligst alle påkrævede felter for varen."), "Ufuldstændige data: Navn og kategorier er påkrævet.");
-        return null; // Return null on failure
-    }
-
-    try {
-        let savedItemId = itemId;
-        if (itemId) {
-            await updateDoc(doc(db, 'inventory_items', itemId), itemData);
-        } else {
-            const newDocRef = await addDoc(collection(db, 'inventory_items'), itemData);
-            savedItemId = newDocRef.id;
-            document.getElementById('inventory-item-id').value = savedItemId;
-            document.getElementById('add-batch-btn').style.display = 'inline-flex';
-            document.getElementById('batch-list-container').innerHTML = '';
-        }
-        
-        showNotification({ title: 'Gemt!', message: 'Varens generelle informationer er blevet gemt.' });
-        return savedItemId; // Return the ID of the saved item
-
-    } catch (error) {
-        handleError(error, "Der opstod en fejl under lagring af varen.", "handleSaveInventoryItem");
-        return null; // Return null on failure
-    }
-}
-
-async function handleDeleteInventoryItem() {
-    const itemId = document.getElementById('inventory-item-id').value;
-    if (!itemId) return;
-
-    const confirmed = await showNotification({
-        title: "Slet Vare",
-        message: "Er du sikker på du vil slette denne vare og ALLE dens batches? Handlingen kan ikke fortrydes.",
-        type: 'confirm'
-    });
-
-    if (!confirmed) return;
-
-    try {
-        const batch = writeBatch(db);
-        batch.delete(doc(db, 'inventory_items', itemId));
-        const q = query(collection(db, 'inventory_batches'), where("itemId", "==", itemId));
-        const batchSnapshot = await getDocs(q);
-        batchSnapshot.forEach(doc => batch.delete(doc.ref));
-
-        await batch.commit();
-        appElements.inventoryItemModal.classList.add('hidden');
-        showNotification({ title: 'Slettet', message: 'Varen og alle dens batches er blevet slettet.' });
-    } catch (error) {
-        handleError(error, "Varen kunne ikke slettes.", "handleDeleteInventoryItem");
-    }
-}
-
-// Batch Management Functions
-export function openBatchModal(itemId, batchId, onSaveSuccess) {
-    onBatchSaveSuccessCallback = onSaveSuccess || null;
-    const form = document.getElementById('batch-edit-form');
-    form.reset();
-    
-    const item = appState.inventory.find(i => i.id === itemId);
-    if (!item) {
-        handleError(new Error("Vare ikke fundet"), "Kan ikke åbne batch-modal, da varen ikke findes.");
+function handleInventoryPageClick(e) {
+    const widget = e.target.closest('.location-widget');
+    if (widget) {
+        inventoryState.currentView = widget.dataset.location;
+        renderCurrentView();
         return;
     }
 
-    const batch = batchId ? appState.inventoryBatches.find(b => b.id === batchId) : null;
-
-    document.getElementById('batch-edit-item-id').value = itemId;
-    document.getElementById('batch-edit-unit').value = item.defaultUnit || 'stk';
-    document.getElementById('batch-edit-size-unit').textContent = item.defaultUnit || 'stk';
-    
-    const modal = document.getElementById('batch-edit-modal');
-    if (batch) {
-        modal.querySelector('h3').textContent = `Rediger Batch for ${item.name}`;
-        document.getElementById('batch-edit-batch-id').value = batch.id;
-        document.getElementById('batch-edit-purchase-date').value = batch.purchaseDate || formatDate(new Date());
-        document.getElementById('batch-edit-expiry-date').value = batch.expiryDate || '';
-        document.getElementById('batch-edit-quantity').value = batch.quantity || 1;
-        document.getElementById('batch-edit-size').value = batch.size || '';
-        document.getElementById('batch-edit-price').value = batch.price || '';
-        document.getElementById('delete-batch-btn').style.display = 'inline-flex';
-    } else {
-        modal.querySelector('h3').textContent = `Nyt Batch for ${item.name}`;
-        document.getElementById('batch-edit-batch-id').value = '';
-        document.getElementById('batch-edit-purchase-date').value = formatDate(new Date());
-        document.getElementById('delete-batch-btn').style.display = 'none';
-    }
-
-    populateReferenceDropdown(document.getElementById('batch-edit-store'), appState.references.stores, 'Vælg butik...', batch?.store);
-    modal.classList.remove('hidden');
-}
-
-async function handleSaveBatch(e) {
-    e.preventDefault();
-    const itemId = document.getElementById('batch-edit-item-id').value;
-    const batchId = document.getElementById('batch-edit-batch-id').value;
-    
-    const batchData = {
-        itemId: itemId,
-        userId: appState.currentUser.uid,
-        purchaseDate: document.getElementById('batch-edit-purchase-date').value,
-        expiryDate: document.getElementById('batch-edit-expiry-date').value || null,
-        quantity: Number(document.getElementById('batch-edit-quantity').value),
-        size: Number(document.getElementById('batch-edit-size').value),
-        unit: document.getElementById('batch-edit-unit').value,
-        price: Number(document.getElementById('batch-edit-price').value) || null,
-        store: document.getElementById('batch-edit-store').value,
-    };
-
-    if (!batchData.purchaseDate || batchData.quantity <= 0 || batchData.size <= 0 || !batchData.store) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Sørg for at indkøbsdato, antal, størrelse og butik er udfyldt korrekt."});
+    const breadcrumbLink = e.target.closest('.inventory-breadcrumb-link');
+    if (breadcrumbLink) {
+        e.preventDefault();
+        inventoryState.currentView = breadcrumbLink.dataset.view;
+        renderCurrentView();
         return;
     }
+}
 
-    try {
-        let newBatchId;
-        if (batchId) {
-            await updateDoc(doc(db, 'inventory_batches', batchId), batchData);
-        } else {
-            const newDocRef = await addDoc(collection(db, 'inventory_batches'), batchData);
-            newBatchId = newDocRef.id;
-        }
-        
-        // Expense logging is now handled by the new economy module.
-        // The user should register the purchase manually there for a better overview.
-
-        document.getElementById('batch-edit-modal').classList.add('hidden');
-        showNotification({title: "Batch Gemt", message: "Dit batch er blevet gemt."});
-
-        if (onBatchSaveSuccessCallback) {
-            onBatchSaveSuccessCallback(itemId);
-        }
-        onBatchSaveSuccessCallback = null; // Reset callback
-    } catch (error) {
-        handleError(error, "Batchet kunne ikke gemmes.", "handleSaveBatch");
+// --- Drag and Drop Handlers ---
+function handleDragStart(e) {
+    const itemCard = e.target.closest('.inventory-item-card');
+    if (itemCard) {
+        draggedItemData = { itemId: itemCard.dataset.itemId };
+        e.dataTransfer.effectAllowed = 'move';
+        // Gør det lidt gennemsigtigt
+        setTimeout(() => itemCard.classList.add('dragging'), 0);
     }
 }
 
-async function handleDeleteBatch() {
-    const batchId = document.getElementById('batch-edit-batch-id').value;
-    if (!batchId) return;
-
-    const confirmed = await showNotification({title: "Slet Batch", message: "Er du sikker på du vil slette dette batch?", type: 'confirm'});
-    if (!confirmed) return;
-
-    try {
-        await deleteDoc(doc(db, 'inventory_batches', batchId));
-        document.getElementById('batch-edit-modal').classList.add('hidden');
-        showNotification({title: "Batch Slettet", message: "Batchet er blevet fjernet fra lageret."});
-    } catch (error) {
-        handleError(error, "Batchet kunne ikke slettes.", "handleDeleteBatch");
-    }
-}
-
-// Helper functions
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
-}
-
-function populateMainCategoryDropdown(selectElement, currentValue) {
-    const mainCategories = (appState.references.itemCategories || [])
-        .map(cat => (typeof cat === 'string' ? cat : cat.name)); // Handle both formats
-    populateReferenceDropdown(selectElement, mainCategories, 'Vælg overkategori...', currentValue);
-}
-
-function populateSubCategoryDropdown(selectElement, mainCategoryName, currentValue) {
-    const allCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
-    const mainCat = allCategories.find(cat => cat.name === mainCategoryName);
-    const subCategories = mainCat ? mainCat.subcategories : [];
-    populateReferenceDropdown(selectElement, subCategories, 'Vælg underkategori...', currentValue);
-    selectElement.disabled = !mainCategoryName;
-}
-
-function addConversionRuleRow(rule = { unit: '', value: '' }) {
-    const container = document.getElementById('conversion-rules-container');
-    const row = document.createElement('div');
-    row.className = 'conversion-rule-row';
-
-    const unitSelect = document.createElement('select');
-    unitSelect.className = 'rule-unit-select';
-    const allUnits = (appState.references.standardUnits || []).filter(u => u !== document.getElementById('inventory-item-default-unit').value);
-    populateReferenceDropdown(unitSelect, allUnits, 'Vælg enhed', rule.unit);
-
-    row.innerHTML = `
-        <div class="input-group">
-            <input type="number" class="rule-quantity-input" value="1" disabled>
-        </div>
-        <div class="input-group">
-        </div>
-        <span>=</span>
-        <div class="input-group">
-            <input type="number" class="rule-value-input" placeholder="Værdi" value="${rule.value || ''}">
-        </div>
-        <span class="rule-base-unit-label">${document.getElementById('inventory-item-default-unit').value}</span>
-        <button type="button" class="btn-icon delete-rule-btn" title="Fjern regel"><i class="fas fa-trash"></i></button>
-    `;
-    row.querySelector('.input-group:nth-child(2)').appendChild(unitSelect);
-    container.appendChild(row);
-}
-
-// REWRITTEN: Impulse Purchase Functions
-function openImpulsePurchaseModal() {
-    impulseState = { selectedItem: null, searchTerm: '' };
-    appElements.impulsePurchaseForm.reset();
-    updateImpulseActionButton();
-    appElements.impulsePurchaseModal.classList.remove('hidden');
-    document.getElementById('impulse-item-search').focus();
-}
-
-function handleImpulseSearch(e) {
-    const searchTerm = e.target.value.toLowerCase();
-    impulseState.searchTerm = e.target.value;
-    impulseState.selectedItem = null; // Reset selection on new input
-    
-    const suggestionsContainer = document.getElementById('impulse-item-suggestions');
-    suggestionsContainer.innerHTML = '';
-    
-    if (searchTerm.length > 0) {
-        const matchingItems = appState.inventoryItems
-            .filter(item => item.name.toLowerCase().includes(searchTerm));
-        
-        matchingItems.slice(0, 5).forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'autocomplete-suggestion';
-            div.textContent = item.name;
-            div.addEventListener('mousedown', () => selectImpulseItem(item));
-            suggestionsContainer.appendChild(div);
-        });
-    }
-    updateImpulseActionButton();
-}
-
-function selectImpulseItem(item) {
-    impulseState.selectedItem = item;
-    impulseState.searchTerm = item.name;
-    document.getElementById('impulse-item-search').value = item.name;
-    document.getElementById('impulse-item-suggestions').innerHTML = '';
-    updateImpulseActionButton();
-}
-
-function updateImpulseActionButton() {
-    const btn = document.getElementById('impulse-action-btn');
-    if (impulseState.selectedItem) {
-        btn.textContent = 'Tilføj Batch til Lager';
-        btn.disabled = false;
-    } else if (impulseState.searchTerm.length > 1) {
-        btn.textContent = `Opret "${impulseState.searchTerm}" & Tilføj Batch`;
-        btn.disabled = false;
-    } else {
-        btn.textContent = 'Søg efter en vare';
-        btn.disabled = true;
-    }
-}
-
-async function handleImpulseAction(e) {
+function handleDragOver(e) {
     e.preventDefault();
-    appElements.impulsePurchaseModal.classList.add('hidden');
-
-    if (impulseState.selectedItem) {
-        // Case 1: Existing item selected -> Open "Add Batch" modal
-        openBatchModal(impulseState.selectedItem.id, null);
-    } else if (impulseState.searchTerm) {
-        // Case 2: New item typed -> Open "Create Item" modal, then "Add Batch"
-        
-        // Temporarily override the inventory item form's submit handler
-        const originalOnSubmit = appElements.inventoryItemForm.onsubmit;
-        
-        const onSaveAndAddBatch = async (event) => {
-            event.preventDefault();
-            const newItemId = await handleSaveInventoryItem(event);
-            
-            // Restore original handler
-            appElements.inventoryItemForm.onsubmit = originalOnSubmit;
-            
-            if (newItemId) {
-                appElements.inventoryItemModal.classList.add('hidden');
-                openBatchModal(newItemId, null);
-            }
-        };
-        
-        appElements.inventoryItemForm.onsubmit = onSaveAndAddBatch;
-        
-        // Open the "Add Item" modal with the name pre-filled
-        openInventoryItemModal(null, impulseState.searchTerm);
+    const dropZone = e.target.closest('.location-widget, .freezer-drawer');
+    if (dropZone) {
+        dropZone.classList.add('drag-over');
     }
+}
+
+function handleDragLeave(e) {
+    const dropZone = e.target.closest('.location-widget, .freezer-drawer');
+    if (dropZone) {
+        dropZone.classList.remove('drag-over');
+    }
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    const dropZone = e.target.closest('.location-widget, .freezer-drawer');
+    if (!dropZone || !draggedItemData) return;
+
+    dropZone.classList.remove('drag-over');
+    
+    const targetLocation = dropZone.dataset.location;
+    const targetSubCategory = dropZone.dataset.subcategory || null;
+
+    const itemRef = doc(db, 'inventory_items', draggedItemData.itemId);
+    const updateData = { location: targetLocation };
+    if (targetSubCategory) {
+        updateData.subCategory = targetSubCategory;
+    }
+
+    try {
+        await updateDoc(itemRef, updateData);
+        showNotification({title: "Vare flyttet", message: "Placeringen er opdateret."});
+    } catch (error) {
+        handleError(error, "Kunne ikke flytte varen.", "moveInventoryItem");
+    }
+
+    draggedItemData = null;
+}
+
+function handleDragEnd(e) {
+    const draggedCard = document.querySelector('.inventory-item-card.dragging');
+    if (draggedCard) {
+        draggedCard.classList.remove('dragging');
+    }
+    draggedItemData = null;
 }
