@@ -6,7 +6,7 @@ import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
 import { openShoppingListModal } from './shoppingList.js';
 import { renderReadView } from './recipes.js';
-import { openEventModal } from './events.js'; // Importer funktionen
+import { openEventModal, handleDeleteEvent } from './events.js'; // Importer nye funktioner
 
 let appState;
 let appElements;
@@ -173,11 +173,6 @@ function renderSidebarSection(startOfWeek) {
     `;
 }
 
-/**
- * OPDATERET: Skaber HTML for "Ugens Aftaler" widget med nyt design og "Tilføj"-knap.
- * @param {Date} startOfWeek - Startdato for ugen.
- * @returns {string} - HTML-strengen for widget'en.
- */
 function createWeeklyEventsWidgetHTML(startOfWeek) {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -196,11 +191,15 @@ function createWeeklyEventsWidgetHTML(startOfWeek) {
             const dayName = new Date(event.date).toLocaleDateString('da-DK', { weekday: 'long' });
             const icon = getIconForCategory(event.category);
             return `
-                <li class="sidebar-event-card">
+                <li class="sidebar-event-card" data-id="${event.id}">
                     <div class="sidebar-event-icon event-${event.category.toLowerCase()}"><i class="fas ${icon}"></i></div>
                     <div class="sidebar-event-content">
                         <span class="sidebar-event-title">${event.title}</span>
                         <span class="sidebar-event-subtitle">${dayName}</span>
+                    </div>
+                    <div class="sidebar-event-actions">
+                        <button class="btn-icon btn-small edit-event-btn" title="Rediger"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-small delete-event-btn" title="Slet"><i class="fas fa-trash"></i></button>
                     </div>
                 </li>
             `;
@@ -218,10 +217,6 @@ function createWeeklyEventsWidgetHTML(startOfWeek) {
     `;
 }
 
-/**
- * OPDATERET: Skaber HTML for "Ugens To-Do's" widget med nyt design og "Tilføj"-knap.
- * @returns {string} - HTML-strengen for widget'en.
- */
 function createWeeklyTodosWidgetHTML() {
     const upcomingTodos = (appState.events || [])
         .filter(event => event.category === 'To-do' && !event.isComplete)
@@ -242,6 +237,10 @@ function createWeeklyTodosWidgetHTML() {
                              <span class="sidebar-event-subtitle">${dayName}</span>
                         </div>
                     </label>
+                    <div class="sidebar-event-actions">
+                        <button class="btn-icon btn-small edit-event-btn" title="Rediger"><i class="fas fa-edit"></i></button>
+                        <button class="btn-icon btn-small delete-event-btn" title="Slet"><i class="fas fa-trash"></i></button>
+                    </div>
                 </li>
             `;
         }).join('');
@@ -296,24 +295,41 @@ function handleMealPlanClick(e) {
     }
 }
 
-/**
- * OPDATERET: Håndterer klik i sidebar, inkl. de nye "Tilføj"-knapper.
- * @param {Event} e - Klik-event.
- */
 async function handleSidebarClick(e) {
+    // Knap til at åbne indkøbsliste
     if (e.target.closest('#widget-open-shopping-list-btn')) {
         openShoppingListModal('groceries');
     }
 
+    // Knap til at tilføje ny begivenhed/to-do
     const addBtn = e.target.closest('.add-event-widget-btn');
     if (addBtn) {
         const category = addBtn.dataset.category;
         const startOfWeek = getStartOfWeek(appState.currentDate);
-        // Åbner modalen med den korrekte kategori forudvalgt og startdatoen for den viste uge
         openEventModal(formatDate(startOfWeek), null, category);
         return;
     }
 
+    // Knap til at slette en begivenhed/to-do
+    const deleteBtn = e.target.closest('.delete-event-btn');
+    if (deleteBtn) {
+        const eventId = deleteBtn.closest('[data-id]').dataset.id;
+        await handleDeleteEvent(eventId);
+        return;
+    }
+
+    // Knap til at redigere en begivenhed/to-do
+    const editBtn = e.target.closest('.edit-event-btn');
+    if (editBtn) {
+        const eventId = editBtn.closest('[data-id]').dataset.id;
+        const eventData = appState.events.find(event => event.id === eventId);
+        if (eventData) {
+            openEventModal(null, eventData);
+        }
+        return;
+    }
+
+    // Checkbox for at fuldføre en to-do
     const todoCheckbox = e.target.closest('.todo-item input[type="checkbox"]');
     if (todoCheckbox) {
         const todoItemElement = todoCheckbox.closest('.todo-item');
@@ -504,23 +520,26 @@ async function moveMealInFirestore(source, target) {
             const mealIndex = sourceMeals.findIndex(m => m.id === source.mealId);
 
             if (mealIndex === -1) {
-                return;
+                throw new Error("Måltid, der skulle flyttes, blev ikke fundet.");
             }
             
             const [mealToMove] = sourceMeals.splice(mealIndex, 1);
-
-            if (!planData[source.sourceDate]) planData[source.sourceDate] = {};
-            planData[source.sourceDate][source.sourceMealType] = sourceMeals;
-            if (planData[source.sourceDate][source.sourceMealType].length === 0) {
-                delete planData[source.sourceDate][source.sourceMealType];
-            }
-            if (Object.keys(planData[source.sourceDate]).length === 0) {
-                delete planData[source.sourceDate];
-            }
             
             if (!planData[target.date]) planData[target.date] = {};
-            planData[target.date][target.mealType] = [mealToMove];
-
+            if (!planData[target.date][target.mealType]) planData[target.date][target.mealType] = [];
+            planData[target.date][target.mealType].push(mealToMove);
+            
+            if (sourceMeals.length === 0) {
+                 if (planData[source.sourceDate]) {
+                    delete planData[source.sourceDate][source.sourceMealType];
+                    if (Object.keys(planData[source.sourceDate]).length === 0) {
+                        delete planData[source.sourceDate];
+                    }
+                }
+            } else {
+                 planData[source.sourceDate][source.sourceMealType] = sourceMeals;
+            }
+            
             transaction.set(mealPlanRef, planData);
         });
 
@@ -529,6 +548,7 @@ async function moveMealInFirestore(source, target) {
         handleError(error, "Kunne ikke flytte måltidet.", "moveMealInFirestore");
     }
 }
+
 
 async function handleDeleteMeal(mealId, date, mealType) {
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
