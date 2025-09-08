@@ -186,6 +186,11 @@ hr {
 }
 .btn-icon:hover:not(:disabled) { background-color: #eee; color: var(--accent-color); }
 .btn-icon:disabled { color: #ccc; cursor: not-allowed; }
+.btn-icon.btn-small {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+}
 
 /* ===== 4. App Layout (Header & Main) ===== */
 #app-container {
@@ -560,6 +565,7 @@ header {
     align-items: center;
     gap: var(--spacing-m);
     font-weight: 500;
+    flex-grow: 1;
 }
 .todo-item .custom-checkbox {
     width: 20px;
@@ -586,7 +592,8 @@ header {
     transform: translate(-50%, -50%);
     font-size: 12px;
 }
-.todo-item input[type="checkbox"]:checked ~ .todo-text {
+.todo-item input[type="checkbox"]:checked ~ .sidebar-event-text .sidebar-event-title,
+.todo-item input[type="checkbox"]:checked ~ .sidebar-event-text .sidebar-event-subtitle {
     text-decoration: line-through;
     color: #aaa;
 }
@@ -2916,12 +2923,12 @@ input:checked + .slider:before { transform: translateX(22px); }
     opacity: 0;
     transform: scale(0.8);
     transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: none; /* Skjult som standard */
+    pointer-events: none;
 }
 .meal-card:hover .delete-meal-btn {
     opacity: 1;
     transform: scale(1);
-    pointer-events: all; /* Synlig ved hover */
+    pointer-events: all;
 }
 .delete-meal-btn:hover {
     background-color: #C62828;
@@ -2949,10 +2956,82 @@ input:checked + .slider:before { transform: translateX(22px); }
     font-size: 0.9em;
 }
 
-/* Farver for begivenheds-piller */
-.event-fødselsdag { background-color: #fce4ec; color: #c2185b; } /* Lyserød */
-.event-aftale { background-color: #e3f2fd; color: #1565c0; } /* Blå */
-.event-to-do { background-color: #fff8e1; color: #f57f17; } /* Gul */
-.event-udgivelse { background-color: #f3e5f5; color: #6a1b9a; } /* Lilla */
-.event-andet { background-color: #eceff1; color: #37474f; } /* Grå */
+.event-fødselsdag { background-color: #fce4ec; color: #c2185b; }
+.event-aftale { background-color: #e3f2fd; color: #1565c0; }
+.event-to-do { background-color: #fff8e1; color: #f57f17; }
+.event-udgivelse { background-color: #f3e5f5; color: #6a1b9a; }
+.event-andet { background-color: #eceff1; color: #37474f; }
 
+/* =================================================================
+   NYE STYLES: Kalender Sidebar Redesign
+   ================================================================= */
+
+.widget-card .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m); /* Genbrugt fra tidligere */
+}
+.widget-card .widget-header h4 {
+    margin: 0;
+}
+.widget-card .add-event-widget-btn {
+    color: var(--accent-color);
+    background-color: var(--secondary-color);
+}
+.widget-card .add-event-widget-btn:hover {
+    background-color: #e4e0d8;
+    color: var(--text-color);
+}
+
+.sidebar-event-card {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    background-color: var(--light-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+}
+
+.sidebar-event-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.2rem;
+}
+/* Farver for ikoner i sidebar */
+.sidebar-event-icon.event-fødselsdag { background-color: #fce4ec; color: #c2185b; }
+.sidebar-event-icon.event-aftale { background-color: #e3f2fd; color: #1565c0; }
+.sidebar-event-icon.event-udgivelse { background-color: #f3e5f5; color: #6a1b9a; }
+.sidebar-event-icon.event-andet { background-color: #eceff1; color: #37474f; }
+
+.sidebar-event-content {
+    flex-grow: 1;
+}
+.sidebar-event-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-color);
+    display: block;
+}
+.sidebar-event-subtitle {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Specifik styling for To-Do kort for at integrere checkbox */
+.sidebar-event-card.todo-item {
+    padding: 0; /* Fjern padding for at label kan fylde hele kortet */
+}
+.sidebar-event-card.todo-item .sidebar-event-content {
+    padding: var(--spacing-m);
+}
+.sidebar-event-card.todo-item .sidebar-event-text {
+    display: flex;
+    flex-direction: column;
+}
