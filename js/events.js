@@ -7,20 +7,14 @@ import { formatDate } from './utils.js';
 
 let appState;
 
-/**
- * Initializes the personal events module by setting up permanent event listeners.
- * @param {object} state - The global app state.
- */
 export function initEvents(state) {
     appState = state;
     
-    // Find the form and attach the submit listener once.
     const eventFormElement = document.getElementById('event-form');
     if (eventFormElement) {
         eventFormElement.addEventListener('submit', handleSaveEvent);
     }
     
-    // Attach the change listener for the dropdown once.
     const eventTypeSelect = document.getElementById('event-type');
     if (eventTypeSelect) {
         eventTypeSelect.addEventListener('change', toggleEventTypeFields);
@@ -28,11 +22,12 @@ export function initEvents(state) {
 }
 
 /**
- * Opens the modal to add or edit a personal event.
- * @param {string} [date] - Optional date to pre-fill.
- * @param {object} [eventData] - Optional event data for editing.
+ * OPDATERET: Åbner modal for at tilføje/redigere en begivenhed, med mulighed for at forudvælge kategori.
+ * @param {string} [date] - Valgfri dato til forudfyldning.
+ * @param {object} [eventData] - Valgfri begivenhedsdata til redigering.
+ * @param {string} [defaultCategory] - Valgfri kategori til forudvælgelse (f.eks. 'Aftale' eller 'To-do').
  */
-export function openEventModal(date, eventData = null) {
+export function openEventModal(date, eventData = null, defaultCategory = null) {
     const modal = document.getElementById('event-modal');
     const form = document.getElementById('event-form');
     const modalTitle = document.getElementById('event-modal-title');
@@ -45,15 +40,29 @@ export function openEventModal(date, eventData = null) {
     form.reset();
 
     if (eventData) {
-        // Editing an existing event
+        // Redigering
         modalTitle.textContent = 'Rediger Begivenhed';
         document.getElementById('event-id').value = eventData.id;
         document.getElementById('event-title').value = eventData.title;
         document.getElementById('event-date').value = eventData.date;
         document.getElementById('event-type').value = eventData.category;
         
-        toggleEventTypeFields();
-        
+    } else {
+        // Ny begivenhed
+        modalTitle.textContent = 'Tilføj Begivenhed';
+        document.getElementById('event-id').value = '';
+        document.getElementById('event-date').value = date || formatDate(new Date());
+        // Forudvælg kategori hvis angivet
+        if (defaultCategory) {
+            document.getElementById('event-type').value = defaultCategory;
+        }
+    }
+
+    // Kald altid denne for at sikre, at de korrekte felter vises
+    toggleEventTypeFields();
+
+    // Sørg for at felter for redigering bliver udfyldt efter toggleEventTypeFields er kørt
+    if (eventData) {
         setTimeout(() => {
             if (eventData.category === 'Fødselsdag') {
                 document.getElementById('event-birthday-name').value = eventData.name || '';
@@ -68,26 +77,17 @@ export function openEventModal(date, eventData = null) {
                 if (checkbox) checkbox.checked = true;
             }
         }, 0);
-        
-    } else {
-        // Adding a new event
-        modalTitle.textContent = 'Tilføj Begivenhed';
-        document.getElementById('event-id').value = '';
-        document.getElementById('event-date').value = date || formatDate(new Date());
-        toggleEventTypeFields();
     }
 
     modal.classList.remove('hidden');
 }
 
-/**
- * Shows or hides specific form fields based on the selected event type.
- */
+
 function toggleEventTypeFields() {
     const eventTypeSelect = document.getElementById('event-type');
     const specificFieldsContainer = document.getElementById('event-type-specific-fields');
     const eventTitleGroup = document.getElementById('event-title-group');
-    const eventTitleInput = document.getElementById('event-title'); // Get the input itself
+    const eventTitleInput = document.getElementById('event-title');
 
     if (!eventTypeSelect || !specificFieldsContainer || !eventTitleGroup || !eventTitleInput) {
         return;
@@ -96,7 +96,6 @@ function toggleEventTypeFields() {
     const category = eventTypeSelect.value;
     const isTitleHidden = ['Fødselsdag', 'Udgivelse'].includes(category);
 
-    // FIX: Toggle visibility AND the 'required' attribute simultaneously.
     eventTitleGroup.classList.toggle('hidden', isTitleHidden);
     eventTitleInput.required = !isTitleHidden;
     
@@ -147,10 +146,6 @@ function toggleEventTypeFields() {
     specificFieldsContainer.innerHTML = specificHTML;
 }
 
-/**
- * Handles saving an event from the modal form.
- * @param {Event} e - The form submission event.
- */
 async function handleSaveEvent(e) {
     e.preventDefault();
     const eventId = document.getElementById('event-id').value;
@@ -185,8 +180,6 @@ async function handleSaveEvent(e) {
         eventData.isComplete = document.getElementById('event-is-complete')?.checked || false;
     }
 
-    // The main title is now only required if it's visible.
-    // The specific fields for Birthday/Release have their own 'required' attributes.
     if (!eventData.date || !eventData.category) {
         showNotification({ title: "Udfyld påkrævede felter", message: "Dato og kategori skal altid være udfyldt." });
         return;
