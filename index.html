@@ -166,9 +166,6 @@
                 </div>
             </section>
             
-            <!-- ====================================================== -->
-            <!-- START PÅ OPDATERET KOGEBOG-SEKTION                      -->
-            <!-- ====================================================== -->
             <section id="recipes" class="page hidden">
                 <div class="cookbook-layout">
                     <main class="cookbook-main">
@@ -225,50 +222,61 @@
                     </aside>
                 </div>
             </section>
-            <!-- ====================================================== -->
-            <!-- SLUT PÅ OPDATERET KOGEBOG-SEKTION                       -->
-            <!-- ====================================================== -->
-
 
             <section id="inventory" class="page hidden">
-                <h2>Varelager</h2>
-                 <div class="actions-bar">
-                    <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
-                    <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
-                    <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
+                <!-- ====================================================== -->
+                <!-- START PÅ NYT VARELAGER-DESIGN                         -->
+                <!-- ====================================================== -->
+                <div class="inventory-page-layout">
+                    <!-- SIDEBAR -->
+                    <aside class="inventory-sidebar" id="inventory-sidebar">
+                        <div class="sidebar-widget">
+                            <h3>Handlinger</h3>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <button class="btn btn-primary" id="inventory-impulse-purchase-btn"><i class="fas fa-bolt"></i> Hurtigt Køb / Batch</button>
+                                <button class="btn btn-secondary" id="inventory-reorder-assistant-btn"><i class="fas fa-magic-wand-sparkles"></i> Genbestillings-assistent</button>
+                                <button class="btn btn-accent" id="inventory-use-in-cookbook-btn"><i class="fas fa-utensils"></i> Brug på lager i Kogebog</button>
+                            </div>
+                        </div>
+
+                        <!-- FAVORITVARER WIDGET -->
+                        <div class="sidebar-widget">
+                            <h3><i class="fas fa-star" style="color: gold;"></i> Favoritvarer</h3>
+                            <ul class="favorite-item-list" id="favorite-items-list">
+                                <!-- Indhold genereres af inventory.js -->
+                            </ul>
+                        </div>
+
+                        <div class="sidebar-widget">
+                            <h3>Filtre & Oversigt</h3>
+                            <div class="input-group">
+                                <label for="inventory-search">Søg i varelager</label>
+                                <input type="text" id="inventory-search" placeholder="Søg efter navn...">
+                            </div>
+                            <div class="input-group">
+                                <label for="inventory-main-cat-filter">Kategori</label>
+                                <select id="inventory-main-cat-filter">
+                                    <!-- Indhold genereres af inventory.js -->
+                                </select>
+                            </div>
+                             <div class="summary-line" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                                <span>Total Lagerværdi:</span>
+                                <span class="value" id="inventory-total-value-display">0,00 kr.</span>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- HOVEDINDHOLD -->
+                    <main class="inventory-main-content">
+                        <h1>Varelager</h1>
+                        <div id="inventory-main-content-container">
+                            <!-- Indhold genereres af inventory.js -->
+                        </div>
+                    </main>
                 </div>
-                <div class="inventory-dashboard">
-                    <div class="inventory-summary-bar">
-                        <span>Total Lagerværdi:</span>
-                        <span id="inventory-total-value">0,00 kr.</span>
-                    </div>
-                    <div class="inventory-controls">
-                        <div class="search-bar">
-                            <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
-                            <i class="fas fa-search"></i>
-                        </div>
-                    </div>
-                    <div class="inventory-filters">
-                        <div class="input-group">
-                            <label for="inventory-filter-main-category">Overkategori</label>
-                            <select id="inventory-filter-main-category"></select>
-                        </div>
-                        <div class="input-group">
-                            <label for="inventory-filter-sub-category">Underkategori</label>
-                            <select id="inventory-filter-sub-category"></select>
-                        </div>
-                         <div class="input-group">
-                            <label for="inventory-filter-stock-status">Status</label>
-                            <select id="inventory-filter-stock-status">
-                                <option value="">Alle</option>
-                                <option value="in_stock">På lager</option>
-                                <option value="low_stock">Lav beholdning</option>
-                            </select>
-                        </div>
-                        <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
-                    </div>
-                    <div id="inventory-list-container"></div>
-                </div>
+                <!-- ====================================================== -->
+                <!-- SLUT PÅ NYT VARELAGER-DESIGN                          -->
+                <!-- ====================================================== -->
             </section>
             
             <section id="oekonomi" class="page hidden">
@@ -1157,3 +1165,4 @@
 
 </body>
 </html>
+
