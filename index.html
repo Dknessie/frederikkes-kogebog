@@ -166,6 +166,9 @@
                 </div>
             </section>
             
+            <!-- ====================================================== -->
+            <!-- START PÅ OPDATERET KOGEBOG-SEKTION                      -->
+            <!-- ====================================================== -->
             <section id="recipes" class="page hidden">
                 <div class="cookbook-layout">
                     <main class="cookbook-main">
@@ -177,7 +180,9 @@
                             </div>
                         </div>
 
-                        <div id="recipe-flipper" class="recipe-flipper"></div>
+                        <div id="recipe-flipper" class="recipe-flipper">
+                            <!-- Opskrifter til bladrefunktion indsættes dynamisk af recipes.js -->
+                        </div>
                         
                         <div class="flipper-nav">
                             <button id="prev-recipe-btn" class="btn-icon" title="Forrige"><i class="fas fa-chevron-left"></i></button>
@@ -186,8 +191,12 @@
                         
                         <div class="recipe-list-container">
                             <h3>Alle Mine Opskrifter</h3>
-                            <div id="list-filter-tags-container" class="list-filter-tags"></div>
-                            <div id="recipe-list-grid" class="recipe-list-grid"></div>
+                            <div id="list-filter-tags-container" class="list-filter-tags">
+                                <!-- Filter tags indsættes dynamisk af recipes.js -->
+                            </div>
+                            <div id="recipe-list-grid" class="recipe-list-grid">
+                                <!-- Opskriftskort indsættes dynamisk af recipes.js -->
+                            </div>
                         </div>
                     </main>
 
@@ -199,26 +208,71 @@
                             </div>
                         </div>
 
-                        <div id="what-can-i-make-widget" class="cookbook-widget"></div>
+                        <div id="what-can-i-make-widget" class="cookbook-widget">
+                            <h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave</h5>
+                            <ul class="widget-list">
+                                <!-- Indhold indsættes dynamisk af recipes.js -->
+                            </ul>
+                        </div>
 
                         <div id="upcoming-meal-plan-widget" class="cookbook-widget">
                             <h5><i class="fas fa-calendar-day"></i> Kommende Madplan</h5>
-                            <ul class="widget-list"></ul>
+                            <ul class="widget-list">
+                                <!-- Indhold indsættes dynamisk af recipes.js -->
+                            </ul>
                             <button id="go-to-calendar-btn" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">Se hele madplanen</button>
                         </div>
                     </aside>
                 </div>
             </section>
+            <!-- ====================================================== -->
+            <!-- SLUT PÅ OPDATERET KOGEBOG-SEKTION                       -->
+            <!-- ====================================================== -->
+
 
             <section id="inventory" class="page hidden">
                 <h2>Varelager</h2>
-                <div id="inventory-page-content">
-                    <!-- Indhold genereres af inventory.js -->
+                 <div class="actions-bar">
+                    <button id="add-inventory-item-btn" class="btn btn-primary">Tilføj ny vare</button>
+                    <button id="reorder-assistant-btn" class="btn btn-secondary"><i class="fas fa-magic-wand-sparkles"></i> Find varer til genbestilling</button>
+                    <button id="impulse-purchase-btn" class="btn btn-accent"><i class="fas fa-bolt"></i> Hurtigt Køb</button>
+                </div>
+                <div class="inventory-dashboard">
+                    <div class="inventory-summary-bar">
+                        <span>Total Lagerværdi:</span>
+                        <span id="inventory-total-value">0,00 kr.</span>
+                    </div>
+                    <div class="inventory-controls">
+                        <div class="search-bar">
+                            <input type="text" id="inventory-search-input" placeholder="Søg i varelager...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+                    <div class="inventory-filters">
+                        <div class="input-group">
+                            <label for="inventory-filter-main-category">Overkategori</label>
+                            <select id="inventory-filter-main-category"></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="inventory-filter-sub-category">Underkategori</label>
+                            <select id="inventory-filter-sub-category"></select>
+                        </div>
+                         <div class="input-group">
+                            <label for="inventory-filter-stock-status">Status</label>
+                            <select id="inventory-filter-stock-status">
+                                <option value="">Alle</option>
+                                <option value="in_stock">På lager</option>
+                                <option value="low_stock">Lav beholdning</option>
+                            </select>
+                        </div>
+                        <button id="clear-inventory-filters-btn" class="btn btn-secondary"><i class="fas fa-filter-circle-xmark"></i> Ryd filtre</button>
+                    </div>
+                    <div id="inventory-list-container"></div>
                 </div>
             </section>
             
             <section id="oekonomi" class="page hidden">
-                <!-- Indhold genereres af economy.js -->
+                <!-- Indhold for økonomi-siden. -->
             </section>
 
 
@@ -227,9 +281,13 @@
                 <p>Administrér lister og hierarkier, der genbruges i applikationen.</p>
                 <div class="references-page-layout">
                     <aside class="references-sidebar">
-                        <ul id="references-nav-list" class="references-nav-list"></ul>
+                        <ul id="references-nav-list" class="references-nav-list">
+                            <!-- Navigation links indsættes af JS -->
+                        </ul>
                     </aside>
-                    <main id="references-content-area" class="references-content-area"></main>
+                    <main id="references-content-area" class="references-content-area">
+                        <!-- Indhold for den valgte kategori indsættes af JS -->
+                    </main>
                 </div>
             </section>
         </main>
@@ -1100,4 +1158,3 @@
 
 </body>
 </html>
-
