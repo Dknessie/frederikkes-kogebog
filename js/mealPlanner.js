@@ -6,6 +6,7 @@ import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
 import { openShoppingListModal } from './shoppingList.js';
 import { renderReadView } from './recipes.js';
+import { openEventModal } from './events.js'; // Importer funktionen
 
 let appState;
 let appElements;
@@ -78,7 +79,6 @@ function renderMealPlanSection(startOfWeek) {
     section.appendChild(fragment);
 }
 
-// HJÆLPEFUNKTION: Returnerer et ikon baseret på event-kategori
 function getIconForCategory(category) {
     switch (category) {
         case 'To-do': return 'fa-check-square';
@@ -90,11 +90,6 @@ function getIconForCategory(category) {
     }
 }
 
-/**
- * OPDATERET: Skaber HTML for et "dagskort" inklusiv begivenheder.
- * @param {Date} date - Datoen for kortet.
- * @returns {HTMLElement} - Det færdige div-element for dagen.
- */
 function createDayCard(date) {
     const card = document.createElement('div');
     card.className = 'day-card';
@@ -102,7 +97,6 @@ function createDayCard(date) {
     const dayName = date.toLocaleDateString('da-DK', { weekday: 'long' });
     const dayAndMonth = date.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' });
 
-    // Find begivenheder for denne specifikke dag
     const eventsForDay = (appState.events || []).filter(event => event.date === dateString);
     let eventsHTML = '';
     if (eventsForDay.length > 0) {
@@ -133,15 +127,6 @@ function createDayCard(date) {
     return card;
 }
 
-
-/**
- * OPDATERET: Skaber HTML for et måltids-slot med slette-knap.
- * @param {string} title - Titlen (f.eks. "Morgenmad").
- * @param {Array} mealData - Array af måltider.
- * @param {string} dateString - Datoen (YYYY-MM-DD).
- * @param {string} mealType - Typen af måltid ('breakfast', 'lunch', 'dinner').
- * @returns {string} - HTML-strengen for måltids-slottet.
- */
 function createMealSlotHTML(title, mealData, dateString, mealType) {
     let content = '';
     if (mealData && mealData.length > 0) {
@@ -183,11 +168,16 @@ function renderSidebarSection(startOfWeek) {
     const sidebar = appElements.sidebarSection;
     sidebar.innerHTML = `
         ${createWeeklyEventsWidgetHTML(startOfWeek)}
-        ${createWeeklyTodosWidgetHTML()}
+        ${createWeeklyTodosWidgetHTML(startOfWeek)}
         ${createShoppingListWidgetHTML()}
     `;
 }
 
+/**
+ * OPDATERET: Skaber HTML for "Ugens Aftaler" widget med nyt design og "Tilføj"-knap.
+ * @param {Date} startOfWeek - Startdato for ugen.
+ * @returns {string} - HTML-strengen for widget'en.
+ */
 function createWeeklyEventsWidgetHTML(startOfWeek) {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -203,13 +193,14 @@ function createWeeklyEventsWidgetHTML(startOfWeek) {
     let listItems = '<p class="empty-state-small">Ingen aftaler denne uge.</p>';
     if (weeklyEvents.length > 0) {
         listItems = weeklyEvents.map(event => {
-            const dayName = new Date(event.date).toLocaleDateString('da-DK', { weekday: 'short' });
+            const dayName = new Date(event.date).toLocaleDateString('da-DK', { weekday: 'long' });
+            const icon = getIconForCategory(event.category);
             return `
-                <li class="widget-list-item">
-                    <span class="icon"><i class="fas fa-calendar-star"></i></span>
-                    <div class="content">
-                        <span class="title">${event.title}</span>
-                        <span class="subtitle">${dayName}, ${new Date(event.date).toLocaleDateString('da-DK')}</span>
+                <li class="sidebar-event-card">
+                    <div class="sidebar-event-icon event-${event.category.toLowerCase()}"><i class="fas ${icon}"></i></div>
+                    <div class="sidebar-event-content">
+                        <span class="sidebar-event-title">${event.title}</span>
+                        <span class="sidebar-event-subtitle">${dayName}</span>
                     </div>
                 </li>
             `;
@@ -218,12 +209,19 @@ function createWeeklyEventsWidgetHTML(startOfWeek) {
 
     return `
         <div class="widget-card">
-            <h4><i class="fas fa-calendar-star"></i> Ugens Aftaler</h4>
+            <div class="widget-header">
+                <h4><i class="fas fa-calendar-star"></i> Ugens Aftaler</h4>
+                <button class="btn-icon btn-small add-event-widget-btn" data-category="Aftale" title="Tilføj aftale"><i class="fas fa-plus"></i></button>
+            </div>
             <ul class="widget-list">${listItems}</ul>
         </div>
     `;
 }
 
+/**
+ * OPDATERET: Skaber HTML for "Ugens To-Do's" widget med nyt design og "Tilføj"-knap.
+ * @returns {string} - HTML-strengen for widget'en.
+ */
 function createWeeklyTodosWidgetHTML() {
     const upcomingTodos = (appState.events || [])
         .filter(event => event.category === 'To-do' && !event.isComplete)
@@ -232,24 +230,34 @@ function createWeeklyTodosWidgetHTML() {
 
     let listItems = '<p class="empty-state-small">Alt er klaret! Godt gået.</p>';
     if (upcomingTodos.length > 0) {
-        listItems = upcomingTodos.map(todo => `
-            <li class="todo-item" data-id="${todo.id}">
-                <label>
-                    <input type="checkbox" ${todo.isComplete ? 'checked' : ''}>
-                    <span class="custom-checkbox"></span>
-                    <span class="todo-text">${todo.title}</span>
-                </label>
-            </li>
-        `).join('');
+        listItems = upcomingTodos.map(todo => {
+            const dayName = new Date(todo.date).toLocaleDateString('da-DK', { weekday: 'long' });
+            return `
+                 <li class="sidebar-event-card todo-item" data-id="${todo.id}">
+                    <label class="sidebar-event-content">
+                        <input type="checkbox" ${todo.isComplete ? 'checked' : ''}>
+                        <span class="custom-checkbox"></span>
+                        <div class="sidebar-event-text">
+                             <span class="sidebar-event-title">${todo.title}</span>
+                             <span class="sidebar-event-subtitle">${dayName}</span>
+                        </div>
+                    </label>
+                </li>
+            `;
+        }).join('');
     }
 
     return `
         <div class="widget-card">
-            <h4><i class="fas fa-tasks"></i> Ugens To-Do's</h4>
+            <div class="widget-header">
+                <h4><i class="fas fa-tasks"></i> Ugens To-Do's</h4>
+                <button class="btn-icon btn-small add-event-widget-btn" data-category="To-do" title="Tilføj to-do"><i class="fas fa-plus"></i></button>
+            </div>
             <ul class="widget-list">${listItems}</ul>
         </div>
     `;
 }
+
 
 function createShoppingListWidgetHTML() {
     const itemCount = Object.keys(appState.shoppingLists.groceries || {}).length;
@@ -262,17 +270,13 @@ function createShoppingListWidgetHTML() {
     `;
 }
 
-/**
- * OPDATERET: Håndterer klik på sletteknap.
- * @param {Event} e - Klik-event.
- */
 function handleMealPlanClick(e) {
     const emptySlot = e.target.closest('.empty-meal-slot');
     const mealCard = e.target.closest('.meal-card');
     const deleteBtn = e.target.closest('.delete-meal-btn');
 
     if (deleteBtn) {
-        e.stopPropagation(); // Forhindrer at opskriften åbnes
+        e.stopPropagation();
         const card = deleteBtn.closest('.meal-card');
         handleDeleteMeal(
             card.dataset.mealId, 
@@ -292,32 +296,43 @@ function handleMealPlanClick(e) {
     }
 }
 
+/**
+ * OPDATERET: Håndterer klik i sidebar, inkl. de nye "Tilføj"-knapper.
+ * @param {Event} e - Klik-event.
+ */
 async function handleSidebarClick(e) {
     if (e.target.closest('#widget-open-shopping-list-btn')) {
         openShoppingListModal('groceries');
     }
 
+    const addBtn = e.target.closest('.add-event-widget-btn');
+    if (addBtn) {
+        const category = addBtn.dataset.category;
+        const startOfWeek = getStartOfWeek(appState.currentDate);
+        // Åbner modalen med den korrekte kategori forudvalgt og startdatoen for den viste uge
+        openEventModal(formatDate(startOfWeek), null, category);
+        return;
+    }
+
     const todoCheckbox = e.target.closest('.todo-item input[type="checkbox"]');
-    if (!todoCheckbox) return;
+    if (todoCheckbox) {
+        const todoItemElement = todoCheckbox.closest('.todo-item');
+        const todoId = todoItemElement?.dataset.id;
+        
+        if (!todoId) return;
 
-    const todoItemElement = todoCheckbox.closest('.todo-item');
-    const todoId = todoItemElement?.dataset.id;
-    
-    if (!todoId) return;
-
-    const isChecked = todoCheckbox.checked;
-
-    try {
-        const eventRef = doc(db, 'events', todoId);
-        await updateDoc(eventRef, { isComplete: isChecked });
-        showNotification({ title: "To-do Opdateret", message: "Din opgave er blevet opdateret." });
-    } catch (error) {
-        todoCheckbox.checked = !isChecked;
-        handleError(error, "Kunne ikke opdatere to-do.", "updateTodo");
+        const isChecked = todoCheckbox.checked;
+        try {
+            const eventRef = doc(db, 'events', todoId);
+            await updateDoc(eventRef, { isComplete: isChecked });
+            showNotification({ title: "To-do Opdateret", message: "Din opgave er blevet opdateret." });
+        } catch (error) {
+            todoCheckbox.checked = !isChecked;
+            handleError(error, "Kunne ikke opdatere to-do.", "updateTodo");
+        }
     }
 }
 
-// ... resten af filen er uændret ...
 
 async function handleClearMealPlan() {
     const confirmed = await showNotification({
@@ -421,7 +436,6 @@ export function openPlanMealModal(recipeId, date = null, mealType = null) {
     appElements.planMealModal.classList.remove('hidden');
 }
 
-
 function handleDragStart(e) {
     const mealCard = e.target.closest('.meal-card');
     if (!mealCard) return;
@@ -516,12 +530,6 @@ async function moveMealInFirestore(source, target) {
     }
 }
 
-/**
- * NY: Funktion til at slette et måltid fra madplanen.
- * @param {string} mealId - ID på måltidet, der skal slettes.
- * @param {string} date - Datoen for måltidet.
- * @param {string} mealType - Måltidstypen (f.eks. 'dinner').
- */
 async function handleDeleteMeal(mealId, date, mealType) {
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
 
@@ -534,7 +542,6 @@ async function handleDeleteMeal(mealId, date, mealType) {
     if (!confirmed) return;
 
     try {
-        // Hent den nuværende madplan for at finde det specifikke måltidsobjekt
         const mealPlanDoc = await getDoc(mealPlanRef);
         if (!mealPlanDoc.exists()) return;
 
@@ -543,7 +550,6 @@ async function handleDeleteMeal(mealId, date, mealType) {
         const mealToRemove = mealsForSlot.find(m => m.id === mealId);
 
         if (mealToRemove) {
-            // Brug arrayRemove til at fjerne det præcise objekt fra arrayet i Firestore
             await updateDoc(mealPlanRef, {
                 [`${date}.${mealType}`]: arrayRemove(mealToRemove)
             });
