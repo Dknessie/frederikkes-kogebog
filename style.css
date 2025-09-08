@@ -394,11 +394,19 @@ header {
 
 .day-header {
     display: flex;
-    align-items: baseline;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-m);
     padding-bottom: var(--spacing-m);
     border-bottom: 1px solid var(--border-color);
+    flex-wrap: wrap;
+}
+.day-header-main {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-m);
+    flex-shrink: 0;
 }
 .day-header h3 {
     font-size: 1.5rem;
@@ -436,6 +444,7 @@ header {
 }
 
 .meal-card {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
@@ -456,7 +465,7 @@ header {
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    pointer-events: none; /* Forhindrer billedet i at blive trukket separat */
+    pointer-events: none;
 }
 .meal-card span {
     font-weight: 500;
@@ -485,7 +494,7 @@ header {
 
 .sidebar-section {
     position: sticky;
-    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
+    top: calc(65px + var(--spacing-l));
     display: flex;
     flex-direction: column;
     gap: var(--spacing-l);
@@ -2869,25 +2878,81 @@ input:checked + .slider:before { transform: translateX(22px); }
     }
 }
 
-/* ===== 13. NYE STYLES: Træk-og-slip i Kalender ===== */
+/* ===== 13. NYE STYLES: Kalender Opdateringer ===== */
 
-/* Stil for det element, der bliver trukket */
+/* Træk-og-slip */
 .meal-card.dragging {
     opacity: 0.5;
     transform: rotate(3deg) scale(1.05);
     box-shadow: 0 8px 20px rgba(0,0,0,0.2);
     cursor: grabbing;
 }
-
-/* Stil for de områder, hvor man kan slippe et element */
 .meal-slot.drag-over,
 .empty-meal-slot.drag-over {
     background-color: var(--accent-color) !important;
     border-color: #4a7553;
     border-style: solid;
 }
-
 .meal-slot.drag-over > *,
 .empty-meal-slot.drag-over > * {
-    pointer-events: none; /* Forhindrer at ikoner/tekst forstyrrer drop event */
+    pointer-events: none;
 }
+
+/* Slet-knap på måltidskort */
+.delete-meal-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 24px;
+    height: 24px;
+    background-color: var(--status-red);
+    color: var(--white-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none; /* Skjult som standard */
+}
+.meal-card:hover .delete-meal-btn {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: all; /* Synlig ved hover */
+}
+.delete-meal-btn:hover {
+    background-color: #C62828;
+}
+
+/* Begivenheds-piller */
+.day-events-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-s);
+    justify-content: flex-end;
+    flex-grow: 1;
+}
+.day-event-pill {
+    padding: var(--spacing-xs) var(--spacing-s);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    white-space: nowrap;
+}
+.day-event-pill i {
+    font-size: 0.9em;
+}
+
+/* Farver for begivenheds-piller */
+.event-fødselsdag { background-color: #fce4ec; color: #c2185b; } /* Lyserød */
+.event-aftale { background-color: #e3f2fd; color: #1565c0; } /* Blå */
+.event-to-do { background-color: #fff8e1; color: #f57f17; } /* Gul */
+.event-udgivelse { background-color: #f3e5f5; color: #6a1b9a; } /* Lilla */
+.event-andet { background-color: #eceff1; color: #37474f; } /* Grå */
+
