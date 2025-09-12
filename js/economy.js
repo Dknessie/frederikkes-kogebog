@@ -3,11 +3,9 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, Timestamp, getDoc, setDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { formatDate } from './utils.js'; // Assuming you have formatDate in utils
 
 // Lokal state for økonomisiden
 let appState;
-let appElements;
 let economyState = {
     currentDate: new Date(),
     fixedPostsSort: {
@@ -17,6 +15,16 @@ let economyState = {
 };
 
 // --- HJÆLPEFUNKTIONER ---
+
+function formatDate(date) {
+    const d = new Date(date);
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    const year = d.getFullYear();
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+    return [year, month, day].join('-');
+}
 
 function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
     if (!selectElement) return;
@@ -70,16 +78,158 @@ function populateSubCategoryDropdown(selectElement, mainCategoryName, currentVal
 
 // --- INITIALISERING ---
 
-export function initEconomyPage(state, elements) {
+export function initEconomyPage(state) {
     appState = state;
-    appElements = elements; // Gem referencen til de globale elementer
     const pageContainer = document.getElementById('oekonomi');
     if (!pageContainer) return;
 
-    attachEventListeners(pageContainer);
+    if (!pageContainer.querySelector('.economy-dashboard-layout')) {
+        buildPageSkeleton(pageContainer);
+        attachEventListeners(pageContainer);
+    }
+    
     attachModalEventListeners();
+
+    renderEconomyPage();
 }
 
+function buildPageSkeleton(container) {
+    container.innerHTML = `
+        <div class="economy-dashboard-layout">
+            <div class="economy-header">
+                <h2>Mit Økonomiske Overblik</h2>
+                <p>Planlæg din fremtid, en krone ad gangen.</p>
+            </div>
+
+            <div class="economy-main">
+                <div class="economy-month-navigator">
+                    <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                    <h3 id="current-month-display"></h3>
+                    <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+                </div>
+
+                <div class="economy-summary-grid">
+                    <div class="economy-summary-card">
+                        <h4>Total Indkomst</h4>
+                        <p id="total-income">0,00 kr.</p>
+                    </div>
+                    <div class="economy-summary-card">
+                        <h4>Total Udgift</h4>
+                        <p id="total-expense">0,00 kr.</p>
+                    </div>
+                    <div class="economy-summary-card">
+                        <h4>Månedligt Råderum</h4>
+                        <p id="monthly-disposable">0,00 kr.</p>
+                    </div>
+                </div>
+
+                <div class="spending-categories-summary">
+                    <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
+                    <div id="spending-categories-content"></div>
+                </div>
+
+                <div class="spending-accounts-summary">
+                    <h4>Overførsler til Konti (Faste Udgifter)</h4>
+                    <div id="spending-accounts-content"></div>
+                </div>
+
+                <div class="transactions-list">
+                    <h4>Bevægelser for Måneden</h4>
+                    <table id="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>DATO</th>
+                                <th>POST</th>
+                                <th>PERSON</th>
+                                <th>KATEGORI</th>
+                                <th class="text-right">BELØB</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="new-transaction-form">
+                    <h4>Ny Postering</h4>
+                    <form id="transaction-form">
+                        <div class="input-group">
+                            <label for="transaction-description">Beskrivelse</label>
+                            <input type="text" id="transaction-description" placeholder="F.eks. Indkøb, Restaurantbesøg" required>
+                        </div>
+                        <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="transaction-amount">Beløb (kr.)</label>
+                                <input type="number" id="transaction-amount" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="transaction-type">Type</label>
+                                <select id="transaction-type" required>
+                                    <option value="expense">Udgift</option>
+                                    <option value="income">Indkomst</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-grid-2-col">
+                             <div class="input-group">
+                                <label for="transaction-main-category">Overkategori</label>
+                                <select id="transaction-main-category" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="transaction-sub-category">Underkategori</label>
+                                <select id="transaction-sub-category"></select>
+                            </div>
+                        </div>
+                         <div class="form-grid-2-col">
+                            <div class="input-group">
+                                <label for="transaction-person">Person</label>
+                                <select id="transaction-person" required></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="transaction-date">Dato</label>
+                                <input type="date" id="transaction-date" required>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Tilføj</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="economy-sidebar">
+                 <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
+                    <!-- Indhold tilføjes af JS -->
+                </div>
+                <div id="net-worth-widget" class="economy-sidebar-widget">
+                    <h5>Formue & Gæld</h5>
+                    <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
+                    <div id="assets-list-widget"></div>
+                    <div id="liabilities-list-widget"></div>
+                    <div class="form-actions">
+                        <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
+                        <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
+                    </div>
+                </div>
+                 <div class="economy-sidebar-widget">
+                    <div class="widget-header">
+                        <h5>Faste Poster</h5>
+                        <div class="sort-controls">
+                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="description" title="Sortér efter navn"><i class="fas fa-font"></i></button>
+                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="amount" title="Sortér efter beløb"><i class="fas fa-coins"></i></button>
+                        </div>
+                    </div>
+                     <div id="fixed-posts-list-widget"></div>
+                    <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
+                </div>
+                 <div class="economy-sidebar-widget">
+                    <h5>Opsparingsmål</h5>
+                    <p id="savings-goal-summary" class="empty-state-small">Intet mål sat endnu.</p>
+                    <button id="manage-goals-btn" class="btn btn-secondary">Administrer Mål</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
 function attachEventListeners(container) {
     container.addEventListener('click', (e) => {
@@ -170,12 +320,6 @@ function attachModalEventListeners() {
 
     const savingsGoalForm = document.getElementById('edit-budget-form');
     if (savingsGoalForm) savingsGoalForm.addEventListener('submit', handleSaveSavingsGoal);
-
-    // Listener for the new expense modal
-    const addExpenseForm = document.getElementById('add-expense-form');
-    if (addExpenseForm) {
-        addExpenseForm.addEventListener('submit', handleSaveExpenseFromModal);
-    }
 }
 
 // --- RENDERING & BEREGNING ---
@@ -284,13 +428,9 @@ function calculateProjectedValues(targetDate) {
 function populateDropdowns() {
     const mainCategorySelect = document.getElementById('transaction-main-category');
     const personSelect = document.getElementById('transaction-person');
-    const addExpenseMainCategory = document.getElementById('add-expense-main-category');
-    const addExpensePerson = document.getElementById('add-expense-person');
 
     populateMainCategoryDropdown(mainCategorySelect);
     populateReferenceDropdown(personSelect, appState.references.householdMembers, 'Vælg person...');
-    populateMainCategoryDropdown(addExpenseMainCategory);
-    populateReferenceDropdown(addExpensePerson, appState.references.householdMembers, 'Vælg person...');
 }
 
 function renderTransactionsTable(transactions) {
@@ -532,32 +672,6 @@ async function handleSaveTransaction(e) {
         document.getElementById('transaction-date').value = formatDate(new Date());
     } catch (error) {
         handleError(error, "Posteringen kunne ikke gemmes.", "saveTransaction");
-    }
-}
-async function handleSaveExpenseFromModal(e) {
-    e.preventDefault();
-    const expenseData = {
-        amount: parseFloat(document.getElementById('add-expense-amount').value),
-        date: Timestamp.fromDate(new Date(document.getElementById('add-expense-date').value)),
-        description: document.getElementById('add-expense-description').value.trim(),
-        type: 'expense',
-        mainCategory: document.getElementById('add-expense-main-category').value,
-        subCategory: document.getElementById('add-expense-sub-category').value || null,
-        person: document.getElementById('add-expense-person').value,
-        userId: appState.currentUser.uid,
-    };
-
-    if (isNaN(expenseData.amount) || !expenseData.description || !expenseData.mainCategory) {
-        showNotification({ title: "Ugyldigt input", message: "Udfyld venligst alle felter." });
-        return;
-    }
-    try {
-        await addDoc(collection(db, 'expenses'), expenseData);
-        showNotification({ title: "Udgift Gemt!", message: "Din udgift er blevet registreret." });
-        document.getElementById('add-expense-modal').classList.add('hidden');
-        e.target.reset();
-    } catch (error) {
-        handleError(error, "Udgiften kunne ikke gemmes.", "saveExpenseFromModal");
     }
 }
 
@@ -892,23 +1006,4 @@ async function handleSaveSavingsGoal(e) {
     } catch (error) {
         handleError(error, "Kunne ikke gemme opsparingsmål.", "saveSavingsGoal");
     }
-}
-
-export function promptForExpenseCreation(totalAmount, description) {
-    const modal = document.getElementById('add-expense-modal');
-    if (!modal) return;
-    
-    // Udfyld felter
-    document.getElementById('add-expense-description').value = description;
-    document.getElementById('add-expense-amount').value = totalAmount.toFixed(2);
-    document.getElementById('add-expense-date').value = formatDate(new Date());
-
-    // Forsøg at forudvælge 'Dagligvarer'
-    const mainCategorySelect = document.getElementById('add-expense-main-category');
-    const dagligvarerOption = Array.from(mainCategorySelect.options).find(opt => opt.value.toLowerCase() === 'dagligvarer');
-    if (dagligvarerOption) {
-        mainCategorySelect.value = dagligvarerOption.value;
-    }
-    
-    modal.classList.remove('hidden');
 }
