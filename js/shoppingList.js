@@ -5,7 +5,6 @@ import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
 import { openBatchModal } from './inventory.js';
-import { promptForExpenseCreation } from './economy.js'; // IMPORTER NY FUNKTION
 
 let appState;
 let appElements;
@@ -462,7 +461,6 @@ async function handleBulkSave(e) {
     const batch = writeBatch(db);
     const purchasedItems = [];
     let totalExpense = 0;
-    let storeName = '';
 
     rows.forEach(row => {
         const quantity = Number(row.querySelector('.bulk-quantity').value);
@@ -480,9 +478,6 @@ async function handleBulkSave(e) {
                 price: price || null,
                 store: row.querySelector('.bulk-store').value,
             };
-            if (batchData.store && !storeName) {
-                storeName = batchData.store;
-            }
 
             const newBatchRef = doc(collection(db, 'inventory_batches'));
             batch.set(newBatchRef, batchData);
@@ -509,13 +504,6 @@ async function handleBulkSave(e) {
         await batch.commit();
         appElements.bulkAddModal.classList.add('hidden');
         showNotification({ title: "Lager Opdateret!", message: `${purchasedItems.length} vare(r) er blevet tilføjet til dit varelager.` });
-        
-        // Kald funktionen til at oprette en udgift
-        if (totalExpense > 0) {
-            const description = `Indkøb: ${storeName || 'Diverse'}`;
-            promptForExpenseCreation(totalExpense, description);
-        }
-
     } catch (error) {
         handleError(error, "Kunne ikke gemme indkøb.", "handleBulkSave");
     }
