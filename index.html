@@ -280,155 +280,7 @@
             </section>
             
             <section id="oekonomi" class="page hidden">
-                <div class="economy-dashboard-layout">
-                    <div class="economy-header">
-                        <h2>Mit Økonomiske Overblik</h2>
-                        <p>Planlæg din fremtid, en krone ad gangen.</p>
-                    </div>
-        
-                    <div class="economy-main">
-                        <div class="economy-month-navigator">
-                            <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
-                            <h3 id="current-month-display"></h3>
-                            <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
-                        </div>
-        
-                        <div class="economy-summary-grid">
-                            <div class="economy-summary-card">
-                                <h4>Total Indkomst</h4>
-                                <p id="total-income">0,00 kr.</p>
-                            </div>
-                            <div class="economy-summary-card">
-                                <h4>Total Udgift</h4>
-                                <p id="total-expense">0,00 kr.</p>
-                            </div>
-                            <div class="economy-summary-card">
-                                <h4>Månedligt Råderum</h4>
-                                <p id="monthly-disposable">0,00 kr.</p>
-                            </div>
-                        </div>
-        
-                        <div class="spending-categories-summary">
-                            <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
-                            <div id="spending-categories-content"></div>
-                        </div>
-        
-                        <div class="spending-accounts-summary">
-                            <h4>Overførsler til Konti (Faste Udgifter)</h4>
-                            <div id="spending-accounts-content"></div>
-                        </div>
-        
-                        <div class="transactions-list">
-                            <h4>Bevægelser for Måneden</h4>
-                            <table id="transactions-table">
-                                <thead>
-                                    <tr>
-                                        <th>DATO</th>
-                                        <th>POST</th>
-                                        <th>PERSON</th>
-                                        <th>KATEGORI</th>
-                                        <th class="text-right">BELØB</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-        
-                        <div class="new-transaction-form">
-                            <h4>Ny Postering</h4>
-                            <form id="transaction-form">
-                                <div class="input-group">
-                                    <label for="transaction-description">Beskrivelse</label>
-                                    <input type="text" id="transaction-description" placeholder="F.eks. Indkøb, Restaurantbesøg" required>
-                                </div>
-                                <div class="form-grid-2-col">
-                                    <div class="input-group">
-                                        <label for="transaction-amount">Beløb (kr.)</label>
-                                        <input type="number" id="transaction-amount" step="0.01" required>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="transaction-type">Type</label>
-                                        <select id="transaction-type" required>
-                                            <option value="expense">Udgift</option>
-                                            <option value="income">Indkomst</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-grid-2-col">
-                                     <div class="input-group">
-                                        <label for="transaction-main-category">Overkategori</label>
-                                        <select id="transaction-main-category" required></select>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="transaction-sub-category">Underkategori</label>
-                                        <select id="transaction-sub-category"></select>
-                                    </div>
-                                </div>
-                                 <div class="form-grid-2-col">
-                                    <div class="input-group">
-                                        <label for="transaction-person">Person</label>
-                                        <select id="transaction-person" required></select>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="transaction-date">Dato</label>
-                                        <input type="date" id="transaction-date" required>
-                                    </div>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn btn-primary">Tilføj</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-        
-                    <div class="economy-sidebar">
-                         <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
-                            <!-- Indhold tilføjes af JS -->
-                        </div>
-                        <div id="net-worth-widget" class="economy-sidebar-widget">
-                            <h5>Formue & Gæld</h5>
-                            <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
-                            <div id="assets-list-widget"></div>
-                            <div id="liabilities-list-widget"></div>
-                            <div class="form-actions">
-                                <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
-                                <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
-                            </div>
-                        </div>
-                         <div class="economy-sidebar-widget">
-                            <div class="widget-header">
-                                <h5>Faste Poster</h5>
-                                <div class="sort-controls">
-                                    <button class="btn-icon sort-fixed-posts-btn" data-sort-key="description" title="Sortér efter navn"><i class="fas fa-font"></i></button>
-                                    <button class="btn-icon sort-fixed-posts-btn" data-sort-key="amount" title="Sortér efter beløb"><i class="fas fa-coins"></i></button>
-                                </div>
-                            </div>
-                             <div id="fixed-posts-list-widget"></div>
-                            <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
-                        </div>
-        
-                        <!-- NYE WIDGETS FOR FASE 2 & 3 -->
-                        <div id="budget-overview-section" class="economy-sidebar-widget">
-                            <h5>Budget Status</h5>
-                            <div id="budget-overview-content">
-                                 <p class="empty-state-small">Budgetter indlæses...</p>
-                            </div>
-                        </div>
-                        <div class="economy-sidebar-widget">
-                            <h5>Forbrugsfordeling</h5>
-                            <div id="spending-distribution-chart">
-                                <p class="empty-state-small">Graf indlæses...</p>
-                            </div>
-                        </div>
-                        <!-- NYE WIDGETS SLUT -->
-        
-                         <div class="economy-sidebar-widget">
-                            <h5>Opsparingsmål</h5>
-                            <p id="savings-goal-summary" class="empty-state-small">Intet mål sat endnu.</p>
-                            <button id="manage-goals-btn" class="btn btn-secondary">Administrer Mål</button>
-                        </div>
-                    </div>
-                </div>
+                <!-- Indhold for økonomi-siden. -->
             </section>
 
 
@@ -682,18 +534,12 @@
             <h3 id="add-expense-modal-title">Registrer Køb</h3>
             <form id="add-expense-form">
                 <div class="input-group">
-                    <label for="add-expense-description">Beskrivelse</label>
-                    <input type="text" id="add-expense-description" required>
+                    <label for="add-expense-amount">Beløb (kr.)</label>
+                    <input type="number" id="add-expense-amount" step="0.01" required>
                 </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="add-expense-amount">Beløb (kr.)</label>
-                        <input type="number" id="add-expense-amount" step="0.01" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="add-expense-date">Dato</label>
-                        <input type="date" id="add-expense-date" required>
-                    </div>
+                <div class="input-group">
+                    <label for="add-expense-date">Dato</label>
+                    <input type="date" id="add-expense-date" required>
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
@@ -705,9 +551,13 @@
                         <select id="add-expense-sub-category"></select>
                     </div>
                 </div>
-                 <div class="input-group">
-                    <label for="add-expense-person">Person</label>
-                    <select id="add-expense-person" required></select>
+                <div class="input-group">
+                    <label for="add-expense-description">Beskrivelse</label>
+                    <input type="text" id="add-expense-description" required>
+                </div>
+                <div class="input-group-inline">
+                    <input type="checkbox" id="add-expense-is-impulse" checked>
+                    <label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Gem Udgift</button>
@@ -815,10 +665,6 @@
                         <select id="fixed-expense-sub-category"></select>
                     </div>
                 </div>
-                <div class="input-group">
-                    <label for="fixed-expense-account">Konto</label>
-                    <select id="fixed-expense-account" required></select>
-                </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="fixed-expense-start-date-edit">Startdato</label>
@@ -865,14 +711,10 @@
                         <label for="transaction-edit-category">Overkategori</label>
                         <select id="transaction-edit-category" required></select>
                     </div>
-                     <div class="input-group">
-                        <label for="transaction-edit-sub-category">Underkategori</label>
-                        <select id="transaction-edit-sub-category"></select>
+                    <div class="input-group">
+                        <label for="transaction-edit-person">Person</label>
+                        <select id="transaction-edit-person" required></select>
                     </div>
-                </div>
-                <div class="input-group">
-                    <label for="transaction-edit-person">Person</label>
-                    <select id="transaction-edit-person" required></select>
                 </div>
                 <div class="input-group">
                     <label for="transaction-edit-date">Dato</label>
@@ -927,7 +769,6 @@
                 </div>
                 <div id="event-type-specific-fields"></div>
                 <div class="form-actions">
-                    <button id="delete-event-btn" type="button" class="btn btn-danger hidden">Slet</button>
                     <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
                 </div>
             </form>
