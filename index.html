@@ -1146,11 +1146,13 @@
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <h3>Genbestillings-assistent</h3>
-            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
+            <p>Følgende varer er ved, eller under, genbestillingspunktet. Vælg dem, du vil tilføje til indkøbslisten.</p>
             <form id="reorder-form">
-                <div id="reorder-list-container"></div>
+                <div id="reorder-list-container">
+                    <!-- Indhold genereres af shoppingList.js -->
+                </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-cart-plus"></i> Tilføj valgte til Indkøbsliste</button>
                 </div>
             </form>
         </div>
@@ -1165,3 +1167,4 @@
 
 </body>
 </html>
+
