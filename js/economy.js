@@ -11,7 +11,8 @@ let economyState = {
     fixedPostsSort: {
         key: 'description', // 'description' or 'amount'
         order: 'asc' // 'asc' or 'desc'
-    }
+    },
+    spendingChart: null
 };
 
 // --- HJÆLPEFUNKTIONER ---
@@ -94,141 +95,8 @@ export function initEconomyPage(state) {
 }
 
 function buildPageSkeleton(container) {
-    container.innerHTML = `
-        <div class="economy-dashboard-layout">
-            <div class="economy-header">
-                <h2>Mit Økonomiske Overblik</h2>
-                <p>Planlæg din fremtid, en krone ad gangen.</p>
-            </div>
-
-            <div class="economy-main">
-                <div class="economy-month-navigator">
-                    <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
-                    <h3 id="current-month-display"></h3>
-                    <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
-                </div>
-
-                <div class="economy-summary-grid">
-                    <div class="economy-summary-card">
-                        <h4>Total Indkomst</h4>
-                        <p id="total-income">0,00 kr.</p>
-                    </div>
-                    <div class="economy-summary-card">
-                        <h4>Total Udgift</h4>
-                        <p id="total-expense">0,00 kr.</p>
-                    </div>
-                    <div class="economy-summary-card">
-                        <h4>Månedligt Råderum</h4>
-                        <p id="monthly-disposable">0,00 kr.</p>
-                    </div>
-                </div>
-
-                <div class="spending-categories-summary">
-                    <h4>Forbrugs Kategorier (Faste Udgifter)</h4>
-                    <div id="spending-categories-content"></div>
-                </div>
-
-                <div class="spending-accounts-summary">
-                    <h4>Overførsler til Konti (Faste Udgifter)</h4>
-                    <div id="spending-accounts-content"></div>
-                </div>
-
-                <div class="transactions-list">
-                    <h4>Bevægelser for Måneden</h4>
-                    <table id="transactions-table">
-                        <thead>
-                            <tr>
-                                <th>DATO</th>
-                                <th>POST</th>
-                                <th>PERSON</th>
-                                <th>KATEGORI</th>
-                                <th class="text-right">BELØB</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <div class="new-transaction-form">
-                    <h4>Ny Postering</h4>
-                    <form id="transaction-form">
-                        <div class="input-group">
-                            <label for="transaction-description">Beskrivelse</label>
-                            <input type="text" id="transaction-description" placeholder="F.eks. Indkøb, Restaurantbesøg" required>
-                        </div>
-                        <div class="form-grid-2-col">
-                            <div class="input-group">
-                                <label for="transaction-amount">Beløb (kr.)</label>
-                                <input type="number" id="transaction-amount" step="0.01" required>
-                            </div>
-                            <div class="input-group">
-                                <label for="transaction-type">Type</label>
-                                <select id="transaction-type" required>
-                                    <option value="expense">Udgift</option>
-                                    <option value="income">Indkomst</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-grid-2-col">
-                             <div class="input-group">
-                                <label for="transaction-main-category">Overkategori</label>
-                                <select id="transaction-main-category" required></select>
-                            </div>
-                            <div class="input-group">
-                                <label for="transaction-sub-category">Underkategori</label>
-                                <select id="transaction-sub-category"></select>
-                            </div>
-                        </div>
-                         <div class="form-grid-2-col">
-                            <div class="input-group">
-                                <label for="transaction-person">Person</label>
-                                <select id="transaction-person" required></select>
-                            </div>
-                            <div class="input-group">
-                                <label for="transaction-date">Dato</label>
-                                <input type="date" id="transaction-date" required>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Tilføj</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="economy-sidebar">
-                 <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
-                    <!-- Indhold tilføjes af JS -->
-                </div>
-                <div id="net-worth-widget" class="economy-sidebar-widget">
-                    <h5>Formue & Gæld</h5>
-                    <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
-                    <div id="assets-list-widget"></div>
-                    <div id="liabilities-list-widget"></div>
-                    <div class="form-actions">
-                        <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
-                        <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
-                    </div>
-                </div>
-                 <div class="economy-sidebar-widget">
-                    <div class="widget-header">
-                        <h5>Faste Poster</h5>
-                        <div class="sort-controls">
-                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="description" title="Sortér efter navn"><i class="fas fa-font"></i></button>
-                            <button class="btn-icon sort-fixed-posts-btn" data-sort-key="amount" title="Sortér efter beløb"><i class="fas fa-coins"></i></button>
-                        </div>
-                    </div>
-                     <div id="fixed-posts-list-widget"></div>
-                    <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
-                </div>
-                 <div class="economy-sidebar-widget">
-                    <h5>Opsparingsmål</h5>
-                    <p id="savings-goal-summary" class="empty-state-small">Intet mål sat endnu.</p>
-                    <button id="manage-goals-btn" class="btn btn-secondary">Administrer Mål</button>
-                </div>
-            </div>
-        </div>
-    `;
+    // Denne funktion er fjernet for nu, da skelettet er i index.html
+    // Hvis siden skulle genereres dynamisk, ville denne funktion bygge DOM-elementerne.
 }
 
 function attachEventListeners(container) {
@@ -367,11 +235,10 @@ export function renderEconomyPage() {
     renderTransactionsTable(monthlyTransactions);
     renderAssetsListWidget(projected.assets);
     renderLiabilitiesListWidget(projected.liabilities);
-    renderSpendingCategories(activeFixedPosts);
+    renderSpendingChart([...activeFixedPosts, ...monthlyTransactions]); // Opdateret kald
     renderFixedPostsWidget(activeFixedPosts);
     renderSavingsGoalWidget();
     renderSavingsVsWishlistWidget(projected.assets);
-    renderSpendingAccounts(activeFixedPosts);
 }
 
 // OPDATERET: calculateProjectedValues med intelligent gældsafvikling
@@ -535,76 +402,64 @@ function renderFixedPostsWidget(fixedPosts) {
     });
 }
 
+function renderSpendingChart(transactions) {
+    const container = d3.select("#spending-chart-container");
+    container.selectAll("*").remove(); // Ryd tidligere diagram
 
-function renderSpendingCategories(fixedExpenses) {
-    const container = document.getElementById('spending-categories-content');
-    if (!container) return;
+    const spendingData = (transactions || [])
+        .filter(t => t.type === 'expense')
+        .reduce((acc, t) => {
+            const category = t.mainCategory || 'Ukategoriseret';
+            acc[category] = (acc[category] || 0) + t.amount;
+            return acc;
+        }, {});
 
-    const fixedSpending = (fixedExpenses || []).filter(exp => exp.type === 'expense');
-    const totalFixed = fixedSpending.reduce((sum, exp) => sum + exp.amount, 0);
+    const data = Object.entries(spendingData).map(([name, value]) => ({ name, value }));
 
-    if (totalFixed === 0) {
-        container.innerHTML = '<p class="empty-state-small">Ingen faste udgifter at vise.</p>';
+    if (data.length === 0) {
+        container.append('p').attr('class', 'empty-state-small').text('Ingen udgifter at vise for denne måned.');
         return;
     }
 
-    const categories = {};
-    fixedSpending.forEach(exp => {
-        const key = exp.mainCategory;
-        if (!categories[key]) categories[key] = 0;
-        categories[key] += exp.amount;
-    });
+    const width = 300, height = 300, margin = 40;
+    const radius = Math.min(width, height) / 2 - margin;
+    
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width / 2},${height / 2})`);
 
-    const sortedCategories = Object.entries(categories).sort(([,a],[,b]) => b-a);
+    const color = d3.scaleOrdinal()
+        .domain(data.map(d => d.name))
+        .range(d3.schemePastel1);
 
-    container.innerHTML = sortedCategories.map(([name, amount]) => {
-        const percentage = (amount / totalFixed) * 100;
-        return `
-            <div class="category-summary-item">
-                <span class="category-name" title="${name}">${name}</span>
-                <div class="category-bar-container">
-                    <div class="category-bar" style="width: ${percentage}%;"></div>
-                </div>
-                <span class="category-amount">${amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.</span>
-            </div>
-        `;
-    }).join('');
+    const pie = d3.pie().value(d => d.value);
+    const data_ready = pie(data);
+
+    const arc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius);
+    
+    const tooltip = container.append("div").attr("class", "chart-tooltip");
+
+    svg.selectAll('path')
+        .data(data_ready)
+        .enter()
+        .append('path')
+        .attr('d', arc)
+        .attr('fill', d => color(d.data.name))
+        .attr("stroke", "white")
+        .style("stroke-width", "2px")
+        .on("mouseover", (event, d) => {
+            tooltip.style("opacity", 1)
+                   .html(`<strong>${d.data.name}</strong><br>${d.data.value.toLocaleString('da-DK', {style: 'currency', currency: 'DKK'})}`)
+                   .style("left", (event.pageX + 15) + "px")
+                   .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", () => {
+            tooltip.style("opacity", 0);
+        });
 }
 
-function renderSpendingAccounts(fixedExpenses) {
-    const container = document.getElementById('spending-accounts-content');
-    if (!container) return;
-
-    const fixedSpending = (fixedExpenses || []).filter(exp => exp.type === 'expense');
-    const totalFixed = fixedSpending.reduce((sum, exp) => sum + exp.amount, 0);
-
-    if (totalFixed === 0) {
-        container.innerHTML = '<p class="empty-state-small">Ingen faste udgifter at vise.</p>';
-        return;
-    }
-
-    const accounts = {};
-    fixedSpending.forEach(exp => {
-        const key = exp.account || 'Ikke tildelt';
-        if (!accounts[key]) accounts[key] = 0;
-        accounts[key] += exp.amount;
-    });
-
-    const sortedAccounts = Object.entries(accounts).sort(([,a],[,b]) => b-a);
-
-    container.innerHTML = sortedAccounts.map(([name, amount]) => {
-        const percentage = (amount / totalFixed) * 100;
-        return `
-            <div class="category-summary-item">
-                <span class="category-name" title="${name}">${name}</span>
-                <div class="category-bar-container">
-                    <div class="category-bar" style="width: ${percentage}%;"></div>
-                </div>
-                <span class="category-amount">${amount.toLocaleString('da-DK', {minimumFractionDigits: 2})} kr.</span>
-            </div>
-        `;
-    }).join('');
-}
 
 function renderSavingsGoalWidget() {
     const summary = document.getElementById('savings-goal-summary');
@@ -836,7 +691,6 @@ function openFixedExpenseModal(expenseId = null) {
     modal.querySelector('h3').textContent = isEditing ? 'Rediger Fast Post' : 'Ny Fast Post';
     document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
 
-    populateReferenceDropdown(document.getElementById('fixed-expense-account'), appState.references.accounts, 'Vælg konto...', expense?.account);
     populateMainCategoryDropdown(document.getElementById('fixed-expense-main-category'), expense?.mainCategory);
     populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), expense?.mainCategory, expense?.subCategory);
 
@@ -860,7 +714,6 @@ async function handleSaveFixedExpense(e) {
         description: document.getElementById('fixed-expense-description').value.trim(),
         amount: parseFloat(document.getElementById('fixed-expense-amount').value),
         type: document.getElementById('fixed-expense-type').value,
-        account: document.getElementById('fixed-expense-account').value,
         mainCategory: document.getElementById('fixed-expense-main-category').value,
         subCategory: document.getElementById('fixed-expense-sub-category').value,
         startDate: document.getElementById('fixed-expense-start-date-edit').value,
@@ -868,8 +721,8 @@ async function handleSaveFixedExpense(e) {
         userId: appState.currentUser.uid,
     };
 
-    if (!expenseData.description || isNaN(expenseData.amount) || !expenseData.mainCategory || !expenseData.account) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Beskrivelse, beløb, konto og kategori er påkrævet."});
+    if (!expenseData.description || isNaN(expenseData.amount) || !expenseData.mainCategory) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Beskrivelse, beløb og kategori er påkrævet."});
         return;
     }
 
