@@ -280,7 +280,137 @@
             </section>
             
             <section id="oekonomi" class="page hidden">
-                <!-- Indhold for økonomi-siden. -->
+                <div class="economy-dashboard-layout">
+                    <div class="economy-header">
+                        <h2>Mit Økonomiske Overblik</h2>
+                        <p>Planlæg din fremtid, en krone ad gangen.</p>
+                    </div>
+        
+                    <div class="economy-main">
+                        <div class="economy-month-navigator">
+                            <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                            <h3 id="current-month-display"></h3>
+                            <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+        
+                        <div class="economy-summary-grid">
+                            <div class="economy-summary-card">
+                                <h4>Total Indkomst</h4>
+                                <p id="total-income">0,00 kr.</p>
+                            </div>
+                            <div class="economy-summary-card">
+                                <h4>Total Udgift</h4>
+                                <p id="total-expense">0,00 kr.</p>
+                            </div>
+                            <div class="economy-summary-card">
+                                <h4>Månedligt Råderum</h4>
+                                <p id="monthly-disposable">0,00 kr.</p>
+                            </div>
+                        </div>
+        
+                        <div class="economy-widget-chart">
+                            <h4>Forbrug pr. Kategori</h4>
+                            <p class="small-text">Viser det samlede forbrug for den valgte måned, fordelt på hovedkategorier.</p>
+                            <div id="spending-chart-container">
+                                <!-- D3 Donut Chart will be rendered here -->
+                            </div>
+                        </div>
+        
+                        <div class="transactions-list">
+                            <h4>Bevægelser for Måneden</h4>
+                            <table id="transactions-table">
+                                <thead>
+                                    <tr>
+                                        <th>DATO</th>
+                                        <th>POST</th>
+                                        <th>PERSON</th>
+                                        <th>KATEGORI</th>
+                                        <th class="text-right">BELØB</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+        
+                        <div class="new-transaction-form">
+                            <h4>Ny Postering</h4>
+                            <form id="transaction-form">
+                                <div class="input-group">
+                                    <label for="transaction-description">Beskrivelse</label>
+                                    <input type="text" id="transaction-description" placeholder="F.eks. Indkøb, Restaurantbesøg" required>
+                                </div>
+                                <div class="form-grid-2-col">
+                                    <div class="input-group">
+                                        <label for="transaction-amount">Beløb (kr.)</label>
+                                        <input type="number" id="transaction-amount" step="0.01" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="transaction-type">Type</label>
+                                        <select id="transaction-type" required>
+                                            <option value="expense">Udgift</option>
+                                            <option value="income">Indkomst</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-grid-2-col">
+                                     <div class="input-group">
+                                        <label for="transaction-main-category">Overkategori</label>
+                                        <select id="transaction-main-category" required></select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="transaction-sub-category">Underkategori</label>
+                                        <select id="transaction-sub-category"></select>
+                                    </div>
+                                </div>
+                                 <div class="form-grid-2-col">
+                                    <div class="input-group">
+                                        <label for="transaction-person">Person</label>
+                                        <select id="transaction-person" required></select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="transaction-date">Dato</label>
+                                        <input type="date" id="transaction-date" required>
+                                    </div>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn btn-primary">Tilføj</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+        
+                    <div class="economy-sidebar">
+                         <div id="savings-vs-wishlist-widget" class="economy-sidebar-widget">
+                            <!-- Indhold tilføjes af JS -->
+                        </div>
+                        <div id="net-worth-widget" class="economy-sidebar-widget">
+                            <h5>Formue & Gæld</h5>
+                            <p id="net-worth-summary"><strong>Beregnet Friværdi:</strong> 0,00 kr.</p>
+                            <div id="assets-list-widget"></div>
+                            <div id="liabilities-list-widget"></div>
+                            <div class="form-actions">
+                                <button id="add-liability-btn" class="btn btn-secondary">Tilføj Gæld</button>
+                                <button id="add-asset-btn" class="btn btn-secondary">Tilføj Aktiv</button>
+                            </div>
+                        </div>
+                         <div class="economy-sidebar-widget">
+                            <div class="widget-header">
+                                <h5>Faste Poster</h5>
+                                <div class="sort-controls">
+                                    <button class="btn-icon sort-fixed-posts-btn" data-sort-key="description" title="Sortér efter navn"><i class="fas fa-font"></i></button>
+                                    <button class="btn-icon sort-fixed-posts-btn" data-sort-key="amount" title="Sortér efter beløb"><i class="fas fa-coins"></i></button>
+                                </div>
+                            </div>
+                             <div id="fixed-posts-list-widget"></div>
+                            <button id="manage-fixed-btn" class="btn btn-secondary">Administrer Faste Poster</button>
+                        </div>
+                         <div class="economy-sidebar-widget">
+                            <h5>Opsparingsmål</h5>
+                            <p id="savings-goal-summary" class="empty-state-small">Intet mål sat endnu.</p>
+                            <button id="manage-goals-btn" class="btn btn-secondary">Administrer Mål</button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
 
@@ -769,6 +899,7 @@
                 </div>
                 <div id="event-type-specific-fields"></div>
                 <div class="form-actions">
+                    <button type="button" id="delete-event-btn" class="btn btn-danger hidden">Slet</button>
                     <button type="submit" class="btn btn-primary">Gem Begivenhed</button>
                 </div>
             </form>
@@ -890,16 +1021,10 @@
                         <input type="text" id="batch-edit-unit" required>
                     </div>
                 </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="batch-edit-price">Pris (total for batch)</label>
-                        <div class="price-input-wrapper">
-                            <input type="number" id="batch-edit-price" min="0" step="0.01">
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="batch-edit-store">Butik</label>
-                        <select id="batch-edit-store" required></select>
+                <div class="input-group">
+                    <label for="batch-edit-price">Pris (total for batch)</label>
+                    <div class="price-input-wrapper">
+                        <input type="number" id="batch-edit-price" min="0" step="0.01">
                     </div>
                 </div>
                 <div class="form-actions">
@@ -1146,13 +1271,30 @@
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <h3>Genbestillings-assistent</h3>
-            <p>Følgende varer er ved, eller under, genbestillingspunktet. Vælg dem, du vil tilføje til indkøbslisten.</p>
+            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
             <form id="reorder-form">
-                <div id="reorder-list-container">
-                    <!-- Indhold genereres af shoppingList.js -->
-                </div>
+                <div id="reorder-list-container"></div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-cart-plus"></i> Tilføj valgte til Indkøbsliste</button>
+                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NYT: Hurtig Redigering af Lagerbeholdning -->
+    <div id="quick-stock-adjust-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="quick-stock-modal-title">Juster Beholdning</h3>
+            <form id="quick-stock-adjust-form">
+                <input type="hidden" id="quick-stock-item-id">
+                <div class="input-group">
+                    <label for="quick-stock-new-total">Ny total beholdning (<span id="quick-stock-unit-label"></span>)</label>
+                    <input type="number" step="any" id="quick-stock-new-total" required>
+                </div>
+                <p class="small-text">Systemet justerer automatisk dine batches i baggrunden.</p>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Gem</button>
                 </div>
             </form>
         </div>
