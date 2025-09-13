@@ -611,70 +611,44 @@ header {
     width: 100%;
 }
 
-/* ===== 6. Indkøbsliste Modal & Temaer ===== */
+/* ===== 6. Indkøbsliste Modal (NYT UNIFIED DESIGN) ===== */
 .shopping-list-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-m);
 }
 .shopping-list-header h3 {
     margin: 0;
 }
 
-/* NYT: Struktur for indhold i modalen */
-#shopping-list-modal-content-wrapper {
+#shopping-list-modal .modal-content {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-l);
 }
 
-/* NYT: Styling for controls øverst */
+/* Container for controls at the top */
 .shopping-list-controls {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-m);
     padding-bottom: var(--spacing-l);
     border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-l);
     flex-shrink: 0;
 }
 
 .shopping-list-controls .add-item-form {
     margin-top: 0;
-}
-.shopping-list-controls .shopping-list-actions {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-    justify-content: space-between;
-}
-
-/* NYT: Scroll-container for selve listen */
-.shopping-list-scroll-container {
-    overflow-y: auto;
-    max-height: calc(85vh - 250px); /* Justeres efter behov */
-    padding-right: var(--spacing-s); /* Plads til scrollbar */
-}
-
-
-.shopping-list-actions {
-    margin-top: var(--spacing-l);
-    padding-top: var(--spacing-l);
-    border-top: 1px solid var(--border-color);
-}
-
-.add-item-form {
     display: flex;
     gap: var(--spacing-s);
-    margin-top: var(--spacing-m);
 }
-.add-item-form input {
+.shopping-list-controls .add-item-form input {
     flex-grow: 1;
     padding: var(--spacing-m);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
 }
-.add-item-form button {
+.shopping-list-controls .add-item-form button {
     flex-shrink: 0;
     font-size: 1.4rem;
     color: var(--accent-color);
@@ -683,38 +657,69 @@ header {
     width: 44px;
     height: 44px;
 }
-.add-item-form button:hover {
-    background-color: #e9e5dc;
+
+.shopping-list-controls .shopping-list-actions {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
+/* Scrollable container for the list itself */
+.shopping-list-scroll-container {
+    overflow-y: auto;
+    flex-grow: 1;
+    min-height: 200px;
+    padding-right: var(--spacing-s); /* For scrollbar */
+}
 
-/* Styling for Groceries (nu baseret på underkategori) */
+/* Styling for Groceries list (grouped by sub-category) */
 .shopping-list-item {
-    padding: var(--spacing-s) 0;
+    padding: var(--spacing-m) 0;
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
+    border-bottom: 1px solid #f0f0f0;
+}
+.shopping-list-item:last-child {
+    border-bottom: none;
 }
 .shopping-list-item-label {
     cursor: pointer;
     flex-grow: 1;
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-s);
+    font-weight: 500;
+}
+.shopping-list-item-label span {
+    color: #888;
+    font-size: var(--small-font-size);
 }
 .shopping-list-item.is-checked .shopping-list-item-label {
     text-decoration: line-through;
-    color: #888;
+    color: #aaa;
     text-decoration-color: var(--status-red);
 }
-.store-section h4 {
+.store-section h4 { /* Reused for sub-categories */
     font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
     color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: var(--spacing-s);
+    margin: var(--spacing-l) 0 var(--spacing-s) 0;
+}
+.store-section:first-child h4 {
+    margin-top: 0;
 }
 .store-section ul {
     list-style: none;
     padding: 0;
 }
 
-/* Styling for Materialeliste */
+/* Styling for Materials list */
 .project-group h4 {
     font-family: var(--body-font);
     font-weight: 700;
@@ -734,12 +739,13 @@ header {
     font-weight: 600;
     text-transform: uppercase;
     color: #666;
+    font-size: 0.8rem;
 }
 .material-name {
     font-weight: 700;
 }
 
-/* Styling for Ønskeliste */
+/* Styling for Wishlist */
 .wishlist-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1179,7 +1185,7 @@ header {
     animation: fadeIn 0.3s ease;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
+#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal, #quick-stock-adjust-modal { z-index: 2010; }
 #bulk-add-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
@@ -1587,6 +1593,20 @@ input:checked + .slider:before { transform: translateX(22px); }
     overflow-y: auto;
 }
 
+.batch-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--light-bg-color);
+    padding: var(--spacing-s) var(--spacing-m);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-s);
+    font-size: var(--small-font-size);
+}
+.batch-info {
+    flex-basis: 30%;
+}
+
 .conversion-rule-row {
     display: grid;
     grid-template-columns: auto 1fr auto 1fr auto auto;
@@ -1739,10 +1759,12 @@ details:not([open]) .item-table-container {
 .item-table .item-name-cell { display: flex; align-items: center; gap: 0.75rem; }
 .item-table .item-stock-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .item-table .item-name { font-weight: 600; }
-.quantity-cell { cursor: pointer; }
-.quantity-cell:hover { background-color: var(--secondary-color); border-radius: 4px; }
-.quantity-cell input { width: 100px; text-align: left; padding: 0.25rem; border: 1px solid var(--primary-color); border-radius: 4px; }
-.item-table .actions-cell { text-align: right; }
+.quantity-cell { 
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+.quantity-cell:hover { background-color: var(--secondary-color); }
 .actions-cell .btn-icon { 
     background: none; 
     border: none; 
