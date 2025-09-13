@@ -73,7 +73,6 @@ export function openShoppingListModal(listType) {
     
     const modalContent = appElements.shoppingListModal.querySelector('.modal-content');
     modalContent.className = 'modal-content'; // Reset classes
-    modalContent.classList.add(`shopping-list-theme-${listType}`);
 
     renderListInModal();
     appElements.shoppingListModal.classList.remove('hidden');
@@ -88,53 +87,65 @@ function renderListInModal() {
     const list = appState.shoppingLists[currentListType] || {};
     wrapper.innerHTML = ''; // Clear previous content
 
+    // ÆNDRING: Flyt controls (knapper og form) til toppen
+    let listContentHTML = '';
+
     switch (currentListType) {
         case 'groceries':
-            wrapper.innerHTML = renderGroceriesList(list);
+            listContentHTML = renderGroceriesList(list);
             break;
         case 'materials':
-            wrapper.innerHTML = renderMaterialsList(list);
+            listContentHTML = renderMaterialsList(list);
             break;
         case 'wishlist':
-            wrapper.innerHTML = renderWishlist(list);
+            listContentHTML = renderWishlist(list);
             break;
     }
+
+    // Saml den endelige HTML med controls øverst
+    wrapper.innerHTML = `
+        ${createModalControlsHTML(currentListType === 'wishlist')}
+        <div class="shopping-list-scroll-container">
+            ${listContentHTML}
+        </div>
+    `;
 }
 
 function renderGroceriesList(list) {
-    const groupedByStore = {};
+    // ÆNDRING: Gruppér efter underkategori i stedet for butik
+    const groupedBySubCategory = {};
     Object.values(list).forEach(item => {
-        const store = item.storeId || 'Andet';
-        if (!groupedByStore[store]) groupedByStore[store] = [];
-        groupedByStore[store].push(item);
+        const subCategory = item.subCategory || 'Andet'; // Brug underkategori som nøgle
+        if (!groupedBySubCategory[subCategory]) {
+            groupedBySubCategory[subCategory] = [];
+        }
+        groupedBySubCategory[subCategory].push(item);
     });
 
-    if (Object.keys(groupedByStore).length === 0) {
-        return `<p class="empty-state">Indkøbslisten er tom.</p>${getModalFooter()}`;
+    if (Object.keys(groupedBySubCategory).length === 0) {
+        return `<p class="empty-state">Indkøbslisten er tom.</p>`;
     }
 
     let html = '';
-    const storeOrder = [appState.preferences.favoriteStoreId, ...Object.keys(groupedByStore).filter(s => s !== appState.preferences.favoriteStoreId).sort()];
+    // Sortér kategorierne alfabetisk
+    const sortedCategories = Object.keys(groupedBySubCategory).sort((a, b) => a.localeCompare(b));
     
-    storeOrder.forEach(store => {
-        if (groupedByStore[store]) {
-            html += `<div class="store-section"><h4>${store}</h4><ul>`;
-            groupedByStore[store].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
-                const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-                const quantityText = `${item.quantity_to_buy} ${item.unit}`;
+    sortedCategories.forEach(subCategory => {
+        html += `<div class="store-section"><h4>${subCategory}</h4><ul>`; // Genbruger .store-section styling
+        groupedBySubCategory[subCategory].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
+            const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
+            const quantityText = `${item.quantity_to_buy} ${item.unit}`;
 
-                html += `
-                    <li class="shopping-list-item" data-item-name="${item.name}">
-                        <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
-                        <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${quantityText})</span></label>
-                        <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
-                    </li>`;
-            });
-            html += `</ul></div>`;
-        }
+            html += `
+                <li class="shopping-list-item" data-item-name="${item.name}">
+                    <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
+                    <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${quantityText})</span></label>
+                    <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
+                </li>`;
+        });
+        html += `</ul></div>`;
     });
 
-    html += getModalFooter();
     return html;
 }
 
@@ -147,7 +158,7 @@ function renderMaterialsList(list) {
     });
 
     if (Object.keys(groupedByProject).length === 0) {
-        return `<p class="empty-state">Materialelisten er tom.</p>${getModalFooter()}`;
+        return `<p class="empty-state">Materialelisten er tom.</p>`;
     }
 
     let html = '';
@@ -172,14 +183,13 @@ function renderMaterialsList(list) {
         });
         html += `</div>`;
     }
-    html += getModalFooter();
     return html;
 }
 
 function renderWishlist(list) {
     const items = Object.values(list);
     if (items.length === 0) {
-        return `<p class="empty-state">Ønskelisten er tom.</p>${getModalFooter(true)}`;
+        return `<p class="empty-state">Ønskelisten er tom.</p>`;
     }
 
     let html = '<div class="wishlist-grid">';
@@ -201,28 +211,29 @@ function renderWishlist(list) {
         `;
     });
     html += '</div>';
-    html += getModalFooter(true); // isWishlist = true
     return html;
 }
 
-function getModalFooter(isWishlist = false) {
+// ÆNDRING: Omdøbt fra getModalFooter til createModalControlsHTML
+function createModalControlsHTML(isWishlist = false) {
     const confirmText = isWishlist ? "Marker som købt" : "Bekræft Indkøb";
     const addText = isWishlist ? 'ønske' : 'vare';
     
-    // Vis ikke "bekræft køb" for materialer, da de ikke kan redigeres her.
     const confirmButton = currentListType !== 'materials' 
         ? `<button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>` 
         : '';
 
     return `
-        <div class="shopping-list-actions form-actions">
-            <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
-            ${confirmButton}
+        <div class="shopping-list-controls">
+            <form class="add-item-form">
+                <input type="text" placeholder="Tilføj ${addText}..." required>
+                <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
+            </form>
+            <div class="shopping-list-actions">
+                <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
+                ${confirmButton}
+            </div>
         </div>
-        <form class="add-item-form">
-            <input type="text" placeholder="Tilføj ${addText}..." required>
-            <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
-        </form>
     `;
 }
 
@@ -278,15 +289,14 @@ async function generateGroceriesList() {
         const needed = allIngredientsNeeded[ingKey];
         const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ingKey);
 
-        // ÆNDRING: Hvis varen ikke findes på lager, sættes butik til 'Andet'
         if (!inventoryItem) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', itemId: null };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', subCategory: 'Andet', itemId: null };
             continue;
         }
 
         const conversion = convertToGrams(needed.total, needed.unit, inventoryItem);
         if (conversion.error) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', itemId: inventoryItem.id };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', subCategory: inventoryItem.subCategory || 'Andet', itemId: inventoryItem.id };
             continue;
         }
 
@@ -298,29 +308,29 @@ async function generateGroceriesList() {
                 .filter(b => b.size > 0)
                 .sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
             
-            // ÆNDRING: Butik falder tilbage til 'Andet' i stedet for 'Ukendt'
             const storeId = representativeBatch?.store || appState.preferences.favoriteStoreId || 'Andet';
             const pricePerUnit = representativeBatch?.price ? (representativeBatch.price / representativeBatch.quantity) : 0;
             
             let quantityToBuy;
             let displayUnit;
 
-            // ÆNDRING: Forenklet logik for enhedsvisning
             if (inventoryItem.defaultUnit === 'stk') {
                 quantityToBuy = Math.ceil(toBuyInBaseUnit);
                 displayUnit = 'stk';
             } else {
                 const purchaseSize = representativeBatch?.size || 1;
                 quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
-                displayUnit = 'stk'; // Viser 'stk' for pakker, poser osv.
+                displayUnit = 'stk';
             }
 
             const key = inventoryItem.name.toLowerCase();
             shoppingList[key] = {
                 name: inventoryItem.name,
                 quantity_to_buy: quantityToBuy,
-                unit: displayUnit, // FORENKLET ENHED
+                unit: displayUnit,
                 storeId: storeId,
+                // ÆNDRING: Tilføj underkategori til listen
+                subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
                 estimatedPrice: quantityToBuy * pricePerUnit
             };
@@ -349,7 +359,7 @@ async function handleClearShoppingList() {
 }
 
 async function handleAddShoppingItem(itemName) {
-    if (currentListType !== 'groceries') { // For nu kan kun groceries redigeres manuelt herfra
+    if (currentListType !== 'groceries') {
         showNotification({title: "Handling ikke tilladt", message: "Varer til denne liste tilføjes automatisk."});
         return;
     }
@@ -362,34 +372,35 @@ async function handleAddShoppingItem(itemName) {
         return;
     }
     
-    // ÆNDRING: Intelligent opslag for at finde butik og korrekte data
     const inventoryItem = appState.inventory.find(i => i.name.toLowerCase() === key);
     
     let newItem;
     if (inventoryItem) {
-        // Varen findes på lager - brug dens data
         const lastBatch = inventoryItem.batches.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
         newItem = {
-            name: inventoryItem.name, // Korrekt casing
+            name: inventoryItem.name,
             quantity_to_buy: 1,
-            unit: 'stk', // Manuel tilføjelse er altid pr. stk.
+            unit: 'stk',
             storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
+            // ÆNDRING: Tilføj underkategori
+            subCategory: inventoryItem.subCategory || 'Andet',
             itemId: inventoryItem.id,
         };
     } else {
-        // Helt ny vare
         newItem = {
             name: itemName,
             quantity_to_buy: 1,
             unit: 'stk',
-            storeId: appState.preferences.favoriteStoreId || 'Andet', // Standard butik
+            storeId: appState.preferences.favoriteStoreId || 'Andet',
+            // ÆNDRING: Tilføj underkategori
+            subCategory: 'Andet',
             itemId: null,
         };
     }
     
     updatedList[key] = newItem;
     await updateShoppingListInFirestore('groceries', updatedList);
-    renderListInModal(); // Immediate UI update
+    renderListInModal();
 }
 
 
@@ -404,7 +415,7 @@ async function handleRemoveShoppingItem(itemName) {
     if(keyToDelete) {
         delete updatedList[keyToDelete];
         await updateShoppingListInFirestore(currentListType, updatedList);
-        renderListInModal(); // Immediate UI update
+        renderListInModal();
     }
 }
 
@@ -537,13 +548,6 @@ export async function addSingleItemToGroceries(itemId) {
         return handleError(new Error("Vare ikke fundet"), "Varen kunne ikke tilføjes til indkøbslisten.");
     }
 
-    const list = appState.shoppingLists.groceries || {};
-    const key = inventoryItem.name.toLowerCase();
-
-    if (list[key]) {
-        return showNotification({ title: "Vare findes allerede", message: `${inventoryItem.name} er allerede på indkøbslisten.` });
-    }
-
     const lastBatch = inventoryItem.batches
         .filter(b => b.size > 0)
         .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
@@ -556,6 +560,8 @@ export async function addSingleItemToGroceries(itemId) {
         quantity_to_buy: 1,
         unit: 'stk',
         storeId: storeId,
+        // ÆNDRING: Tilføj underkategori
+        subCategory: inventoryItem.subCategory || 'Andet',
         itemId: inventoryItem.id,
         estimatedPrice: pricePerUnit
     };
@@ -610,6 +616,8 @@ async function handleReorderSubmit(e) {
                 quantity_to_buy: 1,
                 unit: 'stk',
                 storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
+                // ÆNDRING: Tilføj underkategori
+                subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
                 estimatedPrice: lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null
             });
