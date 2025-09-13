@@ -15,6 +15,7 @@ import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomyPage } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
+import { convertToGrams } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -189,7 +190,58 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
+        // NULSTIL MATERIALELISTEN, DA DEN ALTID GENBEREGNES
         state.shoppingLists.materials = {};
+        const activeProjects = (state.projects || []).filter(p => ['Igangværende', 'Planlagt'].includes(p.status));
+    
+        activeProjects.forEach(project => {
+            (project.materials || []).forEach(material => {
+                const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === material.name.toLowerCase());
+                const neededQuantity = material.quantity || 0;
+    
+                if (inventoryItem) {
+                    // Konverter materialets enhed til varens base-enhed for at sammenligne lager
+                    const conversion = convertToGrams(neededQuantity, material.unit, inventoryItem);
+                    if (conversion.error) {
+                        // Kan ikke konvertere, tilføj med en note
+                        const key = `${project.id}-${material.name.toLowerCase()}`;
+                        state.shoppingLists.materials[key] = {
+                            name: material.name,
+                            quantity_to_buy: neededQuantity,
+                            unit: material.unit,
+                            projectId: project.id,
+                            note: `Konverteringsfejl: ${conversion.error}`
+                        };
+                        return; // Gå til næste materiale
+                    }
+                    
+                    const neededInBaseUnit = conversion.grams;
+                    const stockInBaseUnit = inventoryItem.totalStock || 0;
+    
+                    if (neededInBaseUnit > stockInBaseUnit) {
+                        const toBuy = neededInBaseUnit - stockInBaseUnit;
+                        const key = `${project.id}-${material.name.toLowerCase()}`;
+                        state.shoppingLists.materials[key] = {
+                            name: material.name,
+                            quantity_to_buy: toBuy, // Gemmes i base-enhed
+                            unit: inventoryItem.defaultUnit,
+                            projectId: project.id,
+                            note: `Behov: ${neededInBaseUnit}${inventoryItem.defaultUnit}, På lager: ${stockInBaseUnit}${inventoryItem.defaultUnit}`
+                        };
+                    }
+                } else {
+                    // Varen findes slet ikke på lager
+                    const key = `${project.id}-${material.name.toLowerCase()}`;
+                    state.shoppingLists.materials[key] = {
+                        name: material.name,
+                        quantity_to_buy: neededQuantity,
+                        unit: material.unit,
+                        projectId: project.id,
+                        note: 'Varen findes ikke på lager.'
+                    };
+                }
+            });
+        });
     }
 
 
@@ -262,10 +314,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
                 state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
+                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches' || stateKey === 'projects') {
                     combineInventoryData();
+                    computeDerivedShoppingLists(); // Genberegn materialeliste ved ændringer
                 }
-                computeDerivedShoppingLists();
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
