@@ -611,7 +611,7 @@ header {
     width: 100%;
 }
 
-/* ===== 6. Indkøbsliste Modal & Temaer (REDESIGN) ===== */
+/* ===== 6. Indkøbsliste Modal & Temaer ===== */
 .shopping-list-header {
     display: flex;
     justify-content: space-between;
@@ -622,12 +622,40 @@ header {
     margin: 0;
 }
 
+/* NYT: Struktur for indhold i modalen */
 #shopping-list-modal-content-wrapper {
-    margin-top: var(--spacing-l);
-    max-height: 55vh;
-    overflow-y: auto;
-    padding-right: var(--spacing-m); /* Plads til scrollbar */
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
 }
+
+/* NYT: Styling for controls øverst */
+.shopping-list-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-m);
+    padding-bottom: var(--spacing-l);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.shopping-list-controls .add-item-form {
+    margin-top: 0;
+}
+.shopping-list-controls .shopping-list-actions {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    justify-content: space-between;
+}
+
+/* NYT: Scroll-container for selve listen */
+.shopping-list-scroll-container {
+    overflow-y: auto;
+    max-height: calc(85vh - 250px); /* Justeres efter behov */
+    padding-right: var(--spacing-s); /* Plads til scrollbar */
+}
+
 
 .shopping-list-actions {
     margin-top: var(--spacing-l);
@@ -659,81 +687,59 @@ header {
     background-color: #e9e5dc;
 }
 
-/* Nyt Design for Dagligvarer */
+
+/* Styling for Groceries (nu baseret på underkategori) */
+.shopping-list-item {
+    padding: var(--spacing-s) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+}
+.shopping-list-item-label {
+    cursor: pointer;
+    flex-grow: 1;
+}
+.shopping-list-item.is-checked .shopping-list-item-label {
+    text-decoration: line-through;
+    color: #888;
+    text-decoration-color: var(--status-red);
+}
 .store-section h4 {
-    font-family: var(--body-font);
-    font-weight: 600;
-    color: var(--text-color);
-    padding-bottom: var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-    margin: var(--spacing-l) 0 var(--spacing-m) 0;
+    font-family: 'Playfair Display', serif;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
 }
 .store-section ul {
     list-style: none;
     padding: 0;
-    margin: 0;
-}
-.shopping-list-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    padding: var(--spacing-s) 0;
-}
-.shopping-list-item-label {
-    flex-grow: 1;
-    cursor: pointer;
-    font-size: 1rem;
-}
-.shopping-list-item-label span {
-    color: #888;
-    font-size: 0.9rem;
-    margin-left: var(--spacing-s);
-}
-.shopping-list-item.is-checked .shopping-list-item-label {
-    text-decoration: line-through;
-    color: #aaa;
-}
-.shopping-list-checkbox {
-    width: 20px;
-    height: 20px;
-    accent-color: var(--accent-color);
-}
-.remove-from-list-btn {
-    color: #ccc;
-}
-.remove-from-list-btn:hover {
-    color: var(--status-red);
 }
 
-/* Nyt Design for Materialer */
+/* Styling for Materialeliste */
 .project-group h4 {
     font-family: var(--body-font);
-    font-weight: 600;
-    color: var(--text-color);
+    font-weight: 700;
+    font-size: 1.1rem;
     padding-bottom: var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-    margin: var(--spacing-l) 0 var(--spacing-m) 0;
+    border-bottom: 1px solid var(--border-color);
 }
 .material-row {
     display: grid;
     grid-template-columns: 2fr 1fr 2fr;
     gap: var(--spacing-l);
-    padding: var(--spacing-s) 0;
+    padding: var(--spacing-m) 0;
     border-bottom: 1px solid var(--border-color);
-}
-.material-row:last-child {
-    border-bottom: none;
+    align-items: center;
 }
 .material-header {
     font-weight: 600;
-    font-size: var(--small-font-size);
-    color: #888;
+    text-transform: uppercase;
+    color: #666;
 }
 .material-name {
-    font-weight: 600;
+    font-weight: 700;
 }
 
-/* Nyt Design for Ønskeliste (i modal) */
+/* Styling for Ønskeliste */
 .wishlist-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -775,7 +781,6 @@ header {
     text-decoration: none;
     color: inherit;
 }
-
 /* ===== 7. Kogebog, Hjem & Referencer Sider ===== */
 .actions-bar {
     margin-bottom: var(--spacing-l);
@@ -1171,6 +1176,7 @@ header {
     z-index: 2000;
     padding: var(--spacing-l);
     box-sizing: border-box;
+    animation: fadeIn 0.3s ease;
 }
 
 #plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
@@ -1187,7 +1193,14 @@ header {
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
+    animation: slideUp 0.4s ease;
 }
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
 .modal-content.large {
     max-width: 1100px;
 }
@@ -1826,7 +1839,8 @@ details:not([open]) .item-table-container {
 .new-transaction-form,
 .transactions-list,
 .economy-sidebar-widget,
-.spending-categories-summary {
+.spending-categories-summary,
+.economy-widget-chart {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
     padding: var(--spacing-l);
@@ -1850,12 +1864,33 @@ details:not([open]) .item-table-container {
 .new-transaction-form h4,
 .transactions-list h4,
 .economy-sidebar-widget h5,
-.spending-categories-summary h4 {
+.spending-categories-summary h4,
+.economy-widget-chart h4 {
     margin-top: 0;
     color: var(--text-color);
     font-family: var(--body-font);
     font-weight: 700;
 }
+
+#spending-chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    position: relative;
+}
+#spending-chart-container .chart-tooltip {
+    position: absolute;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    padding: var(--spacing-s);
+    border-radius: var(--border-radius);
+    font-size: var(--small-font-size);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
 
 .transactions-list table {
     width: 100%;
@@ -2993,24 +3028,3 @@ details:not([open]) .item-table-container {
     color: var(--status-red);
 }
 
-/* NYE STYLES FOR BULK ADD MODAL */
-#bulk-add-list-container {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-.bulk-add-item {
-    background-color: var(--light-bg-color);
-    padding: var(--spacing-m);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-.bulk-add-item-header {
-    font-weight: 600;
-    margin-bottom: var(--spacing-m);
-}
-.bulk-add-item-fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: var(--spacing-m);
-}
