@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
+import { openBatchModal, openInventoryItemModal } from './inventory.js';
 
 let appState;
 let appElements;
@@ -35,6 +36,9 @@ export function initShoppingList(state, elements) {
             } else if (e.target.matches('.shopping-list-checkbox')) {
                 const listItem = e.target.closest('.shopping-list-item');
                 listItem.classList.toggle('is-checked');
+            } else if (e.target.closest('.create-from-list-btn')) {
+                const itemName = e.target.closest('[data-item-name]').dataset.itemName;
+                handleCreateItemFromShoppingList(itemName);
             }
         });
 
@@ -134,12 +138,18 @@ function renderGroceriesList(list) {
         groupedBySubCategory[subCategory].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
             const quantityText = `${item.quantity_to_buy} ${item.unit}`;
+            const createButtonHTML = !item.itemId 
+                ? `<button class="btn-icon btn-small create-from-list-btn" title="Opret '${item.name}' i varelager"><i class="fas fa-plus-circle"></i></button>`
+                : '';
 
             html += `
                 <li class="shopping-list-item" data-item-name="${item.name}">
                     <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
                     <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${quantityText})</span></label>
-                    <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
+                    <div class="shopping-list-item-actions">
+                        ${createButtonHTML}
+                        <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
+                    </div>
                 </li>`;
         });
         html += `</ul></div>`;
@@ -147,6 +157,12 @@ function renderGroceriesList(list) {
 
     return html;
 }
+
+function handleCreateItemFromShoppingList(itemName) {
+    appElements.shoppingListModal.classList.add('hidden');
+    openInventoryItemModal(null, itemName);
+}
+
 
 function renderMaterialsList(list) {
     const groupedByProject = {};
@@ -289,13 +305,13 @@ async function generateGroceriesList() {
         const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ingKey);
 
         if (!inventoryItem) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', subCategory: 'Andet', itemId: null };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, subCategory: 'Andet', itemId: null };
             continue;
         }
 
         const conversion = convertToGrams(needed.total, needed.unit, inventoryItem);
         if (conversion.error) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', subCategory: inventoryItem.subCategory || 'Andet', itemId: inventoryItem.id };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, subCategory: inventoryItem.subCategory || 'Andet', itemId: inventoryItem.id };
             continue;
         }
 
@@ -303,11 +319,6 @@ async function generateGroceriesList() {
         const toBuyInBaseUnit = Math.max(0, neededInBaseUnit - (inventoryItem.totalStock || 0));
 
         if (toBuyInBaseUnit > 0) {
-            const representativeBatch = inventoryItem.batches
-                .filter(b => b.size > 0)
-                .sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
-            
-            const pricePerUnit = representativeBatch?.price ? (representativeBatch.price / representativeBatch.quantity) : 0;
             
             let quantityToBuy;
             let displayUnit;
@@ -316,6 +327,7 @@ async function generateGroceriesList() {
                 quantityToBuy = Math.ceil(toBuyInBaseUnit);
                 displayUnit = 'stk';
             } else {
+                const representativeBatch = inventoryItem.batches.filter(b => b.size > 0).sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
                 const purchaseSize = representativeBatch?.size || 1;
                 quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
                 displayUnit = 'stk';
@@ -328,7 +340,6 @@ async function generateGroceriesList() {
                 unit: displayUnit,
                 subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
-                estimatedPrice: quantityToBuy * pricePerUnit
             };
         }
     }
@@ -434,7 +445,7 @@ function openBulkAddModal(items) {
         const inventoryItem = appState.inventory.find(i => i.id === item.itemId);
         const row = document.createElement('div');
         row.className = 'bulk-add-item';
-        row.dataset.itemId = item.itemId;
+        row.dataset.itemId = item.itemId || '';
         row.dataset.itemName = item.name;
 
         const lastBatch = inventoryItem?.batches?.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
@@ -482,7 +493,7 @@ async function handleBulkSave(e) {
         const quantity = Number(row.querySelector('.bulk-quantity').value);
         const price = Number(row.querySelector('.bulk-price').value);
 
-        if (quantity > 0) {
+        if (quantity > 0 && row.dataset.itemId) { // Only save if it's a known item
             const batchData = {
                 itemId: row.dataset.itemId,
                 userId: appState.currentUser.uid,
@@ -531,19 +542,12 @@ export async function addSingleItemToGroceries(itemId) {
         return handleError(new Error("Vare ikke fundet"), "Varen kunne ikke tilføjes til indkøbslisten.");
     }
 
-    const lastBatch = inventoryItem.batches
-        .filter(b => b.size > 0)
-        .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
-
-    const pricePerUnit = lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null;
-
     const newItem = {
         name: inventoryItem.name,
         quantity_to_buy: 1,
         unit: 'stk',
         subCategory: inventoryItem.subCategory || 'Andet',
         itemId: inventoryItem.id,
-        estimatedPrice: pricePerUnit
     };
 
     await addItemsToGroceriesList([newItem]);
@@ -554,7 +558,7 @@ export function openReorderAssistantModal(items) {
     container.innerHTML = '';
 
     if (!items || items.length === 0) {
-        container.innerHTML = '<p class="empty-state-small">Ingen varer at vise.</p>';
+        container.innerHTML = '<p class="empty-state-small">Alle varer er over deres genbestillingspunkt. Godt gået!</p>';
         return;
     }
 
@@ -587,17 +591,12 @@ async function handleReorderSubmit(e) {
     selectedItemIds.forEach(itemId => {
         const inventoryItem = appState.inventory.find(i => i.id === itemId);
         if (inventoryItem) {
-            const lastBatch = inventoryItem.batches
-                .filter(b => b.size > 0)
-                .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
-            
             itemsToAdd.push({
                 name: inventoryItem.name,
                 quantity_to_buy: 1,
                 unit: 'stk',
                 subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
-                estimatedPrice: lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null
             });
         }
     });
