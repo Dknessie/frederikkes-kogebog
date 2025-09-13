@@ -4,7 +4,6 @@ import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
-import { openBatchModal } from './inventory.js';
 
 let appState;
 let appElements;
@@ -308,7 +307,6 @@ async function generateGroceriesList() {
                 .filter(b => b.size > 0)
                 .sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
             
-            const storeId = representativeBatch?.store || appState.preferences.favoriteStoreId || 'Andet';
             const pricePerUnit = representativeBatch?.price ? (representativeBatch.price / representativeBatch.quantity) : 0;
             
             let quantityToBuy;
@@ -328,8 +326,6 @@ async function generateGroceriesList() {
                 name: inventoryItem.name,
                 quantity_to_buy: quantityToBuy,
                 unit: displayUnit,
-                storeId: storeId,
-                // ÆNDRING: Tilføj underkategori til listen
                 subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
                 estimatedPrice: quantityToBuy * pricePerUnit
@@ -376,13 +372,10 @@ async function handleAddShoppingItem(itemName) {
     
     let newItem;
     if (inventoryItem) {
-        const lastBatch = inventoryItem.batches.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
         newItem = {
             name: inventoryItem.name,
             quantity_to_buy: 1,
             unit: 'stk',
-            storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
-            // ÆNDRING: Tilføj underkategori
             subCategory: inventoryItem.subCategory || 'Andet',
             itemId: inventoryItem.id,
         };
@@ -391,8 +384,6 @@ async function handleAddShoppingItem(itemName) {
             name: itemName,
             quantity_to_buy: 1,
             unit: 'stk',
-            storeId: appState.preferences.favoriteStoreId || 'Andet',
-            // ÆNDRING: Tilføj underkategori
             subCategory: 'Andet',
             itemId: null,
         };
@@ -464,10 +455,6 @@ function openBulkAddModal(items) {
                     <input type="text" class="bulk-unit" value="${inventoryItem?.defaultUnit || 'stk'}" required>
                 </div>
                 <div class="input-group">
-                    <label>Butik</label>
-                    <select class="bulk-store" required></select>
-                </div>
-                <div class="input-group">
                     <label>Total Pris</label>
                     <input type="number" class="bulk-price" placeholder="kr." step="0.01">
                 </div>
@@ -478,9 +465,6 @@ function openBulkAddModal(items) {
             </div>
         `;
         container.appendChild(row);
-        
-        const storeSelect = row.querySelector('.bulk-store');
-        populateReferenceDropdown(storeSelect, appState.references.stores, "Vælg butik...", lastBatch?.store || appState.preferences.favoriteStoreId);
     });
 
     appElements.shoppingListModal.classList.add('hidden');
@@ -508,7 +492,6 @@ async function handleBulkSave(e) {
                 size: Number(row.querySelector('.bulk-size').value),
                 unit: row.querySelector('.bulk-unit').value,
                 price: price || null,
-                store: row.querySelector('.bulk-store').value,
             };
 
             const newBatchRef = doc(collection(db, 'inventory_batches'));
@@ -552,15 +535,12 @@ export async function addSingleItemToGroceries(itemId) {
         .filter(b => b.size > 0)
         .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
 
-    const storeId = lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet';
     const pricePerUnit = lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null;
 
     const newItem = {
         name: inventoryItem.name,
         quantity_to_buy: 1,
         unit: 'stk',
-        storeId: storeId,
-        // ÆNDRING: Tilføj underkategori
         subCategory: inventoryItem.subCategory || 'Andet',
         itemId: inventoryItem.id,
         estimatedPrice: pricePerUnit
@@ -615,8 +595,6 @@ async function handleReorderSubmit(e) {
                 name: inventoryItem.name,
                 quantity_to_buy: 1,
                 unit: 'stk',
-                storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
-                // ÆNDRING: Tilføj underkategori
                 subCategory: inventoryItem.subCategory || 'Andet',
                 itemId: inventoryItem.id,
                 estimatedPrice: lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null
