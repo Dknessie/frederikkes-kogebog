@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, formatDate } from './utils.js';
+import { openReorderAssistantModal } from './shoppingList.js';
 
 let appState;
 let appElements;
@@ -75,9 +76,7 @@ export function initInventory(state, elements) {
 
     // Tilslut knapperne i sidebaren
     if (appElements.inventoryImpulsePurchaseBtn) appElements.inventoryImpulsePurchaseBtn.addEventListener('click', openImpulsePurchaseModal);
-    if (appElements.inventoryReorderAssistantBtn) appElements.inventoryReorderAssistantBtn.addEventListener('click', () => {
-        showNotification({ title: "Kommer Snart", message: "Genbestillings-assistenten er under udvikling." })
-    });
+    if (appElements.inventoryReorderAssistantBtn) appElements.inventoryReorderAssistantBtn.addEventListener('click', handleOpenReorderAssistant);
     if (appElements.inventoryUseInCookbookBtn) appElements.inventoryUseInCookbookBtn.addEventListener('click', () => {
         showNotification({ title: "Kommer Snart", message: "Funktionen til at finde opskrifter baseret på lager er under udvikling." })
     });
@@ -116,13 +115,14 @@ export function initInventory(state, elements) {
     }
 
     // Impulse Purchase
-    appElements.impulsePurchaseForm.addEventListener('submit', handleImpulseAction);
+    if(appElements.impulsePurchaseForm) appElements.impulsePurchaseForm.addEventListener('submit', handleImpulseAction);
     const impulseSearchInput = document.getElementById('impulse-item-search');
     if (impulseSearchInput) {
         impulseSearchInput.addEventListener('input', debounce(handleImpulseSearch, 200));
         impulseSearchInput.addEventListener('blur', () => {
             setTimeout(() => {
-                document.getElementById('impulse-item-suggestions').innerHTML = '';
+                const suggestionsEl = document.getElementById('impulse-item-suggestions');
+                if (suggestionsEl) suggestionsEl.innerHTML = '';
             }, 150);
         });
     }
@@ -349,6 +349,19 @@ async function handleMainContentClick(e) {
     }
 }
 
+function handleOpenReorderAssistant() {
+    const itemsToReorder = (appState.inventory || []).filter(item => 
+        item.reorderPoint && (item.totalStock || 0) <= item.reorderPoint
+    );
+
+    if (itemsToReorder.length === 0) {
+        showNotification({ title: "Alt er fyldt op!", message: "Der er ingen varer, der trænger til genbestilling." });
+        return;
+    }
+
+    openReorderAssistantModal(itemsToReorder);
+}
+
 function handleFavoriteWidgetClick(e) {
     const item = e.target.closest('.favorite-item');
     if (!item) return;
@@ -427,8 +440,8 @@ function openInventoryItemModal(itemId, prefillName = '') {
     appElements.inventoryItemModal.classList.remove('hidden');
 }
 
-async function handleSaveInventoryItem(e) {
-    e.preventDefault();
+async function handleSaveInventoryItem(e, returnId = false) {
+    if (e) e.preventDefault();
     const itemId = document.getElementById('inventory-item-id').value;
     const conversionRules = {};
     document.getElementById('conversion-rules-container').querySelectorAll('.conversion-rule-row').forEach(row => {
@@ -450,19 +463,29 @@ async function handleSaveInventoryItem(e) {
     };
 
     if (!itemData.name || !itemData.mainCategory || !itemData.subCategory || !itemData.location) {
-        return handleError({message: "Udfyld venligst alle påkrævede felter."}, "Ufuldstændige data");
+        handleError({message: "Udfyld venligst alle påkrævede felter."}, "Ufuldstændige data");
+        return null;
     }
 
     try {
         if (itemId) {
             await updateDoc(doc(db, 'inventory_items', itemId), itemData);
+            if (!returnId) {
+                appElements.inventoryItemModal.classList.add('hidden');
+                showNotification({ title: 'Gemt!', message: 'Varens informationer er gemt.' });
+            }
+            return itemId;
         } else {
-            await addDoc(collection(db, 'inventory_items'), itemData);
+            const docRef = await addDoc(collection(db, 'inventory_items'), itemData);
+            if (!returnId) {
+                appElements.inventoryItemModal.classList.add('hidden');
+                showNotification({ title: 'Oprettet!', message: 'Varen er blevet oprettet.' });
+            }
+            return docRef.id;
         }
-        appElements.inventoryItemModal.classList.add('hidden');
-        showNotification({ title: 'Gemt!', message: 'Varens informationer er gemt.' });
     } catch (error) {
         handleError(error, "Varen kunne ikke gemmes.");
+        return null;
     }
 }
 
@@ -536,7 +559,12 @@ function populateReferenceDropdown(select, opts, ph, val) {
 }
 
 function openImpulsePurchaseModal() {
-    showNotification({title: "Kommer Snart", message: "Funktionen for 'Hurtigt Køb' er under udvikling."});
+    impulseState.selectedItem = null;
+    impulseState.searchTerm = '';
+    appElements.impulsePurchaseForm.reset();
+    document.getElementById('impulse-item-suggestions').innerHTML = '';
+    updateImpulseActionButton();
+    appElements.impulsePurchaseModal.classList.remove('hidden');
 }
 
 export function openBatchModal(itemId, batchId, onSaveSuccess) {
@@ -625,19 +653,30 @@ async function handleDeleteBatch() {
 async function handleImpulseAction(e) {
     e.preventDefault();
     appElements.impulsePurchaseModal.classList.add('hidden');
+
     if (impulseState.selectedItem) {
         openBatchModal(impulseState.selectedItem.id, null);
     } else if (impulseState.searchTerm) {
-        const onSaveAndAddBatch = async (event) => {
-            event.preventDefault();
-            const newItemId = await handleSaveInventoryItem(event);
-            appElements.inventoryItemForm.onsubmit = handleSaveInventoryItem;
+        
+        const onSaveSuccessCallback = (newItemId) => {
+            appElements.inventoryItemForm.removeEventListener('submit', tempSubmitHandler);
+            appElements.inventoryItemForm.addEventListener('submit', handleSaveInventoryItem);
+
             if (newItemId) {
                 appElements.inventoryItemModal.classList.add('hidden');
                 openBatchModal(newItemId, null);
             }
         };
-        appElements.inventoryItemForm.onsubmit = onSaveAndAddBatch;
+        
+        const tempSubmitHandler = async (event) => {
+            event.preventDefault();
+            const savedItemId = await handleSaveInventoryItem(event, true);
+            onSaveSuccessCallback(savedItemId);
+        };
+
+        appElements.inventoryItemForm.removeEventListener('submit', handleSaveInventoryItem);
+        appElements.inventoryItemForm.addEventListener('submit', tempSubmitHandler, { once: true });
+        
         openInventoryItemModal(null, impulseState.searchTerm);
     }
 }
@@ -650,7 +689,7 @@ function handleImpulseSearch(e) {
     suggestionsContainer.innerHTML = '';
     
     if (searchTerm.length > 0) {
-        appState.inventoryItems
+        appState.inventory
             .filter(item => item.name.toLowerCase().includes(searchTerm))
             .slice(0, 5)
             .forEach(item => {
