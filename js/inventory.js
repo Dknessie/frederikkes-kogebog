@@ -4,7 +4,6 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, formatDate } from './utils.js';
-import { openReorderAssistantModal } from './shoppingList.js';
 
 let appState;
 let appElements;
@@ -76,7 +75,9 @@ export function initInventory(state, elements) {
 
     // Tilslut knapperne i sidebaren
     if (appElements.inventoryImpulsePurchaseBtn) appElements.inventoryImpulsePurchaseBtn.addEventListener('click', openImpulsePurchaseModal);
-    if (appElements.inventoryReorderAssistantBtn) appElements.inventoryReorderAssistantBtn.addEventListener('click', handleReorderAssistantClick);
+    if (appElements.inventoryReorderAssistantBtn) appElements.inventoryReorderAssistantBtn.addEventListener('click', () => {
+        showNotification({ title: "Kommer Snart", message: "Genbestillings-assistenten er under udvikling." })
+    });
     if (appElements.inventoryUseInCookbookBtn) appElements.inventoryUseInCookbookBtn.addEventListener('click', () => {
         showNotification({ title: "Kommer Snart", message: "Funktionen til at finde opskrifter baseret på lager er under udvikling." })
     });
@@ -99,7 +100,7 @@ export function initInventory(state, elements) {
     if(batchListContainer) batchListContainer.addEventListener('click', e => {
         const editBtn = e.target.closest('.edit-batch-btn');
         if (editBtn) {
-            const itemId = document.getElementById('inventory-item-id').value;
+            const itemId = editBtn.dataset.itemId;
             const batchId = editBtn.dataset.batchId;
             openBatchModal(itemId, batchId);
         }
@@ -127,8 +128,9 @@ export function initInventory(state, elements) {
     }
 
     // Quick Stock Adjust
-    if (appElements.quickStockAdjustForm) {
-        appElements.quickStockAdjustForm.addEventListener('submit', handleQuickStockUpdate);
+    const quickStockForm = document.getElementById('quick-stock-adjust-form');
+    if (quickStockForm) {
+        quickStockForm.addEventListener('submit', handleQuickStockUpdate);
     }
 }
 
@@ -247,7 +249,8 @@ function createItemRow(item) {
             <td>${expiryHTML}</td>
             <td class="actions-cell">
                 <button class="btn-icon favorite-btn ${isFavorite ? 'is-favorite' : ''}" title="${isFavorite ? 'Fjern fra' : 'Tilføj til'} favoritter"><i class="${isFavorite ? 'fas' : 'far'} fa-star"></i></button>
-                <button class="btn-icon edit-btn" title="Rediger varekort"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon move-btn" title="Flyt"><i class="fas fa-random"></i></button>
+                <button class="btn-icon edit-btn" title="Rediger"><i class="fas fa-edit"></i></button>
             </td>
         </tr>
     `;
@@ -317,12 +320,13 @@ function getExpiryInfo(earliestExpiry, location) {
 }
 
 function formatQuantity(item) {
-    if (!item.totalStock || item.totalStock <= 0) return '0';
-    // Round to avoid floating point inaccuracies
-    const totalStock = Math.round(item.totalStock * 100) / 100;
-    return `${totalStock} ${item.defaultUnit}`;
+    if (item.totalStock <= 0) return '0';
+    const batches = item.batches || [];
+    if (batches.length === 1 && item.defaultUnit === 'stk') {
+        return `${batches[0].quantity} ${item.defaultUnit}`;
+    }
+    return `${item.totalStock.toFixed(0)} ${item.defaultUnit}`;
 }
-
 
 function populateCategoryFilter() {
     const select = appElements.inventoryMainCatFilter;
@@ -342,27 +346,14 @@ async function handleMainContentClick(e) {
     
     if (e.target.closest('.edit-btn')) {
         openInventoryItemModal(itemId);
-    } else if (e.target.closest('.favorite-btn')) {
+    }
+    if (e.target.closest('.favorite-btn')) {
         await toggleFavorite(itemId);
-    } else if (e.target.closest('.quantity-cell')) {
+    }
+    if (e.target.closest('.quantity-cell')) {
         openQuickStockAdjustModal(itemId);
     }
 }
-
-
-function handleReorderAssistantClick() {
-    const itemsToReorder = (appState.inventory || []).filter(item => {
-        return item.reorderPoint && item.reorderPoint > 0 && item.totalStock <= item.reorderPoint;
-    });
-
-    if (itemsToReorder.length === 0) {
-        showNotification({ title: "Alt er fyldt op!", message: "Der er ingen varer, der er under genbestillingspunktet." });
-        return;
-    }
-
-    openReorderAssistantModal(itemsToReorder);
-}
-
 
 function handleFavoriteWidgetClick(e) {
     const item = e.target.closest('.favorite-item');
@@ -391,16 +382,94 @@ async function toggleFavorite(itemId) {
     }
 }
 
+function openQuickStockAdjustModal(itemId) {
+    const item = appState.inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    const modal = document.getElementById('quick-stock-adjust-modal');
+    modal.querySelector('h3').textContent = `Juster Beholdning for ${item.name}`;
+    document.getElementById('quick-stock-item-id').value = item.id;
+    document.getElementById('quick-stock-unit-label').textContent = item.defaultUnit;
+    document.getElementById('quick-stock-new-total').value = item.totalStock;
+
+    modal.classList.remove('hidden');
+}
+
+async function handleQuickStockUpdate(e) {
+    e.preventDefault();
+    const itemId = document.getElementById('quick-stock-item-id').value;
+    const newTotalStock = parseFloat(document.getElementById('quick-stock-new-total').value);
+
+    const item = appState.inventory.find(i => i.id === itemId);
+    if (!item || isNaN(newTotalStock)) return;
+
+    const currentTotalStock = item.totalStock || 0;
+    const difference = newTotalStock - currentTotalStock;
+
+    document.getElementById('quick-stock-adjust-modal').classList.add('hidden');
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            if (difference > 0) { // Increasing stock
+                const lastBatch = [...item.batches].sort((a,b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
+                const newBatchData = {
+                    itemId: item.id,
+                    userId: appState.currentUser.uid,
+                    purchaseDate: formatDate(new Date()),
+                    expiryDate: null,
+                    quantity: 1, 
+                    size: difference,
+                    unit: item.defaultUnit,
+                    price: lastBatch ? (lastBatch.price / lastBatch.size) * difference : null,
+                };
+                 if (item.defaultUnit !== 'stk') {
+                    newBatchData.quantity = 1;
+                    newBatchData.size = difference;
+                } else {
+                    newBatchData.quantity = difference;
+                    newBatchData.size = 1;
+                }
+                const newBatchRef = doc(collection(db, 'inventory_batches'));
+                transaction.set(newBatchRef, newBatchData);
+
+            } else if (difference < 0) { // Decreasing stock
+                let amountToRemove = Math.abs(difference);
+                const sortedBatches = [...item.batches].sort((a,b) => new Date(a.purchaseDate) - new Date(b.purchaseDate));
+
+                for (const batch of sortedBatches) {
+                    if (amountToRemove <= 0) break;
+                    const batchRef = doc(db, 'inventory_batches', batch.id);
+                    const batchStock = (batch.quantity || 0) * (batch.size || 0);
+                    const amountFromThisBatch = Math.min(amountToRemove, batchStock);
+                    
+                    const newBatchStock = batchStock - amountFromThisBatch;
+                    if (newBatchStock <= 0) {
+                        transaction.delete(batchRef);
+                    } else {
+                        const newQuantity = (item.defaultUnit === 'stk') ? newBatchStock : (newBatchStock / batch.size);
+                        transaction.update(batchRef, { quantity: newQuantity });
+                    }
+                    amountToRemove -= amountFromThisBatch;
+                }
+            }
+        });
+        showNotification({title: "Beholdning Opdateret", message: `${item.name} er justeret.`});
+    } catch (error) {
+        handleError(error, "Kunne ikke justere beholdningen.", "handleQuickStockUpdate");
+    }
+}
+
+
 // ----- MODAL FUNKTIONER -----
 
-function openInventoryItemModal(itemId, prefillName = '') {
+export function openInventoryItemModal(itemId, prefillName = '') {
     const form = appElements.inventoryItemForm;
     form.reset();
     document.getElementById('conversion-rules-container').innerHTML = '';
     document.getElementById('batch-list-container').innerHTML = '';
     
     const item = itemId ? appState.inventory.find(p => p.id === itemId) : null;
-    appElements.inventoryModalTitle.textContent = item ? 'Rediger Vare' : 'Opret Ny Vare';
+    appElements.inventoryModalTitle.textContent = item ? `Rediger ${item.name}` : 'Opret Ny Vare';
     
     document.getElementById('inventory-item-id').value = item ? item.id : '';
     document.getElementById('inventory-item-name').value = item ? item.name : prefillName;
@@ -487,10 +556,10 @@ function renderBatchListInModal(batches) {
         ? '<p class="empty-state-small">Ingen batches registreret.</p>'
         : batches.map(b => `
             <div class="batch-item">
-                <span class="batch-info">Udløber: ${b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('da-DK') : 'N/A'}</span>
+                <span class="batch-info">Udløber: ${b.expiryDate ? formatDate(b.expiryDate) : 'N/A'}</span>
                 <span class="batch-info">Antal: ${b.quantity} x ${b.size}${b.unit}</span>
                 <span class="batch-info">Pris: ${b.price ? `${b.price.toFixed(2)} kr.` : 'N/A'}</span>
-                <button class="btn-icon edit-batch-btn" data-batch-id="${b.id}" title="Rediger batch"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon edit-batch-btn" data-item-id="${b.itemId}" data-batch-id="${b.id}" title="Rediger batch"><i class="fas fa-edit"></i></button>
             </div>`).join('');
 }
 
@@ -535,14 +604,8 @@ function populateReferenceDropdown(select, opts, ph, val) {
 }
 
 function openImpulsePurchaseModal() {
-    appElements.impulsePurchaseForm.reset();
-    impulseState.selectedItem = null;
-    impulseState.searchTerm = '';
-    updateImpulseActionButton();
-    appElements.impulsePurchaseModal.classList.remove('hidden');
-    setTimeout(() => document.getElementById('impulse-item-search').focus(), 100);
+    showNotification({title: "Kommer Snart", message: "Funktionen for 'Hurtigt Køb' er under udvikling."});
 }
-
 
 export function openBatchModal(itemId, batchId, onSaveSuccess) {
     onBatchSaveSuccessCallback = onSaveSuccess || null;
@@ -620,14 +683,6 @@ async function handleDeleteBatch() {
         await deleteDoc(doc(db, 'inventory_batches', batchId));
         document.getElementById('batch-edit-modal').classList.add('hidden');
         showNotification({title: "Batch Slettet", message: "Batchet er blevet fjernet."});
-
-        // Opdater varekort-modalen, hvis den er åben
-        const itemId = document.getElementById('inventory-item-id').value;
-        if(itemId) {
-            const item = appState.inventory.find(i => i.id === itemId);
-            renderBatchListInModal(item.batches.filter(b => b.id !== batchId));
-        }
-
     } catch (error) {
         handleError(error, "Batchet kunne ikke slettes.", "handleDeleteBatch");
     }
@@ -636,55 +691,22 @@ async function handleDeleteBatch() {
 async function handleImpulseAction(e) {
     e.preventDefault();
     appElements.impulsePurchaseModal.classList.add('hidden');
-
-    const handleSaveAndAddBatch = async (event) => {
-        // Stopper standard form-submit
-        if (event) event.preventDefault();
-        
-        // Gemmer den nye vare
-        const newItemId = await handleSaveInventoryItemFromImpulse();
-        
-        // Fjerner den midlertidige submit-handler
-        appElements.inventoryItemForm.removeEventListener('submit', handleSaveAndAddBatch);
-        
-        if (newItemId) {
-            // Lukker varekort-modalen og åbner batch-modalen for den nye vare
-            appElements.inventoryItemModal.classList.add('hidden');
-            openBatchModal(newItemId, null);
-        }
-    };
-
     if (impulseState.selectedItem) {
         openBatchModal(impulseState.selectedItem.id, null);
     } else if (impulseState.searchTerm) {
-        // Sætter en midlertidig submit-handler på varekortet
-        appElements.inventoryItemForm.addEventListener('submit', handleSaveAndAddBatch);
+        const onSaveAndAddBatch = async (event) => {
+            event.preventDefault();
+            const newItemId = await handleSaveInventoryItem(event);
+            appElements.inventoryItemForm.onsubmit = handleSaveInventoryItem;
+            if (newItemId) {
+                appElements.inventoryItemModal.classList.add('hidden');
+                openBatchModal(newItemId, null);
+            }
+        };
+        appElements.inventoryItemForm.onsubmit = onSaveAndAddBatch;
         openInventoryItemModal(null, impulseState.searchTerm);
     }
 }
-
-async function handleSaveInventoryItemFromImpulse() {
-    const itemData = {
-        name: document.getElementById('inventory-item-name').value.trim(),
-        mainCategory: document.getElementById('inventory-item-main-category').value,
-        subCategory: document.getElementById('inventory-item-sub-category').value,
-        location: document.getElementById('inventory-item-location').value,
-        defaultUnit: document.getElementById('inventory-item-default-unit').value,
-        userId: appState.currentUser.uid,
-    };
-    if (!itemData.name || !itemData.mainCategory || !itemData.subCategory || !itemData.location) {
-        showNotification({ title: "Udfyld påkrævede felter", message: "Udfyld venligst alle felter for at oprette varen." });
-        return null;
-    }
-    try {
-        const docRef = await addDoc(collection(db, 'inventory_items'), itemData);
-        return docRef.id;
-    } catch (error) {
-        handleError(error, "Varen kunne ikke oprettes.", "saveItemFromImpulse");
-        return null;
-    }
-}
-
 
 function handleImpulseSearch(e) {
     const searchTerm = e.target.value.toLowerCase();
@@ -694,7 +716,7 @@ function handleImpulseSearch(e) {
     suggestionsContainer.innerHTML = '';
     
     if (searchTerm.length > 0) {
-        appState.inventory
+        appState.inventoryItems
             .filter(item => item.name.toLowerCase().includes(searchTerm))
             .slice(0, 5)
             .forEach(item => {
@@ -727,96 +749,6 @@ function updateImpulseActionButton() {
     } else {
         btn.textContent = 'Søg efter en vare';
         btn.disabled = true;
-    }
-}
-
-// NY FUNKTION: Åbner modal for hurtig lagerjustering
-function openQuickStockAdjustModal(itemId) {
-    const item = appState.inventory.find(i => i.id === itemId);
-    if (!item) return;
-
-    const modal = appElements.quickStockAdjustModal;
-    document.getElementById('quick-stock-modal-title').textContent = `Juster Beholdning: ${item.name}`;
-    document.getElementById('quick-stock-item-id').value = item.id;
-    document.getElementById('quick-stock-unit-label').textContent = item.defaultUnit;
-    const input = document.getElementById('quick-stock-new-total');
-    input.value = item.totalStock || 0;
-    
-    modal.classList.remove('hidden');
-    setTimeout(() => input.select(), 10);
-}
-
-// NY FUNKTION: Håndterer den "intelligente" opdatering af batches
-async function handleQuickStockUpdate(e) {
-    e.preventDefault();
-    const itemId = document.getElementById('quick-stock-item-id').value;
-    const newTotalStock = parseFloat(document.getElementById('quick-stock-new-total').value);
-    
-    const item = appState.inventory.find(i => i.id === itemId);
-    if (!item || isNaN(newTotalStock) || newTotalStock < 0) {
-        return showNotification({title: "Ugyldigt input", message: "Indtast venligst en gyldig beholdning."});
-    }
-
-    const currentTotalStock = item.totalStock || 0;
-    const difference = newTotalStock - currentTotalStock;
-
-    if (difference === 0) {
-        appElements.quickStockAdjustModal.classList.add('hidden');
-        return;
-    }
-
-    try {
-        if (difference > 0) {
-            // Tilføj et nyt batch med differencen
-            const lastBatch = [...item.batches].sort((a,b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
-            const newBatchData = {
-                itemId: itemId,
-                userId: appState.currentUser.uid,
-                purchaseDate: formatDate(new Date()),
-                expiryDate: null,
-                quantity: 1, // Altid 1 stk for simplicitet ved hurtig tilføjelse
-                size: difference,
-                unit: item.defaultUnit,
-                price: lastBatch ? (lastBatch.price / lastBatch.quantity) * (difference / lastBatch.size) : null,
-            };
-            if (item.defaultUnit === 'stk') {
-                newBatchData.quantity = difference;
-                newBatchData.size = 1;
-            }
-            await addDoc(collection(db, 'inventory_batches'), newBatchData);
-        } else {
-            // Fjern fra lager, startende med de ældste batches
-            let amountToRemove = Math.abs(difference);
-            const sortedBatches = [...item.batches].sort((a,b) => {
-                const dateA = a.expiryDate ? new Date(a.expiryDate) : new Date(a.purchaseDate);
-                const dateB = b.expiryDate ? new Date(b.expiryDate) : new Date(b.purchaseDate);
-                return dateA - dateB;
-            });
-
-            const batch = writeBatch(db);
-
-            for (const b of sortedBatches) {
-                if (amountToRemove <= 0) break;
-                
-                const batchStock = (b.quantity || 0) * (b.size || 0);
-                const removalAmount = Math.min(amountToRemove, batchStock);
-                
-                const newBatchStock = batchStock - removalAmount;
-                if (newBatchStock > 0) {
-                    const newQuantity = newBatchStock / b.size;
-                    batch.update(doc(db, 'inventory_batches', b.id), { quantity: newQuantity });
-                } else {
-                    batch.delete(doc(db, 'inventory_batches', b.id));
-                }
-                amountToRemove -= removalAmount;
-            }
-            await batch.commit();
-        }
-        
-        appElements.quickStockAdjustModal.classList.add('hidden');
-        showNotification({ title: "Lager Opdateret", message: `${item.name} er justeret til ${newTotalStock} ${item.defaultUnit}.` });
-    } catch (error) {
-        handleError(error, "Lageret kunne ikke opdateres.", "quickStockUpdate");
     }
 }
 
