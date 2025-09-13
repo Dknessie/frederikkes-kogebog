@@ -121,9 +121,7 @@ function renderGroceriesList(list) {
             html += `<div class="store-section"><h4>${store}</h4><ul>`;
             groupedByStore[store].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
                 const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-                const quantityText = (item.unit || '').startsWith('stk á') 
-                    ? `${item.quantity_to_buy} ${item.unit}`
-                    : `${item.quantity_to_buy.toFixed(0)} ${item.unit}`;
+                const quantityText = `${item.quantity_to_buy} ${item.unit}`;
 
                 html += `
                     <li class="shopping-list-item" data-item-name="${item.name}">
@@ -280,14 +278,15 @@ async function generateGroceriesList() {
         const needed = allIngredientsNeeded[ingKey];
         const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ingKey);
 
+        // ÆNDRING: Hvis varen ikke findes på lager, sættes butik til 'Andet'
         if (!inventoryItem) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Ukendt Vare', itemId: null };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', itemId: null };
             continue;
         }
 
         const conversion = convertToGrams(needed.total, needed.unit, inventoryItem);
         if (conversion.error) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Konv. Fejl', itemId: inventoryItem.id };
+            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, storeId: 'Andet', itemId: inventoryItem.id };
             continue;
         }
 
@@ -299,21 +298,28 @@ async function generateGroceriesList() {
                 .filter(b => b.size > 0)
                 .sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
             
-            const purchaseSize = representativeBatch?.size || 1;
-            const purchaseUnit = representativeBatch?.unit || inventoryItem.defaultUnit;
-            const storeId = representativeBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt';
+            // ÆNDRING: Butik falder tilbage til 'Andet' i stedet for 'Ukendt'
+            const storeId = representativeBatch?.store || appState.preferences.favoriteStoreId || 'Andet';
             const pricePerUnit = representativeBatch?.price ? (representativeBatch.price / representativeBatch.quantity) : 0;
             
-            let quantityToBuy = 1;
-            if (inventoryItem.defaultUnit !== 'stk') {
-                 quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
+            let quantityToBuy;
+            let displayUnit;
+
+            // ÆNDRING: Forenklet logik for enhedsvisning
+            if (inventoryItem.defaultUnit === 'stk') {
+                quantityToBuy = Math.ceil(toBuyInBaseUnit);
+                displayUnit = 'stk';
+            } else {
+                const purchaseSize = representativeBatch?.size || 1;
+                quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
+                displayUnit = 'stk'; // Viser 'stk' for pakker, poser osv.
             }
 
             const key = inventoryItem.name.toLowerCase();
             shoppingList[key] = {
                 name: inventoryItem.name,
                 quantity_to_buy: quantityToBuy,
-                unit: `stk á ${purchaseSize}${purchaseUnit}`,
+                unit: displayUnit, // FORENKLET ENHED
                 storeId: storeId,
                 itemId: inventoryItem.id,
                 estimatedPrice: quantityToBuy * pricePerUnit
@@ -356,27 +362,29 @@ async function handleAddShoppingItem(itemName) {
         return;
     }
     
+    // ÆNDRING: Intelligent opslag for at finde butik og korrekte data
     const inventoryItem = appState.inventory.find(i => i.name.toLowerCase() === key);
     
-    let newItem = {
-        name: itemName,
-        quantity_to_buy: 1,
-        unit: 'stk',
-        storeId: appState.preferences.favoriteStoreId || 'Andet',
-        itemId: null,
-        price: null,
-        url: null
-    };
-
+    let newItem;
     if (inventoryItem) {
-        newItem.name = inventoryItem.name; // Use correct casing
-        newItem.itemId = inventoryItem.id;
-        newItem.unit = inventoryItem.defaultUnit || 'stk';
+        // Varen findes på lager - brug dens data
         const lastBatch = inventoryItem.batches.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
-        if (lastBatch) {
-            newItem.storeId = lastBatch.store;
-            newItem.price = lastBatch.price / lastBatch.quantity;
-        }
+        newItem = {
+            name: inventoryItem.name, // Korrekt casing
+            quantity_to_buy: 1,
+            unit: 'stk', // Manuel tilføjelse er altid pr. stk.
+            storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
+            itemId: inventoryItem.id,
+        };
+    } else {
+        // Helt ny vare
+        newItem = {
+            name: itemName,
+            quantity_to_buy: 1,
+            unit: 'stk',
+            storeId: appState.preferences.favoriteStoreId || 'Andet', // Standard butik
+            itemId: null,
+        };
     }
     
     updatedList[key] = newItem;
@@ -540,15 +548,13 @@ export async function addSingleItemToGroceries(itemId) {
         .filter(b => b.size > 0)
         .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
 
-    const purchaseSize = lastBatch?.size || 1;
-    const purchaseUnit = lastBatch?.unit || inventoryItem.defaultUnit;
-    const storeId = lastBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt';
+    const storeId = lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet';
     const pricePerUnit = lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null;
 
     const newItem = {
         name: inventoryItem.name,
         quantity_to_buy: 1,
-        unit: `stk á ${purchaseSize}${purchaseUnit}`,
+        unit: 'stk',
         storeId: storeId,
         itemId: inventoryItem.id,
         estimatedPrice: pricePerUnit
@@ -602,8 +608,8 @@ async function handleReorderSubmit(e) {
             itemsToAdd.push({
                 name: inventoryItem.name,
                 quantity_to_buy: 1,
-                unit: `stk á ${lastBatch?.size || 1}${lastBatch?.unit || inventoryItem.defaultUnit}`,
-                storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt',
+                unit: 'stk',
+                storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Andet',
                 itemId: inventoryItem.id,
                 estimatedPrice: lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null
             });
