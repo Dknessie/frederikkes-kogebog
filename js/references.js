@@ -37,11 +37,6 @@ const referenceCategories = {
         icon: 'fa-map-marker-alt',
         isSimpleList: true
     },
-    stores: {
-        title: 'Butikker',
-        icon: 'fa-store',
-        isSimpleList: true
-    },
     assetTypes: {
         title: 'Aktivtyper',
         icon: 'fa-building',
