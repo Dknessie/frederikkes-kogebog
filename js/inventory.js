@@ -4,6 +4,7 @@ import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, query, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { debounce, formatDate } from './utils.js';
+import { masterIngredientList } from './masterIngredientList.js'; // Importer den nye masterliste
 
 let appState;
 let appElements;
@@ -13,7 +14,6 @@ let onBatchSaveSuccessCallback = null;
 let inventoryState = {
     searchTerm: '',
     selectedCategory: '',
-    // Holder styr på sortering for hver lokation, f.eks. { Fryser: 'expiry', Køleskab: 'alpha' }
     locationSort: {},
 };
 // State for impulse purchase modal
@@ -28,7 +28,6 @@ export function initInventory(state, elements) {
     appElements = elements;
 
     // ----- MODAL EVENT LISTENERS -----
-    // Knappen på dashboardet, som ikke findes på selve inventory-siden
     if (appElements.addInventoryItemBtn) {
         appElements.addInventoryItemBtn.addEventListener('click', () => openInventoryItemModal(null));
     }
@@ -478,6 +477,24 @@ export function openInventoryItemModal(itemId, prefillName = '') {
     document.getElementById('delete-inventory-item-btn').style.display = item ? 'inline-flex' : 'none';
     document.getElementById('add-batch-btn').style.display = item ? 'inline-flex' : 'none';
     
+    // NYT: Intelligent forudfyldning
+    if (!item && prefillName) {
+        const normalizedName = prefillName.toLowerCase();
+        const masterData = masterIngredientList[normalizedName];
+        if (masterData) {
+            document.getElementById('inventory-item-name').value = masterData.name;
+            document.getElementById('inventory-item-default-unit').value = masterData.defaultUnit;
+            populateMainCategoryDropdown(document.getElementById('inventory-item-main-category'), masterData.mainCategory);
+            populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), masterData.mainCategory, masterData.subCategory);
+        } else {
+            populateMainCategoryDropdown(document.getElementById('inventory-item-main-category'));
+            populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), null);
+        }
+    } else {
+        populateMainCategoryDropdown(document.getElementById('inventory-item-main-category'), item?.mainCategory);
+        populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), item?.mainCategory, item?.subCategory);
+    }
+    
     if (item?.conversion_rules) {
         for (const unit in item.conversion_rules) {
             addConversionRuleRow({ unit, value: item.conversion_rules[unit] });
@@ -486,8 +503,6 @@ export function openInventoryItemModal(itemId, prefillName = '') {
     
     renderBatchListInModal(item?.batches || []);
 
-    populateMainCategoryDropdown(document.getElementById('inventory-item-main-category'), item?.mainCategory);
-    populateSubCategoryDropdown(document.getElementById('inventory-item-sub-category'), item?.mainCategory, item?.subCategory);
     populateReferenceDropdown(document.getElementById('inventory-item-location'), appState.references.itemLocations, 'Vælg placering...', item?.location);
     
     appElements.inventoryItemModal.classList.remove('hidden');
