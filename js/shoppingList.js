@@ -56,6 +56,10 @@ export function initShoppingList(state, elements) {
     if (appElements.bulkAddForm) {
         appElements.bulkAddForm.addEventListener('submit', handleBulkSave);
     }
+
+    if (appElements.reorderForm) {
+        appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
+    }
 }
 
 export function openShoppingListModal(listType) {
@@ -117,10 +121,14 @@ function renderGroceriesList(list) {
             html += `<div class="store-section"><h4>${store}</h4><ul>`;
             groupedByStore[store].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
                 const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
+                const quantityText = (item.unit || '').startsWith('stk á') 
+                    ? `${item.quantity_to_buy} ${item.unit}`
+                    : `${item.quantity_to_buy.toFixed(0)} ${item.unit}`;
+
                 html += `
                     <li class="shopping-list-item" data-item-name="${item.name}">
                         <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
-                        <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${item.quantity_to_buy} ${item.unit})</span></label>
+                        <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${quantityText})</span></label>
                         <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
                     </li>`;
             });
@@ -151,18 +159,16 @@ function renderMaterialsList(list) {
         html += `
             <div class="material-row material-header">
                 <span>Materiale</span>
-                <span>Antal</span>
-                <span>Butik</span>
-                <span>Pris</span>
+                <span style="text-align: right;">Mængde</span>
+                <span>Note</span>
             </div>
         `;
         groupedByProject[projectId].forEach(item => {
             html += `
                 <div class="material-row" data-item-name="${item.name}">
                     <span class="material-name">${item.name}</span>
-                    <span>${item.quantity_to_buy} ${item.unit || ''}</span>
-                    <span>${item.storeId || 'N/A'}</span>
-                    <span>${item.price ? `${item.price.toFixed(2)} kr.` : 'N/A'}</span>
+                    <span style="text-align: right;">${(item.quantity_to_buy || 0).toFixed(0)} ${item.unit || ''}</span>
+                    <span class="small-text">${item.note || ''}</span>
                 </div>
             `;
         });
@@ -203,13 +209,20 @@ function renderWishlist(list) {
 
 function getModalFooter(isWishlist = false) {
     const confirmText = isWishlist ? "Marker som købt" : "Bekræft Indkøb";
+    const addText = isWishlist ? 'ønske' : 'vare';
+    
+    // Vis ikke "bekræft køb" for materialer, da de ikke kan redigeres her.
+    const confirmButton = currentListType !== 'materials' 
+        ? `<button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>` 
+        : '';
+
     return `
         <div class="shopping-list-actions form-actions">
             <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
-            <button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>
+            ${confirmButton}
         </div>
         <form class="add-item-form">
-            <input type="text" placeholder="Tilføj ${isWishlist ? 'ønske' : 'vare'}..." required>
+            <input type="text" placeholder="Tilføj ${addText}..." required>
             <button type="submit" class="btn-icon"><i class="fas fa-plus-circle"></i></button>
         </form>
     `;
@@ -217,7 +230,7 @@ function getModalFooter(isWishlist = false) {
 
 
 async function updateShoppingListInFirestore(listType, newList) {
-    if (!appState.currentUser || listType !== 'groceries') return;
+    if (!appState.currentUser) return;
     try {
         const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
         await setDoc(shoppingListRef, { [listType]: newList }, { merge: true });
@@ -314,13 +327,13 @@ async function generateGroceriesList() {
 
 
 async function handleClearShoppingList() {
-    if (currentListType !== 'groceries') {
-        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde (Projekter eller Rum)."})
+    if (currentListType !== 'groceries' && currentListType !== 'wishlist') {
+        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde (Projekter)."})
         return;
     }
     const confirmed = await showNotification({
-        title: "Ryd Indkøbsliste",
-        message: `Er du sikker på, at du vil slette alle varer fra listen "${appElements.shoppingListModalTitle.textContent}"?`,
+        title: "Ryd Liste",
+        message: `Er du sikker på, at du vil slette alle emner fra listen "${appElements.shoppingListModalTitle.textContent}"?`,
         type: 'confirm'
     });
     if (confirmed) {
@@ -330,8 +343,8 @@ async function handleClearShoppingList() {
 }
 
 async function handleAddShoppingItem(itemName) {
-    if (currentListType !== 'groceries') {
-        showNotification({title: "Handling ikke tilladt", message: "Varer til denne liste tilføjes automatisk fra Projekter eller Rum."});
+    if (currentListType !== 'groceries') { // For nu kan kun groceries redigeres manuelt herfra
+        showNotification({title: "Handling ikke tilladt", message: "Varer til denne liste tilføjes automatisk."});
         return;
     }
     const list = appState.shoppingLists.groceries || {};
@@ -373,16 +386,16 @@ async function handleAddShoppingItem(itemName) {
 
 
 async function handleRemoveShoppingItem(itemName) {
-    if (currentListType !== 'groceries') {
-        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde (Projekter eller Rum)."})
+    if (currentListType !== 'groceries' && currentListType !== 'wishlist') {
+        showNotification({title: "Handling ikke tilladt", message: "Denne liste kan kun redigeres fra dens kilde."})
         return;
     }
-    const list = appState.shoppingLists.groceries || {};
+    const list = appState.shoppingLists[currentListType] || {};
     const updatedList = { ...list };
     const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
     if(keyToDelete) {
         delete updatedList[keyToDelete];
-        await updateShoppingListInFirestore('groceries', updatedList);
+        await updateShoppingListInFirestore(currentListType, updatedList);
         renderListInModal(); // Immediate UI update
     }
 }
@@ -541,14 +554,83 @@ export async function addSingleItemToGroceries(itemId) {
         estimatedPrice: pricePerUnit
     };
 
-    const updatedList = { ...list, [key]: newItem };
+    await addItemsToGroceriesList([newItem]);
+}
+
+export function openReorderAssistantModal(items) {
+    const container = appElements.reorderListContainer;
+    container.innerHTML = '';
+
+    if (!items || items.length === 0) {
+        container.innerHTML = '<p class="empty-state-small">Ingen varer at vise.</p>';
+        return;
+    }
+
+    items.forEach(item => {
+        const itemHTML = `
+            <div class="reorder-item">
+                <label>
+                    <input type="checkbox" class="reorder-checkbox" value="${item.id}" checked>
+                    <span class="item-name">${item.name}</span>
+                </label>
+                <span class="stock-info">På lager: ${item.totalStock}${item.defaultUnit} (Genbestil ved ${item.reorderPoint}${item.defaultUnit})</span>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', itemHTML);
+    });
+    
+    appElements.reorderAssistantModal.classList.remove('hidden');
+}
+
+async function handleReorderSubmit(e) {
+    e.preventDefault();
+    const selectedItemIds = [...appElements.reorderForm.querySelectorAll('.reorder-checkbox:checked')].map(cb => cb.value);
+    
+    if (selectedItemIds.length === 0) {
+        showNotification({ title: "Intet valgt", message: "Vælg venligst de varer du vil tilføje." });
+        return;
+    }
+
+    const itemsToAdd = [];
+    selectedItemIds.forEach(itemId => {
+        const inventoryItem = appState.inventory.find(i => i.id === itemId);
+        if (inventoryItem) {
+            const lastBatch = inventoryItem.batches
+                .filter(b => b.size > 0)
+                .sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
+            
+            itemsToAdd.push({
+                name: inventoryItem.name,
+                quantity_to_buy: 1,
+                unit: `stk á ${lastBatch?.size || 1}${lastBatch?.unit || inventoryItem.defaultUnit}`,
+                storeId: lastBatch?.store || appState.preferences.favoriteStoreId || 'Ukendt',
+                itemId: inventoryItem.id,
+                estimatedPrice: lastBatch?.price ? (lastBatch.price / lastBatch.quantity) : null
+            });
+        }
+    });
+
+    await addItemsToGroceriesList(itemsToAdd);
+    appElements.reorderAssistantModal.classList.add('hidden');
+    showNotification({ title: "Liste Opdateret", message: `${itemsToAdd.length} vare(r) er blevet tilføjet til din indkøbsliste.` });
+}
+
+async function addItemsToGroceriesList(items) {
+    const list = appState.shoppingLists.groceries || {};
+    const updatedList = { ...list };
+
+    items.forEach(item => {
+        const key = item.name.toLowerCase();
+        if (!updatedList[key]) {
+            updatedList[key] = item;
+        }
+    });
 
     try {
         const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
         await setDoc(shoppingListRef, { groceries: updatedList }, { merge: true });
-        showNotification({ title: "Tilføjet!", message: `${inventoryItem.name} er blevet tilføjet til din indkøbsliste.` });
     } catch (error) {
-        handleError(error, "Varen kunne ikke tilføjes til listen.", "addSingleItemToGroceries");
+        handleError(error, "Kunne ikke tilføje varer til listen.", "addItemsToGroceriesList");
     }
 }
 
@@ -558,3 +640,4 @@ function populateReferenceDropdown(selectElement, options, placeholder, currentV
     (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
     selectElement.value = currentValue || "";
 }
+
