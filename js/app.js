@@ -15,7 +15,6 @@ import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomyPage } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
-import { convertToGrams } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Central state object for the entire application
@@ -89,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         impulsePurchaseModal: document.getElementById('impulse-purchase-modal'),
         impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
+
+        quickStockAdjustModal: document.getElementById('quick-stock-adjust-modal'),
+        quickStockAdjustForm: document.getElementById('quick-stock-adjust-form'),
 
         // Recipes (New Structure)
         cookbookAddRecipeBtn: document.getElementById('cookbook-add-recipe-btn'),
@@ -190,58 +192,48 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // NULSTIL MATERIALELISTEN, DA DEN ALTID GENBEREGNES
-        state.shoppingLists.materials = {};
-        const activeProjects = (state.projects || []).filter(p => ['Igangværende', 'Planlagt'].includes(p.status));
-    
-        activeProjects.forEach(project => {
-            (project.materials || []).forEach(material => {
-                const inventoryItem = state.inventory.find(inv => inv.name.toLowerCase() === material.name.toLowerCase());
-                const neededQuantity = material.quantity || 0;
-    
-                if (inventoryItem) {
-                    // Konverter materialets enhed til varens base-enhed for at sammenligne lager
-                    const conversion = convertToGrams(neededQuantity, material.unit, inventoryItem);
-                    if (conversion.error) {
-                        // Kan ikke konvertere, tilføj med en note
-                        const key = `${project.id}-${material.name.toLowerCase()}`;
-                        state.shoppingLists.materials[key] = {
-                            name: material.name,
-                            quantity_to_buy: neededQuantity,
+        // Beregn materialelisten baseret på projekter
+        const materialsNeeded = {};
+
+        // Gennemgå alle planlagte og igangværende projekter
+        (appState.projects || []).forEach(project => {
+            if (project.status === 'Planlagt' || project.status === 'Igangværende') {
+                (project.materials || []).forEach(material => {
+                    const key = material.name.toLowerCase();
+                    if (!materialsNeeded[key]) {
+                        materialsNeeded[key] = {
+                            total: 0,
                             unit: material.unit,
-                            projectId: project.id,
-                            note: `Konverteringsfejl: ${conversion.error}`
-                        };
-                        return; // Gå til næste materiale
-                    }
-                    
-                    const neededInBaseUnit = conversion.grams;
-                    const stockInBaseUnit = inventoryItem.totalStock || 0;
-    
-                    if (neededInBaseUnit > stockInBaseUnit) {
-                        const toBuy = neededInBaseUnit - stockInBaseUnit;
-                        const key = `${project.id}-${material.name.toLowerCase()}`;
-                        state.shoppingLists.materials[key] = {
                             name: material.name,
-                            quantity_to_buy: toBuy, // Gemmes i base-enhed
-                            unit: inventoryItem.defaultUnit,
-                            projectId: project.id,
-                            note: `Behov: ${neededInBaseUnit}${inventoryItem.defaultUnit}, På lager: ${stockInBaseUnit}${inventoryItem.defaultUnit}`
+                            projects: []
                         };
                     }
-                } else {
-                    // Varen findes slet ikke på lager
-                    const key = `${project.id}-${material.name.toLowerCase()}`;
-                    state.shoppingLists.materials[key] = {
-                        name: material.name,
-                        quantity_to_buy: neededQuantity,
-                        unit: material.unit,
-                        projectId: project.id,
-                        note: 'Varen findes ikke på lager.'
-                    };
-                }
-            });
+                    materialsNeeded[key].total += material.quantity || 0;
+                    materialsNeeded[key].projects.push({ name: project.title, qty: material.quantity });
+                });
+            }
         });
+
+        // Sammenlign med varelager og opret indkøbsliste
+        const materialsShoppingList = {};
+        for (const key in materialsNeeded) {
+            const needed = materialsNeeded[key];
+            const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === key);
+            const stock = inventoryItem ? (inventoryItem.totalStock || 0) : 0;
+            const toBuy = Math.max(0, needed.total - stock);
+            
+            if (toBuy > 0) {
+                materialsShoppingList[key] = {
+                    name: needed.name,
+                    quantity_to_buy: toBuy,
+                    unit: needed.unit,
+                    note: `Til projekt(er): ${needed.projects.map(p => p.name).join(', ')}`,
+                    projectId: needed.projects.length === 1 ? appState.projects.find(p => p.title === needed.projects[0].name)?.id : null,
+                    itemId: inventoryItem ? inventoryItem.id : null
+                };
+            }
+        }
+        state.shoppingLists.materials = materialsShoppingList;
     }
 
 
@@ -314,10 +306,10 @@ document.addEventListener('DOMContentLoaded', () => {
             state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
                 state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches' || stateKey === 'projects') {
+                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
                     combineInventoryData();
-                    computeDerivedShoppingLists(); // Genberegn materialeliste ved ændringer
                 }
+                computeDerivedShoppingLists();
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
