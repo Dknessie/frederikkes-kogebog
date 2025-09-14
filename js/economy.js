@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for økonomi-siden.
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -612,7 +612,7 @@ function renderRow(item, monthHeaders, allActuals, isExpense = false) {
         <tr>
             <td class="editable" contenteditable="true" data-id="${item.id}" data-field="name">
                 ${item.name}
-                <button class="btn-danger delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}">&times;</button>
+                <button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}">&times;</button>
             </td>
             <td class="currency editable" contenteditable="true" data-id="${item.id}" data-field="allocated">${toDKK(item.allocated)}</td>
             ${actualsByMonth}
@@ -655,8 +655,6 @@ function getMonthHeaders(startDate) {
     let date = new Date(startDate);
     date.setDate(1); 
     
-    date.setMonth(date.getMonth() - 11);
-
     for (let i = 0; i < 12; i++) {
         const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         const label = date.toLocaleString('da-DK', { month: 'short', year: '2-digit' });
@@ -665,6 +663,7 @@ function getMonthHeaders(startDate) {
     }
     return headers;
 }
+
 function calculateTotals(person, monthHeaders) {
     const income = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
     const expenses = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
@@ -712,14 +711,20 @@ async function handleContainerClick(e) {
         const isExpense = !!e.target.closest('#add-expense-row');
         const type = isExpense ? 'expenses' : 'income';
         const prefix = isExpense ? 'b' : 'i';
-        const newId = prefix + Date.now();
+        const newId = prefix + crypto.randomUUID();
         
-        if (!activePersonBudget.budget) activePersonBudget.budget = { income: [], expenses: [] };
-        if (!activePersonBudget.budget[type]) activePersonBudget.budget[type] = [];
-
         const newItem = { id: newId, name: 'Ny post', allocated: 0 };
-        activePersonBudget.budget[type].push(newItem);
-        await updateBudgetField(activePersonBudget.id, `budget.${type}`, activePersonBudget.budget[type]);
+
+        try {
+            const budgetRef = doc(db, 'budgets', activePersonBudget.id);
+            // Brug arrayUnion til at tilføje det nye element atomisk
+            await updateDoc(budgetRef, {
+                [`budget.${type}`]: arrayUnion(newItem)
+            });
+            // onSnapshot vil automatisk opdatere UI
+        } catch (error) {
+            handleError(error, "Kunne ikke tilføje den nye post.", "addRowToBudget");
+        }
     }
     // Slet række
     else if (e.target.closest('.delete-row')) {
@@ -727,15 +732,25 @@ async function handleContainerClick(e) {
         const id = button.dataset.id;
         const type = button.dataset.type;
         
-        activePersonBudget.budget[type] = activePersonBudget.budget[type].filter(item => item.id !== id);
+        // Find det specifikke element, der skal fjernes
+        const itemToRemove = (activePersonBudget.budget[type] || []).find(item => item.id === id);
         
-        const batch = writeBatch(db);
-        const budgetRef = doc(db, 'budgets', activePersonBudget.id);
-        batch.update(budgetRef, {
-            [`budget.${type}`]: activePersonBudget.budget[type],
-            [`actuals.${id}`]: deleteField()
-        });
-        await batch.commit();
+        if (itemToRemove) {
+            const batch = writeBatch(db);
+            const budgetRef = doc(db, 'budgets', activePersonBudget.id);
+            
+            // Brug arrayRemove til at fjerne elementet fra array'et
+            batch.update(budgetRef, {
+                [`budget.${type}`]: arrayRemove(itemToRemove)
+            });
+            // Slet også de faktiske data for den slettede post
+            batch.update(budgetRef, {
+                [`actuals.${id}`]: deleteField()
+            });
+            
+            await batch.commit();
+            // onSnapshot vil håndtere UI-opdateringen
+        }
     }
 }
 async function handleCellBlur(e) {
@@ -752,20 +767,30 @@ async function handleCellBlur(e) {
 
     const isExpense = (activePersonBudget.budget.expenses || []).some(i => i.id === id);
     const type = isExpense ? 'expenses' : 'income';
-    const itemIndex = (activePersonBudget.budget[type] || []).findIndex(i => i.id === id);
+    const allItems = [...(activePersonBudget.budget.income || []), ...(activePersonBudget.budget.expenses || [])];
+    const itemToUpdate = allItems.find(i => i.id === id);
 
-    if (itemIndex === -1) return;
+
+    if (!itemToUpdate) return;
 
     let fieldPath;
     let valueToSave;
 
+    // Vi skal opdatere hele array'et, da Firestore ikke kan opdatere et enkelt element i et array via index.
+    const originalArray = [...(activePersonBudget.budget[type] || [])];
+    const itemIndex = originalArray.findIndex(i => i.id === id);
+    if (itemIndex === -1) return;
+
     if (field === 'name') {
-        fieldPath = `budget.${type}.${itemIndex}.name`;
-        valueToSave = newValueRaw;
+        originalArray[itemIndex].name = newValueRaw;
+        fieldPath = `budget.${type}`;
+        valueToSave = originalArray;
     } else if (field === 'allocated') {
         valueToSave = parseDKK(newValueRaw);
-        fieldPath = `budget.${type}.${itemIndex}.allocated`;
-        cell.textContent = toDKK(valueToSave);
+        originalArray[itemIndex].allocated = valueToSave;
+        fieldPath = `budget.${type}`;
+        valueToSave = originalArray;
+        cell.textContent = toDKK(originalArray[itemIndex].allocated);
     } else if (monthKey) {
         valueToSave = parseDKK(newValueRaw);
         fieldPath = `actuals.${id}.${monthKey}`;
@@ -776,4 +801,3 @@ async function handleCellBlur(e) {
         await updateBudgetField(activePersonBudget.id, fieldPath, valueToSave);
     }
 }
-
