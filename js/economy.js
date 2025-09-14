@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for økonomi-siden.
 
 import { db } from './firebase.js';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -13,53 +13,93 @@ let appElements; // Reference til centrale DOM-elementer
 // Lokal state for økonomisiden
 const economyState = {
     currentView: 'budget', // 'dashboard', 'budget', 'assets'
-    currentDate: new Date() // Til at navigere i budget-måneder
+    currentDate: new Date(), // Til at navigere i budget-måneder
+    isBudgetLoading: true,
 };
 
+// =================================================================
+// NY, ROBUST DATAHÅNDTERING FOR BUDGET
+// =================================================================
+
 /**
- * Gemmer den nuværende budget-state til Firestore.
- * Kaldes efter hver ændring for at sikre persistens.
+ * Henter budgetdata for den aktuelle bruger fra Firestore.
+ * Sikrer at den foruddefinerede struktur for Daniel og Frederikke eksisterer.
+ */
+async function loadBudget() {
+    if (!appState.currentUser) return;
+    economyState.isBudgetLoading = true;
+    renderView(); // Viser en loading-spinner
+
+    try {
+        const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
+        const budgetSnap = await getDoc(budgetRef);
+        let budgetData = budgetSnap.exists() ? budgetSnap.data() : null;
+        let needsSave = false;
+
+        // Hvis dokumentet slet ikke findes, opret det med fuld, tom struktur
+        if (!budgetData) {
+            budgetData = {
+                userId: appState.currentUser.uid,
+                activePersonId: 'daniel',
+                persons: {
+                    daniel: { name: 'Daniel', budget: { income: [], expenses: [] }, actuals: {} },
+                    frederikke: { name: 'Frederikke', budget: { income: [], expenses: [] }, actuals: {} }
+                }
+            };
+            needsSave = true;
+        } else {
+            // Hvis dokumentet findes, tjek om Daniel og Frederikke er der
+            if (!budgetData.persons.daniel) {
+                budgetData.persons.daniel = { name: 'Daniel', budget: { income: [], expenses: [] }, actuals: {} };
+                needsSave = true;
+            }
+            if (!budgetData.persons.frederikke) {
+                budgetData.persons.frederikke = { name: 'Frederikke', budget: { income: [], expenses: [] }, actuals: {} };
+                needsSave = true;
+            }
+        }
+        
+        appState.budget = budgetData;
+
+        // Hvis strukturen manglede, gemmes den korrekte version til Firestore
+        if (needsSave) {
+            await saveBudget();
+        }
+
+    } catch (error) {
+        handleError(error, "Kunne ikke hente budgetdata.", "loadBudget");
+    } finally {
+        economyState.isBudgetLoading = false;
+        renderView(); // Renderer den faktiske visning med de hentede (eller nye) data
+    }
+}
+
+
+/**
+ * Gemmer HELE budget-objektet. Bruges ved større ændringer.
  */
 async function saveBudget() {
     if (!appState.currentUser || !appState.budget) return;
     try {
         const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
-        const dataToSave = {
-            ...appState.budget,
-            userId: appState.currentUser.uid
-        };
-        // Bruger setDoc til at oprette/overskrive hele budget-objektet.
-        await setDoc(budgetRef, dataToSave);
+        await setDoc(budgetRef, appState.budget, { merge: true }); // Bruger merge for at være sikker
     } catch (error) {
         handleError(error, "Budgettet kunne ikke gemmes.", "saveBudget");
     }
 }
 
 /**
- * Henter budgetdata for den aktuelle bruger fra Firestore.
- * Denne funktion kaldes, når økonomisiden åbnes.
+ * Gemmer en specifik, isoleret ændring i budgettet.
+ * @param {string} fieldPath - Stien til feltet, der skal opdateres (f.eks. 'persons.daniel.budget.expenses').
+ * @param {*} value - Den nye værdi for feltet.
  */
-async function loadBudget() {
+async function updateBudgetField(fieldPath, value) {
     if (!appState.currentUser) return;
     try {
         const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
-        const budgetSnap = await getDoc(budgetRef);
-        if (budgetSnap.exists()) {
-            appState.budget = budgetSnap.data();
-        } else {
-            // Hvis intet budget findes i Firestore, sikrer vi, at den lokale state er den tomme standard.
-            appState.budget = {
-                activePersonId: null,
-                persons: {}
-            };
-        }
+        await updateDoc(budgetRef, { [fieldPath]: value });
     } catch (error) {
-        console.error("Fejl ved hentning af budget:", error);
-        handleError(error, "Kunne ikke hente budgetdata.", "loadBudget");
-    } finally {
-        // Vi kalder renderView(), efter data er hentet (eller fejlet),
-        // for at sikre, at brugerfladen altid opdateres med de korrekte data.
-        renderView();
+        handleError(error, `Kunne ikke opdatere feltet: ${fieldPath}`, "updateBudgetField");
     }
 }
 
@@ -178,6 +218,11 @@ function renderSidebar() {
 function renderView() {
     const contentArea = document.getElementById('economy-content-area');
     if (!contentArea) return;
+
+    if (economyState.isBudgetLoading && economyState.currentView === 'budget') {
+        contentArea.innerHTML = `<div class="loading-spinner"></div>`; // Viser loading-spinner
+        return;
+    }
 
     switch (economyState.currentView) {
         case 'dashboard':
@@ -526,28 +571,20 @@ function calculateProjectedValues(targetDate) {
 function renderBudgetView(container) {
     const budgetData = appState.budget;
 
-    // NYT: Viser en "start"-skærm, hvis der ingen personer er i budgettet.
-    if (!budgetData || Object.keys(budgetData.persons).length === 0) {
-        container.innerHTML = `
-            <div class="spreadsheet-card">
-                <div class="spreadsheet-header">
-                     <div class="person-tabs">
-                        <button id="add-person" class="btn btn-primary"><i class="fas fa-user-plus"></i> Tilføj Person</button>
-                    </div>
-                </div>
-                <p class="empty-state" style="padding: 2rem;">Du har ikke oprettet nogen budgetter endnu. Start med at tilføje en person.</p>
-            </div>`;
+    // Viser en "start"-skærm, hvis der ingen personer er i budgettet (burde ikke ske med den nye logik)
+    if (!budgetData || !budgetData.persons || Object.keys(budgetData.persons).length === 0) {
+        container.innerHTML = `<div class="loading-spinner"></div><p>Initialiserer budget...</p>`;
         return;
     }
 
-    // NYT: Vælger automatisk den første person, hvis ingen er aktiv.
+    // Vælger automatisk den første person, hvis ingen er aktiv.
     if (!budgetData.activePersonId || !budgetData.persons[budgetData.activePersonId]) {
-        budgetData.activePersonId = Object.keys(budgetData.persons)[0];
+        appState.budget.activePersonId = Object.keys(budgetData.persons)[0] || 'daniel';
     }
 
     const activePerson = budgetData.persons[budgetData.activePersonId];
     if (!activePerson) {
-        container.innerHTML = '<p>Vælg venligst en person.</p>';
+        container.innerHTML = '<p>Kunne ikke indlæse person-data. Prøv at genindlæse siden.</p>';
         return;
     }
 
@@ -557,7 +594,7 @@ function renderBudgetView(container) {
     // Bygger de forskellige dele af tabellen
     const tableHeader = renderTableHeader(monthHeaders);
     const incomeRows = (activePerson.budget.income || []).map(item => renderRow(item, monthHeaders, activePerson.actuals)).join('');
-    const expenseRows = (activePerson.budget.expenses || []).map(item => renderRow(item, monthHeaders, active-person.actuals, true)).join('');
+    const expenseRows = (activePerson.budget.expenses || []).map(item => renderRow(item, monthHeaders, activePerson.actuals, true)).join('');
     const totals = calculateTotals(activePerson, monthHeaders);
     const tableFooter = renderFooter(totals);
     const personTabs = renderPersonTabs(budgetData);
@@ -568,9 +605,7 @@ function renderBudgetView(container) {
             <div class="spreadsheet-header">
                 <div class="person-tabs">
                     ${personTabs}
-                    <button id="add-person" class="btn-icon" title="Tilføj Person"><i class="fas fa-user-plus"></i></button>
                 </div>
-                <!-- NYT: Måneds-navigator -->
                 <div class="economy-month-navigator">
                     <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
                     <h4 id="current-month-display">${monthDisplay}</h4>
@@ -607,7 +642,9 @@ function renderBudgetView(container) {
  * @returns {string} HTML-strengen for fanebladene.
  */
 function renderPersonTabs(budgetData) {
-    return Object.values(budgetData.persons).map(p => `
+    // Sorterer for at sikre fast rækkefølge
+    const sortedPersons = Object.values(budgetData.persons).sort((a, b) => a.name.localeCompare(b.name));
+    return sortedPersons.map(p => `
         <button class="person-tab ${budgetData.activePersonId === p.name.toLowerCase() ? 'active' : ''}" data-person-id="${p.name.toLowerCase()}">
             ${p.name}
         </button>
@@ -778,37 +815,22 @@ function calculateTotals(person, monthHeaders) {
  * @param {Event} e - Klik-eventet.
  */
 async function handleContainerClick(e) {
-    // Denne funktion kaldes nu fra handlePageClick for at undgå at lytte på skjulte elementer.
-    const state = appState.budget;
-    const activePersonId = state.activePersonId;
+    const budget = appState.budget;
 
-    // Tilføj person
-    if (e.target.closest('#add-person')) {
-        const name = prompt("Navn på ny person:");
-        if (name && name.trim() !== '') {
-            const newId = name.toLowerCase().trim();
-            if (!state.persons[newId]) {
-                state.persons[newId] = {
-                    name: name.trim(),
-                    budget: { income: [], expenses: [] },
-                    actuals: {}
-                };
-                state.activePersonId = newId;
-                await saveBudget();
-            } else {
-                showNotification({title: "Fejl", message: "En person med dette navn findes allerede."});
-            }
-        }
-        return;
-    }
+    // Fjernet logik for at tilføje personer
     
     // Kræver en aktiv person for de følgende handlinger
+    const activePersonId = budget.activePersonId;
     if (!activePersonId) return;
 
     // Skift person-faneblad
     if (e.target.closest('.person-tab')) {
-        state.activePersonId = e.target.closest('.person-tab').dataset.personId;
-        await saveBudget(); // Gemmer ændringen af den aktive person
+        const newActiveId = e.target.closest('.person-tab').dataset.personId;
+        if (newActiveId !== activePersonId) {
+            appState.budget.activePersonId = newActiveId;
+            await updateBudgetField('activePersonId', newActiveId);
+            renderView();
+        }
     }
     // Tilføj række (indkomst eller udgift)
     else if (e.target.closest('#add-expense-row') || e.target.closest('#add-income-row')) {
@@ -817,23 +839,33 @@ async function handleContainerClick(e) {
         const prefix = isExpense ? 'b' : 'i';
         const newId = prefix + Date.now();
         
-        const person = state.persons[activePersonId];
+        const person = budget.persons[activePersonId];
         if (!person.budget) person.budget = { income: [], expenses: [] };
         if (!person.budget[type]) person.budget[type] = [];
 
-        person.budget[type].push({ id: newId, name: 'Ny post', allocated: 0 });
-        await saveBudget();
+        const newItem = { id: newId, name: 'Ny post', allocated: 0 };
+        person.budget[type].push(newItem);
+        await updateBudgetField(`persons.${activePersonId}.budget.${type}`, person.budget[type]);
+        renderView();
     }
     // Slet række
     else if (e.target.closest('.delete-row')) {
         const button = e.target.closest('.delete-row');
         const id = button.dataset.id;
         const type = button.dataset.type;
-        const person = state.persons[activePersonId];
+        const person = budget.persons[activePersonId];
         
         person.budget[type] = person.budget[type].filter(item => item.id !== id);
         delete person.actuals[id];
-        await saveBudget();
+
+        const batch = writeBatch(db);
+        const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
+        batch.update(budgetRef, {
+            [`persons.${activePersonId}.budget.${type}`]: person.budget[type],
+            [`persons.${activePersonId}.actuals.${id}`]: deleteField()
+        });
+        await batch.commit();
+        renderView();
     }
 }
 
@@ -844,45 +876,64 @@ async function handleContainerClick(e) {
 async function handleCellBlur(e) {
     if (!e.target.classList.contains('editable')) return;
     
-    const state = appState.budget;
+    const budget = appState.budget;
+    const activePersonId = budget.activePersonId;
 
-    if (!state.activePersonId) return;
+    if (!activePersonId) return;
 
-    const person = state.persons[state.activePersonId];
+    const person = budget.persons[activePersonId];
     const cell = e.target;
     
     const id = cell.dataset.id;
     const field = cell.dataset.field;
     const monthKey = cell.dataset.monthKey;
-    const newValue = cell.textContent;
+    const newValueRaw = cell.textContent;
 
     const isExpense = (person.budget.expenses || []).some(i => i.id === id);
     const type = isExpense ? 'expenses' : 'income';
-    const item = person.budget[type]?.find(i => i.id === id);
+    const itemIndex = (person.budget[type] || []).findIndex(i => i.id === id);
 
-    if (!item) return;
+    if (itemIndex === -1) return;
 
-    // Midlertidig opdatering af UI for at bevare formatering
-    const originalValue = cell.innerHTML;
+    // Gem original værdi i tilfælde af fejl
+    const originalFormattedValue = toDKK(
+        field === 'name' ? person.budget[type][itemIndex].name :
+        field === 'allocated' ? person.budget[type][itemIndex].allocated :
+        (person.actuals[id]?.[monthKey] || 0)
+    );
+
     try {
+        let fieldPath;
+        let valueToSave;
+
         if (field === 'name') {
-            item.name = newValue;
+            fieldPath = `persons.${activePersonId}.budget.${type}.${itemIndex}.name`;
+            valueToSave = newValueRaw;
         } else if (field === 'allocated') {
-            item.allocated = parseDKK(newValue);
-            cell.innerHTML = toDKK(item.allocated);
+            const parsedValue = parseDKK(newValueRaw);
+            fieldPath = `persons.${activePersonId}.budget.${type}.${itemIndex}.allocated`;
+            valueToSave = parsedValue;
+            cell.textContent = toDKK(parsedValue); // Opdater UI med formateret værdi
         } else if (monthKey) {
-            if (!person.actuals[id]) person.actuals[id] = {};
-            person.actuals[id][monthKey] = parseDKK(newValue);
-            cell.innerHTML = toDKK(person.actuals[id][monthKey]);
+            const parsedValue = parseDKK(newValueRaw);
+            fieldPath = `persons.${activePersonId}.actuals.${id}.${monthKey}`;
+            valueToSave = parsedValue;
+            cell.textContent = toDKK(parsedValue); // Opdater UI med formateret værdi
         }
-        
-        await saveBudget();
-        // UI bliver opdateret af Firestore listeneren, men vi beholder den formaterede værdi
-        // som brugeren lige har indtastet, for at undgå et "flash".
-        
+
+        if (fieldPath) {
+            await updateBudgetField(fieldPath, valueToSave);
+            // Efter succesfuld gemning, opdaterer vi den lokale state for at holde den synkroniseret
+            if (field === 'name') person.budget[type][itemIndex].name = valueToSave;
+            if (field === 'allocated') person.budget[type][itemIndex].allocated = valueToSave;
+            if (monthKey) {
+                if (!person.actuals[id]) person.actuals[id] = {};
+                person.actuals[id][monthKey] = valueToSave;
+            }
+            renderView(); // Gen-render for at opdatere totaler
+        }
     } catch (error) {
-        // Hvis der sker en fejl, kan vi rulle værdien tilbage i UI'en
-        cell.innerHTML = originalValue;
+        cell.textContent = originalFormattedValue; // Rul tilbage ved fejl
     }
 }
 
