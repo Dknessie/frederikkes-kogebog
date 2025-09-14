@@ -13,7 +13,8 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-import { initEconomyPage } from './economy.js';
+// Importerer det nye economy-modul
+import { initEconomy, renderEconomy } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +37,35 @@ document.addEventListener('DOMContentLoaded', () => {
         reminders: [],
         maintenance: [],
         home_inventory: [],
+        // NYT: Tilføjer budget-state
+        budget: {
+            activePersonId: 'daniel',
+            persons: {
+                'daniel': {
+                    name: 'Daniel',
+                    budget: {
+                        income: [{ id: 'i1', name: 'Løn', allocated: 45000 }, { id: 'i2', name: 'Ekstra', allocated: 0 }],
+                        expenses: [{ id: 'b1', name: 'Bolig', allocated: 12500 }, { id: 'b2', name: 'Bil', allocated: 5000 }]
+                    },
+                    actuals: {
+                        'i1': { '2025-09': 47000, '2025-08': 46500 },
+                        'b1': { '2025-09': 12500, '2025-08': 12700 },
+                        'b2': { '2025-09': 5100, '2025-08': 4850 }
+                    }
+                },
+                'frederikke': {
+                    name: 'Frederikke',
+                    budget: {
+                        income: [{ id: 'fi1', name: 'Løn', allocated: 38000 }],
+                        expenses: [{ id: 'fb1', name: 'Faste udgifter', allocated: 10000 }, { id: 'fb2', name: 'Fornøjelse', allocated: 6000 }]
+                    },
+                    actuals: {
+                        'fi1': { '2025-09': 38500, '2025-08': 38200 },
+                        'fb1': { '2025-09': 9800, '2025-08': 10100 }
+                    }
+                }
+            }
+        },
         references: {
             maintenanceTasks: []
         },
@@ -189,6 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteHomeInventoryBtn: document.getElementById('delete-home-inventory-btn'),
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
+        
+        // Economy
+        spreadsheetContainer: document.getElementById('spreadsheet-container'),
     };
 
     function computeDerivedShoppingLists() {
@@ -272,7 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderInventory();
                 break;
             case '#oekonomi':
-                initEconomyPage(state);
+                // Kalder den nye render-funktion for økonomi
+                renderEconomy();
                 break;
             case '#references':
                 renderReferencesPage();
@@ -411,10 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initEvents(state);
-        initEconomyPage(state);
+        // Initialiserer det nye economy-modul
+        initEconomy(state, elements);
         initHjemmet(state, elements);
     }
 
     init();
 });
-
