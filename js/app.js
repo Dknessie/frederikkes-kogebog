@@ -1,7 +1,7 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, where, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
@@ -191,6 +191,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
+
+    // =================================================================
+    // MIDLERTIDIG OPRYDNINGSFUNKTION
+    // =================================================================
+    async function cleanupDuplicateBudgets() {
+        if (!state.currentUser) {
+            console.error("Du skal være logget ind for at køre oprydningen.");
+            return;
+        }
+
+        console.log("Starter oprydning af duplikerede budgetter...");
+        const budgetsColRef = collection(db, 'budgets');
+        const q = query(budgetsColRef, where("userId", "==", state.currentUser.uid));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            console.log("Ingen budgetter fundet. Alt ser fint ud.");
+            return;
+        }
+
+        const budgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const grouped = budgets.reduce((acc, doc) => {
+            const key = doc.personId; // 'daniel' or 'frederikke'
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(doc);
+            return acc;
+        }, {});
+
+        const batch = writeBatch(db);
+        let deletions = 0;
+
+        for (const personId in grouped) {
+            const personBudgets = grouped[personId];
+            if (personBudgets.length > 1) {
+                console.log(`Fandt ${personBudgets.length} budgetter for ${personId}. Beholder ét og sletter resten.`);
+                
+                // Sorter for at beholde det ene med flest data (flest budgetposter)
+                personBudgets.sort((a, b) => {
+                    const countA = (a.budget?.income?.length || 0) + (a.budget?.expenses?.length || 0);
+                    const countB = (b.budget?.income?.length || 0) + (b.budget?.expenses?.length || 0);
+                    return countB - countA;
+                });
+
+                const toKeep = personBudgets.shift(); // Fjerner det første (det der skal beholdes) fra array'et
+                console.log(`Beholder budget med ID: ${toKeep.id}`);
+
+                // Resten er dubletter, der skal slettes
+                personBudgets.forEach(docToDelete => {
+                    console.log(`Sletter duplikat med ID: ${docToDelete.id}`);
+                    const docRef = doc(db, 'budgets', docToDelete.id);
+                    batch.delete(docRef);
+                    deletions++;
+                });
+            }
+        }
+
+        if (deletions > 0) {
+            try {
+                await batch.commit();
+                const successMsg = `Oprydning fuldført! ${deletions} duplikat(er) blev slettet. Genindlæs siden for at se resultatet.`;
+                console.log(successMsg);
+                alert(successMsg);
+            } catch (error) {
+                console.error("Fejl under sletning af duplikater:", error);
+                alert("Der opstod en fejl under oprydningen. Se konsollen for detaljer.");
+            }
+        } else {
+            console.log("Ingen duplikater fundet at slette. Alt er i orden.");
+            alert("Ingen duplikater fundet. Alt ser ud til at være i orden.");
+        }
+    }
+    // Gør funktionen tilgængelig i browserens konsol
+    window.cleanupDuplicateBudgets = cleanupDuplicateBudgets;
+    // =================================================================
+    // SLUT PÅ MIDLERTIDIG FUNKTION
+    // =================================================================
+
 
     function computeDerivedShoppingLists() {
         const materialsNeeded = {};
@@ -410,4 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+```
 
+### Trin 2: Kør oprydningen
+
+1.  **Gem `app.js`** og genindlæs "Frederikkes Kogebog" i din browser. Sørg for at være logget ind.
+2.  Åbn **Developer Tools** (Udviklerværktøjer) i din browser. Dette gøres typisk ved at trykke på `F12` eller `Ctrl+Shift+I` (Windows) / `Cmd+Opt+I` (Mac).
+3.  Gå til fanen, der hedder **Console** (Konsol).
+4.  Skriv følgende kommando i konsollen og tryk `Enter`:
+    ```
+    cleanupDuplicateBudgets()
+    
