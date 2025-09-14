@@ -139,7 +139,7 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
         if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
             const cheapestBatch = inventoryItem.batches
                 .filter(b => b.price && b.size > 0 && b.quantity > 0)
-                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * b.size)))[0];
+                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * a.size)))[0];
             
             if (cheapestBatch) {
                 const scaledQuantity = (ing.quantity || 0) * scaleFactor;
@@ -198,3 +198,17 @@ export function handleError(message, error) {
     console.error(`[APP_ERROR] ${message}`, error);
     // Her kan vi senere udvide med mere avanceret fejlhåndtering, f.eks. logging til en service.
 }
+
+/**
+ * Formaterer et tal som en dansk krone-streng.
+ * @param {number} num - Tallet der skal formateres.
+ * @returns {string} Den formaterede streng.
+ */
+export const toDKK = (num) => (num || 0).toLocaleString('da-DK');
+
+/**
+ * Parser en dansk krone-streng til et tal.
+ * @param {string} str - Strengen der skal parses.
+ * @returns {number} Det resulterende tal.
+ */
+export const parseDKK = (str) => parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
