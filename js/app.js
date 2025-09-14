@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
-        initEvents(state);
+        initEvents(state, elements);
         initEconomy(state, elements);
         initHjemmet(state, elements);
     }
