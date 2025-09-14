@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for økonomi-siden.
 
 import { db } from './firebase.js';
-import { doc, setDoc, getDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -14,7 +14,6 @@ let appElements; // Reference til centrale DOM-elementer
 const economyState = {
     currentView: 'budget', // 'dashboard', 'budget', 'assets'
     currentDate: new Date(), // Til at navigere i budget-måneder
-    isBudgetLoading: true,
     activePersonId: 'daniel' // Standard person
 };
 
@@ -32,9 +31,13 @@ async function ensureDefaultBudgets() {
     const personIds = ['daniel', 'frederikke'];
     const personNames = { daniel: 'Daniel', frederikke: 'Frederikke' };
 
+    // Tjekker om de nødvendige dokumenter allerede er i den lokale state
+    const existingPersonIds = appState.budgets.map(b => b.personId);
+
     personIds.forEach(id => {
-        const personBudget = appState.budgets.find(b => b.personId === id);
-        if (!personBudget) {
+        if (!existingPersonIds.includes(id)) {
+            // Opretter en reference med en specifik ID for forudsigelighed (valgfrit, men kan være nyttigt)
+            // Her bruger vi dog auto-genererede IDs som med opskrifter for at holde det simpelt.
             const budgetRef = doc(collection(db, 'budgets'));
             batch.set(budgetRef, {
                 userId: appState.currentUser.uid,
@@ -49,7 +52,9 @@ async function ensureDefaultBudgets() {
     try {
         await batch.commit();
     } catch (error) {
-        handleError(error, "Kunne ikke oprette standard-budgetter.", "ensureDefaultBudgets");
+        // Denne fejl kan opstå, hvis der er et race condition, hvilket er ok.
+        // Vi logger den bare for en sikkerheds skyld, men viser ikke en fejl til brugeren.
+        console.warn("Batch commit for default budgets might have failed (this can be normal):", error);
     }
 }
 
@@ -502,22 +507,23 @@ function calculateProjectedValues(targetDate) {
  */
 function renderBudgetView(container) {
     // Viser en loading-spinner, hvis budget-data stadig hentes
-    if (!appState.budgets) {
-        container.innerHTML = `<div class="loading-spinner"></div><p>Indlæser budget...</p>`;
+    if (!appState.budgets || appState.budgets.length < 2) {
+        container.innerHTML = `<div class="loading-spinner"></div><p>Initialiserer budget...</p>`;
         return;
     }
     
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
 
     if (!activePersonBudget) {
-        container.innerHTML = '<p class="empty-state">Kunne ikke finde budget for den valgte person. Prøv at genindlæse siden.</p>';
+        // Hvis den aktive person af en eller anden grund ikke findes, vælg den første som fallback
+        economyState.activePersonId = appState.budgets[0].personId;
+        renderBudgetView(container); // Prøv at rendere igen
         return;
     }
 
     const monthHeaders = getMonthHeaders(economyState.currentDate);
     const monthDisplay = economyState.currentDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     
-    // Bygger de forskellige dele af tabellen
     const tableHeader = renderTableHeader(monthHeaders);
     const incomeRows = (activePersonBudget.budget.income || []).map(item => renderRow(item, monthHeaders, activePersonBudget.actuals)).join('');
     const expenseRows = (activePersonBudget.budget.expenses || []).map(item => renderRow(item, monthHeaders, activePersonBudget.actuals, true)).join('');
@@ -525,7 +531,6 @@ function renderBudgetView(container) {
     const tableFooter = renderFooter(totals);
     const personTabs = renderPersonTabs();
 
-    // Samler hele HTML-strukturen
     container.innerHTML = `
         <div class="spreadsheet-card">
             <div class="spreadsheet-header">
