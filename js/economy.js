@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for budget-siden.
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -15,6 +15,21 @@ const economyState = {
     currentView: 'dashboard', // 'dashboard', 'budget', 'assets'
     currentDate: new Date() // Til at navigere i budget-måneder
 };
+
+/**
+ * Gemmer den nuværende budget-state til Firestore.
+ * Kaldes efter hver ændring for at sikre persistens.
+ */
+async function saveBudget() {
+    if (!appState.currentUser || !appState.budget) return;
+    try {
+        const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
+        // Bruger setDoc til at overskrive hele budget-objektet med de seneste ændringer
+        await setDoc(budgetRef, appState.budget);
+    } catch (error) {
+        handleError(error, "Budgettet kunne ikke gemmes.", "saveBudget");
+    }
+}
 
 /**
  * Initialiserer economy-modulet.
@@ -476,6 +491,26 @@ function calculateProjectedValues(targetDate) {
  */
 function renderBudgetView(container) {
     const budgetData = appState.budget;
+
+    // NYT: Viser en "start"-skærm, hvis der ingen personer er i budgettet.
+    if (!budgetData || Object.keys(budgetData.persons).length === 0) {
+        container.innerHTML = `
+            <div class="spreadsheet-card">
+                <div class="spreadsheet-header">
+                     <div class="person-tabs">
+                        <button id="add-person" class="btn btn-primary"><i class="fas fa-user-plus"></i> Tilføj Person</button>
+                    </div>
+                </div>
+                <p class="empty-state" style="padding: 2rem;">Du har ikke oprettet nogen budgetter endnu. Start med at tilføje en person.</p>
+            </div>`;
+        return;
+    }
+
+    // NYT: Vælger automatisk den første person, hvis ingen er aktiv.
+    if (!budgetData.activePersonId || !budgetData.persons[budgetData.activePersonId]) {
+        budgetData.activePersonId = Object.keys(budgetData.persons)[0];
+    }
+
     const activePerson = budgetData.persons[budgetData.activePersonId];
     if (!activePerson) {
         container.innerHTML = '<p>Vælg venligst en person.</p>';
@@ -716,19 +751,25 @@ function handleContainerClick(e) {
     if (e.target.closest('.person-tab')) {
         state.activePersonId = e.target.closest('.person-tab').dataset.personId;
         renderBudgetView(document.getElementById('economy-content-area'));
+        saveBudget(); // Gem ændring af aktiv person
     }
     // Tilføj person
     else if (e.target.closest('#add-person')) {
         const name = prompt("Navn på ny person:");
-        if (name && !state.persons[name.toLowerCase()]) {
-            const newId = name.toLowerCase();
-            state.persons[newId] = {
-                name: name,
-                budget: { income: [], expenses: [] },
-                actuals: {}
-            };
-            state.activePersonId = newId;
-            renderBudgetView(document.getElementById('economy-content-area'));
+        if (name && name.trim() !== '') {
+            const newId = name.toLowerCase().trim();
+            if (!state.persons[newId]) {
+                 state.persons[newId] = {
+                    name: name.trim(),
+                    budget: { income: [], expenses: [] },
+                    actuals: {}
+                };
+                state.activePersonId = newId;
+                renderBudgetView(document.getElementById('economy-content-area'));
+                saveBudget(); // Gem den nye person
+            } else {
+                showNotification({title: "Fejl", message: "En person med dette navn findes allerede."});
+            }
         }
     }
     // Tilføj række (indkomst eller udgift)
@@ -738,8 +779,17 @@ function handleContainerClick(e) {
         const prefix = isExpense ? 'b' : 'i';
         const newId = prefix + Date.now();
         
+        // Sikrer at budget-objektet findes, selvom det er tomt
+        if (!state.persons[state.activePersonId].budget) {
+            state.persons[state.activePersonId].budget = { income: [], expenses: [] };
+        }
+        if (!state.persons[state.activePersonId].budget[type]) {
+            state.persons[state.activePersonId].budget[type] = [];
+        }
+
         state.persons[state.activePersonId].budget[type].push({ id: newId, name: 'Ny post', allocated: 0 });
         renderBudgetView(document.getElementById('economy-content-area'));
+        saveBudget(); // Gem den nye række
     }
     // Slet række
     else if (e.target.closest('.delete-row')) {
@@ -751,6 +801,7 @@ function handleContainerClick(e) {
         person.budget[type] = person.budget[type].filter(item => item.id !== id);
         delete person.actuals[id]; // Slet også de faktiske tal
         renderBudgetView(document.getElementById('economy-content-area'));
+        saveBudget(); // Gem sletningen
     }
 }
 
@@ -772,7 +823,7 @@ function handleCellBlur(e) {
 
     const isExpense = (person.budget.expenses || []).some(i => i.id === id);
     const type = isExpense ? 'expenses' : 'income';
-    const item = person.budget[type].find(i => i.id === id);
+    const item = person.budget[type]?.find(i => i.id === id);
 
     if (!item) return;
 
@@ -784,9 +835,9 @@ function handleCellBlur(e) {
         if (!person.actuals[id]) person.actuals[id] = {};
         person.actuals[id][monthKey] = parseDKK(newValue);
     }
-
-    // Gen-render for at opdatere totaler og formatering
+    
+    // Gemmer ændringen og gen-renderer for at opdatere totaler og formatering
+    saveBudget();
     renderBudgetView(document.getElementById('economy-content-area'));
 }
-
 
