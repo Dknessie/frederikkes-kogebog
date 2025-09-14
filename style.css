@@ -235,6 +235,154 @@ header {
 
 
 /* =================================================================
+   NYT: ØKONOMI / BUDGET SIDE
+   ================================================================= */
+
+#oekonomi.page {
+    padding-top: var(--spacing-m);
+}
+
+.spreadsheet-card { 
+    background: var(--white-color); 
+    border-radius: var(--card-border-radius); 
+    box-shadow: var(--strong-shadow);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.spreadsheet-header {
+    padding: var(--spacing-m) var(--spacing-l);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--spacing-m);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--light-bg-color);
+}
+
+.person-tabs {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+
+.person-tab {
+    padding: var(--spacing-s) var(--spacing-m);
+    border: 1px solid transparent;
+    background: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: var(--border-radius);
+}
+.person-tab.active {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow);
+}
+.person-tab:hover:not(.active) {
+    background-color: var(--secondary-color);
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    max-height: 80vh;
+}
+
+.spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--small-font-size);
+}
+
+.spreadsheet-table th, .spreadsheet-table td {
+    padding: var(--spacing-m);
+    text-align: left;
+    border: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.spreadsheet-table thead th {
+    background-color: var(--light-bg-color);
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+/* Sticky first column */
+.spreadsheet-table tbody th, .spreadsheet-table tbody td:first-child, .spreadsheet-table tfoot td:first-child {
+    background-color: var(--light-bg-color);
+    font-weight: 600;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+/* Ensure top-left cell is above all */
+.spreadsheet-table thead th:first-child {
+    left: 0;
+    z-index: 3;
+}
+
+.spreadsheet-table .category-row {
+    background-color: var(--secondary-color);
+    font-family: var(--heading-font);
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.editable {
+    cursor: pointer;
+    min-width: 80px;
+    position: relative;
+}
+.editable:focus {
+    outline: 2px solid var(--primary-color);
+    background-color: #fef2f2; /* Light red background on focus */
+}
+/* Delete button inside editable cell */
+.editable .delete-row {
+    position: absolute;
+    top: 50%;
+    right: 5px;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: #ccc;
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.editable:hover .delete-row {
+    opacity: 1;
+}
+.delete-row:hover {
+    color: var(--status-red);
+}
+
+
+.currency { text-align: right; }
+.positive-text { color: var(--status-green); }
+.negative-text { color: var(--status-red); }
+.positive-bg { background-color: #f0fdf4; }
+.negative-bg { background-color: #fef2f2; }
+
+.spreadsheet-table tfoot {
+    font-weight: 700;
+    background-color: var(--secondary-color);
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+}
+
+
+/* =================================================================
    KOGEBOG-SIDE (SEKTION 5)
    ================================================================= */
 
@@ -3049,4 +3197,5 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
 
