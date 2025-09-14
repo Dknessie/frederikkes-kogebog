@@ -766,8 +766,7 @@ function handleContainerClick(e) {
                         actuals: {}
                     };
                     state.activePersonId = newId;
-                    renderBudgetView(document.getElementById('economy-content-area'));
-                    saveBudget();
+                    saveBudget(); // Gemmer, og lader listeneren re-render.
                 } else {
                     showNotification({title: "Fejl", message: "En person med dette navn findes allerede."});
                 }
@@ -780,7 +779,7 @@ function handleContainerClick(e) {
     // Skift person-faneblad
     if (e.target.closest('.person-tab')) {
         state.activePersonId = e.target.closest('.person-tab').dataset.personId;
-        renderBudgetView(document.getElementById('economy-content-area'));
+        renderBudgetView(document.getElementById('economy-content-area')); // Lokal render for hurtig feedback
         saveBudget(); // Gem ændring af aktiv person
     }
     // Tilføj person
@@ -795,7 +794,6 @@ function handleContainerClick(e) {
                     actuals: {}
                 };
                 state.activePersonId = newId;
-                renderBudgetView(document.getElementById('economy-content-area'));
                 saveBudget(); // Gem den nye person
             } else {
                 showNotification({title: "Fejl", message: "En person med dette navn findes allerede."});
@@ -809,7 +807,6 @@ function handleContainerClick(e) {
         const prefix = isExpense ? 'b' : 'i';
         const newId = prefix + Date.now();
         
-        // Sikrer at budget-objektet findes, selvom det er tomt
         if (!state.persons[state.activePersonId].budget) {
             state.persons[state.activePersonId].budget = { income: [], expenses: [] };
         }
@@ -818,7 +815,6 @@ function handleContainerClick(e) {
         }
 
         state.persons[state.activePersonId].budget[type].push({ id: newId, name: 'Ny post', allocated: 0 });
-        renderBudgetView(document.getElementById('economy-content-area'));
         saveBudget(); // Gem den nye række
     }
     // Slet række
@@ -829,8 +825,7 @@ function handleContainerClick(e) {
         const person = state.persons[state.activePersonId];
         
         person.budget[type] = person.budget[type].filter(item => item.id !== id);
-        delete person.actuals[id]; // Slet også de faktiske tal
-        renderBudgetView(document.getElementById('economy-content-area'));
+        delete person.actuals[id];
         saveBudget(); // Gem sletningen
     }
 }
@@ -844,7 +839,6 @@ function handleCellBlur(e) {
     
     const state = appState.budget;
 
-    // Håndter tilfælde hvor der ingen person er valgt endnu
     if (!state.activePersonId) return;
 
     const person = state.persons[state.activePersonId];
@@ -870,8 +864,7 @@ function handleCellBlur(e) {
         person.actuals[id][monthKey] = parseDKK(newValue);
     }
     
-    // Gemmer ændringen og gen-renderer for at opdatere totaler og formatering
     saveBudget();
-    renderBudgetView(document.getElementById('economy-content-area'));
+    // FJERNEDE LOKAL RENDER - lader Firestore listeneren om at opdatere UI
 }
 
