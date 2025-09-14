@@ -23,34 +23,56 @@ const economyState = {
 
 /**
  * En sikker funktion, der tjekker om standardbudgetterne findes i Firestore og opretter dem, hvis de mangler.
- * Denne funktion er "idempotent", hvilket betyder, at den er sikker at køre flere gange.
+ * Denne funktion er "idempotent", hvilket betyder, at den er sikker at køre flere gange uden at skabe dubletter.
  */
 async function ensureDefaultBudgets() {
     if (!appState.currentUser) return;
 
-    const personIds = ['daniel', 'frederikke'];
-    const personNames = { daniel: 'Daniel', frederikke: 'Frederikke' };
+    // Tjek først den lokale state for en hurtig udvej. Hvis begge budgetter allerede er indlæst,
+    // er der sandsynligvis ingen grund til at tjekke databasen igen.
+    const hasDanielLocally = appState.budgets.some(b => b.personId === 'daniel');
+    const hasFrederikkeLocally = appState.budgets.some(b => b.personId === 'frederikke');
+    if (hasDanielLocally && hasFrederikkeLocally) {
+        return;
+    }
+
     const budgetsColRef = collection(db, 'budgets');
+    const q = query(budgetsColRef, where("userId", "==", appState.currentUser.uid));
+    const snapshot = await getDocs(q);
 
-    for (const id of personIds) {
-        // Spørg databasen direkte for at undgå race conditions med lokal state
-        const q = query(budgetsColRef, where("userId", "==", appState.currentUser.uid), where("personId", "==", id));
-        const snapshot = await getDocs(q);
+    const existingPersonIds = new Set(snapshot.docs.map(doc => doc.data().personId));
+    
+    const personData = {
+        daniel: 'Daniel',
+        frederikke: 'Frederikke'
+    };
+    
+    const batch = writeBatch(db);
+    let createdSomething = false;
 
-        if (snapshot.empty) {
-            // Kun hvis dokumentet vitterligt ikke findes i databasen, opretter vi det.
-            try {
-                await addDoc(budgetsColRef, {
-                    userId: appState.currentUser.uid,
-                    personId: id,
-                    name: personNames[id],
-                    budget: { income: [], expenses: [] },
-                    actuals: {}
-                });
-            } catch (error) {
-                // Denne fejl kan opstå, hvis to browser-vinduer forsøger at oprette samtidig. Det er ok.
-                console.warn(`Kunne ikke oprette budget for ${id}, det blev sandsynligvis lige oprettet.`, error);
-            }
+    // Gennemgå de påkrævede personer og tjek, om de allerede findes i databasen.
+    for (const id in personData) {
+        if (!existingPersonIds.has(id)) {
+            console.log(`Budget for ${id} mangler i databasen. Opretter...`);
+            const newDocRef = doc(budgetsColRef); // Auto-generer ID
+            batch.set(newDocRef, {
+                userId: appState.currentUser.uid,
+                personId: id,
+                name: personData[id],
+                budget: { income: [], expenses: [] },
+                actuals: {}
+            });
+            createdSomething = true;
+        }
+    }
+
+    // Udfør kun et databasekald, hvis der rent faktisk er noget at oprette.
+    if (createdSomething) {
+        try {
+            await batch.commit();
+            console.log("Nye budget-dokumenter blev oprettet.");
+        } catch (error) {
+            handleError(error, "Kunne ikke oprette standard-budget.", "ensureDefaultBudgetsCommit");
         }
     }
 }
@@ -486,7 +508,7 @@ function calculateProjectedValues(targetDate) {
  */
 function renderBudgetView(container) {
     // Viser en loading-spinner, hvis budget-data stadig hentes
-    if (!appState.budgets || appState.budgets.length < 2) {
+    if (!appState.budgets || appState.budgets.length === 0) {
         container.innerHTML = `<div class="loading-spinner"></div><p>Initialiserer budget...</p>`;
         return;
     }
@@ -574,7 +596,7 @@ function renderRow(item, monthHeaders, allActuals, isExpense = false) {
         actualTotal += actual;
         
         let colorClass = '';
-        if (actual !== 0) {
+        if (actual !== 0 && item.allocated > 0) { // Kun farve hvis der er et budget at sammenligne med
             if (isExpense) {
                 colorClass = actual > item.allocated ? 'negative-text' : 'positive-text';
             } else {
@@ -634,7 +656,6 @@ function getMonthHeaders(startDate) {
     let date = new Date(startDate);
     date.setDate(1);
     
-    // RETTELSE: Start 11 måneder FØR den valgte dato for at vise de seneste 12 måneder
     date.setMonth(date.getMonth() - 11);
 
     for (let i = 0; i < 12; i++) {
