@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for økonomi-siden.
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField, arrayUnion } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField, arrayUnion, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -655,6 +655,9 @@ function getMonthHeaders(startDate) {
     let date = new Date(startDate);
     date.setDate(1); 
     
+    // Gå 11 måneder tilbage for at starte perioden
+    date.setMonth(date.getMonth() - 11);
+
     for (let i = 0; i < 12; i++) {
         const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         const label = date.toLocaleString('da-DK', { month: 'short', year: '2-digit' });
@@ -676,7 +679,7 @@ function calculateTotals(person, monthHeaders) {
             income.actuals[i] += actual;
             totalActual += actual;
         });
-        income.diff += totalActual - (item.allocated * monthHeaders.length);
+        income.diff += totalActual - (item.allocated * 12);
     });
 
     (person.budget.expenses || []).forEach(item => {
@@ -687,7 +690,7 @@ function calculateTotals(person, monthHeaders) {
             expenses.actuals[i] += actual;
             totalActual += actual;
         });
-        expenses.diff += (item.allocated * monthHeaders.length) - totalActual;
+        expenses.diff += (item.allocated * 12) - totalActual;
     });
     
     return { income, expenses };
@@ -711,7 +714,8 @@ async function handleContainerClick(e) {
         const isExpense = !!e.target.closest('#add-expense-row');
         const type = isExpense ? 'expenses' : 'income';
         const prefix = isExpense ? 'b' : 'i';
-        const newId = prefix + crypto.randomUUID();
+        // Brug en mere robust måde at skabe et unikt ID
+        const newId = prefix + Date.now();
         
         const newItem = { id: newId, name: 'Ny post', allocated: 0 };
 
@@ -753,51 +757,60 @@ async function handleContainerClick(e) {
         }
     }
 }
+
 async function handleCellBlur(e) {
     if (!e.target.classList.contains('editable')) return;
     
-    const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
-    if (!activePersonBudget) return;
-
     const cell = e.target;
     const id = cell.dataset.id;
-    const field = cell.dataset.field;
     const monthKey = cell.dataset.monthKey;
+    const field = cell.dataset.field;
     const newValueRaw = cell.textContent;
+    
+    const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
+    if (!activePersonBudget) return;
+    
+    const budgetRef = doc(db, 'budgets', activePersonBudget.id);
 
-    const isExpense = (activePersonBudget.budget.expenses || []).some(i => i.id === id);
-    const type = isExpense ? 'expenses' : 'income';
-    const allItems = [...(activePersonBudget.budget.income || []), ...(activePersonBudget.budget.expenses || [])];
-    const itemToUpdate = allItems.find(i => i.id === id);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const budgetDoc = await transaction.get(budgetRef);
+            if (!budgetDoc.exists()) {
+                throw new Error("Budget document not found!");
+            }
 
+            const budgetData = budgetDoc.data();
+            
+            // Håndter opdatering af budgetterede felter (name, allocated)
+            if (field) {
+                const isExpense = (budgetData.budget.expenses || []).some(i => i.id === id);
+                const type = isExpense ? 'expenses' : 'income';
+                const itemsArray = budgetData.budget[type] || [];
+                const itemIndex = itemsArray.findIndex(i => i.id === id);
 
-    if (!itemToUpdate) return;
-
-    let fieldPath;
-    let valueToSave;
-
-    // Vi skal opdatere hele array'et, da Firestore ikke kan opdatere et enkelt element i et array via index.
-    const originalArray = [...(activePersonBudget.budget[type] || [])];
-    const itemIndex = originalArray.findIndex(i => i.id === id);
-    if (itemIndex === -1) return;
-
-    if (field === 'name') {
-        originalArray[itemIndex].name = newValueRaw;
-        fieldPath = `budget.${type}`;
-        valueToSave = originalArray;
-    } else if (field === 'allocated') {
-        valueToSave = parseDKK(newValueRaw);
-        originalArray[itemIndex].allocated = valueToSave;
-        fieldPath = `budget.${type}`;
-        valueToSave = originalArray;
-        cell.textContent = toDKK(originalArray[itemIndex].allocated);
-    } else if (monthKey) {
-        valueToSave = parseDKK(newValueRaw);
-        fieldPath = `actuals.${id}.${monthKey}`;
-        cell.textContent = toDKK(valueToSave);
-    }
-
-    if (fieldPath) {
-        await updateBudgetField(activePersonBudget.id, fieldPath, valueToSave);
+                if (itemIndex > -1) {
+                    if (field === 'name') {
+                        itemsArray[itemIndex].name = newValueRaw;
+                    } else if (field === 'allocated') {
+                        const numericValue = parseDKK(newValueRaw);
+                        itemsArray[itemIndex].allocated = numericValue;
+                        cell.textContent = toDKK(numericValue); // Opdater UI med formateret værdi
+                    }
+                    transaction.update(budgetRef, { [`budget.${type}`]: itemsArray });
+                }
+            } 
+            // Håndter opdatering af faktiske månedlige værdier
+            else if (monthKey) {
+                const numericValue = parseDKK(newValueRaw);
+                const fieldPath = `actuals.${id}.${monthKey}`;
+                transaction.update(budgetRef, { [fieldPath]: numericValue });
+                cell.textContent = toDKK(numericValue); // Opdater UI med formateret værdi
+            }
+        });
+    } catch (error) {
+        handleError(error, "Ændringen kunne ikke gemmes.", "handleCellBlurTransaction");
+        // Gendan UI til den gamle værdi, hvis transaktionen fejler
+        renderView();
     }
 }
+
