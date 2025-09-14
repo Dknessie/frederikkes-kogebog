@@ -318,9 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
 
-        // FJERNET: Den problematiske listener for budgettet er fjernet herfra.
-        // Håndteres nu direkte i economy.js for at undgå fejl på ikke-eksisterende dokumenter.
-
         const userSpecificDocs = {
             shopping_lists: 'shoppingLists',
             references: 'references',
