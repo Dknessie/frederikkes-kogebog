@@ -193,21 +193,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function computeDerivedShoppingLists() {
-        // Beregn materialelisten baseret på projekter
         const materialsNeeded = {};
-
-        // Gennemgå alle planlagte og igangværende projekter
         (state.projects || []).forEach(project => {
             if (project.status === 'Planlagt' || project.status === 'Igangværende') {
                 (project.materials || []).forEach(material => {
                     const key = material.name.toLowerCase();
                     if (!materialsNeeded[key]) {
-                        materialsNeeded[key] = {
-                            total: 0,
-                            unit: material.unit,
-                            name: material.name,
-                            projects: []
-                        };
+                        materialsNeeded[key] = { total: 0, unit: material.unit, name: material.name, projects: [] };
                     }
                     materialsNeeded[key].total += material.quantity || 0;
                     materialsNeeded[key].projects.push({ name: project.title, qty: material.quantity });
@@ -215,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Sammenlign med varelager og opret indkøbsliste
         const materialsShoppingList = {};
         for (const key in materialsNeeded) {
             const needed = materialsNeeded[key];
