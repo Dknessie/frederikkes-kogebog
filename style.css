@@ -402,6 +402,118 @@ header {
     color: var(--text-color);
 }
 
+/* NYT: Styling for Aktiver & Gæld view */
+.assets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--spacing-m);
+    margin-bottom: var(--spacing-l);
+    padding-bottom: var(--spacing-l);
+    border-bottom: 2px solid var(--border-color);
+}
+.assets-header h3 {
+    margin: 0;
+}
+.assets-header p {
+    margin: 0;
+    color: #666;
+}
+.assets-summary {
+    text-align: right;
+    font-size: 0.9rem;
+    color: #555;
+}
+.assets-summary strong {
+    color: var(--text-color);
+    font-size: 1.2em;
+}
+
+.asset-liability-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+}
+
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-m);
+}
+.column-header h4 {
+    margin: 0;
+    font-family: var(--body-font);
+    font-weight: 700;
+}
+
+.asset-column h5, .liability-column h5 {
+    font-family: var(--body-font);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #888;
+    margin: var(--spacing-l) 0 var(--spacing-s) 0;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-s);
+}
+
+.asset-card, .liability-card {
+    background: var(--white-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-m);
+    margin-bottom: var(--spacing-m);
+    cursor: pointer;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.asset-card:hover, .liability-card:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.asset-card-header, .liability-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-weight: 600;
+}
+.asset-value, .liability-balance {
+    font-size: 1.1em;
+}
+
+.asset-card-body {
+    margin-top: var(--spacing-m);
+}
+.net-value {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--small-font-size);
+}
+.net-value strong {
+    color: var(--accent-color);
+}
+.progress-bar-container {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    margin-top: var(--spacing-s);
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background-color: var(--accent-color);
+    border-radius: 4px;
+}
+.liability-card-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--small-font-size);
+    color: #777;
+    margin-top: var(--spacing-s);
+}
+
+
 
 /* =================================================================
    KOGEBOG-SIDE (SEKTION 5)
@@ -3219,6 +3331,7 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
 
 
 
