@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         economySettings: {},
         expenses: [],
         fixedExpenses: [],
-        // NYT: Budget-state initialiseres tomt
         budget: {
             activePersonId: null,
             persons: {}
@@ -194,9 +193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteHomeInventoryBtn: document.getElementById('delete-home-inventory-btn'),
 
         addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
-        
-        // Economy
-        spreadsheetContainer: document.getElementById('spreadsheet-container'),
     };
 
     function computeDerivedShoppingLists() {
@@ -204,7 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const materialsNeeded = {};
 
         // Gennemgå alle planlagte og igangværende projekter
-        (appState.projects || []).forEach(project => {
+        // RETTET: Brugte 'appState' i stedet for 'state'
+        (state.projects || []).forEach(project => {
             if (project.status === 'Planlagt' || project.status === 'Igangværende') {
                 (project.materials || []).forEach(material => {
                     const key = material.name.toLowerCase();
@@ -226,7 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const materialsShoppingList = {};
         for (const key in materialsNeeded) {
             const needed = materialsNeeded[key];
-            const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === key);
+            // RETTET: Brugte 'appState' i stedet for 'state'
+            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
             const stock = inventoryItem ? (inventoryItem.totalStock || 0) : 0;
             const toBuy = Math.max(0, needed.total - stock);
             
@@ -236,7 +234,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     quantity_to_buy: toBuy,
                     unit: needed.unit,
                     note: `Til projekt(er): ${needed.projects.map(p => p.name).join(', ')}`,
-                    projectId: needed.projects.length === 1 ? appState.projects.find(p => p.title === needed.projects[0].name)?.id : null,
+                    // RETTET: Brugte 'appState' i stedet for 'state'
+                    projectId: needed.projects.length === 1 ? state.projects.find(p => p.title === needed.projects[0].name)?.id : null,
                     itemId: inventoryItem ? inventoryItem.id : null
                 };
             }
@@ -280,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderInventory();
                 break;
             case '#oekonomi':
-                // Kalder den nye render-funktion for økonomi
                 renderEconomy();
                 break;
             case '#references':
@@ -323,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
 
-        // NYT: Listener for budget-dokumentet
+        // Listener for budget-dokumentet
         state.listeners.budget = onSnapshot(doc(db, 'budgets', userId), (doc) => {
             if (doc.exists()) {
                 state.budget = doc.data();
