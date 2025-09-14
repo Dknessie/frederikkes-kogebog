@@ -30,10 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         economySettings: {},
         expenses: [],
         fixedExpenses: [],
-        budget: {
-            activePersonId: null,
-            persons: {}
-        },
+        budgets: [], // ÆNDRET: Nu et array, ligesom recipes
         events: [],
         plants: [],
         projects: [],
@@ -302,7 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
             projects: 'projects',
             reminders: 'reminders',
             maintenance: 'maintenance',
-            home_inventory: 'home_inventory'
+            home_inventory: 'home_inventory',
+            budgets: 'budgets' // TILFØJET: Lytter nu til budgets collection
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
