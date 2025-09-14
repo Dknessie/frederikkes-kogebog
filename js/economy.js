@@ -816,8 +816,6 @@ function calculateTotals(person, monthHeaders) {
  */
 async function handleContainerClick(e) {
     const budget = appState.budget;
-
-    // Fjernet logik for at tilføje personer
     
     // Kræver en aktiv person for de følgende handlinger
     const activePersonId = budget.activePersonId;
