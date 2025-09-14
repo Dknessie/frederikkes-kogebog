@@ -6,6 +6,12 @@ import { toDKK, parseDKK } from './utils.js';
 let appState; // Reference til den centrale state
 let appElements; // Reference til centrale DOM-elementer
 
+// Lokal state for økonomisiden
+const economyState = {
+    currentView: 'dashboard', // 'dashboard', 'budget', 'assets'
+    currentDate: new Date() // Til at navigere i budget-måneder
+};
+
 /**
  * Initialiserer economy-modulet.
  * @param {object} state - Den centrale state fra app.js.
@@ -15,28 +21,117 @@ export function initEconomy(state, elements) {
     appState = state;
     appElements = elements;
 
-    // Vi bruger event delegation på containeren for at håndtere alle klik
-    if (appElements.spreadsheetContainer) {
-        appElements.spreadsheetContainer.addEventListener('click', handleContainerClick);
-        appElements.spreadsheetContainer.addEventListener('blur', handleCellBlur, true); // Brug 'capture' fase for at fange blur-eventet
+    // Sæt startdato til den 1. i måneden for at undgå fejl
+    economyState.currentDate.setDate(1);
+
+    const pageContainer = document.getElementById('oekonomi');
+    if (pageContainer) {
+        // Vi bruger event delegation på hele sidens container
+        pageContainer.addEventListener('click', handlePageClick);
+        pageContainer.addEventListener('blur', handleCellBlur, true);
     }
 }
 
 /**
- * Hoved-renderingsfunktion for økonomisiden.
- * Den bygger hele budget-arket dynamisk.
+ * Håndterer alle klik-events på økonomisiden via delegation.
+ * @param {Event} e - Klik-eventet.
  */
-export function renderEconomy() {
-    if (!appElements.spreadsheetContainer) return;
-
-    const budgetData = appState.budget;
-    const activePerson = budgetData.persons[budgetData.activePersonId];
-    if (!activePerson) {
-        appElements.spreadsheetContainer.innerHTML = '<p>Vælg venligst en person.</p>';
+function handlePageClick(e) {
+    const navLink = e.target.closest('.economy-nav-link');
+    if (navLink) {
+        e.preventDefault();
+        economyState.currentView = navLink.dataset.view;
+        renderEconomy();
         return;
     }
 
-    const monthHeaders = getMonthHeaders();
+    const prevMonthBtn = e.target.closest('#prev-month-btn');
+    if (prevMonthBtn) {
+        economyState.currentDate.setMonth(economyState.currentDate.getMonth() - 1);
+        renderView(); // Kun render selve view'et, ikke hele siden
+        return;
+    }
+
+    const nextMonthBtn = e.target.closest('#next-month-btn');
+    if (nextMonthBtn) {
+        economyState.currentDate.setMonth(economyState.currentDate.getMonth() + 1);
+        renderView();
+        return;
+    }
+
+    // Genbrug den eksisterende container-logik til budgettet
+    handleContainerClick(e);
+}
+
+/**
+ * Hoved-renderingsfunktion for økonomisiden.
+ * Den bygger sidens overordnede struktur (sidebar, content) og kalder den specifikke view-renderer.
+ */
+export function renderEconomy() {
+    renderSidebar();
+    renderView();
+}
+
+/**
+ * Renderer sidemenuen for økonomi.
+ */
+function renderSidebar() {
+    const navContainer = document.getElementById('economy-nav-list');
+    if (!navContainer) return;
+
+    const views = [
+        { key: 'dashboard', name: 'Dashboard', icon: 'fa-tachometer-alt' },
+        { key: 'budget', name: 'Budget', icon: 'fa-file-invoice-dollar' },
+        { key: 'assets', name: 'Aktiver / Gæld', icon: 'fa-balance-scale' }
+    ];
+
+    navContainer.innerHTML = views.map(view => `
+        <li>
+            <a href="#" class="references-nav-link economy-nav-link ${economyState.currentView === view.key ? 'active' : ''}" data-view="${view.key}">
+                <i class="fas ${view.icon}"></i>
+                <span>${view.name}</span>
+            </a>
+        </li>
+    `).join('');
+}
+
+/**
+ * "Router" der kalder den korrekte render-funktion baseret på den nuværende state.
+ */
+function renderView() {
+    const contentArea = document.getElementById('economy-content-area');
+    if (!contentArea) return;
+
+    switch (economyState.currentView) {
+        case 'dashboard':
+            contentArea.innerHTML = `<h3>Økonomi Dashboard</h3><p class="empty-state">Dette dashboard er under udvikling.</p>`;
+            break;
+        case 'budget':
+            renderBudgetView(contentArea);
+            break;
+        case 'assets':
+            contentArea.innerHTML = `<h3>Aktiver & Gæld</h3><p class="empty-state">Denne sektion er under udvikling.</p>`;
+            break;
+        default:
+            contentArea.innerHTML = `<p>Vælg en visning fra menuen.</p>`;
+    }
+}
+
+
+/**
+ * Bygger budget-arket dynamisk.
+ * @param {HTMLElement} container - Elementet som budgettet skal renderes ind i.
+ */
+function renderBudgetView(container) {
+    const budgetData = appState.budget;
+    const activePerson = budgetData.persons[budgetData.activePersonId];
+    if (!activePerson) {
+        container.innerHTML = '<p>Vælg venligst en person.</p>';
+        return;
+    }
+
+    const monthHeaders = getMonthHeaders(economyState.currentDate);
+    const monthDisplay = economyState.currentDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     
     // Bygger de forskellige dele af tabellen
     const tableHeader = renderTableHeader(monthHeaders);
@@ -47,12 +142,18 @@ export function renderEconomy() {
     const personTabs = renderPersonTabs(budgetData);
 
     // Samler hele HTML-strukturen
-    appElements.spreadsheetContainer.innerHTML = `
+    container.innerHTML = `
         <div class="spreadsheet-card">
             <div class="spreadsheet-header">
                 <div class="person-tabs">
                     ${personTabs}
                     <button id="add-person" class="btn-icon" title="Tilføj Person"><i class="fas fa-user-plus"></i></button>
+                </div>
+                <!-- NYT: Måneds-navigator -->
+                <div class="economy-month-navigator">
+                    <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                    <h4 id="current-month-display">${monthDisplay}</h4>
+                    <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
                 </div>
                 <div>
                     <button id="add-income-row" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Indkomst</button>
@@ -190,21 +291,25 @@ function renderFooter(totals) {
 // --- LOGIK & BEREGNINGER ---
 
 /**
- * Genererer et array af de seneste 12 måneder til brug i headeren.
+ * Genererer et array af 12 måneder baseret på en startdato.
+ * @param {Date} startDate - Datoen der definerer den sidste måned i perioden.
  * @returns {Array<{key: string, label: string}>}
  */
-function getMonthHeaders() {
+function getMonthHeaders(startDate) {
     const headers = [];
-    let date = new Date();
-    // Gå til starten af den nuværende måned for at undgå fejl
+    let date = new Date(startDate);
     date.setDate(1); 
+    
+    // Gå 11 måneder tilbage for at finde startpunktet
+    date.setMonth(date.getMonth() - 11);
+
     for (let i = 0; i < 12; i++) {
         const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         const label = date.toLocaleString('da-DK', { month: 'short', year: '2-digit' });
         headers.push({ key: monthKey, label });
-        date.setMonth(date.getMonth() - 1);
+        date.setMonth(date.getMonth() + 1);
     }
-    return headers.reverse(); // Viser nyeste måned til højre
+    return headers;
 }
 
 /**
@@ -248,16 +353,17 @@ function calculateTotals(person, monthHeaders) {
 // --- EVENT HANDLERS ---
 
 /**
- * Håndterer klik-events på hele budget-containeren.
+ * Håndterer klik-events på budget-containeren (når den er synlig).
  * @param {Event} e - Klik-eventet.
  */
 function handleContainerClick(e) {
+    // Denne funktion kaldes nu fra handlePageClick for at undgå at lytte på skjulte elementer.
     const state = appState.budget;
 
     // Skift person-faneblad
     if (e.target.closest('.person-tab')) {
         state.activePersonId = e.target.closest('.person-tab').dataset.personId;
-        renderEconomy();
+        renderBudgetView(document.getElementById('economy-content-area'));
     }
     // Tilføj person
     else if (e.target.closest('#add-person')) {
@@ -270,7 +376,7 @@ function handleContainerClick(e) {
                 actuals: {}
             };
             state.activePersonId = newId;
-            renderEconomy();
+            renderBudgetView(document.getElementById('economy-content-area'));
         }
     }
     // Tilføj række (indkomst eller udgift)
@@ -281,7 +387,7 @@ function handleContainerClick(e) {
         const newId = prefix + Date.now();
         
         state.persons[state.activePersonId].budget[type].push({ id: newId, name: 'Ny post', allocated: 0 });
-        renderEconomy();
+        renderBudgetView(document.getElementById('economy-content-area'));
     }
     // Slet række
     else if (e.target.closest('.delete-row')) {
@@ -292,7 +398,7 @@ function handleContainerClick(e) {
         
         person.budget[type] = person.budget[type].filter(item => item.id !== id);
         delete person.actuals[id]; // Slet også de faktiske tal
-        renderEconomy();
+        renderBudgetView(document.getElementById('economy-content-area'));
     }
 }
 
@@ -328,5 +434,6 @@ function handleCellBlur(e) {
     }
 
     // Gen-render for at opdatere totaler og formatering
-    renderEconomy();
+    renderBudgetView(document.getElementById('economy-content-area'));
 }
+
