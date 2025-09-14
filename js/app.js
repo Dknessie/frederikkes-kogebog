@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
+        // NYT: Tilføjet state for aktiver og gæld
         assets: [],
         liabilities: [],
         economySettings: {},
@@ -452,3 +453,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
