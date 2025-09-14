@@ -13,7 +13,6 @@ import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
 import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
-// Importerer det nye economy-modul
 import { initEconomy, renderEconomy } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
 
@@ -26,47 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryBatches: [],
         inventory: [],
         recipes: [],
-        // NYT: Tilføjet state for aktiver og gæld
         assets: [],
         liabilities: [],
         economySettings: {},
         expenses: [],
         fixedExpenses: [],
+        // NYT: Budget-state initialiseres tomt
+        budget: {
+            activePersonId: null,
+            persons: {}
+        },
         events: [],
         plants: [],
         projects: [],
         reminders: [],
         maintenance: [],
         home_inventory: [],
-        // NYT: Tilføjer budget-state
-        budget: {
-            activePersonId: 'daniel',
-            persons: {
-                'daniel': {
-                    name: 'Daniel',
-                    budget: {
-                        income: [{ id: 'i1', name: 'Løn', allocated: 45000 }, { id: 'i2', name: 'Ekstra', allocated: 0 }],
-                        expenses: [{ id: 'b1', name: 'Bolig', allocated: 12500 }, { id: 'b2', name: 'Bil', allocated: 5000 }]
-                    },
-                    actuals: {
-                        'i1': { '2025-09': 47000, '2025-08': 46500 },
-                        'b1': { '2025-09': 12500, '2025-08': 12700 },
-                        'b2': { '2025-09': 5100, '2025-08': 4850 }
-                    }
-                },
-                'frederikke': {
-                    name: 'Frederikke',
-                    budget: {
-                        income: [{ id: 'fi1', name: 'Løn', allocated: 38000 }],
-                        expenses: [{ id: 'fb1', name: 'Faste udgifter', allocated: 10000 }, { id: 'fb2', name: 'Fornøjelse', allocated: 6000 }]
-                    },
-                    actuals: {
-                        'fi1': { '2025-09': 38500, '2025-08': 38200 },
-                        'fb1': { '2025-09': 9800, '2025-08': 10100 }
-                    }
-                }
-            }
-        },
         references: {
             maintenanceTasks: []
         },
@@ -349,6 +323,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }, (error) => commonErrorHandler(error, coll));
         }
 
+        // NYT: Listener for budget-dokumentet
+        state.listeners.budget = onSnapshot(doc(db, 'budgets', userId), (doc) => {
+            if (doc.exists()) {
+                state.budget = doc.data();
+            } else {
+                // Hvis intet budget findes for brugeren, initialiseres et tomt
+                state.budget = { activePersonId: null, persons: {} };
+            }
+            renderCurrentPage();
+        }, (error) => commonErrorHandler(error, 'budget'));
+
+
         const userSpecificDocs = {
             shopping_lists: 'shoppingLists',
             references: 'references',
@@ -446,7 +432,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initReferences(state, elements);
         initDashboard(state, elements);
         initEvents(state);
-        // Initialiserer det nye economy-modul
         initEconomy(state, elements);
         initHjemmet(state, elements);
     }
