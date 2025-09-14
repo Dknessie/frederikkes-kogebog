@@ -24,8 +24,13 @@ async function saveBudget() {
     if (!appState.currentUser || !appState.budget) return;
     try {
         const budgetRef = doc(db, 'budgets', appState.currentUser.uid);
+        // RETTET: Sikrer at userId altid er en del af det dokument, der gemmes, for at overholde sikkerhedsregler.
+        const dataToSave = {
+            ...appState.budget,
+            userId: appState.currentUser.uid
+        };
         // Bruger setDoc til at overskrive hele budget-objektet med de seneste ændringer
-        await setDoc(budgetRef, appState.budget);
+        await setDoc(budgetRef, dataToSave);
     } catch (error) {
         handleError(error, "Budgettet kunne ikke gemmes.", "saveBudget");
     }
@@ -747,6 +752,31 @@ function handleContainerClick(e) {
     // Denne funktion kaldes nu fra handlePageClick for at undgå at lytte på skjulte elementer.
     const state = appState.budget;
 
+    // Returner tidligt hvis der ikke er nogen personer (og dermed intet at interagere med)
+    if (!state || Object.keys(state.persons).length === 0) {
+        // Håndterer kun "tilføj person" i tom tilstand
+        if (e.target.closest('#add-person')) {
+             const name = prompt("Navn på ny person:");
+            if (name && name.trim() !== '') {
+                const newId = name.toLowerCase().trim();
+                if (!state.persons[newId]) {
+                    state.persons[newId] = {
+                        name: name.trim(),
+                        budget: { income: [], expenses: [] },
+                        actuals: {}
+                    };
+                    state.activePersonId = newId;
+                    renderBudgetView(document.getElementById('economy-content-area'));
+                    saveBudget();
+                } else {
+                    showNotification({title: "Fejl", message: "En person med dette navn findes allerede."});
+                }
+            }
+        }
+        return;
+    }
+
+
     // Skift person-faneblad
     if (e.target.closest('.person-tab')) {
         state.activePersonId = e.target.closest('.person-tab').dataset.personId;
@@ -813,6 +843,10 @@ function handleCellBlur(e) {
     if (!e.target.classList.contains('editable')) return;
     
     const state = appState.budget;
+
+    // Håndter tilfælde hvor der ingen person er valgt endnu
+    if (!state.activePersonId) return;
+
     const person = state.persons[state.activePersonId];
     const cell = e.target;
     
