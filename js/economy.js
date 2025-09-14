@@ -2,7 +2,7 @@
 // Dette modul håndterer logikken for økonomi-siden.
 
 import { db } from './firebase.js';
-import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, writeBatch, deleteField, arrayUnion, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, writeBatch, deleteField, arrayUnion, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { toDKK, parseDKK } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
@@ -18,63 +18,42 @@ const economyState = {
 };
 
 // =================================================================
-// NY, ROBUST DATAHÅNDTERING FOR BUDGET
+// DATAHÅNDTERING FOR BUDGET
 // =================================================================
 
 /**
- * Sikrer at de to faste budget-dokumenter eksisterer i Firestore.
- * Kaldes én gang når økonomi-siden initialiseres.
+ * En sikker funktion, der tjekker om standardbudgetterne findes i Firestore og opretter dem, hvis de mangler.
+ * Denne funktion er "idempotent", hvilket betyder, at den er sikker at køre flere gange.
  */
 async function ensureDefaultBudgets() {
     if (!appState.currentUser) return;
-    const batch = writeBatch(db);
+
     const personIds = ['daniel', 'frederikke'];
     const personNames = { daniel: 'Daniel', frederikke: 'Frederikke' };
+    const budgetsColRef = collection(db, 'budgets');
 
-    // Tjekker om de nødvendige dokumenter allerede er i den lokale state
-    const existingPersonIds = appState.budgets.map(b => b.personId);
+    for (const id of personIds) {
+        // Spørg databasen direkte for at undgå race conditions med lokal state
+        const q = query(budgetsColRef, where("userId", "==", appState.currentUser.uid), where("personId", "==", id));
+        const snapshot = await getDocs(q);
 
-    personIds.forEach(id => {
-        if (!existingPersonIds.includes(id)) {
-            // Opretter en reference med en specifik ID for forudsigelighed (valgfrit, men kan være nyttigt)
-            // Her bruger vi dog auto-genererede IDs som med opskrifter for at holde det simpelt.
-            const budgetRef = doc(collection(db, 'budgets'));
-            batch.set(budgetRef, {
-                userId: appState.currentUser.uid,
-                personId: id,
-                name: personNames[id],
-                budget: { income: [], expenses: [] },
-                actuals: {}
-            });
+        if (snapshot.empty) {
+            // Kun hvis dokumentet vitterligt ikke findes i databasen, opretter vi det.
+            try {
+                await addDoc(budgetsColRef, {
+                    userId: appState.currentUser.uid,
+                    personId: id,
+                    name: personNames[id],
+                    budget: { income: [], expenses: [] },
+                    actuals: {}
+                });
+            } catch (error) {
+                // Denne fejl kan opstå, hvis to browser-vinduer forsøger at oprette samtidig. Det er ok.
+                console.warn(`Kunne ikke oprette budget for ${id}, det blev sandsynligvis lige oprettet.`, error);
+            }
         }
-    });
-
-    try {
-        await batch.commit();
-    } catch (error) {
-        // Denne fejl kan opstå, hvis der er et race condition, hvilket er ok.
-        // Vi logger den bare for en sikkerheds skyld, men viser ikke en fejl til brugeren.
-        console.warn("Batch commit for default budgets might have failed (this can be normal):", error);
     }
 }
-
-
-/**
- * Gemmer en specifik, isoleret ændring i et budget-dokument.
- * @param {string} budgetId - ID'et på budget-dokumentet i Firestore.
- * @param {string} fieldPath - Stien til feltet, der skal opdateres.
- * @param {*} value - Den nye værdi for feltet.
- */
-async function updateBudgetField(budgetId, fieldPath, value) {
-    if (!budgetId || !appState.currentUser) return;
-    try {
-        const budgetRef = doc(db, 'budgets', budgetId);
-        await updateDoc(budgetRef, { [fieldPath]: value });
-    } catch (error) {
-        handleError(error, `Kunne ikke opdatere feltet: ${fieldPath}`, "updateBudgetField");
-    }
-}
-
 
 /**
  * Initialiserer economy-modulet.
@@ -111,14 +90,14 @@ export function initEconomy(state, elements) {
 export async function renderEconomy() {
     renderSidebar();
     
-    // NY LOGIK: Vent på at standard-budgetter er oprettet, før vi renderer resten.
+    // Kør det sikre tjek for at sikre, at budget-dokumenterne eksisterer.
     await ensureDefaultBudgets();
 
+    // Render selve indholdet, efter tjekket er kørt.
     renderView();
 }
 
 
-// ... (resten af handlePageClick, renderSidebar, renderView, og Aktiver/Gæld logik er uændret) ...
 function handlePageClick(e) {
     const navLink = e.target.closest('.economy-nav-link');
     if (navLink) {
@@ -516,7 +495,7 @@ function renderBudgetView(container) {
 
     if (!activePersonBudget) {
         // Hvis den aktive person af en eller anden grund ikke findes, vælg den første som fallback
-        economyState.activePersonId = appState.budgets[0].personId;
+        economyState.activePersonId = appState.budgets[0]?.personId || 'daniel';
         renderBudgetView(container); // Prøv at rendere igen
         return;
     }
@@ -653,9 +632,9 @@ function renderFooter(totals) {
 function getMonthHeaders(startDate) {
     const headers = [];
     let date = new Date(startDate);
-    date.setDate(1); 
+    date.setDate(1);
     
-    // Gå 11 måneder tilbage for at starte perioden
+    // RETTELSE: Start 11 måneder FØR den valgte dato for at vise de seneste 12 måneder
     date.setMonth(date.getMonth() - 11);
 
     for (let i = 0; i < 12; i++) {
@@ -666,7 +645,6 @@ function getMonthHeaders(startDate) {
     }
     return headers;
 }
-
 function calculateTotals(person, monthHeaders) {
     const income = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
     const expenses = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
@@ -714,7 +692,6 @@ async function handleContainerClick(e) {
         const isExpense = !!e.target.closest('#add-expense-row');
         const type = isExpense ? 'expenses' : 'income';
         const prefix = isExpense ? 'b' : 'i';
-        // Brug en mere robust måde at skabe et unikt ID
         const newId = prefix + Date.now();
         
         const newItem = { id: newId, name: 'Ny post', allocated: 0 };
@@ -803,7 +780,15 @@ async function handleCellBlur(e) {
             else if (monthKey) {
                 const numericValue = parseDKK(newValueRaw);
                 const fieldPath = `actuals.${id}.${monthKey}`;
-                transaction.update(budgetRef, { [fieldPath]: numericValue });
+                
+                // Brug set med merge:true for at oprette nøgle-stier, der ikke eksisterer
+                transaction.set(budgetRef, { 
+                    actuals: { 
+                        [id]: { 
+                            [monthKey]: numericValue 
+                        } 
+                    } 
+                }, { merge: true });
                 cell.textContent = toDKK(numericValue); // Opdater UI med formateret værdi
             }
         });
