@@ -381,6 +381,27 @@ header {
     z-index: 2;
 }
 
+/* NYT: Styling for Økonomi-sidens layout og navigation */
+.economy-nav-link i {
+    width: 20px; /* Sikrer at ikoner er justeret */
+    text-align: center;
+}
+
+.economy-month-navigator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+}
+
+.economy-month-navigator h4 {
+    margin: 0;
+    font-family: var(--body-font);
+    font-weight: 600;
+    min-width: 150px;
+    text-align: center;
+    color: var(--text-color);
+}
+
 
 /* =================================================================
    KOGEBOG-SIDE (SEKTION 5)
@@ -492,6 +513,7 @@ header {
 .favorite-icon { position: absolute; top: var(--spacing-m); right: var(--spacing-m); font-size: 1.4rem; color: #ddd; cursor: pointer; transition: color 0.2s ease, transform 0.2s ease; -webkit-text-stroke: 1px white; }
 .favorite-icon:hover { transform: scale(1.2); }
 .favorite-icon.favorited { color: var(--status-red); }
+
 
 /* ===== 5. NYT Kalender "Uge-Hub" Design ===== */
 .weekly-hub-container {
@@ -3197,5 +3219,6 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
 
 
