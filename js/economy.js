@@ -219,14 +219,14 @@ function renderView() {
     }
 }
 
-// ... ASSET & LIABILITY FUNCTIONS (UNCHANGED) ...
 function renderAssetsView(container) {
     // NYT: Beregn fremskrevne værdier
     const projectedData = calculateProjectedValues(economyState.projectionDate);
-    const { assets, liabilities, netWorth } = projectedData;
+    const { assets, liabilities } = projectedData;
 
     const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
+    const netWorth = totalAssets - totalLiabilities;
     
     // NYT: Månedsnavigator
     const monthDisplay = economyState.projectionDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
@@ -555,18 +555,22 @@ function calculateProjectedValues(targetDate) {
     const direction = monthsDiff > 0 ? 1 : -1;
 
     for (let i = 0; i < Math.abs(monthsDiff); i++) {
-        // Beregn gæld først, da aktiver kan afhænge af det
+        // Beregn gæld først
         projectedLiabilities.forEach(liability => {
             const { currentBalance, monthlyPayment = 0, interestRate = 0 } = liability;
             if (currentBalance <= 0) return;
 
             const monthlyInterestRate = (interestRate / 100) / 12;
-            const monthlyInterest = currentBalance * monthlyInterestRate;
-            const principalPayment = monthlyPayment - monthlyInterest;
-
+            
             if (direction === 1) { // Frem i tiden
+                const monthlyInterest = currentBalance * monthlyInterestRate;
+                const principalPayment = monthlyPayment - monthlyInterest;
                 liability.currentBalance -= principalPayment;
             } else { // Tilbage i tiden
+                // Dette er en approksimation, da renten afhænger af forrige måneds balance
+                const estimatedPreviousBalance = currentBalance / (1 - monthlyInterestRate) + monthlyPayment / (1 - monthlyInterestRate);
+                const monthlyInterest = estimatedPreviousBalance * monthlyInterestRate;
+                const principalPayment = monthlyPayment - monthlyInterest;
                 liability.currentBalance += principalPayment;
             }
             liability.currentBalance = Math.max(0, liability.currentBalance);
@@ -574,26 +578,13 @@ function calculateProjectedValues(targetDate) {
 
         // Beregn aktiver
         projectedAssets.forEach(asset => {
-            const { value, annualGrowthRate = 0, monthlyContribution = 0, linkedLiabilityIds = [] } = asset;
-            let effectiveMonthlyContribution = monthlyContribution;
-
-            // Hvis aktivet er koblet til gæld, tilføjes afdraget til "indskuddet"
-            if (linkedLiabilityIds.length > 0) {
-                const totalPrincipalPaid = linkedLiabilityIds.reduce((sum, id) => {
-                    const liability = projectedLiabilities.find(l => l.id === id);
-                    if (!liability) return sum;
-                    const monthlyInterest = (liability.currentBalance * ((liability.interestRate || 0) / 100)) / 12;
-                    return sum + ((liability.monthlyPayment || 0) - monthlyInterest);
-                }, 0);
-                effectiveMonthlyContribution += totalPrincipalPaid;
-            }
-            
+            const { value, annualGrowthRate = 0, monthlyContribution = 0 } = asset;
             const monthlyGrowthRate = (annualGrowthRate / 100) / 12;
             
             if (direction === 1) { // Frem i tiden
-                asset.value = asset.value * (1 + monthlyGrowthRate) + effectiveMonthlyContribution;
+                asset.value = asset.value * (1 + monthlyGrowthRate) + monthlyContribution;
             } else { // Tilbage i tiden
-                asset.value = (asset.value - effectiveMonthlyContribution) / (1 + monthlyGrowthRate);
+                asset.value = (asset.value - monthlyContribution) / (1 + monthlyGrowthRate);
             }
         });
     }
