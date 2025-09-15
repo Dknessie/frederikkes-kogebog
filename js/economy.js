@@ -409,7 +409,7 @@ function openLiabilityModal(liabilityId = null) {
         document.getElementById('liability-current-balance').value = liability.currentBalance || '';
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
         document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
-        document.getElementById('liability-term-years').value = liability.termYears || '';
+        document.getElementById('liability-term-months').value = liability.termMonths || '';
     }
     
     populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
@@ -432,7 +432,7 @@ async function handleSaveLiability(e) {
         currentBalance: parseFloat(document.getElementById('liability-current-balance').value),
         monthlyPayment: parseFloat(document.getElementById('liability-monthly-payment').value) || null,
         interestRate: parseFloat(document.getElementById('liability-interest-rate').value) || null,
-        termYears: parseFloat(document.getElementById('liability-term-years').value) || null,
+        termMonths: parseInt(document.getElementById('liability-term-months').value, 10) || null,
         userId: appState.currentUser.uid
     };
 
@@ -869,44 +869,44 @@ function handleLoanCalculatorChange(e) {
 
     const principalInput = form.querySelector('#liability-current-balance');
     const rateInput = form.querySelector('#liability-interest-rate');
-    const termYearsInput = form.querySelector('#liability-term-years');
+    const termMonthsInput = form.querySelector('#liability-term-months');
     const paymentInput = form.querySelector('#liability-monthly-payment');
     const termDisplay = form.querySelector('#liability-remaining-term-display');
 
     const principal = parseFloat(principalInput.value) || 0;
     const annualRate = parseFloat(rateInput.value) || 0;
-    let termYears = parseFloat(termYearsInput.value) || 0;
+    let termMonths = parseInt(termMonthsInput.value, 10) || 0;
     let monthlyPayment = parseFloat(paymentInput.value) || 0;
 
     const changedElementId = e.target.id;
 
     // Gem hvilket felt der sidst blev manuelt ændret
-    if (changedElementId === 'liability-term-years') {
+    if (changedElementId === 'liability-term-months') {
         economyState.lastEditedLoanField = 'term';
     } else if (changedElementId === 'liability-monthly-payment') {
         economyState.lastEditedLoanField = 'payment';
     }
 
     // Udfør beregninger baseret på det ændrede felt
-    if (changedElementId === 'liability-term-years') {
-        const newPayment = calculateMonthlyPayment(principal, annualRate, termYears * 12);
+    if (changedElementId === 'liability-term-months') {
+        const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
         if (newPayment) {
             paymentInput.value = newPayment.toFixed(2);
         }
     } else if (changedElementId === 'liability-monthly-payment') {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
         if (newTermMonths !== null && isFinite(newTermMonths)) {
-            termYearsInput.value = (newTermMonths / 12).toFixed(1);
+            termMonthsInput.value = newTermMonths;
         }
     } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
         // Hvis renten ændres, genberegn baseret på det senest redigerede felt
-        if (economyState.lastEditedLoanField === 'term' && termYears > 0) {
-            const newPayment = calculateMonthlyPayment(principal, annualRate, termYears * 12);
+        if (economyState.lastEditedLoanField === 'term' && termMonths > 0) {
+            const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
              if (newPayment) paymentInput.value = newPayment.toFixed(2);
         } else if (economyState.lastEditedLoanField === 'payment' && monthlyPayment > 0) {
             const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
             if (newTermMonths !== null && isFinite(newTermMonths)) {
-                 termYearsInput.value = (newTermMonths / 12).toFixed(1);
+                 termMonthsInput.value = newTermMonths;
             }
         }
     }
