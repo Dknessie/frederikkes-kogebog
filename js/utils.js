@@ -67,17 +67,20 @@ export function getStartOfWeek(date) {
 
 /**
  * Formats a Date object into a YYYY-MM-DD string, respecting the local timezone.
- * @param {Date} date The date to format.
+ * @param {Date|string} date The date to format.
  * @returns {string} The formatted date string.
  */
 export function formatDate(date) {
-    if (!(date instanceof Date) || isNaN(date)) return '';
-    // FIX: Use local date parts to avoid timezone issues with toISOString()
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const day = d.getDate().toString().padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
 
 /**
  * Converts a quantity from a given recipe unit to the master product's base unit (g or ml).
@@ -155,49 +158,6 @@ export function calculateRecipePrice(recipe, inventory, portionsOverride) {
     return totalPrice;
 }
 
-/**
- * Viser en toast-notifikation.
- * @param {string} message - Meddelelsen, der skal vises.
- * @param {string} [type='info'] - Typen af notifikation ('info', 'success', 'error').
- */
-export function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        console.error('Toast container not found!');
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    // Vis toast
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
-
-    // Skjul og fjern toast efter 3 sekunder
-    setTimeout(() => {
-        toast.classList.remove('show');
-        toast.addEventListener('transitionend', () => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        });
-    }, 3000);
-}
-
-/**
- * Håndterer og logger fejl til konsollen med en standardiseret besked.
- * @param {string} message - En beskrivende besked om fejlen.
- * @param {Error} error - Det faktiske fejl-objekt.
- */
-export function handleError(message, error) {
-    console.error(`[APP_ERROR] ${message}`, error);
-    // Her kan vi senere udvide med mere avanceret fejlhåndtering, f.eks. logging til en service.
-}
 
 /**
  * Formaterer et tal som en dansk krone-streng.
@@ -212,3 +172,54 @@ export const toDKK = (num) => (num || 0).toLocaleString('da-DK');
  * @returns {number} Det resulterende tal.
  */
 export const parseDKK = (str) => parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+
+
+// =================================================================
+// NYE LÅNEBEREGNINGS-FUNKTIONER
+// =================================================================
+
+/**
+ * Beregner den månedlige ydelse for et annuitetslån.
+ * @param {number} principal - Lånets hovedstol (restgæld).
+ * @param {number} annualRate - Den årlige rente i procent (f.eks. 5 for 5%).
+ * @param {number} termMonths - Løbetiden i måneder.
+ * @returns {number|null} Den månedlige ydelse, eller null hvis input er ugyldigt.
+ */
+export function calculateMonthlyPayment(principal, annualRate, termMonths) {
+    if (principal <= 0 || annualRate < 0 || termMonths <= 0) return null;
+
+    if (annualRate === 0) {
+        return principal / termMonths;
+    }
+
+    const monthlyRate = (annualRate / 100) / 12;
+    const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
+    
+    return payment;
+}
+
+/**
+ * Beregner den resterende løbetid i måneder for et annuitetslån.
+ * @param {number} principal - Lånets hovedstol (restgæld).
+ * @param {number} annualRate - Den årlige rente i procent.
+ * @param {number} monthlyPayment - Den månedlige ydelse.
+ * @returns {number|null} Løbetiden i måneder, eller null hvis det er umuligt at afbetale.
+ */
+export function calculateTermMonths(principal, annualRate, monthlyPayment) {
+    if (principal <= 0 || monthlyPayment <= 0) return 0;
+    
+    if (annualRate === 0) {
+        return Math.ceil(principal / monthlyPayment);
+    }
+
+    const monthlyRate = (annualRate / 100) / 12;
+
+    // Tjek om ydelsen overhovedet dækker renterne
+    if (monthlyPayment <= principal * monthlyRate) {
+        return Infinity; // Lånet vil aldrig blive betalt af
+    }
+
+    const term = -Math.log(1 - (principal * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate);
+    
+    return Math.ceil(term);
+}
