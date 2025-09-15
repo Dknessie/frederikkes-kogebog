@@ -415,13 +415,24 @@ tr:hover .delete-row {
     display: none;
 }
 
-
 .spreadsheet-table tfoot {
     font-weight: 700;
     background-color: var(--secondary-color);
     position: sticky;
     bottom: 0;
     z-index: 2;
+}
+
+.total-summary-row td {
+    background-color: var(--secondary-color) !important;
+    font-weight: 700;
+}
+.available-row td {
+    font-size: 1.1em;
+    color: var(--accent-color);
+}
+.available-row .negative-text {
+    color: var(--status-red);
 }
 
 .economy-nav-link i {
@@ -3372,4 +3383,15 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
+" in the Canvas document.
+I will follow these instructions:
+  * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
+  * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
+    * Don't output the same document/empty document and say that you have edited it.
+    * Don't change unrelated code in the document.
+  * Don't output  and  in your final response.
+  * Any references like "this" or "selected code" refers to the code between  and  tags.
+  * Just acknowledge my request in the introduction.
+  * Make sure to refer to the document as "Canvas" in your response.
 
