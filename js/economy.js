@@ -569,7 +569,7 @@ function renderBudgetView(container) {
     
     const expenseCategoriesHTML = Object.keys(defaultExpenseCategories).map(catKey => {
         const categoryData = activePersonBudget.budget.expenses[catKey] || defaultExpenseCategories[catKey];
-        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals, totals);
+        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals);
     }).join('');
 
     const tableFooter = renderFooter(totals);
@@ -630,23 +630,20 @@ function renderIncomeRow(item, monthHeaders, allActuals) {
     return renderSubItemRow('income', item, monthHeaders, allActuals, false);
 }
 
-function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals, totals) {
+function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
     const subItemsHTML = (categoryData.subItems || []).map(item => renderSubItemRow(catKey, item, monthHeaders, allActuals, true)).join('');
     
     const subItemsAllocatedTotal = (categoryData.subItems || []).reduce((sum, item) => sum + item.allocated, 0);
     const budgetDifference = categoryData.budgetedAmount - subItemsAllocatedTotal;
-    
-    const isSavings = catKey === 'opsparing';
-    const budgetedAmount = isSavings ? totals.availableToBudget : categoryData.budgetedAmount;
-    
+        
     return `
         <tr class="main-category-row" data-category-key="${catKey}">
             <td class="name-cell">
                 <span>${categoryData.budgetName}</span>
-                ${!isSavings ? `<button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>` : ''}
+                <button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>
             </td>
-            <td class="currency ${!isSavings ? 'editable' : 'readonly'}" data-category-key="${catKey}" data-field="budgetedAmount">
-                <span ${!isSavings ? 'contenteditable="true"' : ''}>${toDKK(budgetedAmount)}</span>
+            <td class="currency editable" data-category-key="${catKey}" data-field="budgetedAmount">
+                <span contenteditable="true">${toDKK(categoryData.budgetedAmount)}</span>
             </td>
             <td colspan="12"></td>
             <td></td>
@@ -655,8 +652,8 @@ function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals, t
         <tr class="subtotal-row">
             <td>Subtotal for ${categoryData.budgetName}</td>
             <td class="currency">${toDKK(subItemsAllocatedTotal)}</td>
-            <td colspan="12" class="${!isSavings && budgetDifference !== 0 ? 'negative-text' : ''}">
-                ${!isSavings && budgetDifference !== 0 ? `Difference: ${toDKK(budgetDifference)}` : ''}
+            <td colspan="12" class="${budgetDifference !== 0 ? 'negative-text' : ''}">
+                ${budgetDifference !== 0 ? `Difference: ${toDKK(budgetDifference)}` : ''}
             </td>
             <td></td>
         </tr>
@@ -700,7 +697,8 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense) {
 }
 
 function renderFooter(totals) {
-    const remainingClass = totals.availableToBudget < 0 ? 'negative-text' : '';
+    const netResult = totals.income.budget - totals.expenses.budget;
+    const resultClass = netResult < 0 ? 'negative-text' : 'positive-text';
     return `
         <tr class="total-summary-row">
             <td>Total Indkomst</td>
@@ -708,13 +706,13 @@ function renderFooter(totals) {
             <td colspan="13"></td>
         </tr>
         <tr class="total-summary-row">
-            <td>Fordelte Udgifter</td>
-            <td class="currency">${toDKK(totals.expenses.allocated)}</td>
+            <td>Total Budgetterede Udgifter</td>
+            <td class="currency">${toDKK(totals.expenses.budget)}</td>
             <td colspan="13"></td>
         </tr>
         <tr class="total-summary-row available-row">
-            <td>Tilbage at Budgettere (går til opsparing)</td>
-            <td class="currency ${remainingClass}">${toDKK(totals.availableToBudget)}</td>
+            <td>Resultat (Over/Under Budget)</td>
+            <td class="currency ${resultClass}">${toDKK(netResult)}</td>
             <td colspan="13"></td>
         </tr>
     `;
@@ -742,21 +740,14 @@ function getMonthHeaders(startDate) {
 function calculateTotals(person) {
     const totalIncome = (person.budget.income || []).reduce((sum, item) => sum + item.allocated, 0);
     
-    let allocatedExpenses = 0;
+    let totalExpenses = 0;
     if (typeof person.budget.expenses === 'object' && person.budget.expenses !== null) {
-        for (const catKey in person.budget.expenses) {
-            if (catKey !== 'opsparing') {
-                allocatedExpenses += person.budget.expenses[catKey].budgetedAmount || 0;
-            }
-        }
+        totalExpenses = Object.values(person.budget.expenses).reduce((sum, cat) => sum + cat.budgetedAmount, 0);
     }
-
-    const availableToBudget = totalIncome - allocatedExpenses;
     
     return { 
         income: { budget: totalIncome }, 
-        expenses: { allocated: allocatedExpenses },
-        availableToBudget: availableToBudget
+        expenses: { budget: totalExpenses }
     };
 }
 
