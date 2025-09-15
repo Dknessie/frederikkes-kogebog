@@ -18,70 +18,83 @@ const economyState = {
     lastEditedLoanField: 'term' // 'term' or 'payment', to handle interest changes intelligently
 };
 
+const defaultExpenseCategories = {
+    bolig: { budgetName: "Bolig", budgetedAmount: 0, subItems: [] },
+    transport: { budgetName: "Transport", budgetedAmount: 0, subItems: [] },
+    personlig: { budgetName: "Personlig", budgetedAmount: 0, subItems: [] },
+    diverse: { budgetName: "Diverse", budgetedAmount: 0, subItems: [] },
+    opsparing: { budgetName: "Opsparing & Investering", budgetedAmount: 0, subItems: [] }
+};
+
+
 // =================================================================
 // DATAHÅNDTERING FOR BUDGET
 // =================================================================
 
 /**
- * En sikker funktion, der tjekker om standardbudgetterne findes i Firestore og opretter dem, hvis de mangler.
- * Denne funktion er "idempotent", hvilket betyder, at den er sikker at køre flere gange uden at skabe dubletter.
+ * En sikker funktion, der tjekker om standardbudgetterne findes i Firestore og opretter/opdaterer dem, hvis de mangler.
  */
 async function ensureDefaultBudgets() {
     if (!appState.currentUser) return;
-
-    // Tjek først den lokale state for en hurtig udvej. Hvis begge budgetter allerede er indlæst,
-    // er der sandsynligvis ingen grund til at tjekke databasen igen.
-    const hasDanielLocally = appState.budgets.some(b => b.personId === 'daniel');
-    const hasFrederikkeLocally = appState.budgets.some(b => b.personId === 'frederikke');
-    if (hasDanielLocally && hasFrederikkeLocally) {
-        return;
-    }
 
     const budgetsColRef = collection(db, 'budgets');
     const q = query(budgetsColRef, where("userId", "==", appState.currentUser.uid));
     const snapshot = await getDocs(q);
 
-    const existingPersonIds = new Set(snapshot.docs.map(doc => doc.data().personId));
-    
     const personData = {
         daniel: 'Daniel',
         frederikke: 'Frederikke'
     };
     
+    const existingBudgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const existingPersonIds = new Set(existingBudgets.map(b => b.personId));
+    
     const batch = writeBatch(db);
-    let createdSomething = false;
+    let needsUpdate = false;
 
-    // Gennemgå de påkrævede personer og tjek, om de allerede findes i databasen.
+    // Opret manglende budget-dokumenter
     for (const id in personData) {
         if (!existingPersonIds.has(id)) {
-            console.log(`Budget for ${id} mangler i databasen. Opretter...`);
-            const newDocRef = doc(budgetsColRef); // Auto-generer ID
+            const newDocRef = doc(budgetsColRef);
             batch.set(newDocRef, {
                 userId: appState.currentUser.uid,
                 personId: id,
                 name: personData[id],
-                budget: { income: [], expenses: [] },
+                budget: { 
+                    income: [], 
+                    expenses: defaultExpenseCategories 
+                },
                 actuals: {}
             });
-            createdSomething = true;
+            needsUpdate = true;
         }
     }
 
-    // Udfør kun et databasekald, hvis der rent faktisk er noget at oprette.
-    if (createdSomething) {
+    // Tjek eksisterende budgetter for den nye struktur
+    for (const budget of existingBudgets) {
+        if (Array.isArray(budget.budget.expenses)) { // Gammel struktur fundet
+            const upgradedExpenses = { ...defaultExpenseCategories };
+            upgradedExpenses.diverse.subItems = budget.budget.expenses; // Flyt gamle poster til Diverse
+            
+            const docRef = doc(db, 'budgets', budget.id);
+            batch.update(docRef, { "budget.expenses": upgradedExpenses });
+            needsUpdate = true;
+        }
+    }
+
+    if (needsUpdate) {
         try {
             await batch.commit();
-            console.log("Nye budget-dokumenter blev oprettet.");
+            console.log("Budget-dokumenter blev oprettet/opdateret.");
         } catch (error) {
-            handleError(error, "Kunne ikke oprette standard-budget.", "ensureDefaultBudgetsCommit");
+            handleError(error, "Kunne ikke initialisere budgetter.", "ensureDefaultBudgets");
         }
     }
 }
 
+
 /**
  * Initialiserer economy-modulet.
- * @param {object} state - Den centrale state fra app.js.
- * @param {object} elements - De cachede DOM-elementer fra app.js.
  */
 export function initEconomy(state, elements) {
     appState = state;
@@ -95,7 +108,6 @@ export function initEconomy(state, elements) {
         pageContainer.addEventListener('blur', handleCellBlur, true);
     }
 
-    // Tilknyt event listeners til de nye modals
     const assetForm = document.getElementById('asset-form');
     if (assetForm) assetForm.addEventListener('submit', handleSaveAsset);
     const deleteAssetBtn = document.getElementById('delete-asset-btn');
@@ -104,7 +116,6 @@ export function initEconomy(state, elements) {
     const liabilityForm = document.getElementById('liability-form');
     if (liabilityForm) {
         liabilityForm.addEventListener('submit', handleSaveLiability);
-        // Tilføj listeners for den interaktive beregner
         liabilityForm.addEventListener('input', handleLoanCalculatorChange);
     }
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
@@ -116,11 +127,7 @@ export function initEconomy(state, elements) {
  */
 export async function renderEconomy() {
     renderSidebar();
-    
-    // Kør det sikre tjek for at sikre, at budget-dokumenterne eksisterer.
     await ensureDefaultBudgets();
-
-    // Render selve indholdet, efter tjekket er kørt.
     renderView();
 }
 
@@ -137,7 +144,7 @@ function handlePageClick(e) {
     const prevMonthBtn = e.target.closest('#prev-month-btn');
     if (prevMonthBtn) {
         economyState.currentDate.setMonth(economyState.currentDate.getMonth() - 1);
-        renderView(); // Kun render selve view'et, ikke hele siden
+        renderView();
         return;
     }
 
@@ -149,15 +156,10 @@ function handlePageClick(e) {
     }
 
     if (economyState.currentView === 'assets') {
-        if (e.target.closest('#add-asset-btn')) {
-            openAssetModal();
-        } else if (e.target.closest('#add-liability-btn')) {
-            openLiabilityModal();
-        } else if (e.target.closest('.asset-card')) {
-            openAssetModal(e.target.closest('.asset-card').dataset.id);
-        } else if (e.target.closest('.liability-card')) {
-            openLiabilityModal(e.target.closest('.liability-card').dataset.id);
-        }
+        if (e.target.closest('#add-asset-btn')) openAssetModal();
+        else if (e.target.closest('#add-liability-btn')) openLiabilityModal();
+        else if (e.target.closest('.asset-card')) openAssetModal(e.target.closest('.asset-card').dataset.id);
+        else if (e.target.closest('.liability-card')) openLiabilityModal(e.target.closest('.liability-card').dataset.id);
     }
 
     handleContainerClick(e);
@@ -200,6 +202,8 @@ function renderView() {
             contentArea.innerHTML = `<p>Vælg en visning fra menuen.</p>`;
     }
 }
+
+// ... ASSET & LIABILITY FUNCTIONS (UNCHANGED) ...
 function renderAssetsView(container) {
     const assets = appState.assets || [];
     const liabilities = appState.liabilities || [];
@@ -414,8 +418,7 @@ function openLiabilityModal(liabilityId = null) {
     
     populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
     
-    // Udløs en beregning for at udfylde de afledte felter
-    handleLoanCalculatorChange({ target: form.querySelector('input') }); // Simuler et input event
+    handleLoanCalculatorChange({ target: form.querySelector('input') });
     
     modal.classList.remove('hidden');
 }
@@ -541,12 +544,7 @@ function calculateProjectedValues(targetDate) {
 // BUDGET LOGIK
 // =================================================================
 
-/**
- * Bygger budget-arket dynamisk.
- * @param {HTMLElement} container - Elementet som budgettet skal renderes ind i.
- */
 function renderBudgetView(container) {
-    // Viser en loading-spinner, hvis budget-data stadig hentes
     if (!appState.budgets || appState.budgets.length === 0) {
         container.innerHTML = `<div class="loading-spinner"></div><p>Initialiserer budget...</p>`;
         return;
@@ -555,46 +553,47 @@ function renderBudgetView(container) {
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
 
     if (!activePersonBudget) {
-        // Hvis den aktive person af en eller anden grund ikke findes, vælg den første som fallback
         economyState.activePersonId = appState.budgets[0]?.personId || 'daniel';
-        renderBudgetView(container); // Prøv at rendere igen
+        renderBudgetView(container);
         return;
     }
 
     const monthHeaders = getMonthHeaders(economyState.currentDate);
     const monthDisplay = economyState.currentDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     
+    const personTabs = renderPersonTabs();
     const tableHeader = renderTableHeader(monthHeaders);
-    const incomeRows = (activePersonBudget.budget.income || []).map(item => renderRow(item, monthHeaders, activePersonBudget.actuals)).join('');
-    const expenseRows = (activePersonBudget.budget.expenses || []).map(item => renderRow(item, monthHeaders, activePersonBudget.actuals, true)).join('');
+    const incomeRows = (activePersonBudget.budget.income || []).map(item => renderIncomeRow(item, monthHeaders, activePersonBudget.actuals)).join('');
+    
+    // NYT: Generer rækker for hver udgiftskategori
+    const expenseCategoriesHTML = Object.keys(defaultExpenseCategories).map(catKey => {
+        const categoryData = activePersonBudget.budget.expenses[catKey] || defaultExpenseCategories[catKey];
+        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals);
+    }).join('');
+
     const totals = calculateTotals(activePersonBudget, monthHeaders);
     const tableFooter = renderFooter(totals);
-    const personTabs = renderPersonTabs();
 
     container.innerHTML = `
         <div class="spreadsheet-card">
             <div class="spreadsheet-header">
-                <div class="person-tabs">
-                    ${personTabs}
-                </div>
+                <div class="person-tabs">${personTabs}</div>
                 <div class="economy-month-navigator">
                     <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
                     <h4 id="current-month-display">${monthDisplay}</h4>
                     <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <div>
-                    <button id="add-income-row" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Indkomst</button>
-                    <button id="add-expense-row" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Udgift</button>
-                </div>
+                <div><button id="add-income-row" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Indkomst</button></div>
             </div>
             <div class="table-wrapper">
                 <table class="spreadsheet-table">
                     ${tableHeader}
                     <tbody>
-                        <tr class="category-row"><td colspan="15">Indkomst</td></tr>
+                        <tr class="main-category-row"><td colspan="15">Indkomst</td></tr>
                         ${incomeRows}
-                        <tr class="category-row"><td colspan="15">Udgifter</td></tr>
-                        ${expenseRows}
+                    </tbody>
+                    <tbody id="expense-categories-body">
+                        ${expenseCategoriesHTML}
                     </tbody>
                     <tfoot>
                         ${tableFooter}
@@ -626,68 +625,107 @@ function renderTableHeader(monthHeaders) {
             </tr>
         </thead>`;
 }
-function renderRow(item, monthHeaders, allActuals, isExpense = false) {
+
+function renderIncomeRow(item, monthHeaders, allActuals) {
     const yearlyBudget = item.allocated * 12;
     let actualTotal = 0;
 
     const actualsByMonth = monthHeaders.map(h => {
         const actual = allActuals[item.id]?.[h.key] || 0;
         actualTotal += actual;
-        
-        let colorClass = '';
-        if (actual !== 0 && item.allocated > 0) { // Kun farve hvis der er et budget at sammenligne med
-            if (isExpense) {
-                colorClass = actual > item.allocated ? 'negative-text' : 'positive-text';
-            } else {
-                colorClass = actual < item.allocated ? 'negative-text' : 'positive-text';
-            }
-        }
-
-        return `<td class="currency editable" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
+        const colorClass = (actual !== 0 && item.allocated > 0) ? (actual < item.allocated ? 'negative-text' : 'positive-text') : '';
+        return `<td class="currency editable ${colorClass}" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
     }).join('');
 
-    const difference = isExpense ? (yearlyBudget - actualTotal) : (actualTotal - yearlyBudget);
+    const difference = actualTotal - yearlyBudget;
     
-    // NY STRUKTUR: Adskil det redigerbare span fra slet-knappen
     return `
-        <tr>
+        <tr class="sub-item-row">
             <td class="name-cell">
                 <span class="editable" contenteditable="true" data-id="${item.id}" data-field="name">${item.name}</span>
-                <button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}">&times;</button>
+                <button class="delete-row" data-id="${item.id}" data-type="income">&times;</button>
             </td>
             <td class="currency editable" contenteditable="true" data-id="${item.id}" data-field="allocated">${toDKK(item.allocated)}</td>
             ${actualsByMonth}
             <td class="currency ${difference >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(difference)}</td>
         </tr>`;
 }
-function renderFooter(totals) {
-    const result = {
-        budget: totals.income.budget - totals.expenses.budget,
-        actuals: totals.income.actuals.map((inc, i) => inc - totals.expenses.actuals[i]),
-        diff: totals.income.diff + totals.expenses.diff
-    };
+
+function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
+    const subItemsHTML = (categoryData.subItems || []).map(item => renderSubItemRow(catKey, item, monthHeaders, allActuals)).join('');
     
+    const subItemsAllocatedTotal = (categoryData.subItems || []).reduce((sum, item) => sum + item.allocated, 0);
+    const budgetDifference = categoryData.budgetedAmount - subItemsAllocatedTotal;
+
+    return `
+        <tr class="main-category-row" data-category-key="${catKey}">
+            <td class="name-cell">
+                <span>${categoryData.budgetName}</span>
+                <button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>
+            </td>
+            <td class="currency editable" contenteditable="true" data-field="budgetedAmount">${toDKK(categoryData.budgetedAmount)}</td>
+            <td colspan="12"></td>
+            <td></td>
+        </tr>
+        ${subItemsHTML}
+        <tr class="subtotal-row">
+            <td>Subtotal for ${categoryData.budgetName}</td>
+            <td class="currency">${toDKK(subItemsAllocatedTotal)}</td>
+            <td colspan="12" class="${budgetDifference !== 0 ? 'negative-text' : ''}">
+                ${budgetDifference !== 0 ? `Difference: ${toDKK(budgetDifference)}` : ''}
+            </td>
+            <td></td>
+        </tr>
+    `;
+}
+
+function renderSubItemRow(catKey, item, monthHeaders, allActuals) {
+    const yearlyBudget = item.allocated * 12;
+    let actualTotal = 0;
+
+    const actualsByMonth = monthHeaders.map(h => {
+        const actual = allActuals[item.id]?.[h.key] || 0;
+        actualTotal += actual;
+        const colorClass = (actual !== 0 && item.allocated > 0) ? (actual > item.allocated ? 'negative-text' : 'positive-text') : '';
+        return `<td class="currency editable" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}" data-category-key="${catKey}">${toDKK(actual)}</td>`;
+    }).join('');
+
+    const difference = yearlyBudget - actualTotal;
+
+    return `
+        <tr class="sub-item-row">
+            <td class="name-cell indented">
+                <span class="editable" contenteditable="true" data-id="${item.id}" data-field="name" data-category-key="${catKey}">${item.name}</span>
+                <button class="delete-row" data-id="${item.id}" data-type="expenses" data-category-key="${catKey}">&times;</button>
+            </td>
+            <td class="currency editable" contenteditable="true" data-id="${item.id}" data-field="allocated" data-category-key="${catKey}">${toDKK(item.allocated)}</td>
+            ${actualsByMonth}
+            <td class="currency ${difference >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(difference)}</td>
+        </tr>`;
+}
+
+
+function renderFooter(totals) {
+    // Denne funktion skal opdateres til at reflektere den nye datastruktur
     return `
         <tr>
             <td>Total Indkomst</td>
             <td class="currency">${toDKK(totals.income.budget)}</td>
-            ${totals.income.actuals.map(t => `<td class="currency">${toDKK(t)}</td>`).join('')}
-            <td class="currency ${totals.income.diff >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(totals.income.diff)}</td>
+            <td colspan="13"></td>
         </tr>
         <tr>
             <td>Total Udgifter</td>
             <td class="currency">${toDKK(totals.expenses.budget)}</td>
-            ${totals.expenses.actuals.map(t => `<td class="currency">${toDKK(t)}</td>`).join('')}
-            <td class="currency ${totals.expenses.diff >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(totals.expenses.diff)}</td>
+            <td colspan="13"></td>
         </tr>
         <tr>
             <td>Resultat</td>
-            <td class="currency">${toDKK(result.budget)}</td>
-            ${result.actuals.map(t => `<td class="currency ${t >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(t)}</td>`).join('')}
-            <td class="currency ${result.diff >= 0 ? 'positive-bg' : 'negative-bg'}">${toDKK(result.diff)}</td>
+            <td class="currency">${toDKK(totals.income.budget - totals.expenses.budget)}</td>
+            <td colspan="13"></td>
         </tr>
     `;
 }
+
 
 // --- LOGIK & BEREGNINGER ---
 
@@ -706,34 +744,21 @@ function getMonthHeaders(startDate) {
     }
     return headers;
 }
+
 function calculateTotals(person, monthHeaders) {
-    const income = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
-    const expenses = { budget: 0, actuals: Array(12).fill(0), diff: 0 };
-
-    (person.budget.income || []).forEach(item => {
-        income.budget += item.allocated;
-        let totalActual = 0;
-        monthHeaders.forEach((h, i) => {
-            const actual = person.actuals[item.id]?.[h.key] || 0;
-            income.actuals[i] += actual;
-            totalActual += actual;
-        });
-        income.diff += totalActual - (item.allocated * 12);
-    });
-
-    (person.budget.expenses || []).forEach(item => {
-        expenses.budget += item.allocated;
-        let totalActual = 0;
-        monthHeaders.forEach((h, i) => {
-            const actual = person.actuals[item.id]?.[h.key] || 0;
-            expenses.actuals[i] += actual;
-            totalActual += actual;
-        });
-        expenses.diff += (item.allocated * 12) - totalActual;
-    });
+    const totalIncome = (person.budget.income || []).reduce((sum, item) => sum + item.allocated, 0);
     
-    return { income, expenses };
+    let totalExpenses = 0;
+    if (typeof person.budget.expenses === 'object' && person.budget.expenses !== null) {
+        totalExpenses = Object.values(person.budget.expenses).reduce((sum, cat) => sum + cat.budgetedAmount, 0);
+    }
+    
+    return { 
+        income: { budget: totalIncome }, 
+        expenses: { budget: totalExpenses }
+    };
 }
+
 
 // --- EVENT HANDLERS ---
 async function handleContainerClick(e) {
@@ -748,83 +773,71 @@ async function handleContainerClick(e) {
             renderView();
         }
     }
-    // Tilføj række
-    else if (e.target.closest('#add-expense-row') || e.target.closest('#add-income-row')) {
-        const isExpense = !!e.target.closest('#add-expense-row');
-        const type = isExpense ? 'expenses' : 'income';
-        const prefix = isExpense ? 'b' : 'i';
-        const newId = prefix + Date.now();
-        
+    // Tilføj indkomstrække
+    else if (e.target.closest('#add-income-row')) {
+        const newId = 'i' + Date.now();
+        const newItem = { id: newId, name: 'Ny indkomst', allocated: 0 };
+        const budgetRef = doc(db, 'budgets', activePersonBudget.id);
+        await updateDoc(budgetRef, { "budget.income": arrayUnion(newItem) });
+    }
+    // Tilføj udgiftspost til kategori
+    else if (e.target.closest('.add-sub-item-btn')) {
+        const catKey = e.target.closest('.main-category-row').dataset.categoryKey;
+        const newId = 'b' + Date.now();
         const newItem = { id: newId, name: 'Ny post', allocated: 0 };
-
-        try {
-            const budgetRef = doc(db, 'budgets', activePersonBudget.id);
-            // Brug arrayUnion til at tilføje det nye element atomisk
-            await updateDoc(budgetRef, {
-                [`budget.${type}`]: arrayUnion(newItem)
-            });
-            // onSnapshot vil automatisk opdatere UI
-        } catch (error) {
-            handleError(error, "Kunne ikke tilføje den nye post.", "addRowToBudget");
-        }
+        const budgetRef = doc(db, 'budgets', activePersonBudget.id);
+        await updateDoc(budgetRef, { [`budget.expenses.${catKey}.subItems`]: arrayUnion(newItem) });
     }
     // Slet række
     else if (e.target.closest('.delete-row')) {
         const button = e.target.closest('.delete-row');
         const id = button.dataset.id;
-        const type = button.dataset.type;
+        const type = button.dataset.type; // 'income' or 'expenses'
+        const catKey = button.dataset.categoryKey; // Kun for udgifter
+
+        const budgetRef = doc(db, 'budgets', activePersonBudget.id);
         
-        // Find det specifikke element, der skal fjernes
-        const itemToRemove = (activePersonBudget.budget[type] || []).find(item => item.id === id);
-        
-        if (itemToRemove) {
-            const batch = writeBatch(db);
-            const budgetRef = doc(db, 'budgets', activePersonBudget.id);
-            
-            // Brug arrayRemove til at fjerne elementet fra array'et
-            batch.update(budgetRef, {
-                [`budget.${type}`]: arrayRemove(itemToRemove)
-            });
-            // Slet også de faktiske data for den slettede post
-            batch.update(budgetRef, {
-                [`actuals.${id}`]: deleteField()
-            });
-            
-            await batch.commit();
-            // onSnapshot vil håndtere UI-opdateringen
+        if (type === 'income') {
+            const itemToRemove = (activePersonBudget.budget.income || []).find(item => item.id === id);
+            if(itemToRemove) await updateDoc(budgetRef, { "budget.income": arrayRemove(itemToRemove) });
+        } else if (type === 'expenses' && catKey) {
+            const itemToRemove = (activePersonBudget.budget.expenses[catKey].subItems || []).find(item => item.id === id);
+            if(itemToRemove) await updateDoc(budgetRef, { [`budget.expenses.${catKey}.subItems`]: arrayRemove(itemToRemove) });
         }
     }
 }
 
 async function handleCellBlur(e) {
-    if (!e.target.classList.contains('editable')) return;
-    
     const cell = e.target;
-    // FIND RETTE TEKSTINDHOLD - hvis det er en span, tag dens tekst, ellers tag cellens
-    const newValueRaw = cell.tagName === 'SPAN' ? cell.textContent : e.target.textContent;
-
-    const id = cell.dataset.id;
-    const monthKey = cell.dataset.monthKey;
-    const field = cell.dataset.field;
+    if (!cell.isContentEditable) return;
     
+    const newValueRaw = cell.textContent;
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
     if (!activePersonBudget) return;
     
     const budgetRef = doc(db, 'budgets', activePersonBudget.id);
+    const catKey = cell.closest('[data-category-key]')?.dataset.categoryKey || cell.dataset.categoryKey;
+    const id = cell.dataset.id;
+    const field = cell.dataset.field;
 
     try {
         await runTransaction(db, async (transaction) => {
             const budgetDoc = await transaction.get(budgetRef);
-            if (!budgetDoc.exists()) {
-                throw new Error("Budget document not found!");
-            }
-
+            if (!budgetDoc.exists()) throw "Budget document not found!";
             const budgetData = budgetDoc.data();
-            
-            if (field) { // Håndter opdatering af 'name' eller 'allocated'
-                const isExpense = (budgetData.budget.expenses || []).some(i => i.id === id);
-                const type = isExpense ? 'expenses' : 'income';
-                const itemsArray = budgetData.budget[type] || [];
+
+            if (field === 'budgetedAmount') { // Hovedkategori budget
+                const numericValue = parseDKK(newValueRaw);
+                budgetData.budget.expenses[catKey].budgetedAmount = numericValue;
+                cell.textContent = toDKK(numericValue);
+            } else if (id && field) { // Underpost (indkomst eller udgift)
+                let itemsArray, isIncome = false;
+                if (budgetData.budget.income.some(i => i.id === id)) {
+                    itemsArray = budgetData.budget.income;
+                    isIncome = true;
+                } else {
+                    itemsArray = budgetData.budget.expenses[catKey].subItems;
+                }
                 const itemIndex = itemsArray.findIndex(i => i.id === id);
 
                 if (itemIndex > -1) {
@@ -835,25 +848,25 @@ async function handleCellBlur(e) {
                         itemsArray[itemIndex].allocated = numericValue;
                         cell.textContent = toDKK(numericValue);
                     }
-                    transaction.update(budgetRef, { [`budget.${type}`]: itemsArray });
                 }
-            } 
-            else if (monthKey) { // Håndter opdatering af faktiske månedlige værdier
+            } else { // Månedlig 'actual' værdi
+                const monthKey = cell.dataset.monthKey;
                 const numericValue = parseDKK(newValueRaw);
-                const fieldPath = `actuals.${id}.${monthKey}`;
-                transaction.set(budgetRef, { actuals: { [id]: { [monthKey]: numericValue } } }, { merge: true });
+                if (!budgetData.actuals[id]) budgetData.actuals[id] = {};
+                budgetData.actuals[id][monthKey] = numericValue;
                 cell.textContent = toDKK(numericValue);
             }
+            transaction.update(budgetRef, { budget: budgetData.budget, actuals: budgetData.actuals });
         });
     } catch (error) {
         handleError(error, "Ændringen kunne ikke gemmes.", "handleCellBlurTransaction");
-        renderView(); // Gendan UI til den gamle værdi, hvis transaktionen fejler
+        renderView();
     }
 }
 
 
 // =================================================================
-// NYT: LÅNEBEREGNER LOGIK
+// LÅNEBEREGNER LOGIK
 // =================================================================
 
 function handleLoanCalculatorChange(e) {
@@ -873,43 +886,32 @@ function handleLoanCalculatorChange(e) {
 
     const changedElementId = e.target.id;
 
-    // Gem hvilket felt der sidst blev manuelt ændret
     if (changedElementId === 'liability-term-months') {
         economyState.lastEditedLoanField = 'term';
     } else if (changedElementId === 'liability-monthly-payment') {
         economyState.lastEditedLoanField = 'payment';
     }
 
-    // Udfør beregninger baseret på det ændrede felt
     if (changedElementId === 'liability-term-months') {
         const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
-        if (newPayment) {
-            paymentInput.value = newPayment.toFixed(2);
-        }
+        if (newPayment) paymentInput.value = newPayment.toFixed(2);
     } else if (changedElementId === 'liability-monthly-payment') {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
-        if (newTermMonths !== null && isFinite(newTermMonths)) {
-            termMonthsInput.value = Math.round(newTermMonths);
-        }
+        if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
     } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
-        // Hvis renten ændres, genberegn baseret på det senest redigerede felt
         if (economyState.lastEditedLoanField === 'term' && termMonths > 0) {
             const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
-             if (newPayment) paymentInput.value = newPayment.toFixed(2);
+            if (newPayment) paymentInput.value = newPayment.toFixed(2);
         } else if (economyState.lastEditedLoanField === 'payment' && monthlyPayment > 0) {
             const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
-            if (newTermMonths !== null && isFinite(newTermMonths)) {
-                 termMonthsInput.value = Math.round(newTermMonths);
-            }
+            if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
         }
     }
 
-    // Opdater altid den resterende løbetid til sidst
     const finalPayment = parseFloat(paymentInput.value) || 0;
     const finalTermMonths = calculateTermMonths(principal, annualRate, finalPayment);
     updateRemainingTermDisplay(finalTermMonths, termDisplay);
 }
-
 
 function updateRemainingTermDisplay(totalMonths, displayElement) {
     if (totalMonths === null || totalMonths <= 0) {
@@ -923,14 +925,9 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
     
     const years = Math.floor(totalMonths / 12);
     const months = Math.round(totalMonths % 12);
-
     let result = '';
-    if (years > 0) {
-        result += `${years} år `;
-    }
-    if (months > 0) {
-        result += `${months} mdr.`;
-    }
+    if (years > 0) result += `${years} år `;
+    if (months > 0) result += `${months} mdr.`;
     
     displayElement.value = result.trim() || '0 mdr.';
 }
