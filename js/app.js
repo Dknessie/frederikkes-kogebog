@@ -247,14 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const hash = window.location.hash || '#dashboard';
         const pageId = hash.substring(1).split('/')[0];
         const currentPageElement = document.getElementById(pageId);
-
+    
         // Gem scroll-position før rendering
-        let scrollPosition = 0;
+        let scrollPositions = {};
         const scrollableContainer = currentPageElement ? currentPageElement.querySelector('.table-wrapper') : null;
         if (scrollableContainer) {
-            scrollPosition = scrollableContainer.scrollTop;
+            scrollPositions.top = scrollableContainer.scrollTop;
+            scrollPositions.left = scrollableContainer.scrollLeft;
         }
-
+    
         // Udfør den relevante rendering-funktion
         switch('#' + pageId) {
             case '#dashboard':
@@ -279,11 +280,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderReferencesPage();
                 break;
         }
-
+    
         // Gendan scroll-position efter rendering
-        const newScrollableContainer = currentPageElement ? currentPageElement.querySelector('.table-wrapper') : null;
-        if (newScrollableContainer) {
-            newScrollableContainer.scrollTop = scrollPosition;
+        const newScrollableContainer = document.getElementById(pageId)?.querySelector('.table-wrapper');
+        if (newScrollableContainer && scrollPositions.top !== undefined) {
+            newScrollableContainer.scrollTop = scrollPositions.top;
+            newScrollableContainer.scrollLeft = scrollPositions.left;
         }
     }
 
@@ -425,4 +427,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-
