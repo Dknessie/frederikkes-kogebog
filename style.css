@@ -344,6 +344,12 @@ header {
 .main-category-row td {
     background-color: var(--secondary-color) !important;
 }
+/* Gør den låste opsparings-celle grå */
+.main-category-row td.readonly {
+    background-color: #e9ecef !important;
+    cursor: not-allowed;
+    color: #6c757d;
+}
 
 .sub-item-row td.name-cell.indented {
     padding-left: 2.5rem; /* Indrykning for underposter */
@@ -431,7 +437,7 @@ tr:hover .delete-row {
     font-size: 1.1em;
     color: var(--accent-color);
 }
-.available-row .negative-text {
+.available-row td.negative-text {
     color: var(--status-red);
 }
 
@@ -3384,7 +3390,7 @@ details:not([open]) .item-table-container {
     color: var(--status-red);
 }
 
-" in the Canvas document.
+" in the Canvas document, which is open on the right-hand side of my screen.
 I will follow these instructions:
   * Don't output/edit the document if the query is Direct/Simple. For example, if the query asks for a simple explanation, output a direct answer.
   * Make sure to **edit** the document if the query shows the intent of editing the document, in which case output the entire edited document, **not just that section or the edits**.
