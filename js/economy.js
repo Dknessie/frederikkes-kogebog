@@ -565,13 +565,14 @@ function renderBudgetView(container) {
     const tableHeader = renderTableHeader(monthHeaders);
     const incomeRows = (activePersonBudget.budget.income || []).map(item => renderIncomeRow(item, monthHeaders, activePersonBudget.actuals)).join('');
     
-    // NYT: Generer rækker for hver udgiftskategori
+    const totals = calculateTotals(activePersonBudget, monthHeaders); // Beregn totaler FØR rendering
+    
     const expenseCategoriesHTML = Object.keys(defaultExpenseCategories).map(catKey => {
         const categoryData = activePersonBudget.budget.expenses[catKey] || defaultExpenseCategories[catKey];
-        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals);
+        // Send de beregnede totaler med, så Opsparing kan få den korrekte værdi
+        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals, totals);
     }).join('');
 
-    const totals = calculateTotals(activePersonBudget, monthHeaders);
     const tableFooter = renderFooter(totals);
 
     container.innerHTML = `
@@ -634,7 +635,7 @@ function renderIncomeRow(item, monthHeaders, allActuals) {
         const actual = allActuals[item.id]?.[h.key] || 0;
         actualTotal += actual;
         const colorClass = (actual !== 0 && item.allocated > 0) ? (actual < item.allocated ? 'negative-text' : 'positive-text') : '';
-        return `<td class="currency editable ${colorClass}" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
+        return `<td class="currency editable" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
     }).join('');
 
     const difference = actualTotal - yearlyBudget;
@@ -651,19 +652,24 @@ function renderIncomeRow(item, monthHeaders, allActuals) {
         </tr>`;
 }
 
-function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
+function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals, totals) {
     const subItemsHTML = (categoryData.subItems || []).map(item => renderSubItemRow(catKey, item, monthHeaders, allActuals)).join('');
     
     const subItemsAllocatedTotal = (categoryData.subItems || []).reduce((sum, item) => sum + item.allocated, 0);
     const budgetDifference = categoryData.budgetedAmount - subItemsAllocatedTotal;
-
+    
+    const isSavings = catKey === 'opsparing';
+    const budgetedAmount = isSavings ? totals.availableToBudget : categoryData.budgetedAmount;
+    
     return `
         <tr class="main-category-row" data-category-key="${catKey}">
             <td class="name-cell">
                 <span>${categoryData.budgetName}</span>
-                <button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>
+                ${!isSavings ? `<button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>` : ''}
             </td>
-            <td class="currency editable" contenteditable="true" data-field="budgetedAmount">${toDKK(categoryData.budgetedAmount)}</td>
+            <td class="currency ${!isSavings ? 'editable' : 'readonly'}" ${!isSavings ? 'contenteditable="true"' : ''} data-field="budgetedAmount">
+                ${toDKK(budgetedAmount)}
+            </td>
             <td colspan="12"></td>
             <td></td>
         </tr>
@@ -672,12 +678,13 @@ function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
             <td>Subtotal for ${categoryData.budgetName}</td>
             <td class="currency">${toDKK(subItemsAllocatedTotal)}</td>
             <td colspan="12" class="${budgetDifference !== 0 ? 'negative-text' : ''}">
-                ${budgetDifference !== 0 ? `Difference: ${toDKK(budgetDifference)}` : ''}
+                ${!isSavings && budgetDifference !== 0 ? `Difference: ${toDKK(budgetDifference)}` : ''}
             </td>
             <td></td>
         </tr>
     `;
 }
+
 
 function renderSubItemRow(catKey, item, monthHeaders, allActuals) {
     const yearlyBudget = item.allocated * 12;
@@ -706,21 +713,21 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals) {
 
 
 function renderFooter(totals) {
-    // Denne funktion skal opdateres til at reflektere den nye datastruktur
+    const remainingClass = totals.availableToBudget < 0 ? 'negative-text' : 'positive-text';
     return `
-        <tr>
+        <tr class="total-summary-row">
             <td>Total Indkomst</td>
             <td class="currency">${toDKK(totals.income.budget)}</td>
             <td colspan="13"></td>
         </tr>
-        <tr>
-            <td>Total Udgifter</td>
-            <td class="currency">${toDKK(totals.expenses.budget)}</td>
+        <tr class="total-summary-row">
+            <td>Fordelte Udgifter</td>
+            <td class="currency">${toDKK(totals.expenses.allocated)}</td>
             <td colspan="13"></td>
         </tr>
-        <tr>
-            <td>Resultat</td>
-            <td class="currency">${toDKK(totals.income.budget - totals.expenses.budget)}</td>
+        <tr class="total-summary-row available-row">
+            <td>Tilbage at Budgettere (går til opsparing)</td>
+            <td class="currency ${remainingClass}">${toDKK(totals.availableToBudget)}</td>
             <td colspan="13"></td>
         </tr>
     `;
@@ -745,17 +752,24 @@ function getMonthHeaders(startDate) {
     return headers;
 }
 
-function calculateTotals(person, monthHeaders) {
+function calculateTotals(person) {
     const totalIncome = (person.budget.income || []).reduce((sum, item) => sum + item.allocated, 0);
     
-    let totalExpenses = 0;
+    let allocatedExpenses = 0;
     if (typeof person.budget.expenses === 'object' && person.budget.expenses !== null) {
-        totalExpenses = Object.values(person.budget.expenses).reduce((sum, cat) => sum + cat.budgetedAmount, 0);
+        for (const catKey in person.budget.expenses) {
+            if (catKey !== 'opsparing') {
+                allocatedExpenses += person.budget.expenses[catKey].budgetedAmount || 0;
+            }
+        }
     }
+
+    const availableToBudget = totalIncome - allocatedExpenses;
     
     return { 
         income: { budget: totalIncome }, 
-        expenses: { budget: totalExpenses }
+        expenses: { allocated: allocatedExpenses },
+        availableToBudget: availableToBudget
     };
 }
 
@@ -832,7 +846,7 @@ async function handleCellBlur(e) {
                 cell.textContent = toDKK(numericValue);
             } else if (id && field) { // Underpost (indkomst eller udgift)
                 let itemsArray, isIncome = false;
-                if (budgetData.budget.income.some(i => i.id === id)) {
+                if ((budgetData.budget.income || []).some(i => i.id === id)) {
                     itemsArray = budgetData.budget.income;
                     isIncome = true;
                 } else {
