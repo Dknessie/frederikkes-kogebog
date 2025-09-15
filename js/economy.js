@@ -3,7 +3,7 @@
 
 import { db } from './firebase.js';
 import { doc, setDoc, updateDoc, deleteDoc, addDoc, collection, query, where, getDocs, writeBatch, deleteField, arrayUnion, arrayRemove, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { toDKK, parseDKK } from './utils.js';
+import { toDKK, parseDKK, formatDate, calculateMonthlyPayment, calculateTermMonths } from './utils.js';
 import { showNotification, handleError } from './ui.js';
 
 
@@ -14,7 +14,8 @@ let appElements; // Reference til centrale DOM-elementer
 const economyState = {
     currentView: 'budget', // 'dashboard', 'budget', 'assets'
     currentDate: new Date(), // Til at navigere i budget-måneder
-    activePersonId: 'daniel' // Standard person
+    activePersonId: 'daniel', // Standard person
+    lastEditedLoanField: 'term' // 'term' or 'payment', to handle interest changes intelligently
 };
 
 // =================================================================
@@ -101,7 +102,11 @@ export function initEconomy(state, elements) {
     if (deleteAssetBtn) deleteAssetBtn.addEventListener('click', handleDeleteAsset);
 
     const liabilityForm = document.getElementById('liability-form');
-    if (liabilityForm) liabilityForm.addEventListener('submit', handleSaveLiability);
+    if (liabilityForm) {
+        liabilityForm.addEventListener('submit', handleSaveLiability);
+        // Tilføj listeners for den interaktive beregner
+        liabilityForm.addEventListener('input', handleLoanCalculatorChange);
+    }
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
     if (deleteLiabilityBtn) deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
 }
@@ -199,8 +204,8 @@ function renderAssetsView(container) {
     const assets = appState.assets || [];
     const liabilities = appState.liabilities || [];
 
-    const totalAssets = assets.reduce((sum, asset) => sum + asset.value, 0);
-    const totalLiabilities = liabilities.reduce((sum, liability) => sum + liability.currentBalance, 0);
+    const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
+    const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
 
     const assetsByType = assets.reduce((acc, asset) => {
@@ -282,17 +287,38 @@ function createAssetCard(asset, allLiabilities) {
     `;
 }
 function createLiabilityCard(liability) {
-     const nextYearBalance = calculateProjectedValues(new Date(new Date().setFullYear(new Date().getFullYear() + 1))).liabilities.find(l => l.id === liability.id)?.currentBalance || liability.currentBalance;
+    const { originalPrincipal = 0, currentBalance = 0, monthlyPayment = 0 } = liability;
+    const paidAmount = originalPrincipal - currentBalance;
+    const progress = originalPrincipal > 0 ? (paidAmount / originalPrincipal) * 100 : 0;
 
+    const termMonths = calculateTermMonths(currentBalance, liability.interestRate || 0, monthlyPayment);
+    let endDateText = 'Ukendt';
+    if (termMonths && isFinite(termMonths)) {
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + termMonths);
+        endDateText = endDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric'});
+    } else if (termMonths === Infinity) {
+        endDateText = 'Betales aldrig af';
+    }
+    
     return `
         <div class="liability-card" data-id="${liability.id}">
             <div class="liability-card-header">
                 <span class="liability-name">${liability.name}</span>
-                <span class="liability-balance">${toDKK(liability.currentBalance)} kr.</span>
+                <span class="liability-balance">${toDKK(currentBalance)} kr.</span>
+            </div>
+            <div class="asset-card-body"> <!-- Genbruger styling -->
+                <div class="net-value">
+                    <span>Afbetalt</span>
+                    <strong>${toDKK(paidAmount)} kr.</strong>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${progress}%;"></div>
+                </div>
             </div>
             <div class="liability-card-footer">
-                <span>Rente: ${liability.interestRate || 'N/A'}%</span>
-                <span>Om 1 år: ~${toDKK(nextYearBalance)} kr.</span>
+                <span>Ydelse: ${toDKK(monthlyPayment)} kr./md.</span>
+                <span>Slut: ~${endDateText}</span>
             </div>
         </div>
     `;
@@ -363,6 +389,7 @@ async function handleDeleteAsset() {
         handleError(error, "Aktivet kunne ikke slettes.", "deleteAsset");
     }
 }
+
 function openLiabilityModal(liabilityId = null) {
     const modal = document.getElementById('liability-modal');
     const form = document.getElementById('liability-form');
@@ -371,19 +398,28 @@ function openLiabilityModal(liabilityId = null) {
     const liability = isEditing ? appState.liabilities.find(l => l.id === liabilityId) : null;
 
     document.getElementById('liability-id').value = liabilityId || '';
-    modal.querySelector('h3').textContent = isEditing ? 'Rediger Gæld' : 'Ny Gæld';
+    modal.querySelector('h3').textContent = isEditing ? `Rediger ${liability.name}` : 'Ny Gæld';
     document.getElementById('delete-liability-btn').classList.toggle('hidden', !isEditing);
 
     if (isEditing) {
-        document.getElementById('liability-name').value = liability.name;
-        document.getElementById('liability-current-balance').value = liability.currentBalance;
-        document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
+        document.getElementById('liability-name').value = liability.name || '';
+        document.getElementById('liability-type').value = liability.type || '';
+        document.getElementById('liability-original-principal').value = liability.originalPrincipal || '';
+        document.getElementById('liability-start-date').value = formatDate(liability.startDate);
+        document.getElementById('liability-current-balance').value = liability.currentBalance || '';
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
+        document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
+        document.getElementById('liability-term-years').value = liability.termYears || '';
     }
     
     populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
+    
+    // Udløs en beregning for at udfylde de afledte felter
+    handleLoanCalculatorChange({ target: form.querySelector('input') }); // Simuler et input event
+    
     modal.classList.remove('hidden');
 }
+
 async function handleSaveLiability(e) {
     e.preventDefault();
     const liabilityId = document.getElementById('liability-id').value;
@@ -391,9 +427,12 @@ async function handleSaveLiability(e) {
     const liabilityData = {
         name: document.getElementById('liability-name').value.trim(),
         type: document.getElementById('liability-type').value,
+        originalPrincipal: parseFloat(document.getElementById('liability-original-principal').value) || null,
+        startDate: document.getElementById('liability-start-date').value || null,
         currentBalance: parseFloat(document.getElementById('liability-current-balance').value),
         monthlyPayment: parseFloat(document.getElementById('liability-monthly-payment').value) || null,
         interestRate: parseFloat(document.getElementById('liability-interest-rate').value) || null,
+        termYears: parseFloat(document.getElementById('liability-term-years').value) || null,
         userId: appState.currentUser.uid
     };
 
@@ -818,5 +857,88 @@ async function handleCellBlur(e) {
         // Gendan UI til den gamle værdi, hvis transaktionen fejler
         renderView();
     }
+}
+
+// =================================================================
+// NYT: LÅNEBEREGNER LOGIK
+// =================================================================
+
+function handleLoanCalculatorChange(e) {
+    const form = e.target.closest('#liability-form');
+    if (!form) return;
+
+    const principalInput = form.querySelector('#liability-current-balance');
+    const rateInput = form.querySelector('#liability-interest-rate');
+    const termYearsInput = form.querySelector('#liability-term-years');
+    const paymentInput = form.querySelector('#liability-monthly-payment');
+    const termDisplay = form.querySelector('#liability-remaining-term-display');
+
+    const principal = parseFloat(principalInput.value) || 0;
+    const annualRate = parseFloat(rateInput.value) || 0;
+    let termYears = parseFloat(termYearsInput.value) || 0;
+    let monthlyPayment = parseFloat(paymentInput.value) || 0;
+
+    const changedElementId = e.target.id;
+
+    // Gem hvilket felt der sidst blev manuelt ændret
+    if (changedElementId === 'liability-term-years') {
+        economyState.lastEditedLoanField = 'term';
+    } else if (changedElementId === 'liability-monthly-payment') {
+        economyState.lastEditedLoanField = 'payment';
+    }
+
+    // Udfør beregninger baseret på det ændrede felt
+    if (changedElementId === 'liability-term-years') {
+        const newPayment = calculateMonthlyPayment(principal, annualRate, termYears * 12);
+        if (newPayment) {
+            paymentInput.value = newPayment.toFixed(2);
+        }
+    } else if (changedElementId === 'liability-monthly-payment') {
+        const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
+        if (newTermMonths !== null && isFinite(newTermMonths)) {
+            termYearsInput.value = (newTermMonths / 12).toFixed(1);
+        }
+    } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
+        // Hvis renten ændres, genberegn baseret på det senest redigerede felt
+        if (economyState.lastEditedLoanField === 'term' && termYears > 0) {
+            const newPayment = calculateMonthlyPayment(principal, annualRate, termYears * 12);
+             if (newPayment) paymentInput.value = newPayment.toFixed(2);
+        } else if (economyState.lastEditedLoanField === 'payment' && monthlyPayment > 0) {
+            const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
+            if (newTermMonths !== null && isFinite(newTermMonths)) {
+                 termYearsInput.value = (newTermMonths / 12).toFixed(1);
+            }
+        }
+    }
+
+    // Opdater altid den resterende løbetid til sidst
+    const finalPayment = parseFloat(paymentInput.value) || 0;
+    const finalTermMonths = calculateTermMonths(principal, annualRate, finalPayment);
+    updateRemainingTermDisplay(finalTermMonths, termDisplay);
+}
+
+
+function updateRemainingTermDisplay(totalMonths, displayElement) {
+    if (totalMonths === null || totalMonths <= 0) {
+        displayElement.value = 'N/A';
+        return;
+    }
+    if (!isFinite(totalMonths)) {
+        displayElement.value = 'Betales aldrig af';
+        return;
+    }
+    
+    const years = Math.floor(totalMonths / 12);
+    const months = Math.round(totalMonths % 12);
+
+    let result = '';
+    if (years > 0) {
+        result += `${years} år `;
+    }
+    if (months > 0) {
+        result += `${months} mdr.`;
+    }
+    
+    displayElement.value = result.trim() || '0 mdr.';
 }
 
