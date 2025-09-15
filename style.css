@@ -335,17 +335,21 @@ header {
     color: var(--primary-color);
 }
 
-.editable {
-    cursor: pointer;
-    min-width: 80px;
+/* OPDATERING: Gør slet-knappen mere diskret og kun synlig ved hover */
+td.editable {
     position: relative;
+    padding-right: 30px; /* Giver plads til knappen */
 }
-.editable:focus {
+td[contenteditable="true"] {
+    cursor: text;
+    min-width: 80px;
+}
+td[contenteditable="true"]:focus {
     outline: 2px solid var(--primary-color);
-    background-color: #fef2f2; /* Light red background on focus */
+    background-color: #fef2f2;
 }
-/* Delete button inside editable cell */
-.editable .delete-row {
+
+.delete-row {
     position: absolute;
     top: 50%;
     right: 5px;
@@ -358,12 +362,21 @@ header {
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.2s ease;
+    padding: 0.25rem;
+    line-height: 1;
 }
-.editable:hover .delete-row {
+
+/* Vis kun slet-knap, når der hovers over HELE rækken (tr) */
+tr:hover .delete-row {
     opacity: 1;
 }
 .delete-row:hover {
     color: var(--status-red);
+}
+
+/* Skjul slet-knap, når cellen er i fokus (under redigering) */
+td.editable:focus-within .delete-row {
+    display: none;
 }
 
 
@@ -3331,7 +3344,3 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
-
-
-
-
