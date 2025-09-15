@@ -576,8 +576,6 @@ function calculateProjectedValues(targetDate) {
             const isDepreciatingAssetWithLoan = asset.linkedLiabilityIds && asset.linkedLiabilityIds.length > 0;
 
             if (direction === 1) { // Frem i tiden
-                // Anvend kun 'monthlyContribution' hvis aktivet IKKE er et gælds-aktiv som en bil
-                // Dets "indskud" sker via afdrag på gælden, som allerede er beregnet.
                 const contribution = isDepreciatingAssetWithLoan ? 0 : monthlyContribution;
                 asset.value = asset.value * (1 + monthlyGrowthRate) + contribution;
             } else { // Tilbage i tiden
@@ -674,7 +672,6 @@ function renderPersonTabs() {
         </button>
     `).join('');
     
-    // Tilføj Fælles-fanen
     const jointTabHTML = `
         <button class="person-tab ${economyState.activePersonId === 'faelles' ? 'active' : ''}" data-person-id="faelles">
             Fælles
@@ -875,19 +872,25 @@ function generateJointBudget() {
 
 // --- EVENT HANDLERS ---
 async function handleContainerClick(e) {
-    if (economyState.activePersonId === 'faelles') return;
-
-    const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
-    if (!activePersonBudget) return;
-
+    // KORREKTION: Håndter fanebladsskift først, uanset hvilken fane der er aktiv.
     if (e.target.closest('.person-tab')) {
         const newActiveId = e.target.closest('.person-tab').dataset.personId;
         if (newActiveId !== economyState.activePersonId) {
             economyState.activePersonId = newActiveId;
             renderView();
         }
+        return; // Afslut altid efter fanebladsskift
     }
-    else if (e.target.closest('#add-income-row')) {
+
+    // Stop yderligere handlinger hvis vi er i "Fælles" visning
+    if (economyState.activePersonId === 'faelles') {
+        return;
+    }
+
+    const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
+    if (!activePersonBudget) return;
+
+    if (e.target.closest('#add-income-row')) {
         const newId = 'i' + Date.now();
         const newItem = { id: newId, name: 'Ny indkomst', allocated: 0 };
         const budgetRef = doc(db, 'budgets', activePersonBudget.id);
