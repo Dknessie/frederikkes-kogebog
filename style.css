@@ -239,6 +239,7 @@ header {
    ================================================================= */
 
 #oekonomi.page {
+    background: linear-gradient(180deg, #e9f1f8 0%, #f5f5f5 300px);
     padding-top: var(--spacing-m);
 }
 
@@ -497,7 +498,7 @@ td.editable span[contenteditable="true"]:focus + .autofill-btn {
 .assets-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     flex-wrap: wrap;
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-l);
@@ -599,9 +600,13 @@ td.editable span[contenteditable="true"]:focus + .autofill-btn {
 .liability-card-footer {
     display: flex;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-s);
     font-size: var(--small-font-size);
     color: #777;
     margin-top: var(--spacing-s);
+    padding-top: var(--spacing-s);
+    border-top: 1px solid var(--border-color);
 }
 
 
@@ -3422,3 +3427,4 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
