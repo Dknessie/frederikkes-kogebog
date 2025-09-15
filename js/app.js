@@ -1,7 +1,7 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, where, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
@@ -245,9 +245,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCurrentPage() {
         const hash = window.location.hash || '#dashboard';
-        const [mainHash] = hash.split('/');
-        
-        switch(mainHash) {
+        const pageId = hash.substring(1).split('/')[0];
+        const currentPageElement = document.getElementById(pageId);
+
+        // Gem scroll-position før rendering
+        let scrollPosition = 0;
+        const scrollableContainer = currentPageElement ? currentPageElement.querySelector('.table-wrapper') : null;
+        if (scrollableContainer) {
+            scrollPosition = scrollableContainer.scrollTop;
+        }
+
+        // Udfør den relevante rendering-funktion
+        switch('#' + pageId) {
             case '#dashboard':
                 renderDashboardPage();
                 break;
@@ -270,6 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderReferencesPage();
                 break;
         }
+
+        // Gendan scroll-position efter rendering
+        const newScrollableContainer = currentPageElement ? currentPageElement.querySelector('.table-wrapper') : null;
+        if (newScrollableContainer) {
+            newScrollableContainer.scrollTop = scrollPosition;
+        }
     }
 
     function setupRealtimeListeners(userId) {
@@ -291,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
             reminders: 'reminders',
             maintenance: 'maintenance',
             home_inventory: 'home_inventory',
-            budgets: 'budgets' // TILFØJET: Lytter nu til budgets collection
+            budgets: 'budgets'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
