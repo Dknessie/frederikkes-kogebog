@@ -643,15 +643,16 @@ function renderRow(item, monthHeaders, allActuals, isExpense = false) {
             }
         }
 
-        return `<td class="currency editable ${colorClass}" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
+        return `<td class="currency editable" contenteditable="true" data-id="${item.id}" data-month-key="${h.key}">${toDKK(actual)}</td>`;
     }).join('');
 
     const difference = isExpense ? (yearlyBudget - actualTotal) : (actualTotal - yearlyBudget);
     
+    // NY STRUKTUR: Adskil det redigerbare span fra slet-knappen
     return `
         <tr>
-            <td class="editable" contenteditable="true" data-id="${item.id}" data-field="name">
-                ${item.name}
+            <td class="name-cell">
+                <span class="editable" contenteditable="true" data-id="${item.id}" data-field="name">${item.name}</span>
                 <button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}">&times;</button>
             </td>
             <td class="currency editable" contenteditable="true" data-id="${item.id}" data-field="allocated">${toDKK(item.allocated)}</td>
@@ -799,10 +800,12 @@ async function handleCellBlur(e) {
     if (!e.target.classList.contains('editable')) return;
     
     const cell = e.target;
+    // FIND RETTE TEKSTINDHOLD - hvis det er en span, tag dens tekst, ellers tag cellens
+    const newValueRaw = cell.tagName === 'SPAN' ? cell.textContent : e.target.textContent;
+
     const id = cell.dataset.id;
     const monthKey = cell.dataset.monthKey;
     const field = cell.dataset.field;
-    const newValueRaw = cell.textContent;
     
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
     if (!activePersonBudget) return;
@@ -818,8 +821,7 @@ async function handleCellBlur(e) {
 
             const budgetData = budgetDoc.data();
             
-            // Håndter opdatering af budgetterede felter (name, allocated)
-            if (field) {
+            if (field) { // Håndter opdatering af 'name' eller 'allocated'
                 const isExpense = (budgetData.budget.expenses || []).some(i => i.id === id);
                 const type = isExpense ? 'expenses' : 'income';
                 const itemsArray = budgetData.budget[type] || [];
@@ -831,33 +833,24 @@ async function handleCellBlur(e) {
                     } else if (field === 'allocated') {
                         const numericValue = parseDKK(newValueRaw);
                         itemsArray[itemIndex].allocated = numericValue;
-                        cell.textContent = toDKK(numericValue); // Opdater UI med formateret værdi
+                        cell.textContent = toDKK(numericValue);
                     }
                     transaction.update(budgetRef, { [`budget.${type}`]: itemsArray });
                 }
             } 
-            // Håndter opdatering af faktiske månedlige værdier
-            else if (monthKey) {
+            else if (monthKey) { // Håndter opdatering af faktiske månedlige værdier
                 const numericValue = parseDKK(newValueRaw);
                 const fieldPath = `actuals.${id}.${monthKey}`;
-                
-                // Brug set med merge:true for at oprette nøgle-stier, der ikke eksisterer
-                transaction.set(budgetRef, { 
-                    actuals: { 
-                        [id]: { 
-                            [monthKey]: numericValue 
-                        } 
-                    } 
-                }, { merge: true });
-                cell.textContent = toDKK(numericValue); // Opdater UI med formateret værdi
+                transaction.set(budgetRef, { actuals: { [id]: { [monthKey]: numericValue } } }, { merge: true });
+                cell.textContent = toDKK(numericValue);
             }
         });
     } catch (error) {
         handleError(error, "Ændringen kunne ikke gemmes.", "handleCellBlurTransaction");
-        // Gendan UI til den gamle værdi, hvis transaktionen fejler
-        renderView();
+        renderView(); // Gendan UI til den gamle værdi, hvis transaktionen fejler
     }
 }
+
 
 // =================================================================
 // NYT: LÅNEBEREGNER LOGIK
@@ -896,7 +889,7 @@ function handleLoanCalculatorChange(e) {
     } else if (changedElementId === 'liability-monthly-payment') {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
         if (newTermMonths !== null && isFinite(newTermMonths)) {
-            termMonthsInput.value = newTermMonths;
+            termMonthsInput.value = Math.round(newTermMonths);
         }
     } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
         // Hvis renten ændres, genberegn baseret på det senest redigerede felt
@@ -906,7 +899,7 @@ function handleLoanCalculatorChange(e) {
         } else if (economyState.lastEditedLoanField === 'payment' && monthlyPayment > 0) {
             const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
             if (newTermMonths !== null && isFinite(newTermMonths)) {
-                 termMonthsInput.value = newTermMonths;
+                 termMonthsInput.value = Math.round(newTermMonths);
             }
         }
     }
