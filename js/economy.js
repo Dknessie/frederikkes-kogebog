@@ -645,7 +645,7 @@ function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals, t
                 <span>${categoryData.budgetName}</span>
                 ${!isSavings ? `<button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>` : ''}
             </td>
-            <td class="currency ${!isSavings ? 'editable' : 'readonly'}" ${!isSavings ? 'contenteditable="true"' : ''} data-field="budgetedAmount">
+            <td class="currency ${!isSavings ? 'editable' : 'readonly'}" data-category-key="${catKey}" data-field="budgetedAmount">
                 <span ${!isSavings ? 'contenteditable="true"' : ''}>${toDKK(budgetedAmount)}</span>
             </td>
             <td colspan="12"></td>
@@ -677,7 +677,7 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense) {
                 : (actual < item.allocated ? 'negative-text' : 'positive-text');
         }
         return `
-            <td class="currency editable" data-id="${item.id}" data-month-key="${h.key}" data-category-key="${catKey}">
+            <td class="currency editable ${colorClass}" data-id="${item.id}" data-month-key="${h.key}" data-category-key="${catKey}">
                 <span contenteditable="true">${toDKK(actual)}</span>
                 <button class="autofill-btn" title="Indsæt budgetteret beløb">⮫</button>
             </td>`;
@@ -687,8 +687,8 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense) {
 
     return `
         <tr class="sub-item-row">
-            <td class="name-cell ${isExpense ? 'indented' : ''}">
-                <span class="editable" contenteditable="true" data-id="${item.id}" data-field="name" data-category-key="${catKey}">${item.name}</span>
+            <td class="name-cell editable ${isExpense ? 'indented' : ''}" data-id="${item.id}" data-field="name" data-category-key="${catKey}">
+                <span contenteditable="true">${item.name}</span>
                 <button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}" data-category-key="${catKey}">&times;</button>
             </td>
             <td class="currency editable" data-id="${item.id}" data-field="allocated" data-category-key="${catKey}">
@@ -811,7 +811,7 @@ async function handleContainerClick(e) {
         const button = e.target.closest('.autofill-btn');
         const cell = button.closest('td');
         const row = cell.closest('tr');
-        const budgetCell = row.querySelector('td[data-field="allocated"]');
+        const budgetCell = row.querySelector('td[data-field="allocated"] span');
         
         if (cell && row && budgetCell) {
             const budgetValue = budgetCell.textContent;
@@ -819,8 +819,7 @@ async function handleContainerClick(e) {
             if (editableSpan) {
                 editableSpan.textContent = budgetValue;
                 editableSpan.focus();
-                editableSpan.blur(); // Dette trigger handleCellBlur til at gemme
-                showNotification({title: "Indsat!", message: `Beløbet ${budgetValue} kr. er indsat.`});
+                setTimeout(() => editableSpan.blur(), 0); 
             }
         }
     }
@@ -828,7 +827,7 @@ async function handleContainerClick(e) {
 
 async function handleCellBlur(e) {
     const editableSpan = e.target;
-    if (!editableSpan.isContentEditable || editableSpan.tagName !== 'SPAN') return;
+    if (editableSpan.tagName !== 'SPAN' || !editableSpan.isContentEditable) return;
     
     const cell = editableSpan.closest('td');
     const newValueRaw = editableSpan.textContent;
