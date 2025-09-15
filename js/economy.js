@@ -15,7 +15,7 @@ const economyState = {
     currentView: 'budget', // 'dashboard', 'budget', 'assets'
     currentDate: new Date(), // Til at navigere i budget-måneder
     projectionDate: new Date(), // NYT: Til fremskrivning på Aktiver/Gæld
-    activePersonId: 'daniel', // Standard person
+    activePersonId: 'faelles', // Standard person, nu Fælles
     lastEditedLoanField: 'term' // 'term' or 'payment', to handle interest changes intelligently
 };
 
@@ -220,7 +220,6 @@ function renderView() {
 }
 
 function renderAssetsView(container) {
-    // NYT: Beregn fremskrevne værdier
     const projectedData = calculateProjectedValues(economyState.projectionDate);
     const { assets, liabilities } = projectedData;
 
@@ -228,7 +227,6 @@ function renderAssetsView(container) {
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
     
-    // NYT: Månedsnavigator
     const monthDisplay = economyState.projectionDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     const monthNavigatorHTML = `
         <div class="economy-month-navigator">
@@ -564,8 +562,6 @@ function calculateProjectedValues(targetDate) {
                 const principalPayment = monthlyPayment - monthlyInterest;
                 liability.currentBalance -= principalPayment;
             } else { // Backward in time
-                // This is a complex calculation; we approximate by reversing the process.
-                // It's not perfectly accurate but sufficient for projections.
                 const principalPaymentGuess = monthlyPayment - (currentBalance * monthlyInterestRate);
                 liability.currentBalance += principalPaymentGuess;
             }
@@ -576,10 +572,17 @@ function calculateProjectedValues(targetDate) {
             const { monthlyContribution = 0, annualGrowthRate = 0 } = asset;
             const monthlyGrowthRate = (annualGrowthRate / 100) / 12;
 
-            if (direction === 1) { // Forward in time
-                asset.value = asset.value * (1 + monthlyGrowthRate) + monthlyContribution;
-            } else { // Backward in time
-                asset.value = (asset.value - monthlyContribution) / (1 + monthlyGrowthRate);
+            // KORREKTION: Tjek om aktivet er linket til gæld for at undgå dobbelt tælling
+            const isDepreciatingAssetWithLoan = asset.linkedLiabilityIds && asset.linkedLiabilityIds.length > 0;
+
+            if (direction === 1) { // Frem i tiden
+                // Anvend kun 'monthlyContribution' hvis aktivet IKKE er et gælds-aktiv som en bil
+                // Dets "indskud" sker via afdrag på gælden, som allerede er beregnet.
+                const contribution = isDepreciatingAssetWithLoan ? 0 : monthlyContribution;
+                asset.value = asset.value * (1 + monthlyGrowthRate) + contribution;
+            } else { // Tilbage i tiden
+                const contribution = isDepreciatingAssetWithLoan ? 0 : monthlyContribution;
+                asset.value = (asset.value - contribution) / (1 + monthlyGrowthRate);
             }
         });
     }
@@ -591,6 +594,7 @@ function calculateProjectedValues(targetDate) {
     return { assets: projectedAssets, liabilities: projectedLiabilities, netWorth };
 }
 
+
 // =================================================================
 // BUDGET LOGIK
 // =================================================================
@@ -601,10 +605,13 @@ function renderBudgetView(container) {
         return;
     }
     
-    const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
+    const isJointView = economyState.activePersonId === 'faelles';
+    const budgetData = isJointView 
+        ? generateJointBudget() 
+        : appState.budgets.find(b => b.personId === economyState.activePersonId);
 
-    if (!activePersonBudget) {
-        economyState.activePersonId = appState.budgets[0]?.personId || 'daniel';
+    if (!budgetData) {
+        economyState.activePersonId = 'faelles';
         renderBudgetView(container);
         return;
     }
@@ -614,14 +621,14 @@ function renderBudgetView(container) {
     
     const personTabs = renderPersonTabs();
     const tableHeader = renderTableHeader(monthHeaders);
-    const incomeRows = (activePersonBudget.budget.income || []).map(item => renderSubItemRow('income', item, monthHeaders, activePersonBudget.actuals, false)).join('');
+    const incomeRows = (budgetData.budget.income || []).map(item => renderSubItemRow('income', item, monthHeaders, budgetData.actuals, false, isJointView)).join('');
     
     const expenseCategoriesHTML = Object.keys(defaultExpenseCategories).map(catKey => {
-        const categoryData = activePersonBudget.budget.expenses[catKey] || defaultExpenseCategories[catKey];
-        return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals);
+        const categoryData = budgetData.budget.expenses[catKey] || defaultExpenseCategories[catKey];
+        return renderExpenseCategory(catKey, categoryData, monthHeaders, budgetData.actuals, isJointView);
     }).join('');
 
-    const tableFooter = renderFooter(activePersonBudget, monthHeaders);
+    const tableFooter = renderFooter(budgetData, monthHeaders);
 
     container.innerHTML = `
         <div class="spreadsheet-card">
@@ -632,7 +639,11 @@ function renderBudgetView(container) {
                     <h4 id="current-month-display">${monthDisplay}</h4>
                     <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <div><button id="add-income-row" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Indkomst</button></div>
+                <div>
+                    <button id="add-income-row" class="btn btn-secondary" ${isJointView ? 'style="display:none;"' : ''}>
+                        <i class="fas fa-plus"></i> Tilføj Indkomst
+                    </button>
+                </div>
             </div>
             <div class="table-wrapper">
                 <table class="spreadsheet-table">
@@ -657,11 +668,20 @@ function renderBudgetView(container) {
 
 function renderPersonTabs() {
     const sortedPersons = [...appState.budgets].sort((a, b) => a.name.localeCompare(b.name));
-    return sortedPersons.map(p => `
+    const personTabsHTML = sortedPersons.map(p => `
         <button class="person-tab ${economyState.activePersonId === p.personId ? 'active' : ''}" data-person-id="${p.personId}">
             ${p.name}
         </button>
     `).join('');
+    
+    // Tilføj Fælles-fanen
+    const jointTabHTML = `
+        <button class="person-tab ${economyState.activePersonId === 'faelles' ? 'active' : ''}" data-person-id="faelles">
+            Fælles
+        </button>
+    `;
+
+    return jointTabHTML + personTabsHTML;
 }
 function renderTableHeader(monthHeaders) {
     return `
@@ -674,7 +694,7 @@ function renderTableHeader(monthHeaders) {
         </thead>`;
 }
 
-function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense) {
+function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense, isReadOnly = false) {
     const actualsByMonth = monthHeaders.map(h => {
         const actual = allActuals[item.id]?.[h.key] || 0;
         let colorClass = '';
@@ -684,29 +704,28 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals, isExpense) {
                 : (actual < item.allocated ? 'negative-text' : 'positive-text');
         }
         return `
-            <td class="currency editable ${colorClass}" data-id="${item.id}" data-month-key="${h.key}" data-category-key="${catKey}">
-                <span contenteditable="true">${toDKK(actual)}</span>
-                <button class="autofill-btn" title="Indsæt budgetteret beløb">⮫</button>
+            <td class="currency ${!isReadOnly ? 'editable' : ''} ${colorClass}" data-id="${item.id}" data-month-key="${h.key}" data-category-key="${catKey}">
+                <span ${!isReadOnly ? 'contenteditable="true"' : ''}>${toDKK(actual)}</span>
+                ${!isReadOnly ? '<button class="autofill-btn" title="Indsæt budgetteret beløb">⮫</button>' : ''}
             </td>`;
     }).join('');
 
     return `
         <tr class="sub-item-row">
-            <td class="name-cell editable ${isExpense ? 'indented' : ''}" data-id="${item.id}" data-field="name" data-category-key="${catKey}">
-                <span contenteditable="true">${item.name}</span>
-                <button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}" data-category-key="${catKey}">&times;</button>
+            <td class="name-cell ${!isReadOnly ? 'editable' : ''} ${isExpense ? 'indented' : ''}" data-id="${item.id}" data-field="name" data-category-key="${catKey}">
+                <span ${!isReadOnly ? 'contenteditable="true"' : ''}>${item.name}</span>
+                ${!isReadOnly ? `<button class="delete-row" data-id="${item.id}" data-type="${isExpense ? 'expenses' : 'income'}" data-category-key="${catKey}">&times;</button>` : ''}
             </td>
-            <td class="currency editable" data-id="${item.id}" data-field="allocated" data-category-key="${catKey}">
-                <span contenteditable="true">${toDKK(item.allocated)}</span>
+            <td class="currency ${!isReadOnly ? 'editable' : ''}" data-id="${item.id}" data-field="allocated" data-category-key="${catKey}">
+                <span ${!isReadOnly ? 'contenteditable="true"' : ''}>${toDKK(item.allocated)}</span>
             </td>
             ${actualsByMonth}
         </tr>`;
 }
 
-function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
-    const subItemsHTML = (categoryData.subItems || []).map(item => renderSubItemRow(catKey, item, monthHeaders, allActuals, true)).join('');
+function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals, isReadOnly = false) {
+    const subItemsHTML = (categoryData.subItems || []).map(item => renderSubItemRow(catKey, item, monthHeaders, allActuals, true, isReadOnly)).join('');
     
-    // Beregn månedlige totaler og differencer for denne kategori
     const monthlyCells = monthHeaders.map(h => {
         const monthlyActualTotal = (categoryData.subItems || []).reduce((sum, item) => sum + (allActuals[item.id]?.[h.key] || 0), 0);
         const budgetedAmountForSubItems = (categoryData.subItems || []).reduce((sum, item) => sum + item.allocated, 0);
@@ -721,10 +740,10 @@ function renderExpenseCategory(catKey, categoryData, monthHeaders, allActuals) {
         <tr class="main-category-row" data-category-key="${catKey}">
             <td class="name-cell">
                 <span>${categoryData.budgetName}</span>
-                <button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>
+                ${!isReadOnly ? `<button class="add-sub-item-btn" title="Tilføj post til ${categoryData.budgetName}">+</button>` : ''}
             </td>
-            <td class="currency editable" data-category-key="${catKey}" data-field="budgetedAmount">
-                <span contenteditable="true">${toDKK(categoryData.budgetedAmount)}</span>
+            <td class="currency ${!isReadOnly ? 'editable' : ''}" data-category-key="${catKey}" data-field="budgetedAmount">
+                <span ${!isReadOnly ? 'contenteditable="true"' : ''}>${toDKK(categoryData.budgetedAmount)}</span>
             </td>
             ${monthlyCells}
         </tr>
@@ -786,12 +805,81 @@ function getMonthHeaders(startDate) {
     return headers;
 }
 
+function generateJointBudget() {
+    const jointBudget = {
+        personId: 'faelles',
+        name: 'Fælles',
+        budget: {
+            income: [],
+            expenses: JSON.parse(JSON.stringify(defaultExpenseCategories))
+        },
+        actuals: {}
+    };
+
+    const incomeMap = new Map();
+    const expenseSubItemMap = new Map();
+
+    for (const personBudget of appState.budgets) {
+        (personBudget.budget.income || []).forEach(item => {
+            const key = item.name.toLowerCase();
+            if (!incomeMap.has(key)) {
+                incomeMap.set(key, { ...item, id: 'j_inc_' + key.replace(/\s+/g, ''), allocated: 0 });
+            }
+            const jointItem = incomeMap.get(key);
+            jointItem.allocated += item.allocated;
+
+            const personActuals = personBudget.actuals[item.id] || {};
+            for (const monthKey in personActuals) {
+                if (!jointBudget.actuals[jointItem.id]) jointBudget.actuals[jointItem.id] = {};
+                jointBudget.actuals[jointItem.id][monthKey] = (jointBudget.actuals[jointItem.id][monthKey] || 0) + personActuals[monthKey];
+            }
+        });
+
+        for (const catKey in personBudget.budget.expenses) {
+            const personCategory = personBudget.budget.expenses[catKey];
+            const jointCategory = jointBudget.budget.expenses[catKey];
+            jointCategory.budgetedAmount += personCategory.budgetedAmount;
+
+            (personCategory.subItems || []).forEach(subItem => {
+                const key = `${catKey}||${subItem.name.toLowerCase()}`;
+                if (!expenseSubItemMap.has(key)) {
+                    expenseSubItemMap.set(key, { ...subItem, id: 'j_exp_' + key.replace(/\s+/g, ''), allocated: 0 });
+                }
+                const jointSubItem = expenseSubItemMap.get(key);
+                jointSubItem.allocated += subItem.allocated;
+
+                const personActuals = personBudget.actuals[subItem.id] || {};
+                for (const monthKey in personActuals) {
+                    if (!jointBudget.actuals[jointSubItem.id]) jointBudget.actuals[jointSubItem.id] = {};
+                    jointBudget.actuals[jointSubItem.id][monthKey] = (jointBudget.actuals[jointSubItem.id][monthKey] || 0) + personActuals[monthKey];
+                }
+            });
+        }
+    }
+
+    jointBudget.budget.income = Array.from(incomeMap.values()).sort((a,b) => a.name.localeCompare(b.name));
+    
+    expenseSubItemMap.forEach((jointSubItem, key) => {
+        const [catKey, ] = key.split('||');
+        jointBudget.budget.expenses[catKey].subItems.push(jointSubItem);
+    });
+
+    // Sorter sub-items i hver kategori
+    for (const catKey in jointBudget.budget.expenses) {
+        jointBudget.budget.expenses[catKey].subItems.sort((a,b) => a.name.localeCompare(b.name));
+    }
+
+    return jointBudget;
+}
+
+
 // --- EVENT HANDLERS ---
 async function handleContainerClick(e) {
+    if (economyState.activePersonId === 'faelles') return;
+
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
     if (!activePersonBudget) return;
 
-    // Skift person-faneblad
     if (e.target.closest('.person-tab')) {
         const newActiveId = e.target.closest('.person-tab').dataset.personId;
         if (newActiveId !== economyState.activePersonId) {
@@ -799,14 +887,12 @@ async function handleContainerClick(e) {
             renderView();
         }
     }
-    // Tilføj indkomstrække
     else if (e.target.closest('#add-income-row')) {
         const newId = 'i' + Date.now();
         const newItem = { id: newId, name: 'Ny indkomst', allocated: 0 };
         const budgetRef = doc(db, 'budgets', activePersonBudget.id);
         await updateDoc(budgetRef, { "budget.income": arrayUnion(newItem) });
     }
-    // Tilføj udgiftspost til kategori
     else if (e.target.closest('.add-sub-item-btn')) {
         const catKey = e.target.closest('.main-category-row').dataset.categoryKey;
         const newId = 'b' + Date.now();
@@ -814,12 +900,11 @@ async function handleContainerClick(e) {
         const budgetRef = doc(db, 'budgets', activePersonBudget.id);
         await updateDoc(budgetRef, { [`budget.expenses.${catKey}.subItems`]: arrayUnion(newItem) });
     }
-    // Slet række
     else if (e.target.closest('.delete-row')) {
         const button = e.target.closest('.delete-row');
         const id = button.dataset.id;
-        const type = button.dataset.type; // 'income' or 'expenses'
-        const catKey = button.dataset.categoryKey; // Kun for udgifter
+        const type = button.dataset.type;
+        const catKey = button.dataset.categoryKey;
 
         const budgetRef = doc(db, 'budgets', activePersonBudget.id);
         
@@ -831,7 +916,6 @@ async function handleContainerClick(e) {
             if(itemToRemove) await updateDoc(budgetRef, { [`budget.expenses.${catKey}.subItems`]: arrayRemove(itemToRemove) });
         }
     }
-    // Håndter autofill-knap
     else if (e.target.closest('.autofill-btn')) {
         const button = e.target.closest('.autofill-btn');
         const cell = button.closest('td');
@@ -851,6 +935,8 @@ async function handleContainerClick(e) {
 }
 
 async function handleCellBlur(e) {
+    if (economyState.activePersonId === 'faelles') return;
+    
     const editableSpan = e.target;
     if (editableSpan.tagName !== 'SPAN' || !editableSpan.isContentEditable) return;
     
