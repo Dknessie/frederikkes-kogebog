@@ -235,7 +235,7 @@ header {
 
 
 /* =================================================================
-   NYT: ØKONOMI / BUDGET SIDE
+   ØKONOMI / BUDGET SIDE
    ================================================================= */
 
 #oekonomi.page {
@@ -314,7 +314,8 @@ header {
 }
 
 /* Sticky first column */
-.spreadsheet-table tbody th, .spreadsheet-table tbody td:first-child, .spreadsheet-table tfoot td:first-child {
+.spreadsheet-table tbody td:first-child, 
+.spreadsheet-table tfoot td:first-child {
     background-color: var(--light-bg-color);
     font-weight: 600;
     position: sticky;
@@ -322,33 +323,72 @@ header {
     z-index: 1;
 }
 
-/* Ensure top-left cell is above all */
 .spreadsheet-table thead th:first-child {
     left: 0;
     z-index: 3;
 }
 
-.spreadsheet-table .category-row {
-    background-color: var(--secondary-color);
+.currency { text-align: right; }
+.positive-text { color: var(--status-green); }
+.negative-text { color: var(--status-red); }
+.positive-bg { background-color: #f0fdf4; }
+.negative-bg { background-color: #fef2f2; }
+
+/* NYT: Styling for Nulsumsbudget */
+.main-category-row {
+    background-color: var(--secondary-color) !important;
     font-family: var(--heading-font);
     font-weight: 700;
     color: var(--primary-color);
 }
-
-/* OPDATERING: Gør slet-knappen mere diskret og kun synlig ved hover */
-td.editable {
-    position: relative;
-    padding-right: 30px; /* Giver plads til knappen */
+.main-category-row td {
+    background-color: var(--secondary-color) !important;
 }
-td[contenteditable="true"] {
+
+.sub-item-row td.name-cell.indented {
+    padding-left: 2.5rem; /* Indrykning for underposter */
+}
+.subtotal-row {
+    background-color: #fafafa;
+    font-style: italic;
+    color: #555;
+    font-weight: 600;
+}
+.subtotal-row td {
+    background-color: #fafafa !important;
+}
+
+.add-sub-item-btn {
+    background: none;
+    border: none;
+    color: var(--accent-color);
+    font-weight: bold;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-left: var(--spacing-m);
+    padding: 0 var(--spacing-s);
+    border-radius: 50%;
+}
+.add-sub-item-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+/* Rettelse for slet-knap logik */
+td.editable {
     cursor: text;
+}
+td .editable {
+    display: inline-block;
     min-width: 80px;
 }
-td[contenteditable="true"]:focus {
+td .editable:focus {
     outline: 2px solid var(--primary-color);
     background-color: #fef2f2;
 }
-
+td.name-cell {
+    position: relative;
+    padding-right: 35px; /* Giver plads til knappen */
+}
 .delete-row {
     position: absolute;
     top: 50%;
@@ -365,26 +405,16 @@ td[contenteditable="true"]:focus {
     padding: 0.25rem;
     line-height: 1;
 }
-
-/* Vis kun slet-knap, når der hovers over HELE rækken (tr) */
 tr:hover .delete-row {
     opacity: 1;
 }
 .delete-row:hover {
     color: var(--status-red);
 }
-
-/* Skjul slet-knap, når cellen er i fokus (under redigering) */
-td.editable:focus-within .delete-row {
+.editable:focus + .delete-row {
     display: none;
 }
 
-
-.currency { text-align: right; }
-.positive-text { color: var(--status-green); }
-.negative-text { color: var(--status-red); }
-.positive-bg { background-color: #f0fdf4; }
-.negative-bg { background-color: #fef2f2; }
 
 .spreadsheet-table tfoot {
     font-weight: 700;
@@ -394,9 +424,8 @@ td.editable:focus-within .delete-row {
     z-index: 2;
 }
 
-/* NYT: Styling for Økonomi-sidens layout og navigation */
 .economy-nav-link i {
-    width: 20px; /* Sikrer at ikoner er justeret */
+    width: 20px;
     text-align: center;
 }
 
@@ -415,7 +444,6 @@ td.editable:focus-within .delete-row {
     color: var(--text-color);
 }
 
-/* NYT: Styling for Aktiver & Gæld view */
 .assets-header {
     display: flex;
     justify-content: space-between;
@@ -3344,3 +3372,4 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
