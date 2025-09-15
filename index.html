@@ -595,6 +595,16 @@
                     <label for="asset-value">Nuværende Værdi (kr.)</label>
                     <input type="number" id="asset-value" step="any" required>
                 </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="asset-monthly-contribution">Månedligt Indskud (kr.)</label>
+                        <input type="number" id="asset-monthly-contribution" step="any" placeholder="F.eks. 1500">
+                    </div>
+                    <div class="input-group">
+                        <label for="asset-annual-growth-rate">Årligt Afkast/Værdifald (%)</label>
+                        <input type="number" id="asset-annual-growth-rate" step="any" placeholder="F.eks. 7 eller -5">
+                    </div>
+                </div>
                 <div class="input-group">
                     <label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
                     <select id="asset-linked-liability" multiple></select>
@@ -608,13 +618,12 @@
     </div>
 
     <div id="liability-modal" class="modal-overlay hidden">
-        <div class="modal-content"> <!-- Fjernet 'small' for at give mere plads -->
+        <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
             <h3 id="liability-modal-title">Administrer Gæld</h3>
             <form id="liability-form">
                 <input type="hidden" id="liability-id">
                 
-                <h4>Basisinformation</h4>
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="liability-name">Navn på lån</label>
@@ -626,7 +635,6 @@
                     </div>
                 </div>
 
-                <h4>Lånedetaljer</h4>
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="liability-original-principal">Oprindeligt Lånbeløb (kr.)</label>
@@ -637,10 +645,9 @@
                         <input type="date" id="liability-start-date">
                     </div>
                 </div>
-
+                
                 <hr>
                 
-                <h4>Låneberegner</h4>
                 <div class="form-grid-3-col">
                     <div class="input-group">
                         <label for="liability-current-balance">Nuværende Restgæld (kr.)</label>
