@@ -565,11 +565,10 @@ function renderBudgetView(container) {
     const tableHeader = renderTableHeader(monthHeaders);
     const incomeRows = (activePersonBudget.budget.income || []).map(item => renderIncomeRow(item, monthHeaders, activePersonBudget.actuals)).join('');
     
-    const totals = calculateTotals(activePersonBudget, monthHeaders); // Beregn totaler FØR rendering
+    const totals = calculateTotals(activePersonBudget);
     
     const expenseCategoriesHTML = Object.keys(defaultExpenseCategories).map(catKey => {
         const categoryData = activePersonBudget.budget.expenses[catKey] || defaultExpenseCategories[catKey];
-        // Send de beregnede totaler med, så Opsparing kan få den korrekte værdi
         return renderExpenseCategory(catKey, categoryData, monthHeaders, activePersonBudget.actuals, totals);
     }).join('');
 
@@ -713,7 +712,7 @@ function renderSubItemRow(catKey, item, monthHeaders, allActuals) {
 
 
 function renderFooter(totals) {
-    const remainingClass = totals.availableToBudget < 0 ? 'negative-text' : 'positive-text';
+    const remainingClass = totals.availableToBudget < 0 ? 'negative-text' : '';
     return `
         <tr class="total-summary-row">
             <td>Total Indkomst</td>
@@ -823,7 +822,7 @@ async function handleContainerClick(e) {
 
 async function handleCellBlur(e) {
     const cell = e.target;
-    if (!cell.isContentEditable) return;
+    if (!cell.isContentEditable && cell.tagName !== 'SPAN') return;
     
     const newValueRaw = cell.textContent;
     const activePersonBudget = appState.budgets.find(b => b.personId === economyState.activePersonId);
@@ -845,10 +844,9 @@ async function handleCellBlur(e) {
                 budgetData.budget.expenses[catKey].budgetedAmount = numericValue;
                 cell.textContent = toDKK(numericValue);
             } else if (id && field) { // Underpost (indkomst eller udgift)
-                let itemsArray, isIncome = false;
+                let itemsArray;
                 if ((budgetData.budget.income || []).some(i => i.id === id)) {
                     itemsArray = budgetData.budget.income;
-                    isIncome = true;
                 } else {
                     itemsArray = budgetData.budget.expenses[catKey].subItems;
                 }
