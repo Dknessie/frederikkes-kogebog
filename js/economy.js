@@ -47,11 +47,6 @@ export function initEconomy(state, elements) {
     if (fixedExpenseForm) fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
     const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
     if(deleteFixedExpenseBtn) deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
-
-    const transactionForm = document.getElementById('transaction-edit-form');
-    if (transactionForm) transactionForm.addEventListener('submit', handleSaveTransaction);
-    const deleteTransactionBtn = document.getElementById('delete-transaction-btn');
-    if (deleteTransactionBtn) deleteTransactionBtn.addEventListener('click', handleDeleteTransaction);
 }
 
 // =================================================================
@@ -96,10 +91,6 @@ function handlePageClick(e) {
             if (e.target.closest('#add-fixed-expense-btn')) openFixedExpenseModal();
             else if (e.target.closest('.fixed-expense-row')) openFixedExpenseModal(e.target.closest('.fixed-expense-row').dataset.id);
             break;
-        case 'transactions':
-            if (e.target.closest('#add-transaction-btn')) openTransactionModal();
-            else if (e.target.closest('.transaction-row')) openTransactionModal(e.target.closest('.transaction-row').dataset.id);
-            break;
     }
 }
 
@@ -110,7 +101,6 @@ function renderSidebar() {
     const views = [
         { key: 'dashboard', name: 'Økonomisk Dashboard', icon: 'fa-chart-pie' },
         { key: 'fixed', name: 'Faste Poster', icon: 'fa-sync-alt' },
-        { key: 'transactions', name: 'Transaktioner', icon: 'fa-receipt' },
         { key: 'assets', name: 'Aktiver / Gæld', icon: 'fa-chart-line' }
     ];
 
@@ -133,9 +123,6 @@ function renderView() {
             break;
         case 'fixed':
             renderFixedExpensesView(contentArea);
-            break;
-        case 'transactions':
-            renderTransactionsView(contentArea);
             break;
         case 'assets':
             renderAssetsView(contentArea);
@@ -229,7 +216,7 @@ function renderSpendingChart(data, disposableIncome) {
 
     const arc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius);
     
-    const tooltip = container.append("div")
+    const tooltip = d3.select("body").append("div")
       .attr("class", "chart-tooltip");
 
     svg.selectAll('path')
@@ -413,112 +400,6 @@ async function handleDeleteFixedExpense() {
             document.getElementById('fixed-expense-modal').classList.add('hidden');
         } catch(error) {
             handleError(error, "Kunne ikke slette fast post.", "deleteFixedExpense");
-        }
-    }
-}
-
-// =================================================================
-// TRANSAKTIONER
-// =================================================================
-function renderTransactionsView(container) {
-     const items = appState.transactions || [];
-    const itemsHTML = items
-        .sort((a,b) => new Date(b.date) - new Date(a.date)) // Sort by date descending
-        .map(item => `
-        <tr class="transaction-row" data-id="${item.id}">
-            <td>${new Date(item.date).toLocaleDateString('da-DK')}</td>
-            <td>${item.description}</td>
-            <td>${item.mainCategory} / ${item.subCategory}</td>
-            <td class="currency ${item.type === 'income' ? 'positive-text' : 'negative-text'}">${toDKK(item.amount)} kr.</td>
-        </tr>
-    `).join('');
-
-    container.innerHTML = `
-        <div class="tab-header">
-            <h3>Transaktioner</h3>
-             <p>Registrer dine variable køb her. Disse vil blive vist i dit Nulsumsbudget.</p>
-            <button id="add-transaction-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Transaktion</button>
-        </div>
-        <div class="table-wrapper">
-            <table class="spreadsheet-table">
-                <thead>
-                    <tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th>Beløb</th></tr>
-                </thead>
-                <tbody>${itemsHTML || `<tr><td colspan="4" class="empty-state">Ingen transaktioner endnu.</td></tr>`}</tbody>
-            </table>
-        </div>
-    `;
-}
-
-function openTransactionModal(id = null) {
-    const modal = document.getElementById('transaction-edit-modal');
-    const form = document.getElementById('transaction-edit-form');
-    form.reset();
-
-    const isEditing = !!id;
-    const item = isEditing ? appState.transactions.find(i => i.id === id) : null;
-    
-    modal.querySelector('h3').textContent = isEditing ? 'Rediger Transaktion' : 'Ny Transaktion';
-    document.getElementById('transaction-edit-id').value = id || '';
-    document.getElementById('delete-transaction-btn').classList.toggle('hidden', !isEditing);
-    
-    if(isEditing && item) {
-        document.getElementById('transaction-edit-description').value = item.description;
-        document.getElementById('transaction-edit-amount').value = item.amount;
-        document.getElementById('transaction-edit-type').value = item.type;
-        document.getElementById('transaction-edit-date').value = item.date;
-    } else {
-        document.getElementById('transaction-edit-date').value = formatDate(new Date());
-    }
-    
-    populateReferenceDropdown(document.getElementById('transaction-edit-person'), appState.references.householdMembers, 'Vælg person...', item?.person);
-    
-    const mainCatSelect = document.getElementById('transaction-edit-category');
-    populateMainCategoryDropdown(mainCatSelect, item?.mainCategory);
-    mainCatSelect.onchange = () => populateSubCategoryDropdown(document.getElementById('transaction-edit-sub-category'), mainCatSelect.value);
-    populateSubCategoryDropdown(document.getElementById('transaction-edit-sub-category'), item?.mainCategory, item?.subCategory);
-    
-    modal.classList.remove('hidden');
-}
-
-async function handleSaveTransaction(e) {
-     e.preventDefault();
-    const id = document.getElementById('transaction-edit-id').value;
-
-    const data = {
-        description: document.getElementById('transaction-edit-description').value,
-        amount: parseFloat(document.getElementById('transaction-edit-amount').value),
-        type: document.getElementById('transaction-edit-type').value,
-        person: document.getElementById('transaction-edit-person').value,
-        mainCategory: document.getElementById('transaction-edit-category').value,
-        subCategory: document.getElementById('transaction-edit-sub-category').value,
-        date: document.getElementById('transaction-edit-date').value,
-        isFixed: false,
-        userId: appState.currentUser.uid
-    };
-
-    try {
-        if(id) {
-            await updateDoc(doc(db, 'transactions', id), data);
-        } else {
-            await addDoc(collection(db, 'transactions'), data);
-        }
-        document.getElementById('transaction-edit-modal').classList.add('hidden');
-    } catch(error) {
-        handleError(error, "Kunne ikke gemme transaktion.", "saveTransaction");
-    }
-}
-
-async function handleDeleteTransaction() {
-    const id = document.getElementById('transaction-edit-id').value;
-    if(!id) return;
-    const confirmed = await showNotification({type: 'confirm', title: 'Slet Transaktion', message: 'Er du sikker?'});
-    if(confirmed) {
-        try {
-            await deleteDoc(doc(db, 'transactions', id));
-            document.getElementById('transaction-edit-modal').classList.add('hidden');
-        } catch(error) {
-            handleError(error, "Kunne ikke slette transaktion.", "deleteTransaction");
         }
     }
 }
