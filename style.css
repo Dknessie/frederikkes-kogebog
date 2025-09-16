@@ -25,6 +25,7 @@
     --economy-secondary: #34495e; /* Lidt lysere blå */
     --economy-accent: #1abc9c; /* Turkis accent */
     --economy-bg: #ecf0f1; /* Meget lys gråblå */
+    --economy-shared: #95a5a6; /* Neutral grå */
 
     /* Typografi */
     --heading-font: 'Playfair Display', serif;
@@ -345,6 +346,8 @@ header {
 .summary-card.income p { color: var(--status-green); }
 .summary-card.expense { border-color: var(--status-red); }
 .summary-card.expense p { color: var(--status-red); }
+.summary-card.shared { border-color: var(--economy-shared); }
+.summary-card.shared p { color: var(--economy-shared); }
 .summary-card.disposable { border-color: var(--economy-primary); }
 .summary-card.disposable p { color: var(--economy-primary); }
 
