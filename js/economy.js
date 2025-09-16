@@ -12,8 +12,7 @@ let appElements; // Reference til centrale DOM-elementer
 
 // Lokal state for økonomisiden
 const economyState = {
-    currentView: 'budget', // 'budget', 'fixed', 'transactions', 'assets'
-    currentDate: new Date(), // Til at navigere i budget-måneder
+    currentView: 'dashboard', // NYT: 'dashboard' er nu standard
     projectionDate: new Date(),
 };
 
@@ -73,36 +72,21 @@ function handlePageClick(e) {
         return;
     }
 
-    const prevMonthBtn = e.target.closest('#prev-month-btn');
-    if (prevMonthBtn) {
-        economyState.currentDate.setMonth(economyState.currentDate.getMonth() - 1);
-        renderView();
-        return;
-    }
-
-    const nextMonthBtn = e.target.closest('#next-month-btn');
-    if (nextMonthBtn) {
-        economyState.currentDate.setMonth(economyState.currentDate.getMonth() + 1);
-        renderView();
-        return;
-    }
-
-    const assetsPrevMonthBtn = e.target.closest('#assets-prev-month-btn');
-    if (assetsPrevMonthBtn) {
-        economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() - 1);
-        renderView();
-        return;
-    }
-    const assetsNextMonthBtn = e.target.closest('#assets-next-month-btn');
-    if (assetsNextMonthBtn) {
-        economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() + 1);
-        renderView();
-        return;
-    }
-    
     // Håndter klik baseret på aktiv visning
     switch(economyState.currentView) {
         case 'assets':
+             const assetsPrevMonthBtn = e.target.closest('#assets-prev-month-btn');
+            if (assetsPrevMonthBtn) {
+                economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() - 1);
+                renderView();
+                return;
+            }
+            const assetsNextMonthBtn = e.target.closest('#assets-next-month-btn');
+            if (assetsNextMonthBtn) {
+                economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() + 1);
+                renderView();
+                return;
+            }
             if (e.target.closest('#add-asset-btn')) openAssetModal();
             else if (e.target.closest('#add-liability-btn')) openLiabilityModal();
             else if (e.target.closest('.asset-card')) openAssetModal(e.target.closest('.asset-card').dataset.id);
@@ -124,7 +108,7 @@ function renderSidebar() {
     if (!navContainer) return;
 
     const views = [
-        { key: 'budget', name: 'Nulsumsbudget', icon: 'fa-balance-scale' },
+        { key: 'dashboard', name: 'Økonomisk Dashboard', icon: 'fa-chart-pie' },
         { key: 'fixed', name: 'Faste Poster', icon: 'fa-sync-alt' },
         { key: 'transactions', name: 'Transaktioner', icon: 'fa-receipt' },
         { key: 'assets', name: 'Aktiver / Gæld', icon: 'fa-chart-line' }
@@ -144,8 +128,8 @@ function renderView() {
     if (!contentArea) return;
 
     switch (economyState.currentView) {
-        case 'budget':
-            renderBudgetView(contentArea);
+        case 'dashboard':
+            renderEconomicDashboardView(contentArea);
             break;
         case 'fixed':
             renderFixedExpensesView(contentArea);
@@ -162,134 +146,164 @@ function renderView() {
 }
 
 // =================================================================
-// NULSUMSBUDGET
+// ØKONOMISK DASHBOARD (NYT)
 // =================================================================
-async function renderBudgetView(container) {
-    const monthKey = `${economyState.currentDate.getFullYear()}-${(economyState.currentDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+function renderEconomicDashboardView(container) {
+    const fixedItems = appState.fixedExpenses || [];
     
-    // Auto-populate fixed expenses for the current month if not already done
-    await autoPopulateFixedExpensesForMonth(monthKey);
-    
-    const transactionsForMonth = (appState.transactions || []).filter(t => t.date.startsWith(monthKey));
-    const fixedForMonth = (appState.fixedExpenses || []).filter(item => {
-        const startDate = new Date(item.startDate);
-        const endDate = item.endDate ? new Date(item.endDate) : null;
-        const currentDate = new Date(economyState.currentDate);
-        currentDate.setDate(1);
+    const totalIncome = fixedItems.filter(i => i.type === 'income').reduce((sum, i) => sum + i.amount, 0);
+    const totalExpenses = fixedItems.filter(i => i.type === 'expense').reduce((sum, i) => sum + i.amount, 0);
+    const disposableIncome = totalIncome - totalExpenses;
 
-        return startDate <= currentDate && (!endDate || endDate >= currentDate);
-    });
+    const expensesByCategory = fixedItems
+        .filter(i => i.type === 'expense')
+        .reduce((acc, item) => {
+            const category = item.mainCategory || 'Diverse';
+            if (!acc[category]) {
+                acc[category] = { total: 0, items: [] };
+            }
+            acc[category].total += item.amount;
+            acc[category].items.push(item);
+            return acc;
+        }, {});
 
-    const totalIncome = fixedForMonth.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-    const totalFixedExpenses = fixedForMonth.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
-    const availableForSpending = totalIncome - totalFixedExpenses;
-
-    const spendingByCategory = transactionsForMonth.reduce((acc, t) => {
-        if(t.type === 'expense') {
-            const cat = t.mainCategory || 'Diverse';
-            if (!acc[cat]) acc[cat] = 0;
-            acc[cat] += t.amount;
-        }
-        return acc;
-    }, {});
-    
-    const totalVariableSpending = Object.values(spendingByCategory).reduce((sum, amount) => sum + amount, 0);
-    const remaining = availableForSpending - totalVariableSpending;
-
-    const monthDisplay = economyState.currentDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
-    const monthNavigatorHTML = `
-        <div class="economy-month-navigator">
-            <button id="prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
-            <h4 id="current-month-display">${monthDisplay}</h4>
-            <button id="next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
-        </div>
-    `;
+    const chartData = Object.entries(expensesByCategory).map(([name, data]) => ({
+        name: name,
+        value: data.total,
+        percentage: totalExpenses > 0 ? (data.total / totalExpenses) * 100 : 0
+    }));
 
     container.innerHTML = `
-        <div class="nulsums-header">
-            <h3>Budget for ${monthDisplay}</h3>
-            ${monthNavigatorHTML}
+        <div class="economy-dashboard-header">
+            <h3>Dit Månedlige Økonomiske Overblik</h3>
+            <p>Baseret på dine faste, gennemsnitlige poster.</p>
         </div>
-        <div class="nulsums-grid">
-            <div class="nulsums-card">
-                <h4>Indkomst</h4>
-                <p class="amount positive-text">${toDKK(totalIncome)} kr.</p>
-                <ul>${fixedForMonth.filter(t => t.type === 'income').map(t => `<li><span>${t.description}</span><span>${toDKK(t.amount)} kr.</span></li>`).join('')}</ul>
+        <div class="economy-dashboard-layout">
+            <div class="economy-main">
+                <div class="economy-widget-chart">
+                    <h4>Forbrugsfordeling</h4>
+                    <div id="spending-chart-container"></div>
+                </div>
             </div>
-            <div class="nulsums-card">
-                <h4>Faste Udgifter</h4>
-                <p class="amount negative-text">${toDKK(totalFixedExpenses)} kr.</p>
-                 <ul>${fixedForMonth.filter(t => t.type === 'expense').map(t => `<li><span>${t.description}</span><span>${toDKK(t.amount)} kr.</span></li>`).join('')}</ul>
-            </div>
-            <div class="nulsums-card highlight">
-                <h4>Til Rådighed for Forbrug</h4>
-                <p class="amount">${toDKK(availableForSpending)} kr.</p>
-            </div>
-            <div class="nulsums-card">
-                <h4>Variabelt Forbrug</h4>
-                <p class="amount negative-text">${toDKK(totalVariableSpending)} kr.</p>
-                 <ul>${Object.entries(spendingByCategory).map(([cat, amount]) => `<li><span>${cat}</span><span>${toDKK(amount)} kr.</span></li>`).join('') || '<li>Ingen variable udgifter endnu.</li>'}</ul>
-            </div>
-             <div class="nulsums-card highlight">
-                <h4>Resultat</h4>
-                <p class="amount ${remaining >= 0 ? 'positive-text' : 'negative-text'}">${toDKK(remaining)} kr.</p>
-                 <p class="subtitle">${remaining >= 0 ? 'Over / Til Opsparing' : 'Overforbrug'}</p>
+            <div class="economy-sidebar" id="budget-overview-list">
+                <!-- Detaljeret oversigt indsættes her -->
             </div>
         </div>
     `;
+
+    renderSpendingChart(chartData, disposableIncome);
+    renderBudgetOverviewList({
+        totalIncome,
+        totalExpenses,
+        disposableIncome,
+        expensesByCategory,
+        incomeItems: fixedItems.filter(i => i.type === 'income')
+    });
 }
 
-async function autoPopulateFixedExpensesForMonth(monthKey) {
-    if (!appState.currentUser) return;
-    
-    const settingsRef = doc(db, 'users', appState.currentUser.uid, 'settings', 'economy');
-    const settingsDoc = await getDocs(query(collection(db, 'users', appState.currentUser.uid, 'settings')));
-    
-    let lastPopulated = '';
-    if(!settingsDoc.empty) {
-        const economySettings = settingsDoc.docs.find(d => d.id === 'economy');
-        if(economySettings) {
-             lastPopulated = economySettings.data().lastPopulatedMonth_fixed || '';
-        }
+function renderSpendingChart(data, disposableIncome) {
+    const container = d3.select("#spending-chart-container");
+    container.html(""); // Ryd tidligere indhold
+
+    if (data.length === 0) {
+        container.append("p").attr("class", "empty-state").text("Tilføj faste udgifter for at se diagrammet.");
+        return;
     }
+
+    const width = 350, height = 350, margin = 40;
+    const radius = Math.min(width, height) / 2 - margin;
+
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+      .append("g")
+        .attr("transform", `translate(${width / 2},${height / 2})`);
+
+    const color = d3.scaleOrdinal()
+      .domain(data.map(d => d.name))
+      .range(["#d1603d", "#5d8a66", "#f3f0e9", "#a9a9a9", "#6b483c"]);
+
+    const pie = d3.pie().value(d => d.value).sort(null);
+    const data_ready = pie(data);
+
+    const arc = d3.arc().innerRadius(radius * 0.5).outerRadius(radius);
     
-    if (lastPopulated === monthKey) return;
+    const tooltip = container.append("div")
+      .attr("class", "chart-tooltip");
 
-    const fixedForMonth = (appState.fixedExpenses || []).filter(item => {
-        const startDate = new Date(item.startDate);
-        const endDate = item.endDate ? new Date(item.endDate) : null;
-        const [year, month] = monthKey.split('-').map(Number);
-        const currentMonthStart = new Date(year, month - 1, 1);
-        
-        return startDate <= currentMonthStart && (!endDate || endDate >= currentMonthStart);
-    });
+    svg.selectAll('path')
+      .data(data_ready)
+      .enter()
+      .append('path')
+      .attr('d', arc)
+      .attr('fill', d => color(d.data.name))
+      .attr("stroke", "white")
+      .style("stroke-width", "2px")
+      .on("mouseover", (event, d) => {
+          tooltip.style("opacity", 1)
+                 .html(`<strong>${d.data.name}</strong><br>${toDKK(d.data.value)} kr. (${d.data.percentage.toFixed(1)}%)`);
+      })
+      .on("mousemove", (event) => {
+          tooltip.style("left", (event.pageX + 15) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", () => {
+          tooltip.style("opacity", 0);
+      });
 
-    if (fixedForMonth.length > 0) {
-        const batch = writeBatch(db);
-        const transactionsColRef = collection(db, 'transactions');
+    svg.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", "-0.5em")
+        .style("font-size", "1.8em")
+        .style("font-weight", "700")
+        .text(`${toDKK(disposableIncome)} kr.`);
+    
+    svg.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", "1.0em")
+        .style("font-size", "0.9em")
+        .style("color", "#666")
+        .text("Rådighedsbeløb");
+}
 
-        for (const item of fixedForMonth) {
-            const transactionDate = `${monthKey}-${item.startDate.split('-')[2]}`; // Use the day from the fixed expense start date
-            
-            const newTransaction = {
-                ...item,
-                date: transactionDate,
-                isFixed: true
-            };
-            delete newTransaction.id;
-            delete newTransaction.startDate;
-            delete newTransaction.endDate;
+function renderBudgetOverviewList(data) {
+    const container = document.getElementById('budget-overview-list');
+    if(!container) return;
 
-            batch.set(doc(transactionsColRef), newTransaction);
-        }
+    const incomeHTML = data.incomeItems.map(item => `
+        <div class="overview-item"><span>${item.description}</span><span>${toDKK(item.amount)} kr.</span></div>
+    `).join('');
 
-        try {
-            await batch.commit();
-            await setDoc(settingsRef, { lastPopulatedMonth_fixed: monthKey }, { merge: true });
-        } catch(error) {
-            handleError(error, "Kunne ikke auto-udfylde faste udgifter.", "autoPopulateFixed");
-        }
-    }
+    const expensesHTML = Object.entries(data.expensesByCategory).map(([category, details]) => `
+        <div class="overview-category">
+            <h5>${category}</h5>
+            ${details.items.map(item => `
+                <div class="overview-item"><span>${item.description}</span><span>-${toDKK(item.amount)} kr.</span></div>
+            `).join('')}
+            <div class="overview-subtotal"><span>Subtotal</span><span>-${toDKK(details.total)} kr.</span></div>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <div class="economy-sidebar-widget">
+            <h5>Budgetoversigt</h5>
+            <div class="overview-section">
+                <h4>Indkomst</h4>
+                ${incomeHTML}
+                <div class="overview-total"><span>Total Indkomst</span><span>${toDKK(data.totalIncome)} kr.</span></div>
+            </div>
+            <div class="overview-section">
+                <h4>Udgifter</h4>
+                ${expensesHTML}
+                <div class="overview-total"><span>Total Udgifter</span><span>-${toDKK(data.totalExpenses)} kr.</span></div>
+            </div>
+            <div class="overview-final">
+                <span>Rådighedsbeløb</span>
+                <span class="${data.disposableIncome >= 0 ? 'positive-text' : 'negative-text'}">${toDKK(data.disposableIncome)} kr.</span>
+            </div>
+        </div>
+    `;
 }
 
 
@@ -313,6 +327,7 @@ function renderFixedExpensesView(container) {
     container.innerHTML = `
         <div class="tab-header">
             <h3>Faste Poster</h3>
+            <p>Dette er dit budgetgrundlag. Definer alle dine faste, månedlige indtægter og udgifter her.</p>
             <button id="add-fixed-expense-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Fast Post</button>
         </div>
         <div class="table-wrapper">
@@ -320,7 +335,7 @@ function renderFixedExpensesView(container) {
                 <thead>
                     <tr><th>Beskrivelse</th><th>Beløb</th><th>Kategori</th><th>Startdato</th><th>Slutdato</th></tr>
                 </thead>
-                <tbody>${itemsHTML}</tbody>
+                <tbody>${itemsHTML || `<tr><td colspan="5" class="empty-state">Ingen faste poster endnu.</td></tr>`}</tbody>
             </table>
         </div>
     `;
@@ -421,6 +436,7 @@ function renderTransactionsView(container) {
     container.innerHTML = `
         <div class="tab-header">
             <h3>Transaktioner</h3>
+             <p>Registrer dine variable køb her. Disse vil blive vist i dit Nulsumsbudget.</p>
             <button id="add-transaction-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Transaktion</button>
         </div>
         <div class="table-wrapper">
@@ -428,7 +444,7 @@ function renderTransactionsView(container) {
                 <thead>
                     <tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th>Beløb</th></tr>
                 </thead>
-                <tbody>${itemsHTML}</tbody>
+                <tbody>${itemsHTML || `<tr><td colspan="4" class="empty-state">Ingen transaktioner endnu.</td></tr>`}</tbody>
             </table>
         </div>
     `;
@@ -921,11 +937,12 @@ function handleLoanCalculatorChange(e) {
     let monthlyPayment = parseFloat(paymentInput.value) || 0;
 
     const changedElementId = e.target.id;
+    let lastEditedLoanField = 'term'; // default
 
     if (changedElementId === 'liability-term-months') {
-        economyState.lastEditedLoanField = 'term';
+        lastEditedLoanField = 'term';
     } else if (changedElementId === 'liability-monthly-payment') {
-        economyState.lastEditedLoanField = 'payment';
+        lastEditedLoanField = 'payment';
     }
 
     if (changedElementId === 'liability-term-months') {
@@ -935,10 +952,10 @@ function handleLoanCalculatorChange(e) {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
         if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
     } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
-        if (economyState.lastEditedLoanField === 'term' && termMonths > 0) {
+        if (lastEditedLoanField === 'term' && termMonths > 0) {
             const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
             if (newPayment) paymentInput.value = newPayment.toFixed(2);
-        } else if (economyState.lastEditedLoanField === 'payment' && monthlyPayment > 0) {
+        } else if (lastEditedLoanField === 'payment' && monthlyPayment > 0) {
             const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
             if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
         }
