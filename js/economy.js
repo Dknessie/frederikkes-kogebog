@@ -36,6 +36,11 @@ export function initEconomy(state, elements) {
     if (assetForm) assetForm.addEventListener('submit', handleSaveAsset);
     const deleteAssetBtn = document.getElementById('delete-asset-btn');
     if (deleteAssetBtn) deleteAssetBtn.addEventListener('click', handleDeleteAsset);
+    
+    // NYT: Listener til at vise/skjule graf-checkbox
+    const linkedLiabilitySelect = document.getElementById('asset-linked-liability');
+    if (linkedLiabilitySelect) linkedLiabilitySelect.addEventListener('change', toggleGraphCheckboxVisibility);
+
 
     const liabilityForm = document.getElementById('liability-form');
     if (liabilityForm) {
@@ -155,38 +160,33 @@ function renderBudgetView() {
 
     const activeFixedExpenses = appState.fixedExpenses || [];
     const monthlyAverages = calculateMonthlyAverages(activeFixedExpenses);
-    const groupedExpenses = filterAndGroupExpenses(monthlyAverages, economyState.selectedPerson);
+    const groupedData = filterAndGroupExpenses(monthlyAverages, economyState.selectedPerson);
 
-    const totalIncome = groupedExpenses.income.reduce((sum, item) => sum + item.monthlyAmount, 0);
-    const totalExpenses = groupedExpenses.expenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    const totalIncome = groupedData.income.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    const totalExpenses = groupedData.expenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
     const disposable = totalIncome - totalExpenses;
 
-    // Beregn Fællesudgifter/Overførsel
     let sharedExpensesTitle = 'Fællesudgifter';
     let sharedExpensesAmount = 0;
     
-    // Find alle udgifter fra fælleskontoen
-    const allSharedExpenses = monthlyAverages.filter(item => 
+    const allSharedAccountExpenses = monthlyAverages.filter(item => 
         item.account === 'Fælles Budget' && item.type === 'expense'
     );
-    const totalSharedAmount = allSharedExpenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    const totalSharedAmount = allSharedAccountExpenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
 
     if (economyState.selectedPerson === 'Fælles') {
         sharedExpensesAmount = totalSharedAmount;
     } else {
-        // Find de poster den valgte person allerede betaler til fælleskontoen
         const personPaidToShared = monthlyAverages.filter(item => 
             item.account === 'Fælles Budget' && item.person === economyState.selectedPerson && item.type === 'expense'
         ).reduce((sum, item) => sum + item.monthlyAmount, 0);
         
-        // Antager 50/50 split. Beregn hvad personen mangler at overføre.
         const halfOfTotal = totalSharedAmount / 2;
         sharedExpensesAmount = Math.max(0, halfOfTotal - personPaidToShared);
         sharedExpensesTitle = 'Overførsel til Fælles';
     }
 
-
-    const categories = [...new Set(groupedExpenses.expenses.map(item => item.mainCategory))].sort();
+    const categories = [...new Set(groupedData.expenses.map(item => item.mainCategory))].sort();
 
     container.innerHTML = `
         <div class="economy-header">
@@ -213,7 +213,7 @@ function renderBudgetView() {
         </div>
 
         <div id="budget-details-container">
-            ${categories.map(category => renderCategorySection(category, groupedExpenses.expenses)).join('')}
+            ${categories.map(category => renderCategorySection(category, groupedData.expenses)).join('')}
         </div>
     `;
 }
@@ -232,7 +232,7 @@ function renderCategorySection(category, allExpenses) {
                 ${itemsInCategory.map(item => `
                     <div class="budget-item-row" data-id="${item.id}">
                         <span class="item-description">${item.description}</span>
-                        ${economyState.selectedPerson === 'Fælles' ? `<span class="item-person">${item.person}</span>` : ''}
+                        ${economyState.selectedPerson === 'Fælles' && item.person.split(',').length < 2 ? `<span class="item-person">${item.person}</span>` : ''}
                         <span class="item-amount">-${toDKK(item.monthlyAmount)} kr.</span>
                     </div>
                 `).join('')}
@@ -261,21 +261,22 @@ function calculateMonthlyAverages(items) {
 }
 
 function filterAndGroupExpenses(items, personFilter) {
-    let filtered = items;
+    let filteredItems = items;
+    // Visning for en specifik person
     if (personFilter !== 'Fælles') {
-        filtered = items.filter(item => item.person === personFilter);
+        filteredItems = items.filter(item => item.person === personFilter);
     }
+    
+    const income = filteredItems.filter(item => item.type === 'income');
+    let expenses = filteredItems.filter(item => item.type === 'expense');
 
-    const income = filtered.filter(item => item.type === 'income');
-    let expenses = filtered.filter(item => item.type === 'expense');
-
+    // Hvis "Fælles" er valgt, konsolider poster
     if (personFilter === 'Fælles') {
         const consolidatedExpenses = {};
         expenses.forEach(item => {
             const key = `${item.description.toLowerCase()}_${item.mainCategory.toLowerCase()}`;
             if (consolidatedExpenses[key]) {
                 consolidatedExpenses[key].monthlyAmount += item.monthlyAmount;
-                // Append person if not already there
                 if (!consolidatedExpenses[key].person.includes(item.person)) {
                     consolidatedExpenses[key].person += `, ${item.person}`;
                 }
@@ -288,6 +289,7 @@ function filterAndGroupExpenses(items, personFilter) {
     
     return { income, expenses };
 }
+
 
 
 // =================================================================
@@ -447,6 +449,16 @@ function renderAssetsView(container) {
             </div>
         </div>
     `;
+    
+    // NYT: Initialiser grafer efter HTML er indsat
+    document.querySelectorAll('.asset-chart-container').forEach(container => {
+        const assetId = container.dataset.assetId;
+        const asset = assets.find(a => a.id === assetId);
+        if (asset) {
+            renderAssetChart(container.id, asset);
+        }
+    });
+
 }
 function createAssetCard(asset, allLiabilities) {
     const linkedLiabilities = (asset.linkedLiabilityIds || [])
@@ -456,6 +468,22 @@ function createAssetCard(asset, allLiabilities) {
     const totalDebtOnAsset = linkedLiabilities.reduce((sum, l) => sum + l.currentBalance, 0);
     const netValue = asset.value - totalDebtOnAsset;
     const debtRatio = asset.value > 0 ? (totalDebtOnAsset / asset.value) * 100 : 0;
+    
+    // NYT: Logik til at vælge mellem graf og progress bar
+    let bodyContent;
+    if (asset.showHistoryGraph && (!asset.linkedLiabilityIds || asset.linkedLiabilityIds.length === 0)) {
+        bodyContent = `<div class="asset-chart-container" id="chart-${asset.id}" data-asset-id="${asset.id}"></div>`;
+    } else {
+        bodyContent = `
+            <div class="net-value">
+                <span>Friværdi</span>
+                <strong>${toDKK(netValue)} kr.</strong>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: ${100 - debtRatio}%;"></div>
+            </div>
+        `;
+    }
 
     return `
         <div class="asset-card" data-id="${asset.id}">
@@ -464,13 +492,7 @@ function createAssetCard(asset, allLiabilities) {
                 <span class="asset-value">${toDKK(asset.value)} kr.</span>
             </div>
             <div class="asset-card-body">
-                <div class="net-value">
-                    <span>Friværdi</span>
-                    <strong>${toDKK(netValue)} kr.</strong>
-                </div>
-                <div class="progress-bar-container">
-                    <div class="progress-bar-fill" style="width: ${100 - debtRatio}%;"></div>
-                </div>
+                ${bodyContent}
             </div>
         </div>
     `;
@@ -526,6 +548,9 @@ function openAssetModal(assetId = null) {
     document.getElementById('asset-id').value = assetId || '';
     modal.querySelector('h3').textContent = isEditing ? 'Rediger Aktiv' : 'Nyt Aktiv';
     document.getElementById('delete-asset-btn').classList.toggle('hidden', !isEditing);
+    
+    document.getElementById('asset-show-graph').checked = asset?.showHistoryGraph || false;
+
 
     if (isEditing) {
         document.getElementById('asset-name').value = asset.name;
@@ -536,6 +561,9 @@ function openAssetModal(assetId = null) {
     
     populateReferenceDropdown(document.getElementById('asset-type'), appState.references.assetTypes, 'Vælg type...', asset?.type);
     populateLiabilitiesDropdown(document.getElementById('asset-linked-liability'), 'Tilknyt gæld...', asset?.linkedLiabilityIds);
+
+    toggleGraphCheckboxVisibility();
+
     modal.classList.remove('hidden');
 }
 async function handleSaveAsset(e) {
@@ -551,6 +579,7 @@ async function handleSaveAsset(e) {
         monthlyContribution: parseFloat(document.getElementById('asset-monthly-contribution').value) || null,
         annualGrowthRate: parseFloat(document.getElementById('asset-annual-growth-rate').value) || null,
         linkedLiabilityIds: linkedLiabilityIds,
+        showHistoryGraph: document.getElementById('asset-show-graph').checked,
         userId: appState.currentUser.uid
     };
 
@@ -699,14 +728,15 @@ function populateLiabilitiesDropdown(selectElement, placeholder, currentValues) 
         });
     }
 }
-function calculateProjectedValues(targetDate) {
+function calculateProjectedValues(targetDate, baseAsset = null) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
 
+    const assetsToProject = baseAsset ? [JSON.parse(JSON.stringify(baseAsset))] : JSON.parse(JSON.stringify(appState.assets || []));
     let projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || []));
-    let projectedAssets = JSON.parse(JSON.stringify(appState.assets || []));
+    let projectedAssets = assetsToProject;
 
     const monthsDiff = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
     const direction = monthsDiff >= 0 ? 1 : -1;
@@ -744,6 +774,10 @@ function calculateProjectedValues(targetDate) {
         });
     }
 
+    if (baseAsset) {
+        return projectedAssets[0];
+    }
+    
     const totalAssets = projectedAssets.reduce((sum, asset) => sum + asset.value, 0);
     const totalLiabilities = projectedLiabilities.reduce((sum, l) => sum + l.currentBalance, 0);
     const netWorth = totalAssets - totalLiabilities;
@@ -834,5 +868,67 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
     if (months > 0) result += `${months} mdr.`;
     
     displayElement.value = result.trim() || '0 mdr.';
+}
+
+// NYT: Funktion til at vise/skjule graf-checkbox
+function toggleGraphCheckboxVisibility() {
+    const linkedLiabilitySelect = document.getElementById('asset-linked-liability');
+    const graphCheckboxGroup = document.getElementById('asset-graph-checkbox-group');
+    if (!linkedLiabilitySelect || !graphCheckboxGroup) return;
+
+    const hasLinkedDebt = Array.from(linkedLiabilitySelect.selectedOptions).some(opt => opt.value !== '');
+    graphCheckboxGroup.style.display = hasLinkedDebt ? 'none' : 'flex';
+}
+
+// NYT: D3.js Graf-rendering
+function renderAssetChart(containerId, asset) {
+    const data = [];
+    const today = economyState.projectionDate;
+
+    // Generer data 12 måneder tilbage og 12 måneder frem
+    for (let i = -12; i <= 12; i++) {
+        const date = new Date(today);
+        date.setMonth(today.getMonth() + i);
+        const projectedAsset = calculateProjectedValues(date, asset);
+        data.push({ date: date, value: projectedAsset.value });
+    }
+
+    const container = d3.select(`#${containerId}`);
+    container.html(""); // Ryd container
+    
+    const margin = { top: 20, right: 30, bottom: 40, left: 60 };
+    const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
+    const height = 200 - margin.top - margin.bottom;
+
+    const svg = container.append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleTime()
+      .domain(d3.extent(data, d => d.date))
+      .range([ 0, width ]);
+      
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x).ticks(5).tickFormat(d3.timeFormat("%b %y")));
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(data, d => d.value)])
+      .range([ height, 0 ]);
+      
+    svg.append("g")
+      .call(d3.axisLeft(y).ticks(5).tickFormat(d => `${d/1000}k`));
+
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "var(--economy-primary)")
+      .attr("stroke-width", 2.5)
+      .attr("d", d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.value))
+      );
 }
 
