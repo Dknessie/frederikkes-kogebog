@@ -235,257 +235,19 @@ header {
 
 
 /* =================================================================
-   ØKONOMI / BUDGET SIDE
+   ØKONOMI SIDE
    ================================================================= */
 
 #oekonomi.page {
     background: linear-gradient(180deg, #e9f1f8 0%, #f5f5f5 300px);
-    padding: var(--spacing-l) var(--spacing-xl); /* Tilføjet padding i siderne */
 }
-
-.spreadsheet-card { 
-    background: var(--white-color); 
-    border-radius: var(--card-border-radius); 
-    box-shadow: var(--strong-shadow);
-    overflow: hidden;
-    border: 1px solid var(--border-color);
-}
-
-.spreadsheet-header {
-    padding: var(--spacing-m) var(--spacing-l);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--spacing-m);
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--light-bg-color);
-}
-
-.person-tabs {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-s);
-}
-
-.person-tab {
-    padding: var(--spacing-s) var(--spacing-m);
-    border: 1px solid transparent;
-    background: none;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    border-radius: var(--border-radius);
-}
-.person-tab.active {
-    background-color: var(--white-color);
-    color: var(--primary-color);
-    border-color: var(--border-color);
-    box-shadow: var(--shadow);
-}
-.person-tab:hover:not(.active) {
-    background-color: var(--secondary-color);
-}
-
-.table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    max-height: 80vh;
-}
-
-.spreadsheet-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--small-font-size);
-}
-
-.spreadsheet-table th, .spreadsheet-table td {
-    padding: var(--spacing-m);
-    text-align: left;
-    border: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-
-.spreadsheet-table thead th {
-    background-color: var(--light-bg-color);
-    font-weight: 700;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
-/* Sticky first column */
-.spreadsheet-table tbody td:first-child, 
-.spreadsheet-table tfoot td:first-child {
-    background-color: var(--light-bg-color);
-    font-weight: 600;
-    position: sticky;
-    left: 0;
-    z-index: 1;
-}
-
-.spreadsheet-table thead th:first-child {
-    left: 0;
-    z-index: 3;
-}
-
-.currency { text-align: right; }
 .positive-text { color: var(--status-green); }
 .negative-text { color: var(--status-red); }
-.positive-bg { background-color: #f0fdf4; }
-.negative-bg { background-color: #fef2f2; }
-
-/* NYT: Styling for Nulsumsbudget */
-.main-category-row {
-    background-color: var(--secondary-color) !important;
-    font-family: var(--heading-font);
-    font-weight: 700;
-    color: var(--primary-color);
-}
-.main-category-row td {
-    background-color: var(--secondary-color) !important;
-}
-/* Gør den låste opsparings-celle grå */
-.main-category-row td.readonly {
-    background-color: #e9ecef !important;
-    cursor: not-allowed;
-    color: #6c757d;
-}
-
-.sub-item-row td.name-cell.indented {
-    padding-left: 2.5rem; /* Indrykning for underposter */
-}
-.subtotal-row {
-    background-color: #fafafa;
-    font-style: italic;
-    color: #555;
-    font-weight: 600;
-}
-.subtotal-row td {
-    background-color: #fafafa !important;
-}
-
-.add-sub-item-btn {
-    background: none;
-    border: none;
-    color: var(--accent-color);
-    font-weight: bold;
-    font-size: 1.2rem;
-    cursor: pointer;
-    margin-left: var(--spacing-m);
-    padding: 0 var(--spacing-s);
-    border-radius: 50%;
-}
-.add-sub-item-btn:hover {
-    background-color: rgba(0,0,0,0.1);
-}
-
-/* Rettelse for slet-knap logik */
-td .editable {
-    display: inline-block;
-    min-width: 80px;
-    cursor: text;
-}
-td .editable:focus {
-    outline: 2px solid var(--primary-color);
-    background-color: #fef2f2;
-}
-td.name-cell {
-    position: relative;
-    padding-right: 35px; /* Giver plads til knappen */
-}
-.delete-row {
-    position: absolute;
-    top: 50%;
-    right: 5px;
-    transform: translateY(-50%);
-    border: none;
-    background: none;
-    color: #ccc;
-    font-weight: bold;
-    font-size: 1.2rem;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    padding: 0.25rem;
-    line-height: 1;
-}
-tr:hover .delete-row {
-    opacity: 1;
-}
-.delete-row:hover {
-    color: var(--status-red);
-}
-.editable:focus + .delete-row {
-    display: none;
-}
-
-/* NYT: Styling for Autofill-knap */
-td.editable {
-    position: relative;
-}
-.autofill-btn {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 1px solid var(--border-color);
-    background-color: var(--white-color);
-    color: var(--accent-color);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    line-height: 1;
-    opacity: 0;
-    transition: opacity 0.2s ease, background-color 0.2s ease;
-    z-index: 5;
-}
-td.editable:hover .autofill-btn {
-    opacity: 1;
-}
-.autofill-btn:hover {
-    background-color: var(--secondary-color);
-}
-td.editable span[contenteditable="true"]:focus + .autofill-btn {
-    display: none;
-}
-
-
-.spreadsheet-table tfoot {
-    font-weight: 700;
-    background-color: var(--secondary-color);
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-}
-
-.total-summary-row td {
-    background-color: var(--secondary-color) !important;
-    font-weight: 700;
-}
-.available-row td {
-    font-size: 1.1em;
-    color: var(--accent-color);
-}
-.available-row td.negative-text {
-    color: var(--status-red);
-}
-
-.economy-nav-link i {
-    width: 20px;
-    text-align: center;
-}
-
 .economy-month-navigator {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
 }
-
 .economy-month-navigator h4 {
     margin: 0;
     font-family: var(--body-font);
@@ -494,6 +256,114 @@ td.editable span[contenteditable="true"]:focus + .autofill-btn {
     text-align: center;
     color: var(--text-color);
 }
+.tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-l);
+}
+.tab-header h3 {
+    margin: 0;
+}
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    max-height: 80vh;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.spreadsheet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--small-font-size);
+}
+.spreadsheet-table th, .spreadsheet-table td {
+    padding: var(--spacing-m);
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+.spreadsheet-table thead th {
+    background-color: var(--light-bg-color);
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.spreadsheet-table tbody tr:hover {
+    background-color: var(--secondary-color);
+}
+.fixed-expense-row, .transaction-row {
+    cursor: pointer;
+}
+.currency { text-align: right; }
+
+/* =================================================================
+   NYT: ØKONOMI NULSUMSBUDGET
+   ================================================================= */
+.nulsums-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-l);
+}
+.nulsums-header h3 {
+    margin: 0;
+}
+.nulsums-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--spacing-l);
+}
+.nulsums-card {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--shadow);
+}
+.nulsums-card.highlight {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--primary-color);
+}
+.nulsums-card h4 {
+    margin-top: 0;
+    font-family: var(--body-font);
+    font-weight: 600;
+    font-size: 1rem;
+    color: #666;
+}
+.nulsums-card .amount {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 var(--spacing-m) 0;
+}
+.nulsums-card .subtitle {
+    font-size: 0.9rem;
+    color: #777;
+    margin-top: -0.5rem;
+}
+.nulsums-card ul {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-m) 0 0 0;
+}
+.nulsums-card li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.nulsums-card li:last-child {
+    border-bottom: none;
+}
+.nulsums-card li span:last-child {
+    font-weight: 600;
+}
+
+/* =================================================================
+   ØKONOMI: AKIVER & GÆLD
+   ================================================================= */
 
 .assets-header {
     display: flex;
@@ -608,7 +478,6 @@ td.editable span[contenteditable="true"]:focus + .autofill-btn {
     padding-top: var(--spacing-s);
     border-top: 1px solid var(--border-color);
 }
-
 
 
 /* =================================================================
@@ -2169,228 +2038,6 @@ details:not([open]) .item-table-container {
 .favorite-item-actions .btn-icon { padding: 0.25rem; font-size: 0.9rem; color: var(--accent-color); width: 28px; height: 28px; }
 
 /* =================================================================
-   NYT: ØKONOMI DASHBOARD TEMA
-   ================================================================= */
-
-#oekonomi.page {
-    background: linear-gradient(180deg, #e9f1f8 0%, #f5f5f5 300px);
-    padding-top: var(--spacing-xl);
-}
-
-.economy-dashboard-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    grid-template-areas:
-        "header header"
-        "main sidebar";
-    gap: var(--spacing-l);
-}
-
-.economy-header {
-    grid-area: header;
-}
-.economy-header h2 {
-    color: #2c3e50;
-    margin: 0;
-}
-.economy-header p {
-    color: #7f8c8d;
-    margin: 0;
-}
-
-.economy-main {
-    grid-area: main;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-
-.economy-sidebar {
-    grid-area: sidebar;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-l);
-}
-
-.economy-month-navigator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing-l);
-    background-color: var(--white-color);
-    padding: var(--spacing-s);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
-}
-.economy-month-navigator h3 {
-    margin: 0;
-    color: var(--text-color);
-    min-width: 200px;
-    text-align: center;
-}
-
-.economy-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--spacing-l);
-}
-
-.economy-summary-card,
-.new-transaction-form,
-.transactions-list,
-.economy-sidebar-widget,
-.spending-categories-summary,
-.economy-widget-chart {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-l);
-    box-shadow: var(--shadow);
-}
-
-.economy-summary-card h4 {
-    margin: 0 0 var(--spacing-s) 0;
-    color: #7f8c8d;
-    font-size: 1rem;
-    font-family: var(--body-font);
-    font-weight: 600;
-}
-.economy-summary-card p {
-    margin: 0;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #2c3e50;
-}
-
-.new-transaction-form h4,
-.transactions-list h4,
-.economy-sidebar-widget h5,
-.spending-categories-summary h4,
-.economy-widget-chart h4 {
-    margin-top: 0;
-    color: var(--text-color);
-    font-family: var(--body-font);
-    font-weight: 700;
-}
-
-#spending-chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 300px;
-    position: relative;
-}
-#spending-chart-container .chart-tooltip {
-    position: absolute;
-    background-color: rgba(0,0,0,0.7);
-    color: white;
-    padding: var(--spacing-s);
-    border-radius: var(--border-radius);
-    font-size: var(--small-font-size);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-
-.transactions-list table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: var(--spacing-m);
-}
-.transactions-list th, .transactions-list td {
-    padding: var(--spacing-m);
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-.transactions-list th {
-    font-size: var(--small-font-size);
-    color: #7f8c8d;
-    font-weight: 600;
-}
-.transactions-list .text-right {
-    text-align: right;
-}
-.transactions-list .expense-amount {
-    color: var(--status-red);
-    font-weight: 600;
-}
-.transactions-list .income-amount {
-    color: var(--status-green);
-    font-weight: 600;
-}
-
-.economy-sidebar-widget .btn {
-    width: 100%;
-    margin-top: var(--spacing-m);
-}
-#net-worth-widget .form-actions {
-    flex-direction: column;
-    gap: var(--spacing-s);
-}
-#net-worth-widget .btn {
-    width: 100%;
-    margin: 0;
-}
-
-
-#net-worth-widget h6 {
-    font-family: var(--body-font);
-    font-size: 0.9rem;
-    color: var(--text-color);
-    margin: var(--spacing-m) 0 var(--spacing-s) 0;
-    padding-bottom: var(--spacing-xs);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.economy-item-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-s);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.economy-item-row:hover {
-    background-color: var(--secondary-color);
-}
-
-.economy-item-value {
-    font-weight: 600;
-}
-
-.category-summary-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    margin-bottom: var(--spacing-s);
-}
-.category-summary-item .category-name {
-    width: 120px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.category-summary-item .category-bar-container {
-    flex-grow: 1;
-    background-color: #eee;
-    border-radius: var(--border-radius);
-    height: 20px;
-}
-.category-summary-item .category-bar {
-    background-color: var(--accent-color);
-    height: 100%;
-    border-radius: var(--border-radius);
-}
-.category-summary-item .category-amount {
-    font-weight: 600;
-    width: 100px;
-    text-align: right;
-}
-
-/* =================================================================
    NYT: HJEMMET TEMA
    ================================================================= */
 
@@ -3430,4 +3077,3 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
-
