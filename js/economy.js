@@ -161,6 +161,30 @@ function renderBudgetView() {
     const totalExpenses = groupedExpenses.expenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
     const disposable = totalIncome - totalExpenses;
 
+    // Beregn Fællesudgifter/Overførsel
+    let sharedExpensesTitle = 'Fællesudgifter';
+    let sharedExpensesAmount = 0;
+    
+    // Find alle udgifter fra fælleskontoen
+    const allSharedExpenses = monthlyAverages.filter(item => 
+        item.account === 'Fælles Budget' && item.type === 'expense'
+    );
+    const totalSharedAmount = allSharedExpenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
+
+    if (economyState.selectedPerson === 'Fælles') {
+        sharedExpensesAmount = totalSharedAmount;
+    } else {
+        // Find de poster den valgte person allerede betaler til fælleskontoen
+        const personPaidToShared = monthlyAverages.filter(item => 
+            item.account === 'Fælles Budget' && item.person === economyState.selectedPerson && item.type === 'expense'
+        ).reduce((sum, item) => sum + item.monthlyAmount, 0);
+        
+        // Antager 50/50 split. Beregn hvad personen mangler at overføre.
+        const halfOfTotal = totalSharedAmount / 2;
+        sharedExpensesAmount = Math.max(0, halfOfTotal - personPaidToShared);
+        sharedExpensesTitle = 'Overførsel til Fælles';
+    }
+
     const categories = [...new Set(groupedExpenses.expenses.map(item => item.mainCategory))].sort();
 
     container.innerHTML = `
@@ -183,6 +207,7 @@ function renderBudgetView() {
         <div id="economy-summary-cards">
             <div class="summary-card income"><h4>Total Indkomst</h4><p>${toDKK(totalIncome)} kr.</p></div>
             <div class="summary-card expense"><h4>Total Udgifter</h4><p>${toDKK(totalExpenses)} kr.</p></div>
+            <div class="summary-card shared"><h4>${sharedExpensesTitle}</h4><p>${toDKK(sharedExpensesAmount)} kr.</p></div>
             <div class="summary-card disposable"><h4>Rådighedsbeløb</h4><p>${toDKK(disposable)} kr.</p></div>
         </div>
 
