@@ -326,7 +326,8 @@ function createLiabilityCard(liability) {
     const termMonths = calculateTermMonths(currentBalance, liability.interestRate || 0, monthlyPayment);
     let endDateText = 'Ukendt';
     if (termMonths && isFinite(termMonths)) {
-        const endDate = new Date();
+        // KORREKTION: Brug den valgte 'projectionDate' som udgangspunkt for beregningen.
+        const endDate = new Date(economyState.projectionDate);
         endDate.setMonth(endDate.getMonth() + termMonths);
         endDateText = endDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric'});
     } else if (termMonths === Infinity) {
@@ -1063,4 +1064,3 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
     
     displayElement.value = result.trim() || '0 mdr.';
 }
-
