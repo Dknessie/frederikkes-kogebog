@@ -279,6 +279,8 @@ header {
     max-height: 80vh;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
+    background-color: var(--white-color);
+    box-shadow: var(--shadow);
 }
 .spreadsheet-table {
     width: 100%;
@@ -2383,7 +2385,145 @@ details:not([open]) .item-table-container {
 }
 
 
-/* ===== 12. Responsive Design ===== */
+/* =================================================================
+   NYT: Referencer Side Layout
+   ================================================================= */
+
+.references-page-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: var(--spacing-xl);
+    align-items: flex-start;
+}
+
+.references-sidebar {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-m);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
+}
+
+.references-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-s);
+}
+
+.references-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-m);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.references-nav-link:hover {
+    background-color: var(--secondary-color);
+}
+
+.references-nav-link.active {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+
+.references-content-area .reference-category-content {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Genbrug af eksisterende reference-card styling */
+.reference-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+.reference-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.reference-item:last-child {
+    border-bottom: none;
+}
+.reference-actions {
+    display: flex;
+    align-items: center;
+}
+.edit-container {
+    display: flex;
+    flex-grow: 1;
+    align-items: center;
+    gap: var(--spacing-s);
+}
+.edit-reference-input {
+    flex-grow: 1;
+    padding: var(--spacing-s);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+}
+.add-reference-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-m);
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--spacing-m);
+}
+.add-reference-form .input-group {
+    flex-grow: 1;
+    margin-bottom: 0;
+}
+.category-item {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-s) 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    width: 100%;
+}
+.subcategory-list {
+    list-style: none;
+    padding-left: var(--spacing-l);
+    margin-top: var(--spacing-s);
+    width: 100%;
+}
+.subcategory-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+.add-subcategory-form {
+    display: flex;
+    gap: var(--spacing-s);
+    margin-top: var(--spacing-s);
+    padding-left: var(--spacing-l);
+}
+
+/* =================================================================
+   RESPONSIVE DESIGN
+   ================================================================= */
+
 @media (max-width: 1200px) {
     .hub-main-layout {
         grid-template-columns: 1.8fr 1fr;
@@ -2397,14 +2537,15 @@ details:not([open]) .item-table-container {
     .desktop-nav {
         display: none;
     }
-    .dashboard-layout {
+    .dashboard-layout, .asset-liability-layout, .hjemmet-layout, .references-page-layout {
         grid-template-columns: 1fr;
     }
-    .hjemmet-layout {
-        grid-template-columns: 1fr;
-    }
-    .hjemmet-sidebar {
+    .hjemmet-sidebar, .references-sidebar {
         position: static;
+    }
+    .references-nav-list {
+        flex-direction: row;
+        flex-wrap: wrap;
     }
     .hub-main-layout {
         grid-template-columns: 1fr;
@@ -2425,87 +2566,16 @@ details:not([open]) .item-table-container {
     .economy-dashboard-layout {
         grid-template-columns: 1fr;
     }
+    .read-view-main-content {
+        grid-template-columns: 1fr;
+    }
+    .form-grid-3-col, .form-grid-2-col {
+        grid-template-columns: 1fr;
+    }
 }
-
-/* ===== 13. NYE STYLES: Kalender Opdateringer ===== */
-
-/* Træk-og-slip */
-.meal-card.dragging {
-    opacity: 0.5;
-    transform: rotate(3deg) scale(1.05);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-    cursor: grabbing;
-}
-.meal-slot.drag-over,
-.empty-meal-slot.drag-over {
-    background-color: var(--accent-color) !important;
-    border-color: #4a7553;
-    border-style: solid;
-}
-.meal-slot.drag-over > *,
-.empty-meal-slot.drag-over > * {
-    pointer-events: none;
-}
-
-/* Slet-knap på måltidskort */
-.delete-meal-btn {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 24px;
-    height: 24px;
-    background-color: var(--status-red);
-    color: var(--white-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    cursor: pointer;
-    opacity: 0;
-    transform: scale(0.8);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    pointer-events: none;
-}
-.meal-card:hover .delete-meal-btn {
-    opacity: 1;
-    transform: scale(1);
-    pointer-events: all;
-}
-.delete-meal-btn:hover {
-    background-color: #C62828;
-}
-
-/* Begivenheds-piller */
-.day-events-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-s);
-    justify-content: flex-end;
-    flex-grow: 1;
-}
-.day-event-pill {
-    padding: var(--spacing-xs) var(--spacing-s);
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    white-space: nowrap;
-}
-.day-event-pill i {
-    font-size: 0.9em;
-}
-
-.event-fødselsdag { background-color: #fce4ec; color: #c2185b; }
-.event-aftale { background-color: #e3f2fd; color: #1565c0; }
-.event-to-do { background-color: #fff8e1; color: #f57f17; }
-.event-udgivelse { background-color: #f3e5f5; color: #6a1b9a; }
-.event-andet { background-color: #eceff1; color: #37474f; }
 
 /* =================================================================
-   NYE STYLES: Kalender Sidebar Redesign
+   KALENDER SPECIFIKKE STYLES
    ================================================================= */
 
 /* Træk-og-slip */
