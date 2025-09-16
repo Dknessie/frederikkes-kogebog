@@ -12,8 +12,12 @@ let appElements; // Reference til centrale DOM-elementer
 
 // Lokal state for økonomisiden
 const economyState = {
-    currentView: 'dashboard', // NYT: 'dashboard' er nu standard
+    currentView: 'dashboard',
     projectionDate: new Date(),
+    activePerson: {
+        dashboard: 'faelles',
+        assets: 'faelles'
+    }
 };
 
 // =================================================================
@@ -66,6 +70,16 @@ function handlePageClick(e) {
         renderEconomy();
         return;
     }
+    
+    const personTab = e.target.closest('.person-tab');
+    if(personTab) {
+        const view = personTab.dataset.view;
+        const person = personTab.dataset.person;
+        economyState.activePerson[view] = person;
+        renderView();
+        return;
+    }
+
 
     // Håndter klik baseret på aktiv visning
     switch(economyState.currentView) {
@@ -132,12 +146,28 @@ function renderView() {
     }
 }
 
+function renderPersonTabs(view) {
+    const members = appState.references.householdMembers || [];
+    let tabs = `<button class="person-tab ${economyState.activePerson[view] === 'faelles' ? 'active' : ''}" data-view="${view}" data-person="faelles">Fælles</button>`;
+    
+    tabs += members.map(person => {
+        return `<button class="person-tab ${economyState.activePerson[view] === person ? 'active' : ''}" data-view="${view}" data-person="${person}">${person}</button>`;
+    }).join('');
+
+    return `<div class="person-tabs">${tabs}</div>`;
+}
+
 // =================================================================
 // ØKONOMISK DASHBOARD (NYT)
 // =================================================================
 
 function renderEconomicDashboardView(container) {
-    const fixedItems = appState.fixedExpenses || [];
+    const activePerson = economyState.activePerson.dashboard;
+    let fixedItems = appState.fixedExpenses || [];
+    
+    if (activePerson !== 'faelles') {
+        fixedItems = fixedItems.filter(item => item.person === activePerson);
+    }
     
     const totalIncome = fixedItems.filter(i => i.type === 'income').reduce((sum, i) => sum + i.amount, 0);
     const totalExpenses = fixedItems.filter(i => i.type === 'expense').reduce((sum, i) => sum + i.amount, 0);
@@ -165,6 +195,7 @@ function renderEconomicDashboardView(container) {
         <div class="economy-dashboard-header">
             <h3>Dit Månedlige Økonomiske Overblik</h3>
             <p>Baseret på dine faste, gennemsnitlige poster.</p>
+            ${renderPersonTabs('dashboard')}
         </div>
         <div class="economy-dashboard-layout">
             <div class="economy-main">
@@ -306,6 +337,7 @@ function renderFixedExpensesView(container) {
             <td>${item.description}</td>
             <td class="currency ${item.type === 'income' ? 'positive-text' : 'negative-text'}">${toDKK(item.amount)} kr.</td>
             <td>${item.mainCategory}</td>
+            <td>${item.person}</td>
             <td>${new Date(item.startDate).toLocaleDateString('da-DK')}</td>
             <td>${item.endDate ? new Date(item.endDate).toLocaleDateString('da-DK') : 'Løbende'}</td>
         </tr>
@@ -320,9 +352,9 @@ function renderFixedExpensesView(container) {
         <div class="table-wrapper">
             <table class="spreadsheet-table">
                 <thead>
-                    <tr><th>Beskrivelse</th><th>Beløb</th><th>Kategori</th><th>Startdato</th><th>Slutdato</th></tr>
+                    <tr><th>Beskrivelse</th><th>Beløb</th><th>Kategori</th><th>Person</th><th>Startdato</th><th>Slutdato</th></tr>
                 </thead>
-                <tbody>${itemsHTML || `<tr><td colspan="5" class="empty-state">Ingen faste poster endnu.</td></tr>`}</tbody>
+                <tbody>${itemsHTML || `<tr><td colspan="6" class="empty-state">Ingen faste poster endnu.</td></tr>`}</tbody>
             </table>
         </div>
     `;
@@ -406,16 +438,40 @@ async function handleDeleteFixedExpense() {
 
 
 // =================================================================
-// AKIVER & GÆLD (Eksisterende kode, ingen ændringer)
+// AKIVER & GÆLD
 // =================================================================
 
 function renderAssetsView(container) {
-    const projectedData = calculateProjectedValues(economyState.projectionDate);
-    const { assets, liabilities } = projectedData;
+    const activePerson = economyState.activePerson.assets;
+    let assets = appState.assets || [];
+    let liabilities = appState.liabilities || [];
+    
+    const getFilteredAndCalculatedValues = (person) => {
+        let personAssets = assets.filter(a => a.owner === person);
+        let personLiabilities = liabilities.filter(l => l.owner === person);
+        
+        let commonAssetsValue = assets.filter(a => a.owner === 'Fælles').reduce((sum, a) => sum + a.value, 0);
+        let commonLiabilitiesValue = liabilities.filter(l => l.owner === 'Fælles').reduce((sum, l) => sum + l.currentBalance, 0);
+        
+        const totalAssets = personAssets.reduce((sum, a) => sum + a.value, 0) + (commonAssetsValue / 2);
+        const totalLiabilities = personLiabilities.reduce((sum, l) => sum + l.currentBalance, 0) + (commonLiabilitiesValue / 2);
+        
+        return { totalAssets, totalLiabilities, netWorth: totalAssets - totalLiabilities };
+    };
 
-    const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
-    const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
-    const netWorth = totalAssets - totalLiabilities;
+    let totalAssets, totalLiabilities, netWorth;
+
+    if (activePerson === 'faelles') {
+        totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
+        totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
+        netWorth = totalAssets - totalLiabilities;
+    } else {
+        ({ totalAssets, totalLiabilities, netWorth } = getFilteredAndCalculatedValues(activePerson));
+        assets = assets.filter(a => a.owner === activePerson || a.owner === 'Fælles');
+        liabilities = liabilities.filter(l => l.owner === activePerson || l.owner === 'Fælles');
+    }
+    
+    const projectedData = calculateProjectedValues(economyState.projectionDate, assets, liabilities);
     
     const monthDisplay = economyState.projectionDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     const monthNavigatorHTML = `
@@ -426,14 +482,14 @@ function renderAssetsView(container) {
         </div>
     `;
 
-    const assetsByType = assets.reduce((acc, asset) => {
+    const assetsByType = projectedData.assets.reduce((acc, asset) => {
         const type = asset.type || 'Andet';
         if (!acc[type]) acc[type] = [];
         acc[type].push(asset);
         return acc;
     }, {});
 
-    const liabilitiesByType = liabilities.reduce((acc, liability) => {
+    const liabilitiesByType = projectedData.liabilities.reduce((acc, liability) => {
         const type = liability.type || 'Andet';
         if (!acc[type]) acc[type] = [];
         acc[type].push(liability);
@@ -446,6 +502,7 @@ function renderAssetsView(container) {
             <div>
                 <h3>Aktiver & Gæld</h3>
                 <p>Et overblik over din nettoformue.</p>
+                ${renderPersonTabs('assets')}
             </div>
             ${monthNavigatorHTML}
             <div class="assets-summary">
@@ -483,15 +540,20 @@ function createAssetCard(asset, allLiabilities) {
         .map(id => allLiabilities.find(l => l.id === id))
         .filter(Boolean);
     
+    let value = asset.value;
+    if (economyState.activePerson.assets !== 'faelles' && asset.owner === 'Fælles') {
+        value /= 2;
+    }
+    
     const totalDebtOnAsset = linkedLiabilities.reduce((sum, l) => sum + l.currentBalance, 0);
-    const netValue = asset.value - totalDebtOnAsset;
-    const debtRatio = asset.value > 0 ? (totalDebtOnAsset / asset.value) * 100 : 0;
+    const netValue = value - totalDebtOnAsset;
+    const debtRatio = value > 0 ? (totalDebtOnAsset / value) * 100 : 0;
 
     return `
         <div class="asset-card" data-id="${asset.id}">
             <div class="asset-card-header">
-                <span class="asset-name">${asset.name}</span>
-                <span class="asset-value">${toDKK(asset.value)} kr.</span>
+                <span class="asset-name">${asset.name} ${asset.owner !== 'Fælles' ? `(${asset.owner})` : ''}</span>
+                <span class="asset-value">${toDKK(value)} kr.</span>
             </div>
             <div class="asset-card-body">
                 <div class="net-value">
@@ -506,7 +568,14 @@ function createAssetCard(asset, allLiabilities) {
     `;
 }
 function createLiabilityCard(liability) {
-    const { originalPrincipal = 0, currentBalance = 0, monthlyPayment = 0, interestRate = 0 } = liability;
+    let { originalPrincipal = 0, currentBalance = 0, monthlyPayment = 0, interestRate = 0 } = liability;
+    
+    if (economyState.activePerson.assets !== 'faelles' && liability.owner === 'Fælles') {
+        originalPrincipal /= 2;
+        currentBalance /= 2;
+        monthlyPayment /= 2;
+    }
+
     const paidAmount = originalPrincipal - currentBalance;
     const progress = originalPrincipal > 0 ? (paidAmount / originalPrincipal) * 100 : 0;
 
@@ -526,10 +595,10 @@ function createLiabilityCard(liability) {
     return `
         <div class="liability-card" data-id="${liability.id}">
             <div class="liability-card-header">
-                <span class="liability-name">${liability.name}</span>
+                <span class="liability-name">${liability.name} ${liability.owner !== 'Fælles' ? `(${liability.owner})` : ''}</span>
                 <span class="liability-balance">${toDKK(currentBalance)} kr.</span>
             </div>
-            <div class="asset-card-body"> <!-- Genbruger styling -->
+            <div class="asset-card-body">
                 <div class="net-value">
                     <span>Afbetalt</span>
                     <strong>${toDKK(paidAmount)} kr.</strong>
@@ -565,6 +634,7 @@ function openAssetModal(assetId = null) {
     }
     
     populateReferenceDropdown(document.getElementById('asset-type'), appState.references.assetTypes, 'Vælg type...', asset?.type);
+    populateOwnerDropdown(document.getElementById('asset-owner'), asset?.owner);
     populateLiabilitiesDropdown(document.getElementById('asset-linked-liability'), 'Tilknyt gæld...', asset?.linkedLiabilityIds);
     modal.classList.remove('hidden');
 }
@@ -577,6 +647,7 @@ async function handleSaveAsset(e) {
     const assetData = {
         name: document.getElementById('asset-name').value.trim(),
         type: document.getElementById('asset-type').value,
+        owner: document.getElementById('asset-owner').value,
         value: parseFloat(document.getElementById('asset-value').value),
         monthlyContribution: parseFloat(document.getElementById('asset-monthly-contribution').value) || null,
         annualGrowthRate: parseFloat(document.getElementById('asset-annual-growth-rate').value) || null,
@@ -640,6 +711,7 @@ function openLiabilityModal(liabilityId = null) {
     }
     
     populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
+    populateOwnerDropdown(document.getElementById('liability-owner'), liability?.owner);
     
     handleLoanCalculatorChange({ target: form.querySelector('input') });
     
@@ -653,6 +725,7 @@ async function handleSaveLiability(e) {
     const liabilityData = {
         name: document.getElementById('liability-name').value.trim(),
         type: document.getElementById('liability-type').value,
+        owner: document.getElementById('liability-owner').value,
         originalPrincipal: parseFloat(document.getElementById('liability-original-principal').value) || null,
         startDate: document.getElementById('liability-start-date').value || null,
         currentBalance: parseFloat(document.getElementById('liability-current-balance').value),
@@ -729,14 +802,14 @@ function populateLiabilitiesDropdown(selectElement, placeholder, currentValues) 
         });
     }
 }
-function calculateProjectedValues(targetDate) {
+function calculateProjectedValues(targetDate, assets, liabilities) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
 
-    let projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || []));
-    let projectedAssets = JSON.parse(JSON.stringify(appState.assets || []));
+    let projectedLiabilities = JSON.parse(JSON.stringify(liabilities || []));
+    let projectedAssets = JSON.parse(JSON.stringify(assets || []));
 
     const monthsDiff = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
     const direction = monthsDiff >= 0 ? 1 : -1;
@@ -784,6 +857,11 @@ function calculateProjectedValues(targetDate) {
 // =================================================================
 // HJÆLPEFUNKTIONER (f.eks. til dropdowns)
 // =================================================================
+
+function populateOwnerDropdown(select, val) {
+    const owners = ['Fælles', ...(appState.references.householdMembers || [])];
+    populateReferenceDropdown(select, owners, 'Vælg ejer...', val)
+}
 
 function populateMainCategoryDropdown(select, val) {
     const mainCategories = (appState.references.budgetCategories || []).map(cat => (typeof cat === 'string' ? cat : cat.name));
