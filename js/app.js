@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         assets: [],
         liabilities: [],
         economySettings: {},
-        expenses: [],
+        transactions: [], // NYT: Til at holde variable transaktioner
         fixedExpenses: [],
-        budgets: [], // ÆNDRET: Nu et array, ligesom recipes
+        budgets: [],
         events: [],
         plants: [],
         projects: [],
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
             events: 'events',
-            expenses: 'expenses',
+            transactions: 'transactions', // NYT
             fixed_expenses: 'fixedExpenses',
             assets: 'assets',
             liabilities: 'liabilities',
