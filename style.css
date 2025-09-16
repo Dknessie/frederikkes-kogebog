@@ -18,7 +18,13 @@
     --status-yellow: #FFC107;
     --status-red: #F44336;
     --deleted-color: #757575;
-    --favorite-yellow: #FFD700; /* NY VARIABEL */
+    --favorite-yellow: #FFD700;
+
+    /* NYT: Økonomi Tema */
+    --economy-primary: #2c3e50; /* Mørk skiferblå */
+    --economy-secondary: #34495e; /* Lidt lysere blå */
+    --economy-accent: #1abc9c; /* Turkis accent */
+    --economy-bg: #ecf0f1; /* Meget lys gråblå */
 
     /* Typografi */
     --heading-font: 'Playfair Display', serif;
@@ -276,7 +282,7 @@ header {
 }
 #economy-month-navigator h3, .economy-month-navigator h4 {
     margin: 0;
-    color: var(--text-color);
+    color: var(--economy-secondary);
     font-family: var(--body-font);
     font-weight: 700;
     min-width: 200px;
@@ -285,7 +291,7 @@ header {
 }
 #economy-person-filter {
     display: flex;
-    background-color: var(--secondary-color);
+    background-color: var(--economy-bg);
     border-radius: var(--border-radius);
     padding: var(--spacing-xs);
 }
@@ -296,17 +302,19 @@ header {
     border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
-    color: #777;
+    color: var(--economy-secondary);
     transition: all 0.2s ease;
 }
 .person-tab.active {
     background-color: var(--white-color);
-    color: var(--primary-color);
+    color: var(--economy-primary);
     box-shadow: var(--shadow);
 }
-.economy-header-actions {
-    display: flex;
-    gap: var(--spacing-m);
+.economy-header-actions .btn-primary {
+    background-color: var(--economy-primary);
+}
+.economy-header-actions .btn-primary:hover {
+    background-color: var(--economy-secondary);
 }
 
 #economy-summary-cards {
@@ -337,8 +345,8 @@ header {
 .summary-card.income p { color: var(--status-green); }
 .summary-card.expense { border-color: var(--status-red); }
 .summary-card.expense p { color: var(--status-red); }
-.summary-card.disposable { border-color: var(--accent-color); }
-.summary-card.disposable p { color: var(--accent-color); }
+.summary-card.disposable { border-color: var(--economy-primary); }
+.summary-card.disposable p { color: var(--economy-primary); }
 
 
 #budget-details-container {
@@ -358,16 +366,17 @@ header {
     justify-content: space-between;
     align-items: baseline;
     padding-bottom: var(--spacing-m);
-    border-bottom: 2px solid var(--secondary-color);
+    border-bottom: 2px solid var(--economy-bg);
     margin-bottom: var(--spacing-m);
 }
 .category-header h4 {
     margin: 0;
-    color: var(--primary-color);
+    color: var(--economy-primary);
 }
 .category-expense-total {
     font-weight: 700;
     font-size: 1.1rem;
+    color: var(--economy-secondary);
 }
 .budget-items-table {
     display: flex;
@@ -385,15 +394,15 @@ header {
     cursor: pointer;
 }
 .budget-item-row:hover {
-    background-color: var(--secondary-color);
+    background-color: var(--economy-bg);
 }
 .budget-item-row .item-description {
     font-weight: 600;
 }
 .budget-item-row .item-person {
     font-size: var(--small-font-size);
-    color: #888;
-    background-color: #f5f5f5;
+    color: var(--economy-secondary);
+    background-color: var(--economy-bg);
     padding: 2px 6px;
     border-radius: 4px;
 }
@@ -449,10 +458,11 @@ header {
 }
 .assets-header h3 {
     margin: 0;
+    color: var(--economy-primary);
 }
 .assets-header p {
     margin: 0;
-    color: #666;
+    color: var(--economy-secondary);
 }
 .assets-summary {
     text-align: right;
@@ -460,7 +470,7 @@ header {
     color: #555;
 }
 .assets-summary strong {
-    color: var(--text-color);
+    color: var(--economy-primary);
     font-size: 1.2em;
 }
 
@@ -484,6 +494,7 @@ header {
     margin: 0;
     font-family: var(--body-font);
     font-weight: 700;
+    color: var(--economy-secondary);
 }
 
 .asset-column h5, .liability-column h5 {
@@ -529,18 +540,18 @@ header {
     font-size: var(--small-font-size);
 }
 .net-value strong {
-    color: var(--accent-color);
+    color: var(--economy-accent);
 }
 .progress-bar-container {
     height: 8px;
-    background-color: #e9ecef;
+    background-color: var(--economy-bg);
     border-radius: 4px;
     margin-top: var(--spacing-s);
     overflow: hidden;
 }
 .progress-bar-fill {
     height: 100%;
-    background-color: var(--accent-color);
+    background-color: var(--economy-accent);
     border-radius: 4px;
 }
 .liability-card-footer {
@@ -549,7 +560,7 @@ header {
     flex-wrap: wrap;
     gap: var(--spacing-s);
     font-size: var(--small-font-size);
-    color: #777;
+    color: var(--economy-secondary);
     margin-top: var(--spacing-s);
     padding-top: var(--spacing-s);
     border-top: 1px solid var(--border-color);
@@ -2349,13 +2360,61 @@ details:not([open]) .item-table-container {
     margin-bottom: var(--spacing-m);
 }
 
-.wishlist-page-grid .wishlist-item-card {
-    background-color: var(--hjem-widget-bg);
-    border-color: var(--hjem-widget-border);
+/* RETTELSE: Styling for billeder på Ønskeliste-siden */
+.wishlist-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--spacing-l);
 }
-.wishlist-page-grid .wishlist-item-price {
+.wishlist-item-card {
+    background-color: var(--hjem-widget-bg);
+    border: 1px solid var(--hjem-widget-border);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+.wishlist-item-image-wrapper {
+    height: 160px;
+    background-color: #f0f0f0;
+}
+.wishlist-item-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
+}
+.wishlist-item-content {
+    padding: var(--spacing-m);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.wishlist-item-title {
+    font-weight: 600;
+    color: var(--hjem-header-text);
+}
+.wishlist-item-subtitle {
+    font-size: var(--small-font-size);
+    color: var(--hjem-subheader-text);
+    margin-bottom: var(--spacing-s);
+}
+.wishlist-item-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.wishlist-item-price {
+    font-weight: 700;
     color: var(--hjem-primary-green);
 }
+.wishlist-item-actions .btn-icon {
+    width: 32px;
+    height: 32px;
+}
+
 
 /* OPDATERING: Nyt tema til plante-modal */
 .plant-modal-theme {
