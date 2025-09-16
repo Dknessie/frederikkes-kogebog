@@ -28,9 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
         assets: [],
         liabilities: [],
         economySettings: {},
-        transactions: [], // NYT: Til at holde variable transaktioner
         fixedExpenses: [],
-        budgets: [],
         events: [],
         plants: [],
         projects: [],
@@ -188,8 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         homeInventoryModal: document.getElementById('home-inventory-edit-modal'),
         homeInventoryForm: document.getElementById('home-inventory-form'),
         deleteHomeInventoryBtn: document.getElementById('delete-home-inventory-btn'),
-
-        addExpenseBtn: document.querySelector('[data-action="add-expense"]'),
     };
 
     function computeDerivedShoppingLists() {
@@ -299,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
             inventory_batches: 'inventoryBatches',
             recipes: 'recipes',
             events: 'events',
-            transactions: 'transactions', // NYT
             fixed_expenses: 'fixedExpenses',
             assets: 'assets',
             liabilities: 'liabilities',
@@ -307,8 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             projects: 'projects',
             reminders: 'reminders',
             maintenance: 'maintenance',
-            home_inventory: 'home_inventory',
-            budgets: 'budgets'
+            home_inventory: 'home_inventory'
         };
 
         for (const [coll, stateKey] of Object.entries(collections)) {
@@ -350,8 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         elements.inventoryReorderAssistantBtn, 
                         elements.cookbookAddRecipeBtn,
                         elements.hubGenerateGroceriesBtn,
-                        elements.inventoryImpulsePurchaseBtn,
-                        elements.addExpenseBtn
+                        elements.inventoryImpulsePurchaseBtn
                     ];
                      buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 }
@@ -387,8 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.inventoryReorderAssistantBtn, 
             elements.cookbookAddRecipeBtn,
             elements.hubGenerateGroceriesBtn,
-            elements.inventoryImpulsePurchaseBtn,
-            elements.addExpenseBtn
+            elements.inventoryImpulsePurchaseBtn
         ];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
     }
@@ -427,3 +419,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
