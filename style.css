@@ -441,8 +441,10 @@ header {
     flex-wrap: wrap;
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-l);
-    padding-bottom: var(--spacing-l);
-    border-bottom: 2px solid var(--border-color);
+    padding: var(--spacing-l); /* Rettelse: tilføjet padding */
+    background-color: var(--white-color); /* Rettelse: tilføjet baggrund */
+    border-radius: var(--card-border-radius); /* Rettelse: tilføjet radius */
+    box-shadow: var(--strong-shadow); /* Rettelse: tilføjet skygge */
 }
 .assets-header h3 {
     margin: 0;
@@ -465,6 +467,10 @@ header {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-xl);
+    background-color: var(--white-color); /* Rettelse: tilføjet baggrund */
+    padding: var(--spacing-l); /* Rettelse: tilføjet padding */
+    border-radius: var(--card-border-radius); /* Rettelse: tilføjet radius */
+    box-shadow: var(--shadow); /* Rettelse: tilføjet skygge */
 }
 
 .column-header {
@@ -490,7 +496,7 @@ header {
 }
 
 .asset-card, .liability-card {
-    background: var(--white-color);
+    background: var(--light-bg-color); /* Rettelse: lysere baggrund for kontrast */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: var(--spacing-m);
