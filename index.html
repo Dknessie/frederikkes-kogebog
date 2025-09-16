@@ -112,7 +112,6 @@
                             <h3>Hurtig Adgang</h3>
                             <div class="quick-actions-container">
                                 <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
-                                <a href="#oekonomi" data-action="add-expense" class="quick-action-btn" disabled><i class="fas fa-receipt"></i><span>Registrer Køb</span></a>
                                 <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
                             </div>
                         </div>
@@ -538,44 +537,6 @@
         </div>
     </div>
 
-    <div id="add-expense-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="add-expense-modal-title">Registrer Køb</h3>
-            <form id="add-expense-form">
-                <div class="input-group">
-                    <label for="add-expense-amount">Beløb (kr.)</label>
-                    <input type="number" id="add-expense-amount" step="0.01" required>
-                </div>
-                <div class="input-group">
-                    <label for="add-expense-date">Dato</label>
-                    <input type="date" id="add-expense-date" required>
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="add-expense-main-category">Hovedkategori</label>
-                        <select id="add-expense-main-category" required></select>
-                    </div>
-                    <div class="input-group">
-                        <label for="add-expense-sub-category">Underkategori</label>
-                        <select id="add-expense-sub-category"></select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="add-expense-description">Beskrivelse</label>
-                    <input type="text" id="add-expense-description" required>
-                </div>
-                <div class="input-group-inline">
-                    <input type="checkbox" id="add-expense-is-impulse" checked>
-                    <label for="add-expense-is-impulse">Tæl som variabel/impuls udgift</label>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem Udgift</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- NYT: Modals for Aktiver og Gæld -->
     <div id="asset-modal" class="modal-overlay hidden">
         <div class="modal-content small">
@@ -744,55 +705,6 @@
         </div>
     </div>
     
-    <div id="transaction-edit-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Rediger Postering</h3>
-            <form id="transaction-edit-form">
-                <input type="hidden" id="transaction-edit-id">
-                <div class="input-group">
-                    <label for="transaction-edit-description">Beskrivelse</label>
-                    <input type="text" id="transaction-edit-description" required>
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="transaction-edit-amount">Beløb (kr.)</label>
-                        <input type="number" id="transaction-edit-amount" step="0.01" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="transaction-edit-type">Type</label>
-                        <select id="transaction-edit-type" required>
-                            <option value="expense">Udgift</option>
-                            <option value="income">Indkomst</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="transaction-edit-category">Overkategori</label>
-                        <select id="transaction-edit-category" required></select>
-                    </div>
-                     <div class="input-group">
-                        <label for="transaction-edit-sub-category">Underkategori</label>
-                        <select id="transaction-edit-sub-category"></select>
-                    </div>
-                    <div class="input-group">
-                        <label for="transaction-edit-person">Person</label>
-                        <select id="transaction-edit-person" required></select>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="transaction-edit-date">Dato</label>
-                    <input type="date" id="transaction-edit-date" required>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="delete-transaction-btn" class="btn btn-danger">Slet</button>
-                    <button type="submit" class="btn btn-primary">Gem Ændringer</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Other Modals -->
     <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content large">
