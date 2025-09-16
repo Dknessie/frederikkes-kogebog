@@ -548,9 +548,15 @@
                     <label for="asset-name">Navn på aktiv</label>
                     <input type="text" id="asset-name" required placeholder="F.eks. Andelsbolig, Volvo V60">
                 </div>
-                <div class="input-group">
-                    <label for="asset-type">Type</label>
-                    <select id="asset-type" required></select>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="asset-type">Type</label>
+                        <select id="asset-type" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="asset-owner">Ejer</label>
+                        <select id="asset-owner" required></select>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="asset-value">Nuværende Værdi (kr.)</label>
@@ -595,16 +601,19 @@
                         <select id="liability-type" required></select>
                     </div>
                 </div>
-
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="liability-original-principal">Oprindeligt Lånbeløb (kr.)</label>
                         <input type="number" id="liability-original-principal" step="any">
                     </div>
                     <div class="input-group">
-                        <label for="liability-start-date">Startdato</label>
-                        <input type="date" id="liability-start-date">
+                        <label for="liability-owner">Ejer</label>
+                        <select id="liability-owner" required></select>
                     </div>
+                </div>
+                <div class="input-group">
+                    <label for="liability-start-date">Startdato</label>
+                    <input type="date" id="liability-start-date">
                 </div>
                 
                 <hr>
