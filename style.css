@@ -258,12 +258,20 @@ header {
 }
 .tab-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-s);
     margin-bottom: var(--spacing-l);
 }
 .tab-header h3 {
     margin: 0;
+}
+.tab-header p {
+    margin: 0;
+    color: #666;
+}
+.tab-header .btn {
+    align-self: flex-end;
 }
 .table-wrapper {
     width: 100%;
@@ -299,66 +307,121 @@ header {
 .currency { text-align: right; }
 
 /* =================================================================
-   NYT: ØKONOMI NULSUMSBUDGET
+   NYT: ØKONOMI DASHBOARD
    ================================================================= */
-.nulsums-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.economy-dashboard-header {
     margin-bottom: var(--spacing-l);
 }
-.nulsums-header h3 {
+.economy-dashboard-header h3 {
+    font-family: var(--body-font);
+    font-weight: 700;
+    color: var(--text-color);
     margin: 0;
 }
-.nulsums-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--spacing-l);
+.economy-dashboard-header p {
+    color: #666;
 }
-.nulsums-card {
+.economy-dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-l);
+    align-items: flex-start;
+}
+.economy-widget-chart {
     background-color: var(--white-color);
     border-radius: var(--card-border-radius);
     padding: var(--spacing-l);
     box-shadow: var(--shadow);
 }
-.nulsums-card.highlight {
-    background-color: var(--secondary-color);
-    border: 1px solid var(--primary-color);
-}
-.nulsums-card h4 {
+.economy-widget-chart h4 {
     margin-top: 0;
+}
+#spending-chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 350px;
+    position: relative;
+}
+.chart-tooltip {
+    position: fixed;
+    background-color: rgba(0,0,0,0.8);
+    color: white;
+    padding: var(--spacing-s) var(--spacing-m);
+    border-radius: var(--border-radius);
+    font-size: var(--small-font-size);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2100;
+}
+
+.economy-sidebar-widget {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    padding: var(--spacing-l);
+    box-shadow: var(--shadow);
+}
+.economy-sidebar-widget h5 {
+    font-family: var(--body-font);
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: var(--spacing-l);
+}
+.overview-section {
+    margin-bottom: var(--spacing-l);
+}
+.overview-section h4 {
+    font-size: 1.1rem;
     font-family: var(--body-font);
     font-weight: 600;
+    margin-top: 0;
+    margin-bottom: var(--spacing-s);
+    color: var(--text-color);
+}
+.overview-category h5 {
     font-size: 1rem;
-    color: #666;
+    font-weight: 600;
+    margin-top: var(--spacing-m);
+    padding-top: var(--spacing-m);
+    border-top: 1px solid var(--border-color);
+    color: var(--primary-color);
 }
-.nulsums-card .amount {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 var(--spacing-m) 0;
-}
-.nulsums-card .subtitle {
-    font-size: 0.9rem;
-    color: #777;
-    margin-top: -0.5rem;
-}
-.nulsums-card ul {
-    list-style: none;
-    padding: 0;
-    margin: var(--spacing-m) 0 0 0;
-}
-.nulsums-card li {
+.overview-item {
     display: flex;
     justify-content: space-between;
-    font-size: 0.9rem;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-s) var(--spacing-m);
+    border-radius: var(--border-radius);
 }
-.nulsums-card li:last-child {
-    border-bottom: none;
+.overview-item:nth-child(even) {
+    background-color: var(--light-bg-color);
 }
-.nulsums-card li span:last-child {
+.overview-subtotal {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--spacing-s) var(--spacing-m);
+    font-style: italic;
+    color: #555;
     font-weight: 600;
+}
+.overview-total {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 1.1em;
+    padding: var(--spacing-m) 0;
+    margin-top: var(--spacing-s);
+    border-top: 2px solid var(--text-color);
+}
+.overview-final {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 1.3em;
+    padding: var(--spacing-m);
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    margin-top: var(--spacing-l);
 }
 
 /* =================================================================
@@ -2328,458 +2391,6 @@ details:not([open]) .item-table-container {
 }
 
 @media (max-width: 992px) {
-    .desktop-nav {
-        display: none;
-    }
-    .mobile-tab-bar {
-        display: flex;
-    }
-    .dashboard-layout {
-        grid-template-columns: 1fr;
-    }
-    .page {
-        padding: var(--spacing-m);
-    }
-    #oekonomi.page {
-        padding: var(--spacing-m);
-    }
-    header {
-        padding: 0 var(--spacing-m);
-    }
-    .inventory-filters {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    }
-    #inventory .actions-bar {
-        display: flex;
-    }
-    #add-fixed-expense-form {
-        grid-template-columns: 1fr;
-    }
-    .asset-liability-layout {
-        grid-template-columns: 1fr;
-    }
-    .economy-dashboard-layout {
-        grid-template-columns: 1fr;
-        grid-template-areas:
-            "header"
-            "main"
-            "sidebar";
-    }
-    .economy-summary-grid {
-        grid-template-columns: 1fr;
-    }
-    .hjemmet-layout {
-        grid-template-columns: 1fr;
-    }
-    .hjemmet-sidebar {
-        position: static;
-    }
-    /* Kalender responsive */
-    .hub-main-layout {
-        grid-template-columns: 1fr;
-    }
-    .sidebar-section {
-        position: static;
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    }
-}
-
-@media (max-width: 768px) {
-    .read-view-main-content {
-        grid-template-columns: 1fr;
-    }
-    .form-grid-3-col, .form-grid-2-col {
-        grid-template-columns: 1fr;
-    }
-    .recipe-actions-bar, #inventory .actions-bar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--spacing-m);
-    }
-
-    .modal-content {
-        padding: var(--spacing-m);
-        max-height: 85vh;
-        margin-top: 5vh;
-        margin-bottom: 5vh;
-    }
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-    .image-upload-container img {
-        height: 150px;
-    }
-    .inventory-filters {
-        grid-template-columns: 1fr;
-    }
-    .project-image-container {
-        grid-template-columns: 1fr;
-    }
-    #add-calendar-event-modal .quick-actions-container {
-        grid-template-columns: 1fr;
-    }
-    .expense-split-row {
-        grid-template-columns: 1fr;
-    }
-    .timeline-grid {
-        grid-template-columns: 1fr;
-    }
-    .savings-dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-    /* Kalender responsive */
-    .meal-slots-container {
-        grid-template-columns: 1fr;
-    }
-}
-/* =================================================================
-   NYT: Referencer Side Layout
-   ================================================================= */
-
-.references-page-layout {
-    display: grid;
-    grid-template-columns: 260px minmax(0, 1fr);
-    gap: var(--spacing-xl);
-    align-items: flex-start;
-}
-
-.references-sidebar {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-m);
-    box-shadow: var(--shadow);
-    position: sticky;
-    top: calc(65px + var(--spacing-l)); /* Header height + page padding */
-}
-
-.references-nav-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-s);
-}
-
-.references-nav-link {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    padding: var(--spacing-m);
-    border-radius: var(--border-radius);
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.references-nav-link:hover {
-    background-color: var(--secondary-color);
-}
-
-.references-nav-link.active {
-    background-color: var(--primary-color);
-    color: var(--white-color);
-}
-
-.references-content-area .reference-category-content {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-l);
-    box-shadow: var(--shadow);
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-/* Genbrug af eksisterende reference-card styling */
-.reference-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1;
-}
-.reference-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.reference-item:last-child {
-    border-bottom: none;
-}
-.reference-actions {
-    display: flex;
-    align-items: center;
-}
-.edit-container {
-    display: flex;
-    flex-grow: 1;
-    align-items: center;
-    gap: var(--spacing-s);
-}
-.edit-reference-input {
-    flex-grow: 1;
-    padding: var(--spacing-s);
-    border: 1px solid var(--primary-color);
-    border-radius: var(--border-radius);
-}
-.add-reference-form {
-    display: flex;
-    gap: var(--spacing-s);
-    margin-top: var(--spacing-m);
-    border-top: 1px solid var(--border-color);
-    padding-top: var(--spacing-m);
-}
-.add-reference-form .input-group {
-    flex-grow: 1;
-    margin-bottom: 0;
-}
-.category-item {
-    display: flex;
-    flex-direction: column;
-    padding: var(--spacing-s) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: bold;
-    width: 100%;
-}
-.subcategory-list {
-    list-style: none;
-    padding-left: var(--spacing-l);
-    margin-top: var(--spacing-s);
-    width: 100%;
-}
-.subcategory-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-xs) 0;
-}
-.add-subcategory-form {
-    display: flex;
-    gap: var(--spacing-s);
-    margin-top: var(--spacing-s);
-    padding-left: var(--spacing-l);
-}
-
-/* Responsive justering for det nye layout */
-@media (max-width: 992px) {
-    .references-page-layout {
-        grid-template-columns: 1fr;
-    }
-    .references-sidebar {
-        position: static;
-        margin-bottom: var(--spacing-l);
-    }
-    .references-nav-list {
-        flex-direction: row;
-        flex-wrap: wrap;
-    }
-}
-
-.wishlist-page-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--spacing-l);
-}
-
-.wishlist-item-card {
-    background-color: var(--hjem-widget-bg);
-    border: 1px solid var(--hjem-widget-border);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.wishlist-item-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--strong-shadow);
-}
-
-.wishlist-item-card a {
-    text-decoration: none;
-    color: inherit;
-    display: flex; /* Gør hele kortet til et flex-container */
-    flex-direction: column;
-    height: 100%;
-}
-
-.wishlist-item-image-wrapper {
-    position: relative;
-    width: 100%;
-    padding-top: 75%; /* Aspect ratio 4:3 */
-    background-color: #f3f4f6;
-    flex-shrink: 0;
-}
-
-.wishlist-item-image {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.wishlist-item-content {
-    padding: var(--spacing-m);
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-}
-
-.wishlist-item-title {
-    font-weight: 600;
-    color: var(--hjem-header-text);
-    margin-bottom: var(--spacing-s);
-}
-
-.wishlist-item-subtitle {
-    font-size: 0.875rem;
-    color: var(--hjem-subheader-text);
-    margin-bottom: var(--spacing-m);
-}
-
-.wishlist-item-footer {
-    margin-top: auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: var(--spacing-s);
-}
-
-.wishlist-item-price {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--hjem-primary-green);
-}
-
-.wishlist-item-actions {
-    display: flex;
-    gap: var(--spacing-s);
-}
-
-.wishlist-item-actions .btn-icon {
-    color: #9ca3af;
-}
-.wishlist-item-actions .btn-icon:hover {
-    color: var(--primary-color);
-}
-
-/* Forbedret visning af underkategorier i forbrugsoversigt */
-.spending-categories-summary .category-name {
-    white-space: normal; /* Tillad ombrydning */
-    word-break: break-word; /* Bryd lange ord om */
-}
-
-/* Styling for den nye Opsparing vs. Ønskeliste widget */
-.savings-vs-wishlist-summary {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--small-font-size);
-    margin-top: var(--spacing-s);
-    color: var(--hjem-subheader-text);
-}
-
-.savings-progress-bar {
-    width: 100%;
-    height: 12px;
-    background-color: var(--hjem-widget-border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: var(--spacing-m);
-}
-
-.savings-progress-bar-inner {
-    height: 100%;
-    background-color: var(--hjem-primary-green);
-    border-radius: 6px;
-    transition: width 0.5s ease-in-out;
-}
-
-/* Justering af Opsparingsmål widget */
-#savings-goal-summary strong {
-    color: var(--hjem-header-text);
-    font-size: 1.1em;
-}
-
-/* Styling for sorteringsikoner i sidebar widget */
-.economy-sidebar-widget .widget-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-m);
-}
-.economy-sidebar-widget .widget-header h5 {
-    margin: 0;
-}
-.sort-controls {
-    display: flex;
-    gap: var(--spacing-s);
-}
-.sort-controls .btn-icon {
-    font-size: 1rem;
-    color: #ccc;
-    transition: color 0.2s ease;
-}
-.sort-controls .btn-icon:hover,
-.sort-controls .btn-icon.active {
-    color: var(--primary-color);
-}
-
-
-/* Forbedret visning af underkategorier i forbrugsoversigt */
-.spending-categories-summary .category-name {
-    white-space: normal;
-    word-break: break-word;
-}
-
-/* Styling for den nye Opsparing vs. Ønskeliste widget */
-.savings-vs-wishlist-summary {
-    display: flex;
-    justify-content: space-between;
-    font-size: var(--small-font-size);
-    margin-top: var(--spacing-s);
-    color: var(--hjem-subheader-text);
-}
-
-.savings-progress-bar {
-    width: 100%;
-    height: 12px;
-    background-color: var(--hjem-widget-border);
-    border-radius: 6px;
-    overflow: hidden;
-    margin-top: var(--spacing-m);
-}
-
-.savings-progress-bar-inner {
-    height: 100%;
-    background-color: var(--hjem-primary-green);
-    border-radius: 6px;
-    transition: width 0.5s ease-in-out;
-}
-
-/* Justering af Opsparingsmål widget */
-#savings-goal-summary strong {
-    color: var(--hjem-header-text);
-    font-size: 1.1em;
-}
-@media (max-width: 1200px) {
-    .hub-main-layout {
-        grid-template-columns: 1.8fr 1fr;
-    }
-}
-
-@media (max-width: 992px) {
     .cookbook-layout {
         grid-template-columns: 1fr;
     }
@@ -2809,6 +2420,9 @@ details:not([open]) .item-table-container {
         grid-template-columns: 1fr;
     }
     .timeline-grid {
+        grid-template-columns: 1fr;
+    }
+    .economy-dashboard-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -3077,3 +2691,4 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
