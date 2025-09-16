@@ -185,6 +185,7 @@ function renderBudgetView() {
         sharedExpensesTitle = 'Overførsel til Fælles';
     }
 
+
     const categories = [...new Set(groupedExpenses.expenses.map(item => item.mainCategory))].sort();
 
     container.innerHTML = `
