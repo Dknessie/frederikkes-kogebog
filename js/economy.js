@@ -82,13 +82,13 @@ function handlePageClick(e) {
         case 'budget':
             if (e.target.closest('#budget-prev-month-btn')) {
                 economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() - 1);
-                renderBudgetView();
+                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
             } else if (e.target.closest('#budget-next-month-btn')) {
                 economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() + 1);
-                renderBudgetView();
+                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
             } else if (e.target.closest('.person-tab')) {
                 economyState.currentPerson = e.target.closest('.person-tab').dataset.person;
-                renderBudgetView();
+                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
             } else if (e.target.closest('#add-fixed-expense-btn')) {
                 openFixedExpenseModal();
             } else if (e.target.closest('.budget-item-row[data-id]')) {
@@ -98,10 +98,10 @@ function handlePageClick(e) {
         case 'formue':
              if (e.target.closest('#assets-prev-month-btn')) {
                 economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() - 1);
-                renderAssetsView();
+                renderAssetsView(document.getElementById('economy-content-area')); // Rettelse: Kald renderAssetsView direkte
             } else if (e.target.closest('#assets-next-month-btn')) {
                 economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() + 1);
-                renderAssetsView();
+                renderAssetsView(document.getElementById('economy-content-area')); // Rettelse: Kald renderAssetsView direkte
             } else if (e.target.closest('#add-asset-btn')) {
                 openAssetModal();
             } else if (e.target.closest('#add-liability-btn')) {
@@ -122,7 +122,6 @@ function renderSidebar() {
     const views = [
         { key: 'budget', name: 'Budgetoversigt', icon: 'fa-wallet' },
         { key: 'formue', name: 'Formue', icon: 'fa-chart-line' },
-        { key: 'transaktioner', name: 'Transaktioner', icon: 'fa-receipt' },
     ];
 
     navContainer.innerHTML = views.map(view => `
@@ -139,7 +138,6 @@ function renderView() {
     const contentArea = document.getElementById('economy-content-area');
     if (!contentArea) return;
     
-    // Ryd tidligere indhold for at undgå duplikerede elementer
     contentArea.innerHTML = '';
 
     switch (economyState.currentView) {
@@ -148,9 +146,6 @@ function renderView() {
             break;
         case 'formue':
             renderAssetsView(contentArea);
-            break;
-        case 'transaktioner':
-            contentArea.innerHTML = '<h3>Transaktioner (under udvikling)</h3>';
             break;
         default:
             renderBudgetView(contentArea);
@@ -163,7 +158,6 @@ function renderView() {
 // =================================================================
 
 function renderBudgetView(container) {
-    // Indsæt HTML-strukturen for budgetvisningen
     container.innerHTML = `
         <div class="economy-page-container">
             <header class="economy-header">
@@ -182,16 +176,13 @@ function renderBudgetView(container) {
 
     const monthDisplay = economyState.currentMonth.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     
-    // Beregn data baseret på state
     const { monthlyAverages } = calculateMonthlyAverages(appState.fixedExpenses);
     const filteredData = filterAndGroupExpenses(monthlyAverages, economyState.currentPerson);
     
-    // Beregn totaler for summary cards
     const totalIncome = filteredData.reduce((sum, cat) => sum + cat.income, 0);
     const totalExpense = filteredData.reduce((sum, cat) => sum + cat.expense, 0);
     const disposable = totalIncome - totalExpense;
 
-    // Render de dynamiske dele af HTML
     renderMonthNavigator(container.querySelector('#economy-month-navigator'), monthDisplay);
     renderPersonFilter(container.querySelector('#economy-person-filter'));
     renderSummaryCards(container.querySelector('#economy-summary-cards'), totalIncome, totalExpense, disposable);
@@ -286,7 +277,6 @@ function filterAndGroupExpenses(monthlyAverages, personFilter) {
         itemsToShow = monthlyAverages.filter(item => item.person === personFilter);
     }
 
-    // Konsolidering
     if (personFilter === 'Fælles') {
         const consolidated = {};
         itemsToShow.forEach(item => {
@@ -639,7 +629,7 @@ function openLiabilityModal(liabilityId = null) {
         document.getElementById('liability-name').value = liability.name || '';
         document.getElementById('liability-type').value = liability.type || '';
         document.getElementById('liability-original-principal').value = liability.originalPrincipal || '';
-        document.getElementById('liability-start-date').value = formatDate(liability.startDate);
+        document.getElementById('liability-start-date').value = formatDate(new Date(liability.startDate));
         document.getElementById('liability-current-balance').value = liability.currentBalance || '';
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
         document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
