@@ -12,9 +12,10 @@ let appElements; // Reference til centrale DOM-elementer
 
 // Lokal state for økonomisiden
 const economyState = {
-    currentView: 'budget', // 'budget', 'formue'
-    currentMonth: new Date(), // Holder styr på den viste måned
-    currentPerson: 'Fælles', // 'Fælles', 'Frederikke', 'Daniel'
+    currentView: 'budget', // 'budget' or 'assets'
+    selectedPerson: 'Fælles', // 'Fælles', 'Frederikke', 'Daniel'
+    currentMonth: new Date(),
+    projectionDate: new Date(),
 };
 
 // =================================================================
@@ -29,22 +30,8 @@ export function initEconomy(state, elements) {
     if (pageContainer) {
         pageContainer.addEventListener('click', handlePageClick);
     }
-    
-    const fixedExpenseForm = document.getElementById('fixed-expense-form');
-    if (fixedExpenseForm) {
-        fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
-        const frequencySelect = document.getElementById('fixed-expense-frequency');
-        if(frequencySelect) {
-            frequencySelect.addEventListener('change', (e) => {
-                const paymentMonthGroup = document.getElementById('payment-month-group');
-                paymentMonthGroup.classList.toggle('hidden', e.target.value !== 'yearly');
-            });
-        }
-    }
-    const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
-    if(deleteFixedExpenseBtn) deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
 
-    // Listeners for Aktiver & Gæld
+    // Modals
     const assetForm = document.getElementById('asset-form');
     if (assetForm) assetForm.addEventListener('submit', handleSaveAsset);
     const deleteAssetBtn = document.getElementById('delete-asset-btn');
@@ -57,6 +44,11 @@ export function initEconomy(state, elements) {
     }
     const deleteLiabilityBtn = document.getElementById('delete-liability-btn');
     if (deleteLiabilityBtn) deleteLiabilityBtn.addEventListener('click', handleDeleteLiability);
+    
+    const fixedExpenseForm = document.getElementById('fixed-expense-form');
+    if (fixedExpenseForm) fixedExpenseForm.addEventListener('submit', handleSaveFixedExpense);
+    const deleteFixedExpenseBtn = document.getElementById('delete-fixed-expense-btn');
+    if(deleteFixedExpenseBtn) deleteFixedExpenseBtn.addEventListener('click', handleDeleteFixedExpense);
 }
 
 // =================================================================
@@ -80,37 +72,39 @@ function handlePageClick(e) {
     // Håndter klik baseret på aktiv visning
     switch(economyState.currentView) {
         case 'budget':
-            if (e.target.closest('#budget-prev-month-btn')) {
-                economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() - 1);
-                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
-            } else if (e.target.closest('#budget-next-month-btn')) {
-                economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() + 1);
-                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
-            } else if (e.target.closest('.person-tab')) {
-                economyState.currentPerson = e.target.closest('.person-tab').dataset.person;
-                renderBudgetView(document.getElementById('economy-content-area')); // Rettelse: Kald renderBudgetView direkte
-            } else if (e.target.closest('#add-fixed-expense-btn')) {
+            const personTab = e.target.closest('.person-tab');
+            if(personTab) {
+                economyState.selectedPerson = personTab.dataset.person;
+                renderBudgetView(); // Kun render budget-delen, ikke hele siden
+                return;
+            }
+            if (e.target.closest('#add-fixed-expense-btn')) {
                 openFixedExpenseModal();
-            } else if (e.target.closest('.budget-item-row[data-id]')) {
-                openFixedExpenseModal(e.target.closest('.budget-item-row').dataset.id);
+                return;
+            }
+            const budgetItemRow = e.target.closest('.budget-item-row');
+            if (budgetItemRow) {
+                openFixedExpenseModal(budgetItemRow.dataset.id);
+                return;
             }
             break;
-        case 'formue':
-             if (e.target.closest('#assets-prev-month-btn')) {
-                economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() - 1);
-                renderAssetsView(document.getElementById('economy-content-area')); // Rettelse: Kald renderAssetsView direkte
-            } else if (e.target.closest('#assets-next-month-btn')) {
-                economyState.currentMonth.setMonth(economyState.currentMonth.getMonth() + 1);
-                renderAssetsView(document.getElementById('economy-content-area')); // Rettelse: Kald renderAssetsView direkte
-            } else if (e.target.closest('#add-asset-btn')) {
-                openAssetModal();
-            } else if (e.target.closest('#add-liability-btn')) {
-                openLiabilityModal();
-            } else if (e.target.closest('.asset-card')) {
-                openAssetModal(e.target.closest('.asset-card').dataset.id);
-            } else if (e.target.closest('.liability-card')) {
-                openLiabilityModal(e.target.closest('.liability-card').dataset.id);
+        case 'assets':
+             const assetsPrevMonthBtn = e.target.closest('#assets-prev-month-btn');
+            if (assetsPrevMonthBtn) {
+                economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() - 1);
+                renderView();
+                return;
             }
+            const assetsNextMonthBtn = e.target.closest('#assets-next-month-btn');
+            if (assetsNextMonthBtn) {
+                economyState.projectionDate.setMonth(economyState.projectionDate.getMonth() + 1);
+                renderView();
+                return;
+            }
+            if (e.target.closest('#add-asset-btn')) openAssetModal();
+            else if (e.target.closest('#add-liability-btn')) openLiabilityModal();
+            else if (e.target.closest('.asset-card')) openAssetModal(e.target.closest('.asset-card').dataset.id);
+            else if (e.target.closest('.liability-card')) openLiabilityModal(e.target.closest('.liability-card').dataset.id);
             break;
     }
 }
@@ -121,7 +115,7 @@ function renderSidebar() {
 
     const views = [
         { key: 'budget', name: 'Budgetoversigt', icon: 'fa-wallet' },
-        { key: 'formue', name: 'Formue', icon: 'fa-chart-line' },
+        { key: 'assets', name: 'Formue', icon: 'fa-chart-line' }
     ];
 
     navContainer.innerHTML = views.map(view => `
@@ -133,202 +127,245 @@ function renderSidebar() {
         </li>
     `).join('');
 }
-
 function renderView() {
     const contentArea = document.getElementById('economy-content-area');
     if (!contentArea) return;
-    
-    contentArea.innerHTML = '';
 
     switch (economyState.currentView) {
         case 'budget':
-            renderBudgetView(contentArea);
+            contentArea.innerHTML = `<div id="budget-view-container" class="economy-page-container"></div>`;
+            renderBudgetView();
             break;
-        case 'formue':
-            renderAssetsView(contentArea);
+        case 'assets':
+            contentArea.innerHTML = `<div id="assets-view-container" class="economy-page-container"></div>`;
+            renderAssetsView(document.getElementById('assets-view-container'));
             break;
         default:
-            renderBudgetView(contentArea);
+            contentArea.innerHTML = `<p>Vælg en visning fra menuen.</p>`;
     }
 }
 
-
 // =================================================================
-// BUDGET VISNING
+// NY BUDGETOVERSIGT
 // =================================================================
 
-function renderBudgetView(container) {
-    container.innerHTML = `
-        <div class="economy-page-container">
-            <header class="economy-header">
-                <div id="economy-month-navigator"></div>
-                <div id="economy-person-filter"></div>
-                <div class="economy-header-actions">
-                    <button id="add-fixed-expense-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Fast Post</button>
-                    <button id="add-planned-expense-btn" class="btn btn-secondary" disabled><i class="fas fa-calendar-plus"></i> Planlæg Udgift</button>
-                </div>
-            </header>
-            <div id="economy-summary-cards"></div>
-            <div id="planned-expenses-warning-bar" class="hidden"></div>
-            <main id="budget-details-container"></main>
-        </div>
-    `;
-
-    const monthDisplay = economyState.currentMonth.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
-    
-    const { monthlyAverages } = calculateMonthlyAverages(appState.fixedExpenses);
-    const filteredData = filterAndGroupExpenses(monthlyAverages, economyState.currentPerson);
-    
-    const totalIncome = filteredData.reduce((sum, cat) => sum + cat.income, 0);
-    const totalExpense = filteredData.reduce((sum, cat) => sum + cat.expense, 0);
-    const disposable = totalIncome - totalExpense;
-
-    renderMonthNavigator(container.querySelector('#economy-month-navigator'), monthDisplay);
-    renderPersonFilter(container.querySelector('#economy-person-filter'));
-    renderSummaryCards(container.querySelector('#economy-summary-cards'), totalIncome, totalExpense, disposable);
-    renderBudgetDetails(container.querySelector('#budget-details-container'), filteredData);
-}
-
-function renderMonthNavigator(container, monthDisplay) {
+function renderBudgetView() {
+    const container = document.getElementById('budget-view-container');
     if (!container) return;
-    container.innerHTML = `
-        <button id="budget-prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
-        <h3>${monthDisplay}</h3>
-        <button id="budget-next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
-    `;
-}
 
-function renderPersonFilter(container) {
-    if (!container) return;
-    const persons = ['Fælles', 'Frederikke', 'Daniel'];
-    container.innerHTML = persons.map(p => `
-        <button class="person-tab ${economyState.currentPerson === p ? 'active' : ''}" data-person="${p}">${p}</button>
-    `).join('');
-}
+    const activeFixedExpenses = appState.fixedExpenses || [];
+    const monthlyAverages = calculateMonthlyAverages(activeFixedExpenses);
+    const groupedExpenses = filterAndGroupExpenses(monthlyAverages, economyState.selectedPerson);
 
-function renderSummaryCards(container, income, expense, disposable) {
-    if (!container) return;
+    const totalIncome = groupedExpenses.income.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    const totalExpenses = groupedExpenses.expenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    const disposable = totalIncome - totalExpenses;
+
+    const categories = [...new Set(groupedExpenses.expenses.map(item => item.mainCategory))].sort();
+
     container.innerHTML = `
-        <div class="summary-card income">
-            <h4>Indkomst</h4>
-            <p>${toDKK(income)} kr.</p>
+        <div class="economy-header">
+            <div id="economy-month-navigator">
+                <button class="btn-icon"><i class="fas fa-chevron-left"></i></button>
+                <h3>${economyState.currentMonth.toLocaleString('da-DK', { month: 'long', year: 'numeric' })}</h3>
+                <button class="btn-icon"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div id="economy-person-filter">
+                <button class="person-tab ${economyState.selectedPerson === 'Fælles' ? 'active' : ''}" data-person="Fælles">Fælles</button>
+                <button class="person-tab ${economyState.selectedPerson === 'Frederikke' ? 'active' : ''}" data-person="Frederikke">Frederikke</button>
+                <button class="person-tab ${economyState.selectedPerson === 'Daniel' ? 'active' : ''}" data-person="Daniel">Daniel</button>
+            </div>
+            <div class="economy-header-actions">
+                <button id="add-fixed-expense-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Fast Post</button>
+            </div>
         </div>
-        <div class="summary-card expense">
-            <h4>Udgifter</h4>
-            <p>${toDKK(expense)} kr.</p>
+
+        <div id="economy-summary-cards">
+            <div class="summary-card income"><h4>Total Indkomst</h4><p>${toDKK(totalIncome)} kr.</p></div>
+            <div class="summary-card expense"><h4>Total Udgifter</h4><p>${toDKK(totalExpenses)} kr.</p></div>
+            <div class="summary-card disposable"><h4>Rådighedsbeløb</h4><p>${toDKK(disposable)} kr.</p></div>
         </div>
-        <div class="summary-card disposable">
-            <h4>Rådighedsbeløb</h4>
-            <p>${toDKK(disposable)} kr.</p>
+
+        <div id="budget-details-container">
+            ${categories.map(category => renderCategorySection(category, groupedExpenses.expenses)).join('')}
         </div>
     `;
 }
 
-function renderBudgetDetails(container, groupedData) {
-    if (!container) return;
-    if (groupedData.length === 0) {
-        container.innerHTML = `<p class="empty-state">Ingen poster fundet for den valgte person.</p>`;
-        return;
-    }
+function renderCategorySection(category, allExpenses) {
+    const itemsInCategory = allExpenses.filter(item => item.mainCategory === category);
+    const categoryTotal = itemsInCategory.reduce((sum, item) => sum + item.monthlyAmount, 0);
 
-    container.innerHTML = groupedData.map(category => `
+    return `
         <div class="budget-category-section">
             <div class="category-header">
-                <h4>${category.name}</h4>
-                <div class="category-totals">
-                    <span class="category-expense-total">${toDKK(category.expense)} kr.</span>
-                </div>
+                <h4>${category}</h4>
+                <span class="category-expense-total">-${toDKK(categoryTotal)} kr.</span>
             </div>
             <div class="budget-items-table">
-                ${category.items.map(item => `
+                ${itemsInCategory.map(item => `
                     <div class="budget-item-row" data-id="${item.id}">
                         <span class="item-description">${item.description}</span>
-                        <span class="item-person">${item.persons.join(' & ')}</span>
-                        <span class="item-amount">${toDKK(item.monthlyAmount)} kr.</span>
+                        ${economyState.selectedPerson === 'Fælles' ? `<span class="item-person">${item.person}</span>` : ''}
+                        <span class="item-amount">-${toDKK(item.monthlyAmount)} kr.</span>
                     </div>
                 `).join('')}
             </div>
         </div>
-    `).join('');
+    `;
 }
 
-// =================================================================
-// DATA LOGIK (Budget)
-// =================================================================
-
-function calculateMonthlyAverages(fixedExpenses) {
-    const monthlyAverages = (fixedExpenses || []).map(item => {
+function calculateMonthlyAverages(items) {
+    return items.map(item => {
         let monthlyAmount = item.amount;
-        if (item.frequency === 'yearly') {
-            monthlyAmount = item.amount / 12;
-        } else if (item.frequency === 'quarterly') {
-            monthlyAmount = item.amount / 3;
+        switch (item.frequency) {
+            case 'yearly':
+                monthlyAmount /= 12;
+                break;
+            case 'semi-annually':
+                monthlyAmount /= 6;
+                break;
+            case 'quarterly':
+                monthlyAmount /= 3;
+                break;
+            // 'monthly' is default
         }
         return { ...item, monthlyAmount };
     });
-    return { monthlyAverages };
 }
 
-function filterAndGroupExpenses(monthlyAverages, personFilter) {
-    let itemsToShow = [];
-    if (personFilter === 'Fælles') {
-        itemsToShow = monthlyAverages;
-    } else {
-        itemsToShow = monthlyAverages.filter(item => item.person === personFilter);
+function filterAndGroupExpenses(items, personFilter) {
+    let filtered = items;
+    if (personFilter !== 'Fælles') {
+        filtered = items.filter(item => item.person === personFilter);
     }
 
+    const income = filtered.filter(item => item.type === 'income');
+    let expenses = filtered.filter(item => item.type === 'expense');
+
     if (personFilter === 'Fælles') {
-        const consolidated = {};
-        itemsToShow.forEach(item => {
-            const key = item.description.toLowerCase();
-            if (!consolidated[key]) {
-                consolidated[key] = { ...item, persons: [item.person] };
-            } else {
-                consolidated[key].monthlyAmount += item.monthlyAmount;
-                if (!consolidated[key].persons.includes(item.person)) {
-                    consolidated[key].persons.push(item.person);
+        const consolidatedExpenses = {};
+        expenses.forEach(item => {
+            const key = `${item.description.toLowerCase()}_${item.mainCategory.toLowerCase()}`;
+            if (consolidatedExpenses[key]) {
+                consolidatedExpenses[key].monthlyAmount += item.monthlyAmount;
+                // Append person if not already there
+                if (!consolidatedExpenses[key].person.includes(item.person)) {
+                    consolidatedExpenses[key].person += `, ${item.person}`;
                 }
+            } else {
+                consolidatedExpenses[key] = { ...item };
             }
         });
-        itemsToShow = Object.values(consolidated);
-    } else {
-         itemsToShow = itemsToShow.map(item => ({ ...item, persons: [item.person] }));
+        expenses = Object.values(consolidatedExpenses);
     }
-
-    const groupedByCategory = {};
-    itemsToShow.forEach(item => {
-        const category = item.mainCategory || 'Diverse';
-        if (!groupedByCategory[category]) {
-            groupedByCategory[category] = { name: category, items: [], income: 0, expense: 0 };
-        }
-        groupedByCategory[category].items.push(item);
-        if (item.type === 'income') {
-            groupedByCategory[category].income += item.monthlyAmount;
-        } else {
-            groupedByCategory[category].expense += item.monthlyAmount;
-        }
-    });
-
-    return Object.values(groupedByCategory).sort((a,b) => a.name.localeCompare(b.name));
+    
+    return { income, expenses };
 }
 
+
 // =================================================================
-// FORMUE VISNING (Aktiver & Gæld)
+// FASTE POSTER (MODAL & SAVE LOGIC)
+// =================================================================
+
+function openFixedExpenseModal(id = null) {
+    const modal = document.getElementById('fixed-expense-modal');
+    const form = document.getElementById('fixed-expense-form');
+    form.reset();
+
+    const isEditing = !!id;
+    const item = isEditing ? appState.fixedExpenses.find(i => i.id === id) : null;
+    
+    modal.querySelector('h3').textContent = isEditing ? 'Rediger Fast Post' : 'Ny Fast Post';
+    document.getElementById('fixed-expense-id-edit').value = id || '';
+    document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
+    
+    if(isEditing && item) {
+        document.getElementById('fixed-expense-description').value = item.description;
+        document.getElementById('fixed-expense-amount').value = item.amount;
+        document.getElementById('fixed-expense-type').value = item.type;
+        document.getElementById('fixed-expense-frequency').value = item.frequency || 'monthly';
+        document.getElementById('fixed-expense-payment-month').value = item.paymentMonth || '';
+        document.getElementById('fixed-expense-start-date-edit').value = item.startDate;
+        document.getElementById('fixed-expense-end-date-edit').value = item.endDate || '';
+    } else {
+        document.getElementById('fixed-expense-start-date-edit').value = formatDate(new Date());
+    }
+    
+    populateReferenceDropdown(document.getElementById('fixed-expense-account'), appState.references.accounts, 'Vælg konto...', item?.account);
+    populateReferenceDropdown(document.getElementById('fixed-expense-person'), appState.references.householdMembers, 'Vælg person...', item?.person);
+    
+    const mainCatSelect = document.getElementById('fixed-expense-main-category');
+    populateMainCategoryDropdown(mainCatSelect, item?.mainCategory);
+    mainCatSelect.onchange = () => populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), mainCatSelect.value);
+    populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), item?.mainCategory, item?.subCategory);
+    
+    modal.classList.remove('hidden');
+}
+
+async function handleSaveFixedExpense(e) {
+    e.preventDefault();
+    const id = document.getElementById('fixed-expense-id-edit').value;
+
+    const data = {
+        description: document.getElementById('fixed-expense-description').value,
+        amount: parseFloat(document.getElementById('fixed-expense-amount').value),
+        type: document.getElementById('fixed-expense-type').value,
+        frequency: document.getElementById('fixed-expense-frequency').value,
+        paymentMonth: document.getElementById('fixed-expense-payment-month').value || null,
+        account: document.getElementById('fixed-expense-account').value,
+        person: document.getElementById('fixed-expense-person').value,
+        mainCategory: document.getElementById('fixed-expense-main-category').value,
+        subCategory: document.getElementById('fixed-expense-sub-category').value,
+        startDate: document.getElementById('fixed-expense-start-date-edit').value,
+        endDate: document.getElementById('fixed-expense-end-date-edit').value || null,
+        userId: appState.currentUser.uid
+    };
+
+    try {
+        if(id) {
+            await updateDoc(doc(db, 'fixed_expenses', id), data);
+        } else {
+            await addDoc(collection(db, 'fixed_expenses'), data);
+        }
+        document.getElementById('fixed-expense-modal').classList.add('hidden');
+    } catch(error) {
+        handleError(error, "Kunne ikke gemme fast post.", "saveFixedExpense");
+    }
+}
+
+async function handleDeleteFixedExpense() {
+    const id = document.getElementById('fixed-expense-id-edit').value;
+    if(!id) return;
+    const confirmed = await showNotification({type: 'confirm', title: 'Slet Fast Post', message: 'Er du sikker?'});
+    if(confirmed) {
+        try {
+            await deleteDoc(doc(db, 'fixed_expenses', id));
+            document.getElementById('fixed-expense-modal').classList.add('hidden');
+        } catch(error) {
+            handleError(error, "Kunne ikke slette fast post.", "deleteFixedExpense");
+        }
+    }
+}
+
+
+// =================================================================
+// AKIVER & GÆLD
 // =================================================================
 
 function renderAssetsView(container) {
-    const projectedData = calculateProjectedValues(economyState.currentMonth);
+    const projectedData = calculateProjectedValues(economyState.projectionDate);
     const { assets, liabilities } = projectedData;
 
     const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
     
-    const monthDisplay = economyState.currentMonth.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
+    const monthDisplay = economyState.projectionDate.toLocaleString('da-DK', { month: 'long', year: 'numeric' });
     const monthNavigatorHTML = `
         <div class="economy-month-navigator">
             <button id="assets-prev-month-btn" class="btn-icon"><i class="fas fa-chevron-left"></i></button>
-            <h4 id="assets-current-month-display">${monthDisplay}</h4>
+            <h4>${monthDisplay}</h4>
             <button id="assets-next-month-btn" class="btn-icon"><i class="fas fa-chevron-right"></i></button>
         </div>
     `;
@@ -346,6 +383,7 @@ function renderAssetsView(container) {
         acc[type].push(liability);
         return acc;
     }, {});
+
 
     container.innerHTML = `
         <div class="assets-header">
@@ -384,7 +422,6 @@ function renderAssetsView(container) {
         </div>
     `;
 }
-
 function createAssetCard(asset, allLiabilities) {
     const linkedLiabilities = (asset.linkedLiabilityIds || [])
         .map(id => allLiabilities.find(l => l.id === id))
@@ -412,7 +449,6 @@ function createAssetCard(asset, allLiabilities) {
         </div>
     `;
 }
-
 function createLiabilityCard(liability) {
     const { originalPrincipal = 0, currentBalance = 0, monthlyPayment = 0, interestRate = 0 } = liability;
     const paidAmount = originalPrincipal - currentBalance;
@@ -424,7 +460,7 @@ function createLiabilityCard(liability) {
     const termMonths = calculateTermMonths(currentBalance, liability.interestRate || 0, monthlyPayment);
     let endDateText = 'Ukendt';
     if (termMonths && isFinite(termMonths)) {
-        const endDate = new Date(economyState.currentMonth);
+        const endDate = new Date(economyState.projectionDate);
         endDate.setMonth(endDate.getMonth() + termMonths);
         endDateText = endDate.toLocaleDateString('da-DK', { month: 'long', year: 'numeric'});
     } else if (termMonths === Infinity) {
@@ -454,95 +490,6 @@ function createLiabilityCard(liability) {
         </div>
     `;
 }
-
-// =================================================================
-// MODAL & FIRESTORE FUNKTIONER
-// =================================================================
-
-function openFixedExpenseModal(id = null) {
-    const modal = document.getElementById('fixed-expense-modal');
-    const form = document.getElementById('fixed-expense-form');
-    form.reset();
-
-    const isEditing = !!id;
-    const item = isEditing ? appState.fixedExpenses.find(i => i.id === id) : null;
-    
-    modal.querySelector('h3').textContent = isEditing ? `Rediger: ${item.description}` : 'Ny Fast Post';
-    document.getElementById('fixed-expense-id-edit').value = id || '';
-    document.getElementById('delete-fixed-expense-btn').classList.toggle('hidden', !isEditing);
-    
-    if(isEditing && item) {
-        document.getElementById('fixed-expense-description').value = item.description;
-        document.getElementById('fixed-expense-amount').value = item.amount;
-        document.getElementById('fixed-expense-type').value = item.type;
-        document.getElementById('fixed-expense-start-date-edit').value = item.startDate;
-        document.getElementById('fixed-expense-end-date-edit').value = item.endDate || '';
-        document.getElementById('fixed-expense-person').value = item.person || '';
-        document.getElementById('fixed-expense-frequency').value = item.frequency || 'monthly';
-        document.getElementById('fixed-expense-payment-month').value = item.paymentMonth || '1';
-    } else {
-        document.getElementById('fixed-expense-start-date-edit').value = formatDate(new Date());
-    }
-    
-    const paymentMonthGroup = document.getElementById('payment-month-group');
-    paymentMonthGroup.classList.toggle('hidden', document.getElementById('fixed-expense-frequency').value !== 'yearly');
-
-    populateReferenceDropdown(document.getElementById('fixed-expense-person'), appState.references.householdMembers, 'Vælg person...', item?.person);
-    populateReferenceDropdown(document.getElementById('fixed-expense-account'), appState.references.accounts, 'Vælg konto...', item?.account);
-    
-    const mainCatSelect = document.getElementById('fixed-expense-main-category');
-    populateMainCategoryDropdown(mainCatSelect, item?.mainCategory);
-    mainCatSelect.onchange = () => populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), mainCatSelect.value);
-    populateSubCategoryDropdown(document.getElementById('fixed-expense-sub-category'), item?.mainCategory, item?.subCategory);
-    
-    modal.classList.remove('hidden');
-}
-
-async function handleSaveFixedExpense(e) {
-    e.preventDefault();
-    const id = document.getElementById('fixed-expense-id-edit').value;
-
-    const data = {
-        description: document.getElementById('fixed-expense-description').value,
-        amount: parseFloat(document.getElementById('fixed-expense-amount').value),
-        type: document.getElementById('fixed-expense-type').value,
-        person: document.getElementById('fixed-expense-person').value,
-        frequency: document.getElementById('fixed-expense-frequency').value,
-        paymentMonth: document.getElementById('fixed-expense-frequency').value === 'yearly' ? parseInt(document.getElementById('fixed-expense-payment-month').value, 10) : null,
-        account: document.getElementById('fixed-expense-account').value,
-        mainCategory: document.getElementById('fixed-expense-main-category').value,
-        subCategory: document.getElementById('fixed-expense-sub-category').value,
-        startDate: document.getElementById('fixed-expense-start-date-edit').value,
-        endDate: document.getElementById('fixed-expense-end-date-edit').value || null,
-        userId: appState.currentUser.uid
-    };
-
-    try {
-        if(id) {
-            await updateDoc(doc(db, 'fixed_expenses', id), data);
-        } else {
-            await addDoc(collection(db, 'fixed_expenses'), data);
-        }
-        document.getElementById('fixed-expense-modal').classList.add('hidden');
-    } catch(error) {
-        handleError(error, "Kunne ikke gemme fast post.", "saveFixedExpense");
-    }
-}
-
-async function handleDeleteFixedExpense() {
-    const id = document.getElementById('fixed-expense-id-edit').value;
-    if(!id) return;
-    const confirmed = await showNotification({type: 'confirm', title: 'Slet Fast Post', message: 'Er du sikker?'});
-    if(confirmed) {
-        try {
-            await deleteDoc(doc(db, 'fixed_expenses', id));
-            document.getElementById('fixed-expense-modal').classList.add('hidden');
-        } catch(error) {
-            handleError(error, "Kunne ikke slette fast post.", "deleteFixedExpense");
-        }
-    }
-}
-
 function openAssetModal(assetId = null) {
     const modal = document.getElementById('asset-modal');
     const form = document.getElementById('asset-form');
@@ -629,7 +576,7 @@ function openLiabilityModal(liabilityId = null) {
         document.getElementById('liability-name').value = liability.name || '';
         document.getElementById('liability-type').value = liability.type || '';
         document.getElementById('liability-original-principal').value = liability.originalPrincipal || '';
-        document.getElementById('liability-start-date').value = formatDate(new Date(liability.startDate));
+        document.getElementById('liability-start-date').value = formatDate(liability.startDate);
         document.getElementById('liability-current-balance').value = liability.currentBalance || '';
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
         document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
@@ -702,7 +649,30 @@ async function handleDeleteLiability() {
         handleError(error, "Gældsposten kunne ikke slettes.", "deleteLiability");
     }
 }
-
+function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (options || []).sort().forEach(opt => {
+        const option = new Option(opt, opt);
+        selectElement.add(option);
+    });
+    if (currentValue) {
+        selectElement.value = currentValue;
+    }
+}
+function populateLiabilitiesDropdown(selectElement, placeholder, currentValues) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    (appState.liabilities || []).sort((a,b) => a.name.localeCompare(b.name)).forEach(l => selectElement.add(new Option(l.name, l.id)));
+    
+    if (currentValues && Array.isArray(currentValues)) {
+        Array.from(selectElement.options).forEach(opt => {
+            if (currentValues.includes(opt.value)) {
+                opt.selected = true;
+            }
+        });
+    }
+}
 function calculateProjectedValues(targetDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -747,39 +717,17 @@ function calculateProjectedValues(targetDate) {
             }
         });
     }
-    
-    return { assets: projectedAssets, liabilities: projectedLiabilities };
+
+    const totalAssets = projectedAssets.reduce((sum, asset) => sum + asset.value, 0);
+    const totalLiabilities = projectedLiabilities.reduce((sum, l) => sum + l.currentBalance, 0);
+    const netWorth = totalAssets - totalLiabilities;
+
+    return { assets: projectedAssets, liabilities: projectedLiabilities, netWorth };
 }
 
 // =================================================================
-// HJÆLPEFUNKTIONER
+// HJÆLPEFUNKTIONER (f.eks. til dropdowns)
 // =================================================================
-
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => {
-        const option = new Option(opt, opt);
-        selectElement.add(option);
-    });
-    if (currentValue) {
-        selectElement.value = currentValue;
-    }
-}
-
-function populateLiabilitiesDropdown(selectElement, placeholder, currentValues) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (appState.liabilities || []).sort((a,b) => a.name.localeCompare(b.name)).forEach(l => selectElement.add(new Option(l.name, l.id)));
-    
-    if (currentValues && Array.isArray(currentValues)) {
-        Array.from(selectElement.options).forEach(opt => {
-            if (currentValues.includes(opt.value)) {
-                opt.selected = true;
-            }
-        });
-    }
-}
 
 function populateMainCategoryDropdown(select, val) {
     const mainCategories = (appState.references.budgetCategories || []).map(cat => (typeof cat === 'string' ? cat : cat.name));
@@ -793,6 +741,10 @@ function populateSubCategoryDropdown(select, mainCat, val) {
     populateReferenceDropdown(select, subCategories, 'Vælg underkategori...', val);
     select.disabled = !mainCat;
 }
+
+// =================================================================
+// LÅNEBEREGNER LOGIK
+// =================================================================
 
 function handleLoanCalculatorChange(e) {
     const form = e.target.closest('#liability-form');
@@ -810,6 +762,13 @@ function handleLoanCalculatorChange(e) {
     let monthlyPayment = parseFloat(paymentInput.value) || 0;
 
     const changedElementId = e.target.id;
+    let lastEditedLoanField = 'term'; // default
+
+    if (changedElementId === 'liability-term-months') {
+        lastEditedLoanField = 'term';
+    } else if (changedElementId === 'liability-monthly-payment') {
+        lastEditedLoanField = 'payment';
+    }
 
     if (changedElementId === 'liability-term-months') {
         const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
@@ -817,8 +776,11 @@ function handleLoanCalculatorChange(e) {
     } else if (changedElementId === 'liability-monthly-payment') {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
         if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
-    } else if (['liability-interest-rate', 'liability-current-balance'].includes(changedElementId)) {
-        if (monthlyPayment > 0) {
+    } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
+        if (lastEditedLoanField === 'term' && termMonths > 0) {
+            const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
+            if (newPayment) paymentInput.value = newPayment.toFixed(2);
+        } else if (lastEditedLoanField === 'payment' && monthlyPayment > 0) {
             const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
             if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
         }
