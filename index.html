@@ -279,17 +279,39 @@
             </section>
             
             <section id="oekonomi" class="page hidden">
-                <!-- NYT: Layout med sidebar til navigation -->
-                <div class="references-page-layout">
-                    <aside class="references-sidebar">
-                        <ul id="economy-nav-list" class="references-nav-list">
-                            <!-- Navigation links indsættes af economy.js -->
-                        </ul>
-                    </aside>
-                    <main id="economy-content-area" class="references-content-area">
-                        <!-- Indhold for den valgte fane indsættes af economy.js -->
+                <!-- START: NYT ØKONOMI LAYOUT -->
+                <div class="economy-page-container">
+                    <header class="economy-header">
+                        <div id="economy-month-navigator">
+                            <!-- Månedsnavigator indsættes af JS -->
+                        </div>
+                        <div id="economy-person-filter">
+                            <!-- Person-filter tabs indsættes af JS -->
+                        </div>
+                        <div class="economy-header-actions">
+                            <button id="add-fixed-expense-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Fast Post</button>
+                            <button id="add-planned-expense-btn" class="btn btn-secondary"><i class="fas fa-calendar-plus"></i> Planlæg Udgift</button>
+                        </div>
+                    </header>
+
+                    <div id="economy-summary-cards">
+                        <!-- Nøgletalskort (Indkomst, Udgift, Rådighed) indsættes af JS -->
+                    </div>
+                    
+                    <div id="planned-expenses-warning-bar" class="hidden">
+                        <!-- Advarselsbjælke for planlagte udgifter indsættes af JS -->
+                    </div>
+
+                    <main id="economy-main-content">
+                        <aside id="economy-sidebar-content">
+                            <!-- Formue-widget (Aktiver/Gæld) indsættes af JS -->
+                        </aside>
+                        <div id="budget-details-container">
+                            <!-- Detaljeret budget opdelt i kategorier indsættes af JS -->
+                        </div>
                     </main>
                 </div>
+                <!-- SLUT: NYT ØKONOMI LAYOUT -->
             </section>
 
 
@@ -667,14 +689,48 @@
                         </select>
                     </div>
                 </div>
+                <!-- START: Nye felter til fast post -->
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-person">Person</label>
+                        <select id="fixed-expense-person" required>
+                            <!-- Options tilføjes af JS -->
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-frequency">Hyppighed</label>
+                        <select id="fixed-expense-frequency" required>
+                            <option value="monthly">Månedligt</option>
+                            <option value="quarterly">Kvartalsvis</option>
+                            <option value="yearly">Årligt</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="payment-month-group" class="input-group hidden">
+                    <label for="fixed-expense-payment-month">Betalingsmåned</label>
+                    <select id="fixed-expense-payment-month">
+                        <option value="1">Januar</option>
+                        <option value="2">Februar</option>
+                        <option value="3">Marts</option>
+                        <option value="4">April</option>
+                        <option value="5">Maj</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+                <!-- SLUT: Nye felter til fast post -->
                  <div class="form-grid-2-col">
                     <div class="input-group">
                          <label for="fixed-expense-account">Konto</label>
                         <select id="fixed-expense-account" required></select>
                     </div>
                     <div class="input-group">
-                         <label for="fixed-expense-person">Person</label>
-                        <select id="fixed-expense-person" required></select>
+                         <!-- Dette felt er flyttet op -->
                     </div>
                 </div>
                 <div class="form-grid-2-col">
@@ -1156,4 +1212,3 @@
 
 </body>
 </html>
-
