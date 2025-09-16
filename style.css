@@ -368,9 +368,15 @@ header {
     font-weight: 700;
     font-size: 1.1rem;
 }
-.budget-item-row {
+.budget-items-table {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+.budget-item-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: var(--spacing-m);
     align-items: center;
     padding: var(--spacing-m);
     border-radius: var(--border-radius);
@@ -386,9 +392,13 @@ header {
 .budget-item-row .item-person {
     font-size: var(--small-font-size);
     color: #888;
+    background-color: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 .budget-item-row .item-amount {
     font-weight: 500;
+    justify-self: end;
 }
 
 /* Gammel styling for tabeller (bruges til transaktioner) */
@@ -2555,13 +2565,13 @@ details:not([open]) .item-table-container {
     .timeline-grid {
         grid-template-columns: 1fr;
     }
-    .economy-dashboard-layout {
-        grid-template-columns: 1fr;
-    }
     .read-view-main-content {
         grid-template-columns: 1fr;
     }
     .form-grid-3-col, .form-grid-2-col {
+        grid-template-columns: 1fr;
+    }
+    .asset-liability-layout {
         grid-template-columns: 1fr;
     }
 }
@@ -2753,3 +2763,4 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
