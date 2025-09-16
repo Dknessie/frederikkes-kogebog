@@ -169,22 +169,22 @@ function renderBudgetView() {
     let sharedExpensesTitle = 'Fællesudgifter';
     let sharedExpensesAmount = 0;
     
-    const allSharedAccountExpenses = monthlyAverages.filter(item => 
-        item.account === 'Fælles Budget' && item.type === 'expense'
-    );
-    const totalSharedAmount = allSharedAccountExpenses.reduce((sum, item) => sum + item.monthlyAmount, 0);
+    // Totalen af alle udgifter betalt fra "Fælles Budget"
+    const totalFromSharedAccount = monthlyAverages
+        .filter(item => item.account === 'Fælles Budget' && item.type === 'expense')
+        .reduce((sum, item) => sum + item.monthlyAmount, 0);
 
     if (economyState.selectedPerson === 'Fælles') {
-        sharedExpensesAmount = totalSharedAmount;
+        sharedExpensesAmount = totalFromSharedAccount;
     } else {
-        const personPaidToShared = monthlyAverages.filter(item => 
-            item.account === 'Fælles Budget' && item.person === economyState.selectedPerson && item.type === 'expense'
-        ).reduce((sum, item) => sum + item.monthlyAmount, 0);
-        
-        const halfOfTotal = totalSharedAmount / 2;
-        sharedExpensesAmount = Math.max(0, halfOfTotal - personPaidToShared);
+        // For en individuel person: Hvad skal de overføre?
+        // Det er summen af deres egne poster, der er markeret til at blive betalt fra fælleskontoen.
+        sharedExpensesAmount = monthlyAverages
+            .filter(item => item.person === economyState.selectedPerson && item.account === 'Fælles Budget' && item.type === 'expense')
+            .reduce((sum, item) => sum + item.monthlyAmount, 0);
         sharedExpensesTitle = 'Overførsel til Fælles';
     }
+
 
     const categories = [...new Set(groupedData.expenses.map(item => item.mainCategory))].sort();
 
@@ -262,21 +262,23 @@ function calculateMonthlyAverages(items) {
 
 function filterAndGroupExpenses(items, personFilter) {
     let filteredItems = items;
-    // Visning for en specifik person
+    // Visning for en specifik person: Vis KUN den persons poster.
     if (personFilter !== 'Fælles') {
         filteredItems = items.filter(item => item.person === personFilter);
     }
+    // For "Fælles"-visning, brug alle items.
     
     const income = filteredItems.filter(item => item.type === 'income');
     let expenses = filteredItems.filter(item => item.type === 'expense');
 
-    // Hvis "Fælles" er valgt, konsolider poster
+    // Konsolidering sker KUN for "Fælles"-visningen
     if (personFilter === 'Fælles') {
         const consolidatedExpenses = {};
         expenses.forEach(item => {
             const key = `${item.description.toLowerCase()}_${item.mainCategory.toLowerCase()}`;
             if (consolidatedExpenses[key]) {
                 consolidatedExpenses[key].monthlyAmount += item.monthlyAmount;
+                // Holder styr på hvem der bidrager, men vi viser det ikke
                 if (!consolidatedExpenses[key].person.includes(item.person)) {
                     consolidatedExpenses[key].person += `, ${item.person}`;
                 }
