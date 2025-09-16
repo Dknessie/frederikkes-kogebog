@@ -269,18 +269,19 @@ header {
     border-radius: var(--card-border-radius);
     box-shadow: var(--strong-shadow);
 }
-#economy-month-navigator {
+#economy-month-navigator, .economy-month-navigator {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
 }
-#economy-month-navigator h3 {
+#economy-month-navigator h3, .economy-month-navigator h4 {
     margin: 0;
     color: var(--text-color);
     font-family: var(--body-font);
     font-weight: 700;
     min-width: 200px;
     text-align: center;
+    font-size: 1.25rem;
 }
 #economy-person-filter {
     display: flex;
@@ -437,14 +438,14 @@ header {
 .assets-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: wrap;
     gap: var(--spacing-m);
     margin-bottom: var(--spacing-l);
-    padding: var(--spacing-l); /* Rettelse: tilføjet padding */
-    background-color: var(--white-color); /* Rettelse: tilføjet baggrund */
-    border-radius: var(--card-border-radius); /* Rettelse: tilføjet radius */
-    box-shadow: var(--strong-shadow); /* Rettelse: tilføjet skygge */
+    padding: var(--spacing-l);
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
 }
 .assets-header h3 {
     margin: 0;
@@ -467,10 +468,10 @@ header {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--spacing-xl);
-    background-color: var(--white-color); /* Rettelse: tilføjet baggrund */
-    padding: var(--spacing-l); /* Rettelse: tilføjet padding */
-    border-radius: var(--card-border-radius); /* Rettelse: tilføjet radius */
-    box-shadow: var(--shadow); /* Rettelse: tilføjet skygge */
+    background-color: var(--white-color);
+    padding: var(--spacing-l);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
 }
 
 .column-header {
@@ -496,7 +497,7 @@ header {
 }
 
 .asset-card, .liability-card {
-    background: var(--light-bg-color); /* Rettelse: lysere baggrund for kontrast */
+    background: var(--light-bg-color);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: var(--spacing-m);
