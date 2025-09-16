@@ -235,48 +235,166 @@ header {
 
 
 /* =================================================================
-   ØKONOMI SIDE
+   NY ØKONOMISIDE (BUDGET & FORMUE)
    ================================================================= */
 
-#oekonomi.page {
-    background: linear-gradient(180deg, #e9f1f8 0%, #f5f5f5 300px);
+#oekonomi .references-page-layout {
+    gap: var(--spacing-l);
 }
-.positive-text { color: var(--status-green); }
-.negative-text { color: var(--status-red); }
-.economy-month-navigator {
+#oekonomi .references-sidebar {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+#oekonomi .references-content-area {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+}
+.economy-page-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-l);
+}
+
+.economy-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-l);
+    padding: var(--spacing-l);
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--strong-shadow);
+}
+#economy-month-navigator {
     display: flex;
     align-items: center;
     gap: var(--spacing-m);
 }
-.economy-month-navigator h4 {
+#economy-month-navigator h3 {
     margin: 0;
-    font-family: var(--body-font);
-    font-weight: 600;
-    min-width: 150px;
-    text-align: center;
     color: var(--text-color);
+    font-family: var(--body-font);
+    font-weight: 700;
+    min-width: 200px;
+    text-align: center;
 }
-.tab-header {
+#economy-person-filter {
     display: flex;
-    flex-direction: column;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+.person-tab {
+    padding: var(--spacing-s) var(--spacing-m);
+    border: none;
+    background: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #777;
+    transition: all 0.2s ease;
+}
+.person-tab.active {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+    box-shadow: var(--shadow);
+}
+.economy-header-actions {
+    display: flex;
+    gap: var(--spacing-m);
+}
+
+#economy-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-l);
+}
+.summary-card {
+    background-color: var(--white-color);
+    padding: var(--spacing-l);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    border-left: 5px solid;
+}
+.summary-card h4 {
+    margin: 0 0 var(--spacing-s) 0;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: var(--body-font);
+    color: #555;
+}
+.summary-card p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+.summary-card.income { border-color: var(--status-green); }
+.summary-card.income p { color: var(--status-green); }
+.summary-card.expense { border-color: var(--status-red); }
+.summary-card.expense p { color: var(--status-red); }
+.summary-card.disposable { border-color: var(--accent-color); }
+.summary-card.disposable p { color: var(--accent-color); }
+
+
+#budget-details-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--spacing-l);
     align-items: flex-start;
-    gap: var(--spacing-s);
-    margin-bottom: var(--spacing-l);
 }
-.tab-header h3 {
+.budget-category-section {
+    background-color: var(--white-color);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--shadow);
+    padding: var(--spacing-l);
+}
+.budget-category-section .category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: var(--spacing-m);
+    border-bottom: 2px solid var(--secondary-color);
+    margin-bottom: var(--spacing-m);
+}
+.category-header h4 {
     margin: 0;
+    color: var(--primary-color);
 }
-.tab-header p {
-    margin: 0;
-    color: #666;
+.category-expense-total {
+    font-weight: 700;
+    font-size: 1.1rem;
 }
-.tab-header .btn {
-    align-self: flex-end;
+.budget-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
 }
+.budget-item-row:hover {
+    background-color: var(--secondary-color);
+}
+.budget-item-row .item-description {
+    font-weight: 600;
+}
+.budget-item-row .item-person {
+    font-size: var(--small-font-size);
+    color: #888;
+}
+.budget-item-row .item-amount {
+    font-weight: 500;
+}
+
+/* Gammel styling for tabeller (bruges til transaktioner) */
 .table-wrapper {
     width: 100%;
     overflow-x: auto;
-    max-height: 80vh;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     background-color: var(--white-color);
@@ -303,133 +421,9 @@ header {
 .spreadsheet-table tbody tr:hover {
     background-color: var(--secondary-color);
 }
-.fixed-expense-row, .transaction-row {
-    cursor: pointer;
-}
 .currency { text-align: right; }
 
-/* =================================================================
-   NYT: ØKONOMI DASHBOARD
-   ================================================================= */
-.economy-dashboard-header {
-    margin-bottom: var(--spacing-l);
-}
-.economy-dashboard-header h3 {
-    font-family: var(--body-font);
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0;
-}
-.economy-dashboard-header p {
-    color: #666;
-}
-.economy-dashboard-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--spacing-l);
-    align-items: flex-start;
-}
-.economy-widget-chart {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-l);
-    box-shadow: var(--shadow);
-}
-.economy-widget-chart h4 {
-    margin-top: 0;
-}
-#spending-chart-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 350px;
-    position: relative;
-}
-.chart-tooltip {
-    position: fixed;
-    background-color: rgba(0,0,0,0.8);
-    color: white;
-    padding: var(--spacing-s) var(--spacing-m);
-    border-radius: var(--border-radius);
-    font-size: var(--small-font-size);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 2100;
-}
-
-.economy-sidebar-widget {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    padding: var(--spacing-l);
-    box-shadow: var(--shadow);
-}
-.economy-sidebar-widget h5 {
-    font-family: var(--body-font);
-    font-weight: 700;
-    margin-top: 0;
-    margin-bottom: var(--spacing-l);
-}
-.overview-section {
-    margin-bottom: var(--spacing-l);
-}
-.overview-section h4 {
-    font-size: 1.1rem;
-    font-family: var(--body-font);
-    font-weight: 600;
-    margin-top: 0;
-    margin-bottom: var(--spacing-s);
-    color: var(--text-color);
-}
-.overview-category h5 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-top: var(--spacing-m);
-    padding-top: var(--spacing-m);
-    border-top: 1px solid var(--border-color);
-    color: var(--primary-color);
-}
-.overview-item {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-s) var(--spacing-m);
-    border-radius: var(--border-radius);
-}
-.overview-item:nth-child(even) {
-    background-color: var(--light-bg-color);
-}
-.overview-subtotal {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--spacing-s) var(--spacing-m);
-    font-style: italic;
-    color: #555;
-    font-weight: 600;
-}
-.overview-total {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    font-size: 1.1em;
-    padding: var(--spacing-m) 0;
-    margin-top: var(--spacing-s);
-    border-top: 2px solid var(--text-color);
-}
-.overview-final {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 700;
-    font-size: 1.3em;
-    padding: var(--spacing-m);
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-    margin-top: var(--spacing-l);
-}
-
-/* =================================================================
-   ØKONOMI: AKIVER & GÆLD
-   ================================================================= */
-
+/* Styling for Aktiver & Gæld (Eksisterende) */
 .assets-header {
     display: flex;
     justify-content: space-between;
@@ -543,8 +537,6 @@ header {
     padding-top: var(--spacing-s);
     border-top: 1px solid var(--border-color);
 }
-
-
 /* =================================================================
    KOGEBOG-SIDE (SEKTION 5)
    ================================================================= */
@@ -2761,4 +2753,3 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
-
