@@ -279,18 +279,14 @@
             </section>
             
             <section id="oekonomi" class="page hidden">
-                <!-- START: GEN-INTRODUCERET SIDEBAR LAYOUT -->
                 <div class="references-page-layout">
                     <aside class="references-sidebar">
                         <ul id="economy-nav-list" class="references-nav-list">
-                            <!-- Navigation links indsættes af economy.js -->
                         </ul>
                     </aside>
                     <main id="economy-content-area" class="references-content-area">
-                        <!-- Indhold for den valgte fane indsættes af economy.js -->
                     </main>
                 </div>
-                <!-- SLUT: GEN-INTRODUCERET SIDEBAR LAYOUT -->
             </section>
 
 
@@ -668,48 +664,14 @@
                         </select>
                     </div>
                 </div>
-                <!-- START: Nye felter til fast post -->
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="fixed-expense-person">Person</label>
-                        <select id="fixed-expense-person" required>
-                            <!-- Options tilføjes af JS -->
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="fixed-expense-frequency">Hyppighed</label>
-                        <select id="fixed-expense-frequency" required>
-                            <option value="monthly">Månedligt</option>
-                            <option value="quarterly">Kvartalsvis</option>
-                            <option value="yearly">Årligt</option>
-                        </select>
-                    </div>
-                </div>
-                <div id="payment-month-group" class="input-group hidden">
-                    <label for="fixed-expense-payment-month">Betalingsmåned</label>
-                    <select id="fixed-expense-payment-month">
-                        <option value="1">Januar</option>
-                        <option value="2">Februar</option>
-                        <option value="3">Marts</option>
-                        <option value="4">April</option>
-                        <option value="5">Maj</option>
-                        <option value="6">Juni</option>
-                        <option value="7">Juli</option>
-                        <option value="8">August</option>
-                        <option value="9">September</option>
-                        <option value="10">Oktober</option>
-                        <option value="11">November</option>
-                        <option value="12">December</option>
-                    </select>
-                </div>
-                <!-- SLUT: Nye felter til fast post -->
                  <div class="form-grid-2-col">
                     <div class="input-group">
                          <label for="fixed-expense-account">Konto</label>
                         <select id="fixed-expense-account" required></select>
                     </div>
                     <div class="input-group">
-                         <!-- Dette felt er flyttet op -->
+                         <label for="fixed-expense-person">Person</label>
+                        <select id="fixed-expense-person" required></select>
                     </div>
                 </div>
                 <div class="form-grid-2-col">
@@ -720,6 +682,35 @@
                     <div class="input-group">
                         <label for="fixed-expense-sub-category">Underkategori</label>
                         <select id="fixed-expense-sub-category"></select>
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="fixed-expense-frequency">Hyppighed</label>
+                        <select id="fixed-expense-frequency" required>
+                            <option value="monthly">Månedlig</option>
+                            <option value="quarterly">Kvartalsvis</option>
+                            <option value="semi-annually">Halvårlig</option>
+                            <option value="yearly">Årlig</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fixed-expense-payment-month">Betalingsmåned (hvis ikke månedlig)</label>
+                        <select id="fixed-expense-payment-month">
+                            <option value="">Vælg måned</option>
+                            <option value="1">Januar</option>
+                            <option value="2">Februar</option>
+                            <option value="3">Marts</option>
+                            <option value="4">April</option>
+                            <option value="5">Maj</option>
+                            <option value="6">Juni</option>
+                            <option value="7">Juli</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">Oktober</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-grid-2-col">
