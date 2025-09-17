@@ -373,9 +373,19 @@ async function handleDeleteFixedExpense() {
 
 function renderAssetsView(container) {
     const projectedData = calculateProjectedValues(economyState.projectionDate);
-    const { assets, liabilities } = projectedData;
+    
+    // NY SORTERING: Aktiver med gæld først
+    const sortedAssets = (projectedData.assets || []).sort((a, b) => {
+        const aHasDebt = (a.linkedLiabilityIds || []).length > 0;
+        const bHasDebt = (b.linkedLiabilityIds || []).length > 0;
+        if (aHasDebt && !bHasDebt) return -1;
+        if (!aHasDebt && bHasDebt) return 1;
+        return a.name.localeCompare(b.name);
+    });
 
-    const totalAssets = assets.reduce((sum, asset) => sum + (asset.value || 0), 0);
+    const { liabilities } = projectedData;
+
+    const totalAssets = sortedAssets.reduce((sum, asset) => sum + (asset.value || 0), 0);
     const totalLiabilities = liabilities.reduce((sum, liability) => sum + (liability.currentBalance || 0), 0);
     const netWorth = totalAssets - totalLiabilities;
     
@@ -388,7 +398,7 @@ function renderAssetsView(container) {
         </div>
     `;
 
-    const assetsByType = assets.reduce((acc, asset) => {
+    const assetsByType = sortedAssets.reduce((acc, asset) => {
         const type = asset.type || 'Andet';
         if (!acc[type]) acc[type] = [];
         acc[type].push(asset);
