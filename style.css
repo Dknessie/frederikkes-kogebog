@@ -388,7 +388,7 @@ header {
 }
 .budget-item-row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: 1fr auto;
     gap: var(--spacing-m);
     align-items: center;
     padding: var(--spacing-m);
@@ -401,13 +401,6 @@ header {
 }
 .budget-item-row .item-description {
     font-weight: 600;
-}
-.budget-item-row .item-person {
-    font-size: var(--small-font-size);
-    color: var(--economy-secondary);
-    background-color: var(--economy-bg);
-    padding: 2px 6px;
-    border-radius: 4px;
 }
 .budget-item-row .item-amount {
     font-weight: 500;
@@ -567,6 +560,26 @@ header {
     margin-top: var(--spacing-s);
     padding-top: var(--spacing-s);
     border-top: 1px solid var(--border-color);
+}
+/* NYT: Styling for aktiv-KPI'er */
+.asset-kpis {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--spacing-m);
+    margin-top: var(--spacing-s);
+}
+.kpi-item {
+    text-align: center;
+}
+.kpi-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #777;
+}
+.kpi-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--economy-primary);
 }
 /* =================================================================
    KOGEBOG-SIDE (SEKTION 5)
@@ -2832,3 +2845,4 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
