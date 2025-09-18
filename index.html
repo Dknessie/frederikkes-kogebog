@@ -119,6 +119,7 @@
                 </div>
             </section>
 
+            <!-- GENINDSAT KALENDER-SEKTION -->
             <section id="calendar" class="page hidden">
                 <div class="weekly-hub-container">
                     <header class="hub-header">
@@ -222,43 +223,36 @@
                 </div>
             </section>
 
-            <!-- ====================================================== -->
-            <!-- START PÅ NYT INGREDISENS-BIBLIOTEK DESIGN              -->
-            <!-- ====================================================== -->
             <section id="inventory" class="page hidden">
                 <h2>Ingrediens-bibliotek</h2>
                 <p>Administrér generel information om dine ingredienser for at beregne priser og kalorier på opskrifter.</p>
                 
                 <div class="actions-bar">
                     <button id="add-ingredient-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
+                    <!-- NYT: Knap til bulk import -->
+                    <button id="bulk-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer Ingredienser</button>
                     <div class="search-bar" style="max-width: 300px; flex-grow: 1;">
                          <input type="text" id="library-search" placeholder="Søg i biblioteket...">
                     </div>
                      <select id="library-category-filter" style="max-width: 250px;">
                         <!-- Indhold genereres af inventory.js -->
                     </select>
-                    <!-- NYT: Knapper til at skifte visning -->
                     <div class="view-toggle-buttons">
                         <button id="view-grid-btn" class="btn-icon active" title="Kort-visning"><i class="fas fa-th-large"></i></button>
                         <button id="view-list-btn" class="btn-icon" title="Liste-visning"><i class="fas fa-list"></i></button>
                     </div>
                 </div>
 
-                <!-- NYT: Container til kort-visning -->
                 <div id="ingredient-grid-container" class="recipe-grid">
                     <!-- Indhold (kort) genereres af inventory.js -->
                 </div>
 
-                <!-- OPDATERING: Skjult som standard -->
                 <div class="table-wrapper hidden">
                     <div id="ingredient-library-container">
                         <!-- Indhold (tabel) genereres af inventory.js -->
                     </div>
                 </div>
             </section>
-            <!-- ====================================================== -->
-            <!-- SLUT PÅ NYT INGREDISENS-BIBLIOTEK DESIGN               -->
-            <!-- ====================================================== -->
             
             <section id="oekonomi" class="page hidden">
                 <div class="references-page-layout">
@@ -288,7 +282,7 @@
             </section>
         </main>
 
-        <nav id="mobile-tab-bar" class="mobile-tab-bar hidden">
+        <nav id="mobile-tab-bar" class="mobile-tab-bar">
             <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
             <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjemmet</span></a>
@@ -299,9 +293,6 @@
 
     <!-- MODALS -->
 
-    <!-- ================================================================= -->
-    <!-- START: OPDATERET MODAL FOR INGREDISENS-BIBLIOTEK                  -->
-    <!-- ================================================================= -->
     <div id="ingredient-info-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -331,14 +322,12 @@
                 <p class="small-text">Disse værdier bruges til at estimere pris og kalorieindhold i dine opskrifter.</p>
                 <div class="form-grid-3-col">
                     <div class="input-group">
-                        <!-- OPDATERING: Label er nu mere brugervenlig -->
                         <label for="ingredient-info-price">Pris (kr. pr. kg/l/stk)</label>
                         <div class="price-input-wrapper">
                             <input type="number" id="ingredient-info-price" step="0.01" placeholder="f.eks. 110">
                         </div>
                     </div>
                     <div class="input-group">
-                        <!-- OPDATERING: Ny label -->
                         <label for="ingredient-info-default-unit">Prisenhed</label>
                         <select id="ingredient-info-default-unit" required>
                             <option value="g">Kilogram (kg)</option>
@@ -359,11 +348,26 @@
             </form>
         </div>
     </div>
-    <!-- ================================================================= -->
-    <!-- SLUT: OPDATERET MODAL FOR INGREDISENS-BIBLIOTEK                    -->
-    <!-- ================================================================= -->
+    
+    <!-- NYT: Bulk Import Modal -->
+    <div id="bulk-import-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3>Importer Ingredienser</h3>
+            <p>Indsæt en liste af ingredienser i JSON-format herunder. Systemet vil ignorere ingredienser, der allerede findes.</p>
+            <form id="bulk-import-form">
+                <div class="input-group">
+                    <label for="bulk-import-textarea">JSON Data</label>
+                    <textarea id="bulk-import-textarea" rows="15" placeholder="Indsæt dit JSON-array her..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-file-import"></i> Importér og Opret</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <!-- NYT: Oprettelses-assistent Modal -->
+
     <div id="ingredient-assistant-modal" class="modal-overlay hidden">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
@@ -795,20 +799,6 @@
         </div>
     </div>
     
-    <!-- Other Modals -->
-    <div id="bulk-add-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
-        <div class="modal-content large">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Registrer Indkøb</h3>
-            <p>Udfyld detaljer for de varer, du har købt. Varer uden antal eller pris vil ikke blive tilføjet til lageret.</p>
-            <form id="bulk-add-form">
-                <div id="bulk-add-list-container"></div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Gem alle og opdater lager</button>
-                </div>
-            </form>
-        </div>
-    </div>
     <div id="event-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -962,7 +952,6 @@
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
                     <button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
-                    <!-- NYT: Knap til oprettelses-assistent -->
                     <button id="create-missing-ingredients-btn" class="btn btn-accent"><i class="fas fa-magic"></i> Opret Manglende Ingredienser</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
