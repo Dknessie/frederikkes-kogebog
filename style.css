@@ -635,7 +635,7 @@ header {
 .recipe-display-card img { width: 100%; height: 280px; object-fit: cover; flex-shrink: 0; }
 .recipe-content { padding: var(--spacing-l); flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 .recipe-content h3 { font-family: var(--heading-font); margin: 0 0 var(--spacing-m) 0; color: var(--text-color); font-size: 1.8rem; }
-.recipe-meta { display: flex; gap: var(--spacing-l); color: #777; margin-bottom: var(--spacing-m); }
+.recipe-meta { display: flex; flex-wrap: wrap; gap: var(--spacing-l); color: #777; margin-bottom: var(--spacing-m); }
 .recipe-meta span { display: flex; align-items: center; gap: var(--spacing-s); }
 .recipe-tags { display: flex; gap: var(--spacing-s); flex-wrap: wrap; margin-bottom: var(--spacing-m); }
 .recipe-tag { background-color: #eee; padding: 0.25rem 0.6rem; border-radius: 12px; font-size: 0.8rem; }
@@ -1141,11 +1141,29 @@ header {
     display: flex;
     gap: var(--spacing-m);
     flex-wrap: wrap;
+    align-items: center;
 }
 .recipe-actions-bar {
     justify-content: space-between;
     align-items: center;
 }
+/* NYT: Styling for view toggle */
+.view-toggle-buttons {
+    margin-left: auto;
+    display: flex;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs);
+}
+.view-toggle-buttons .btn-icon {
+    color: var(--text-color);
+}
+.view-toggle-buttons .btn-icon.active {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+    box-shadow: var(--shadow);
+}
+
 
 .filter-container {
     margin-bottom: var(--spacing-l);
@@ -1213,11 +1231,6 @@ header {
 .status-indicator.status-green { background-color: var(--status-green); }
 .status-indicator.status-yellow { background-color: var(--status-yellow); }
 .status-indicator.status-red { background-color: var(--status-red); }
-
-/* GAMMEL VARELAGER-STYLING (Fjernes eller erstattes) */
-.inventory-dashboard { display: none; }
-.inventory-item { display: none; }
-
 
 /* ===== 8. Nyt Dashboard Layout ===== */
 .dashboard-layout {
@@ -1533,8 +1546,8 @@ header {
     animation: fadeIn 0.3s ease;
 }
 
-#plan-meal-modal, #edit-budget-modal, #reorder-assistant-modal, #batch-edit-modal, #project-edit-modal, #room-edit-modal, #impulse-purchase-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal, #quick-stock-adjust-modal { z-index: 2010; }
-#bulk-add-modal { z-index: 2015; }
+#plan-meal-modal, #edit-budget-modal, #project-edit-modal, #room-edit-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
+#ingredient-assistant-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
 
@@ -1564,9 +1577,6 @@ header {
 #plan-meal-modal .modal-content,
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
-#reorder-assistant-modal .modal-content,
-#batch-edit-modal .modal-content,
-#impulse-purchase-modal .modal-content,
 #maintenance-log-modal .modal-content,
 #event-modal .modal-content {
     max-width: 550px;
@@ -1818,44 +1828,6 @@ input:checked + .slider:before { transform: translateX(22px); }
 .slider.round { border-radius: 28px; }
 .slider.round:before { border-radius: 50%; }
 
-#reorder-list-container {
-    max-height: 50vh;
-    overflow-y: auto;
-    padding: var(--spacing-s);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-}
-.reorder-category h4 {
-    margin: var(--spacing-m) 0;
-    padding-bottom: var(--spacing-s);
-    border-bottom: 2px solid var(--secondary-color);
-}
-.reorder-item {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    padding: var(--spacing-m) 0;
-    border-bottom: 1px solid #f0f0f0;
-}
-.reorder-item:last-child {
-    border-bottom: none;
-}
-.reorder-item label {
-    flex-grow: 1;
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-m);
-    font-weight: normal;
-}
-.reorder-item .item-name {
-    font-weight: 600;
-}
-.reorder-item .stock-info {
-    font-size: var(--small-font-size);
-    color: #666;
-    margin-left: auto;
-}
-
 /* ===== 10. Billedupload & Input Wrappers ===== */
 .image-options {
     display: flex;
@@ -1916,227 +1888,68 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 
 
-/* ===== Varelager Modal Specifikke Styles ===== */
-#inventory-item-form .form-section-box {
+/* =================================================================
+   NYT: INGREDISENS-BIBLIOTEK STYLING
+   ================================================================= */
+.ingredient-card {
     background-color: var(--white-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: transform 0.2s ease;
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
+}
+.ingredient-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--strong-shadow);
+}
+.ingredient-card .list-card-content {
     padding: var(--spacing-l);
-    margin-bottom: var(--spacing-l);
 }
-#inventory-item-form .form-section-box h4 {
-    margin-top: 0;
-    padding-bottom: var(--spacing-m);
-    border-bottom: 2px solid var(--secondary-color);
-}
-#inventory-item-form .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-#batch-list-container {
+.ingredient-card-info {
     margin-top: var(--spacing-m);
-    max-height: 250px;
-    overflow-y: auto;
-}
-
-.batch-item {
+    padding-top: var(--spacing-m);
+    border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    background-color: var(--light-bg-color);
-    padding: var(--spacing-s) var(--spacing-m);
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-s);
     font-size: var(--small-font-size);
+    color: #555;
 }
-.batch-info {
-    flex-basis: 30%;
-}
-
-.conversion-rule-row {
-    display: grid;
-    grid-template-columns: auto 1fr auto 1fr auto auto;
-    gap: var(--spacing-s);
+.ingredient-card-info span {
+    display: flex;
     align-items: center;
-    margin-bottom: var(--spacing-s);
+    gap: var(--spacing-s);
 }
-.conversion-rule-row .input-group {
+.ingredient-card-info .fa-coins { color: var(--accent-color); }
+.ingredient-card-info .fa-fire-alt { color: var(--primary-color); }
+
+/* NYT: Oprettelses-assistent modal */
+.assistant-item-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-l);
+    padding: var(--spacing-l) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.assistant-item-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 200px;
+    flex-shrink: 0;
+}
+.assistant-item-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--spacing-m);
+    flex-grow: 1;
+}
+.assistant-item-inputs .input-group {
     margin: 0;
 }
 
-/* =================================================================
-   NYT: VARELAGER REDESIGN
-   ================================================================= */
-
-#inventory.page {
-    background-color: #f9fafb;
-}
-
-.inventory-page-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 2rem;
-    align-items: flex-start;
-}
-
-.inventory-sidebar {
-    position: sticky;
-    top: calc(var(--spacing-l) + 65px); /* Page padding + header height */
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.sidebar-widget {
-    background-color: var(--white-color);
-    border-radius: var(--card-border-radius);
-    box-shadow: var(--strong-shadow);
-    padding: 1.5rem;
-}
-
-.sidebar-widget h3 {
-    font-family: var(--body-font);
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin: 0 0 1rem 0;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-widget .btn { width: 100%; }
-
-.summary-line { 
-    display: flex; 
-    justify-content: space-between; 
-    font-weight: 600; 
-    font-size: 0.9rem;
-}
-.summary-line .value { color: var(--accent-color); }
-
-.inventory-main-content h1 { 
-    font-family: var(--heading-font); 
-    color: var(--primary-color); 
-    font-size: 2.5rem; 
-    margin: 0 0 2rem 0; 
-}
-
-details.storage-location-card { 
-    background-color: var(--white-color); 
-    border-radius: var(--card-border-radius); 
-    box-shadow: var(--strong-shadow); 
-    margin-bottom: 2rem; 
-    transition: all 0.3s ease; 
-    border: 1px solid var(--border-color);
-}
-details summary { 
-    list-style: none; 
-    cursor: pointer; 
-    padding: 1.25rem 1.5rem; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-}
-details summary::-webkit-details-marker { display: none; }
-details .storage-header { padding: 0; border-bottom: none; }
-details .storage-header h2 { 
-    margin: 0; 
-    font-family: var(--heading-font); 
-    font-size: 1.5rem; 
-    color: var(--text-color); 
-    display: flex; 
-    align-items: center; 
-    gap: 0.75rem; 
-}
-.storage-header .fa-snowflake { color: #3498db; }
-.storage-header .fa-door-closed { color: #a37b52; }
-.storage-header .fa-carrot { color: #e67e22; }
-
-.item-count { 
-    background-color: var(--secondary-color); 
-    color: var(--primary-color); 
-    padding: 0.25rem 0.75rem; 
-    border-radius: 1rem; 
-    font-size: 0.9rem; 
-    font-weight: 600; 
-}
-details summary .toggle-icon { transition: transform 0.3s ease; color: #aaa; }
-details[open] summary .toggle-icon { transform: rotate(180deg); }
-
-.storage-header-controls { 
-    display: flex; 
-    align-items: center; 
-    gap: 1rem; 
-}
-.sort-control select { 
-    font-size: 0.85rem; 
-    padding: 0.25rem 0.5rem; 
-    border-radius: 4px; 
-    border: 1px solid var(--border-color); 
-    background-color: var(--light-bg-color);
-}
-.item-table-container { 
-    padding: 0 1.5rem 1rem;
-    transition: all 0.3s ease-in-out; 
-}
-details:not([open]) .item-table-container {
-    padding: 0 1.5rem;
-}
-
-.item-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-}
-.item-table th, .item-table td { 
-    text-align: left; 
-    padding: 0.85rem 1rem; 
-    border-bottom: 1px solid var(--border-color); 
-    vertical-align: middle; 
-}
-.item-table th { 
-    font-size: 0.8rem; 
-    color: #666; 
-    font-weight: 600; 
-    text-transform: uppercase; 
-}
-.item-table tr:last-child td { border-bottom: none; }
-.item-table tr .actions-cell { opacity: 0; transition: opacity 0.2s ease; }
-.item-table tr:hover { background-color: #fcfbfa; }
-.item-table tr:hover .actions-cell { opacity: 1; }
-.item-table .item-name-cell { display: flex; align-items: center; gap: 0.75rem; }
-.item-table .item-stock-status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.item-table .item-name { font-weight: 600; }
-.quantity-cell { 
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-.quantity-cell:hover { background-color: var(--secondary-color); }
-.actions-cell .btn-icon { 
-    background: none; 
-    border: none; 
-    font-size: 1rem; 
-    color: #aaa; 
-    cursor: pointer; 
-    padding: 0.5rem; 
-    transition: color 0.2s ease; 
-    width: 32px; height: 32px;
-}
-.actions-cell .btn-icon:hover { color: var(--primary-color); background-color: var(--secondary-color); }
-.actions-cell .favorite-btn.is-favorite i { color: var(--favorite-yellow); }
-.actions-cell .favorite-btn.is-favorite:hover i { color: #eec400; }
-
-.status-red { color: var(--status-red); font-weight: 600; }
-.status-yellow { color: var(--status-yellow); font-weight: 600; }
-
-.empty-list-message { text-align: center; padding: 2rem; color: #888; font-style: italic; }
-
-.favorite-item-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
-.favorite-item { display: flex; align-items: center; justify-content: space-between; }
-.favorite-item-name { display: flex; align-items: center; gap: 0.5rem; font-weight: 500; }
-.favorite-item-actions { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #666; }
-.favorite-item-actions .btn-icon { padding: 0.25rem; font-size: 0.9rem; color: var(--accent-color); width: 28px; height: 28px; }
 
 /* =================================================================
    NYT: HJEMMET TEMA
@@ -2376,7 +2189,6 @@ details:not([open]) .item-table-container {
     margin-bottom: var(--spacing-m);
 }
 
-/* RETTELSE: Styling for billeder på Ønskeliste-siden */
 .wishlist-page-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -2432,7 +2244,6 @@ details:not([open]) .item-table-container {
 }
 
 
-/* OPDATERING: Nyt tema til plante-modal */
 .plant-modal-theme {
     background-color: var(--plant-bg-color);
 }
@@ -2656,6 +2467,13 @@ details:not([open]) .item-table-container {
     .asset-liability-layout {
         grid-template-columns: 1fr;
     }
+    .assistant-item-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .assistant-item-inputs {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 /* =================================================================
@@ -2845,4 +2663,3 @@ details:not([open]) .item-table-container {
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
-
