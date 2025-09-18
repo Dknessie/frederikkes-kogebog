@@ -3,11 +3,8 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-// OPDATERING: Importerer de nye beregningsfunktioner
 import { normalizeUnit, calculateRecipePrice, calculateRecipeNutrition } from './utils.js';
 import { openPlanMealModal } from './mealPlanner.js';
-// FJERNET: kitchenCounter er udgået
-// import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
@@ -17,14 +14,12 @@ const cookbookState = {
     flipperIndex: 0,
     searchTerm: '',
     activeListFilterTags: new Set(),
-    selectedKeyIngredient: null,
 };
 
 export function initRecipes(state, elements) {
     appState = state;
     appElements = {
         ...elements,
-        // OPDATERING: addIngredientBtn er nu specifik for opskriftsmodalen
         recipeAddIngredientBtn: document.getElementById('add-ingredient-btn'),
         importRecipeBtn: document.getElementById('import-recipe-btn')
     };
@@ -41,9 +36,6 @@ export function initRecipes(state, elements) {
     });
      if (appElements.goToCalendarBtn) appElements.goToCalendarBtn.addEventListener('click', () => window.location.hash = '#calendar');
 
-    // FJERNET: whatCanIMakeWidget er baseret på lagerstatus og fjernes
-    // if (appElements.whatCanIMakeWidget) { ... }
-
     appElements.recipeAddIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
     appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
@@ -59,8 +51,13 @@ export function initRecipes(state, elements) {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
     });
-    // FJERNET: "Cook" knappen har ikke længere lager-funktionalitet, så dens listener fjernes for nu
-    // appElements.readViewCookBtn.addEventListener('click', ...);
+    
+    // NYT: Event listener for oprettelses-assistenten
+    const createMissingBtn = document.getElementById('create-missing-ingredients-btn');
+    if (createMissingBtn) {
+        createMissingBtn.addEventListener('click', handleCreateMissingIngredients);
+    }
+
     appElements.readViewEditBtn.addEventListener('click', openEditRecipeModal);
     appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
 }
@@ -90,7 +87,6 @@ function renderFlipper() {
         const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
         const intro = (recipe.introduction || '').substring(0, 150) + ((recipe.introduction || '').length > 150 ? '...' : '');
         
-        // OPDATERING: Beregn pris og kalorier
         const price = calculateRecipePrice(recipe, appState.ingredientInfo);
         const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
         const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? `~${Math.round(totalCalories / recipe.portions)} kcal/port.` : '';
@@ -192,7 +188,6 @@ function renderListFilterTags() {
 }
 
 function renderSidebarWidgets() {
-    // FJERNET: "Hvad kan jeg lave" er fjernet.
     appElements.whatCanIMakeWidget.innerHTML = `<h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave?</h5><p class="empty-state-small">Denne funktion er midlertidigt fjernet under ombygningen af varelageret.</p>`;
     renderUpcomingMealPlanWidget();
 }
@@ -298,7 +293,6 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
         const value = e.target.value.toLowerCase();
         removeAutocomplete();
         if (value.length < 1) return;
-        // OPDATERING: Søger i det nye ingredientInfo-bibliotek
         const suggestions = appState.ingredientInfo.filter(item => item.name.toLowerCase().startsWith(value));
         if (suggestions.length > 0) {
             const suggestionsContainer = document.createElement('div');
@@ -321,7 +315,6 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
     nameInput.addEventListener('blur', () => setTimeout(removeAutocomplete, 150));
 }
 
-// OPDATERING: Gør funktionen tilgængelig for andre moduler ved at tilføje 'export'
 export function renderReadView(recipe) {
     if (!recipe) return;
     const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
@@ -331,7 +324,6 @@ export function renderReadView(recipe) {
     document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
 
-    // OPDATERING: Beregn og vis pris og kalorier
     const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
     const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
     const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? Math.round(totalCalories / recipe.portions) : 0;
@@ -358,7 +350,6 @@ export function renderReadView(recipe) {
     if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ing => {
             const li = document.createElement('li');
-            // FJERNET: Lagerstatus-check er fjernet
             const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
             li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span>`;
             ingredientsList.appendChild(li);
@@ -377,6 +368,8 @@ export function renderReadView(recipe) {
     appState.currentlyViewedRecipeId = recipe.id;
     appElements.recipeReadModal.classList.remove('hidden');
 }
+
+// ... (resten af filen, fra parseIngredientLine til slut, forbliver uændret) ...
 
 function parseIngredientLine(line) {
     line = line.trim();
@@ -600,3 +593,82 @@ async function handleDeleteRecipeFromReadView() {
         }
     }
 }
+
+/**
+ * NY FUNKTION: Håndterer klik på "Opret Manglende Ingredienser".
+ */
+function handleCreateMissingIngredients() {
+    const recipe = appState.recipes.find(r => r.id === appState.currentlyViewedRecipeId);
+    if (!recipe || !recipe.ingredients) return;
+
+    const existingIngredientNames = new Set(appState.ingredientInfo.map(i => i.name.toLowerCase()));
+    const missingIngredients = recipe.ingredients.filter(ing => !existingIngredientNames.has(ing.name.toLowerCase()));
+
+    if (missingIngredients.length === 0) {
+        showNotification({title: "Alle Findes", message: "Alle ingredienser i denne opskrift findes allerede i dit bibliotek."});
+        return;
+    }
+
+    openIngredientAssistantModal(missingIngredients);
+}
+
+function openIngredientAssistantModal(missingIngredients) {
+    const modal = document.getElementById('ingredient-assistant-modal');
+    const listContainer = document.getElementById('ingredient-assistant-list');
+    listContainer.innerHTML = '';
+
+    const mainCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? { name: cat, subcategories: [] } : cat));
+
+    missingIngredients.forEach(ing => {
+        const row = document.createElement('div');
+        row.className = 'assistant-item-row';
+        row.dataset.name = ing.name;
+
+        // Opret dropdowns for kategorier
+        const mainCatSelect = document.createElement('select');
+        mainCatSelect.className = 'assistant-main-cat';
+        populateReferenceDropdown(mainCatSelect, mainCategories.map(c => c.name), 'Vælg kategori...');
+        
+        const subCatSelect = document.createElement('select');
+        subCatSelect.className = 'assistant-sub-cat';
+        subCatSelect.disabled = true;
+
+        mainCatSelect.addEventListener('change', () => {
+            const selectedMain = mainCategories.find(c => c.name === mainCatSelect.value);
+            populateReferenceDropdown(subCatSelect, selectedMain ? selectedMain.subcategories : [], 'Vælg underkategori...');
+            subCatSelect.disabled = !selectedMain;
+        });
+
+        row.innerHTML = `
+            <div class="assistant-item-name">${ing.name}</div>
+            <div class="assistant-item-inputs">
+                <div class="input-group">${mainCatSelect.outerHTML}</div>
+                <div class="input-group">${subCatSelect.outerHTML}</div>
+                <div class="input-group">
+                    <input type="number" step="0.01" class="assistant-price" placeholder="Pris (kg/l/stk)">
+                </div>
+                <div class="input-group">
+                    <select class="assistant-unit">
+                        <option value="g">kr/kg</option>
+                        <option value="ml">kr/l</option>
+                        <option value="stk">kr/stk</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <input type="number" class="assistant-calories" placeholder="kcal/100g">
+                </div>
+            </div>
+        `;
+        listContainer.appendChild(row);
+    });
+    
+    modal.classList.remove('hidden');
+}
+
+function populateReferenceDropdown(select, opts, ph, val) {
+    if (!select) return;
+    select.innerHTML = `<option value="">${ph}</option>`;
+    (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
+    select.value = val || "";
+}
+
