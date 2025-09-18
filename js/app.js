@@ -1,17 +1,19 @@
 // js/app.js
 
 import { db } from './firebase.js';
-import { collection, onSnapshot, doc, where, query, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
-import { initInventory, renderInventory } from './inventory.js';
+// OPDATERING: Omdøbt initInventory til initIngredientLibrary for klarhed
+import { initIngredientLibrary, renderIngredientLibrary } from './inventory.js';
 import { initRecipes, renderRecipes } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
-import { initKitchenCounter } from './kitchenCounter.js';
+// FJERNET: kitchenCounter.js er ikke længere nødvendig
+// import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomy, renderEconomy } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
@@ -21,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentUser: null,
         users: [],
-        inventoryItems: [],
-        inventoryBatches: [],
-        inventory: [],
+        // OPDATERING: Omdøbt og simplificeret datastruktur for ingredienser
+        ingredientInfo: [], // Erstatter inventoryItems og inventory
+        // FJERNET: inventoryBatches er ikke længere i brug
         recipes: [],
         assets: [],
         liabilities: [],
@@ -65,32 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
         hjemmetSidebar: document.getElementById('hjemmet-sidebar'),
         hjemmetMainContent: document.getElementById('hjemmet-main-content'),
 
-        // Inventory
-        inventoryItemModal: document.getElementById('inventory-item-modal'),
-        inventoryItemForm: document.getElementById('inventory-item-form'),
-        addInventoryItemBtn: document.getElementById('add-inventory-item-btn'),
-        inventoryModalTitle: document.getElementById('inventory-item-modal-title'),
-        reorderAssistantModal: document.getElementById('reorder-assistant-modal'),
-        reorderListContainer: document.getElementById('reorder-list-container'),
-        reorderForm: document.getElementById('reorder-form'),
+        // OPDATERING: Omdøbt elementer for at matche den nye funktionalitet
+        ingredientModal: document.getElementById('ingredient-info-modal'),
+        ingredientForm: document.getElementById('ingredient-info-form'),
+        addIngredientBtn: document.getElementById('add-ingredient-btn'),
+        ingredientModalTitle: document.getElementById('ingredient-modal-title'),
         
-        // NYE VARELAGER ELEMENTER
-        inventorySidebar: document.getElementById('inventory-sidebar'),
-        inventoryMainContentContainer: document.getElementById('inventory-main-content-container'),
-        favoriteItemsList: document.getElementById('favorite-items-list'),
-        inventoryTotalValueDisplay: document.getElementById('inventory-total-value-display'),
-        inventorySearch: document.getElementById('inventory-search'),
-        inventoryMainCatFilter: document.getElementById('inventory-main-cat-filter'),
-        inventoryImpulsePurchaseBtn: document.getElementById('inventory-impulse-purchase-btn'),
-        inventoryReorderAssistantBtn: document.getElementById('inventory-reorder-assistant-btn'),
-        inventoryUseInCookbookBtn: document.getElementById('inventory-use-in-cookbook-btn'),
+        // FJERNET: Gamle varelager-elementer er slettet fra index.html
         
-        impulsePurchaseModal: document.getElementById('impulse-purchase-modal'),
-        impulsePurchaseForm: document.getElementById('impulse-purchase-form'),
-
-        quickStockAdjustModal: document.getElementById('quick-stock-adjust-modal'),
-        quickStockAdjustForm: document.getElementById('quick-stock-adjust-form'),
-
         // Recipes (New Structure)
         cookbookAddRecipeBtn: document.getElementById('cookbook-add-recipe-btn'),
         recipeFlipper: document.getElementById('recipe-flipper'),
@@ -108,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeForm: document.getElementById('recipe-form'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
         ingredientsContainer: document.getElementById('ingredients-container'),
-        addIngredientBtn: document.getElementById('add-ingredient-btn'),
+        // addIngredientBtn er nu i recipe-modalen, ikke global
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         importRecipeBtn: document.getElementById('import-recipe-btn'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
@@ -188,69 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         deleteHomeInventoryBtn: document.getElementById('delete-home-inventory-btn'),
     };
 
-    function computeDerivedShoppingLists() {
-        const materialsNeeded = {};
-        (state.projects || []).forEach(project => {
-            if (project.status === 'Planlagt' || project.status === 'Igangværende') {
-                (project.materials || []).forEach(material => {
-                    const key = material.name.toLowerCase();
-                    if (!materialsNeeded[key]) {
-                        materialsNeeded[key] = { total: 0, unit: material.unit, name: material.name, projects: [] };
-                    }
-                    materialsNeeded[key].total += material.quantity || 0;
-                    materialsNeeded[key].projects.push({ name: project.title, qty: material.quantity });
-                });
-            }
-        });
-
-        const materialsShoppingList = {};
-        for (const key in materialsNeeded) {
-            const needed = materialsNeeded[key];
-            const inventoryItem = state.inventory.find(item => item.name.toLowerCase() === key);
-            const stock = inventoryItem ? (inventoryItem.totalStock || 0) : 0;
-            const toBuy = Math.max(0, needed.total - stock);
-            
-            if (toBuy > 0) {
-                materialsShoppingList[key] = {
-                    name: needed.name,
-                    quantity_to_buy: toBuy,
-                    unit: needed.unit,
-                    note: `Til projekt(er): ${needed.projects.map(p => p.name).join(', ')}`,
-                    projectId: needed.projects.length === 1 ? state.projects.find(p => p.title === needed.projects[0].name)?.id : null,
-                    itemId: inventoryItem ? inventoryItem.id : null
-                };
-            }
-        }
-        state.shoppingLists.materials = materialsShoppingList;
-    }
-
-
-    function combineInventoryData() {
-        if (!state.inventoryItems || !state.inventoryBatches) return;
-        state.inventory = state.inventoryItems.map(item => {
-            const batches = state.inventoryBatches.filter(batch => batch.itemId === item.id);
-            let totalStock = 0;
-            if (item.defaultUnit === 'stk') {
-                totalStock = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
-            } else {
-                totalStock = batches.reduce((sum, b) => sum + ((b.quantity || 0) * (b.size || 0)), 0);
-            }
-            return { ...item, batches: batches.sort((a,b) => new Date(a.expiryDate) - new Date(b.expiryDate)), totalStock };
-        });
-    }
-
     function renderCurrentPage() {
         const hash = window.location.hash || '#dashboard';
         const pageId = hash.substring(1).split('/')[0];
-        const currentPageElement = document.getElementById(pageId);
-    
-        // Gem scroll-position før rendering
-        let scrollPositions = {};
-        const scrollableContainer = currentPageElement ? currentPageElement.querySelector('.table-wrapper') : null;
-        if (scrollableContainer) {
-            scrollPositions.top = scrollableContainer.scrollTop;
-            scrollPositions.left = scrollableContainer.scrollLeft;
-        }
     
         // Udfør den relevante rendering-funktion
         switch('#' + pageId) {
@@ -267,7 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderRecipes();
                 break;
             case '#inventory':
-                renderInventory();
+                // OPDATERING: Kalder den nye render-funktion
+                renderIngredientLibrary();
                 break;
             case '#oekonomi':
                 renderEconomy();
@@ -276,13 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderReferencesPage();
                 break;
         }
-    
-        // Gendan scroll-position efter rendering
-        const newScrollableContainer = document.getElementById(pageId)?.querySelector('.table-wrapper');
-        if (newScrollableContainer && scrollPositions.top !== undefined) {
-            newScrollableContainer.scrollTop = scrollPositions.top;
-            newScrollableContainer.scrollLeft = scrollPositions.left;
-        }
     }
 
     function setupRealtimeListeners(userId) {
@@ -290,9 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
+        // OPDATERING: Simplificeret listener-opsætning
         const collections = {
-            inventory_items: 'inventoryItems',
-            inventory_batches: 'inventoryBatches',
+            // OPDATERING: Omdøbt collection til 'ingredient_info'
+            ingredient_info: 'ingredientInfo',
             recipes: 'recipes',
             events: 'events',
             fixed_expenses: 'fixedExpenses',
@@ -309,11 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const q = query(collection(db, coll), where("userId", "==", userId));
             state.listeners[stateKey] = onSnapshot(q, (snapshot) => {
                 state[stateKey] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                if (stateKey === 'inventoryItems' || stateKey === 'inventoryBatches') {
-                    combineInventoryData();
-                }
-                computeDerivedShoppingLists();
                 renderCurrentPage();
             }, (error) => commonErrorHandler(error, coll));
         }
@@ -340,11 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (stateKey === 'references') {
                      const buttonsToEnable = [
-                        elements.addInventoryItemBtn, 
-                        elements.inventoryReorderAssistantBtn, 
+                        elements.addIngredientBtn, 
                         elements.cookbookAddRecipeBtn,
                         elements.hubGenerateGroceriesBtn,
-                        elements.inventoryImpulsePurchaseBtn
                     ];
                      buttonsToEnable.forEach(btn => { if (btn) btn.disabled = false; });
                 }
@@ -376,11 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         
         const buttonsToDisable = [
-            elements.addInventoryItemBtn, 
-            elements.inventoryReorderAssistantBtn, 
+            elements.addIngredientBtn, 
             elements.cookbookAddRecipeBtn,
             elements.hubGenerateGroceriesBtn,
-            elements.inventoryImpulsePurchaseBtn
         ];
         buttonsToDisable.forEach(btn => { if (btn) btn.disabled = true; });
     }
@@ -405,10 +315,11 @@ document.addEventListener('DOMContentLoaded', () => {
         initAuth(onLogin, onLogout);
 
         initUI(state, elements);
-        initInventory(state, elements);
+        // OPDATERING: Kalder den nye init-funktion
+        initIngredientLibrary(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
-        initKitchenCounter(state);
+        // FJERNET: kitchenCounter er udgået
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
@@ -419,4 +330,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-
