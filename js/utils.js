@@ -83,79 +83,107 @@ export function formatDate(date) {
 
 
 /**
- * Converts a quantity from a given recipe unit to the master product's base unit (g or ml).
- * It prioritizes user-defined conversion rules on the master product.
+ * Converts a quantity from a given recipe unit to a base unit (g, ml, or stk).
+ * It uses standard conversion factors.
+ * NOTE: This is simplified and does not use user-defined rules anymore.
  * @param {number} quantity The quantity to convert.
- * @param {string} fromUnit The unit to convert from (e.g., 'stk', 'dl').
- * @param {object} masterProduct The master product, which contains conversion_rules and defaultUnit.
- * @returns {{grams: number|null, error: string|null}} Result object.
+ * @param {string} fromUnit The unit to convert from (e.g., 'dl', 'spsk').
+ * @param {string} targetUnit The target base unit ('g', 'ml', 'stk').
+ * @returns {{ amount: number|null, error: string|null }} Result object.
  */
-export function convertToGrams(quantity, fromUnit, masterProduct) {
-    if (!quantity) return { grams: 0, error: null };
+export function convertToBaseUnit(quantity, fromUnit, targetUnit) {
+    if (!quantity) return { amount: 0, error: null };
     
-    const normalizedFromUnit = normalizeUnit(fromUnit);
-    const rules = masterProduct.conversion_rules || {};
-    const baseUnit = masterProduct.defaultUnit || 'g'; // 'g' or 'ml'
-
-    // 1. Direct match with base unit
-    if (normalizedFromUnit === baseUnit) {
-        return { grams: quantity, error: null };
-    }
-
-    // 2. Check user-defined conversion rules on the master product
-    if (rules[normalizedFromUnit]) {
-        return { grams: quantity * rules[normalizedFromUnit], error: null };
-    }
-
-    // 3. Fallback to standard conversions if no user rule exists
-    const standardConversions = {
-        'g': { 'kg': 1000 },
-        'ml': { 'l': 1000, 'dl': 100, 'spsk': 15, 'tsk': 5 }
-    };
+    const normalizedFrom = normalizeUnit(fromUnit);
     
-    if (standardConversions[baseUnit] && standardConversions[baseUnit][normalizedFromUnit]) {
-        return { grams: quantity * standardConversions[baseUnit][normalizedFromUnit], error: null };
+    if (normalizedFrom === targetUnit) {
+        return { amount: quantity, error: null };
     }
 
-    // 4. If no conversion is possible
+    const conversionsToMl = { 'l': 1000, 'dl': 100, 'spsk': 15, 'tsk': 5 };
+    const conversionsToG = { 'kg': 1000 };
+    
+    if (targetUnit === 'ml' && conversionsToMl[normalizedFrom]) {
+        return { amount: quantity * conversionsToMl[normalizedFrom], error: null };
+    }
+    
+    if (targetUnit === 'g' && conversionsToG[normalizedFrom]) {
+        return { amount: quantity * conversionsToG[normalizedFrom], error: null };
+    }
+
+    // If it's 'stk' or any other unit that doesn't have a direct conversion path,
+    // we assume it's a 1-to-1 conversion if the target is also 'stk'. Otherwise, it's an error.
+    if (targetUnit === 'stk' && normalizedFrom === 'stk') {
+         return { amount: quantity, error: null };
+    }
+
+    // We can't convert, e.g., 'stk' to 'g' without more info.
     return { 
-        grams: null, 
-        error: `Kan ikke omregne '${fromUnit}' til '${baseUnit}' for varen '${masterProduct.name}'. Tilføj venligst en konverteringsregel på varekortet.` 
+        amount: null, 
+        error: `Kan ikke konvertere fra '${fromUnit}' til '${targetUnit}'.` 
     };
 }
 
+
 /**
- * Calculates the estimated price of a recipe.
+ * Calculates the estimated price of a recipe based on the ingredient library.
  * @param {object} recipe The recipe object.
- * @param {Array} inventory The full inventory list.
+ * @param {Array} ingredientInfo The full ingredient library.
  * @param {number} [portionsOverride] Optional number of portions to calculate for.
  * @returns {number} The total estimated price.
  */
-export function calculateRecipePrice(recipe, inventory, portionsOverride) {
+export function calculateRecipePrice(recipe, ingredientInfo, portionsOverride) {
     let totalPrice = 0;
-    if (!recipe.ingredients) return 0;
+    if (!recipe.ingredients || !ingredientInfo) return 0;
 
     const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
 
     recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase());
-        if (inventoryItem && inventoryItem.batches && inventoryItem.batches.length > 0) {
-            const cheapestBatch = inventoryItem.batches
-                .filter(b => b.price && b.size > 0 && b.quantity > 0)
-                .sort((a, b) => (a.price / (a.quantity * a.size)) - (b.price / (b.quantity * a.size)))[0];
+        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+        if (info && info.averagePrice && info.defaultUnit) {
+            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
             
-            if (cheapestBatch) {
-                const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-                const conversion = convertToGrams(scaledQuantity, ing.unit, inventoryItem);
-                
-                if (conversion.grams !== null) {
-                    const pricePerBaseUnit = cheapestBatch.price / (cheapestBatch.quantity * cheapestBatch.size);
-                    totalPrice += conversion.grams * pricePerBaseUnit;
-                }
+            // Convert the ingredient's unit to the price unit defined in the library
+            const conversion = convertToBaseUnit(scaledQuantity, ing.unit, info.defaultUnit);
+            
+            if (conversion.amount !== null) {
+                totalPrice += conversion.amount * info.averagePrice;
             }
         }
     });
     return totalPrice;
+}
+
+/**
+ * NY FUNKTION: Calculates the estimated nutrition (calories) of a recipe.
+ * @param {object} recipe The recipe object.
+ * @param {Array} ingredientInfo The full ingredient library.
+ * @param {number} [portionsOverride] Optional number of portions to calculate for.
+ * @returns {number} The total estimated calories for the entire dish.
+ */
+export function calculateRecipeNutrition(recipe, ingredientInfo, portionsOverride) {
+    let totalCalories = 0;
+    if (!recipe.ingredients || !ingredientInfo) return 0;
+
+    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
+
+    recipe.ingredients.forEach(ing => {
+        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+        // We can only calculate if we have calorie info and the unit is mass or volume
+        if (info && info.caloriesPer100g && (info.defaultUnit === 'g' || info.defaultUnit === 'ml')) {
+            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
+            
+            // Convert ingredient unit to a base unit (g or ml) to calculate calories
+            const conversion = convertToBaseUnit(scaledQuantity, ing.unit, info.defaultUnit);
+
+            if (conversion.amount !== null) {
+                // Calculate calories based on the amount in grams/ml
+                const calories = (conversion.amount / 100) * info.caloriesPer100g;
+                totalCalories += calories;
+            }
+        }
+    });
+    return totalCalories;
 }
 
 
