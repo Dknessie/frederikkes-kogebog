@@ -41,7 +41,8 @@
                     <a href="#calendar" class="nav-link"><i class="fas fa-calendar-alt"></i> Kalender</a>
                     <a href="#hjem" class="nav-link"><i class="fas fa-home"></i> Hjemmet</a>
                     <a href="#recipes" class="nav-link"><i class="fas fa-book-open"></i> Kogebog</a>
-                    <a href="#inventory" class="nav-link"><i class="fas fa-boxes-stacked"></i> Varelager</a>
+                    <!-- OPDATERING: Tekstændring for at afspejle ny funktion -->
+                    <a href="#inventory" class="nav-link"><i class="fas fa-carrot"></i> Ingredienser</a>
                     <a href="#oekonomi" class="nav-link"><i class="fas fa-chart-pie"></i> Økonomi</a>
                     <a href="#references" class="nav-link"><i class="fas fa-cogs"></i> Referencer</a>
                 </nav>
@@ -112,7 +113,8 @@
                             <h3>Hurtig Adgang</h3>
                             <div class="quick-actions-container">
                                 <a href="#recipes" data-action="add-recipe" class="quick-action-btn"><i class="fas fa-book-open"></i><span>Ny Opskrift</span></a>
-                                <a href="#inventory" data-action="add-inventory" class="quick-action-btn"><i class="fas fa-box"></i><span>Tilføj Vare</span></a>
+                                <!-- OPDATERING: Ændret tekst og data-action -->
+                                <a href="#inventory" data-action="add-ingredient" class="quick-action-btn"><i class="fas fa-carrot"></i><span>Tilføj Ingrediens</span></a>
                             </div>
                         </div>
                     </div>
@@ -222,61 +224,33 @@
                 </div>
             </section>
 
+            <!-- ====================================================== -->
+            <!-- START PÅ NYT INGREDISENS-BIBLIOTEK DESIGN              -->
+            <!-- ====================================================== -->
             <section id="inventory" class="page hidden">
-                <!-- ====================================================== -->
-                <!-- START PÅ NYT VARELAGER-DESIGN                         -->
-                <!-- ====================================================== -->
-                <div class="inventory-page-layout">
-                    <!-- SIDEBAR -->
-                    <aside class="inventory-sidebar" id="inventory-sidebar">
-                        <div class="sidebar-widget">
-                            <h3>Handlinger</h3>
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                                <button class="btn btn-primary" id="inventory-impulse-purchase-btn"><i class="fas fa-bolt"></i> Hurtigt Køb / Batch</button>
-                                <button class="btn btn-secondary" id="inventory-reorder-assistant-btn"><i class="fas fa-magic-wand-sparkles"></i> Genbestillings-assistent</button>
-                                <button class="btn btn-accent" id="inventory-use-in-cookbook-btn"><i class="fas fa-utensils"></i> Brug på lager i Kogebog</button>
-                            </div>
-                        </div>
-
-                        <!-- FAVORITVARER WIDGET -->
-                        <div class="sidebar-widget">
-                            <h3><i class="fas fa-star" style="color: gold;"></i> Favoritvarer</h3>
-                            <ul class="favorite-item-list" id="favorite-items-list">
-                                <!-- Indhold genereres af inventory.js -->
-                            </ul>
-                        </div>
-
-                        <div class="sidebar-widget">
-                            <h3>Filtre & Oversigt</h3>
-                            <div class="input-group">
-                                <label for="inventory-search">Søg i varelager</label>
-                                <input type="text" id="inventory-search" placeholder="Søg efter navn...">
-                            </div>
-                            <div class="input-group">
-                                <label for="inventory-main-cat-filter">Kategori</label>
-                                <select id="inventory-main-cat-filter">
-                                    <!-- Indhold genereres af inventory.js -->
-                                </select>
-                            </div>
-                             <div class="summary-line" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                                <span>Total Lagerværdi:</span>
-                                <span class="value" id="inventory-total-value-display">0,00 kr.</span>
-                            </div>
-                        </div>
-                    </aside>
-
-                    <!-- HOVEDINDHOLD -->
-                    <main class="inventory-main-content">
-                        <h1>Varelager</h1>
-                        <div id="inventory-main-content-container">
-                            <!-- Indhold genereres af inventory.js -->
-                        </div>
-                    </main>
+                <!-- OPDATERING: Titel og beskrivelse ændret -->
+                <h2>Ingrediens-bibliotek</h2>
+                <p>Administrér generel information om dine ingredienser for at beregne priser og kalorier på opskrifter.</p>
+                
+                <div class="actions-bar">
+                    <button id="add-ingredient-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
+                    <div class="search-bar" style="max-width: 300px; flex-grow: 1;">
+                         <input type="text" id="library-search" placeholder="Søg i biblioteket...">
+                    </div>
+                     <select id="library-category-filter" style="max-width: 250px;">
+                        <!-- Indhold genereres af inventory.js -->
+                    </select>
                 </div>
-                <!-- ====================================================== -->
-                <!-- SLUT PÅ NYT VARELAGER-DESIGN                          -->
-                <!-- ====================================================== -->
+
+                <div class="table-wrapper">
+                    <div id="ingredient-library-container">
+                        <!-- Indhold (tabel) genereres af inventory.js -->
+                    </div>
+                </div>
             </section>
+            <!-- ====================================================== -->
+            <!-- SLUT PÅ NYT INGREDISENS-BIBLIOTEK DESIGN               -->
+            <!-- ====================================================== -->
             
             <section id="oekonomi" class="page hidden">
                 <div class="references-page-layout">
@@ -310,12 +284,81 @@
             <a href="#dashboard" class="mobile-tab-link active" data-page="dashboard"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
             <a href="#calendar" class="mobile-tab-link" data-page="calendar"><i class="fas fa-calendar-alt"></i><span>Kalender</span></a>
             <a href="#hjem" class="mobile-tab-link" data-page="hjem"><i class="fas fa-home"></i><span>Hjemmet</span></a>
-            <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-boxes-stacked"></i><span>Varelager</span></a>
+            <a href="#inventory" class="mobile-tab-link" data-page="inventory"><i class="fas fa-carrot"></i><span>Ingredienser</span></a>
             <a href="#oekonomi" class="mobile-tab-link" data-page="oekonomi"><i class="fas fa-chart-pie"></i><span>Økonomi</span></a>
         </nav>
     </div>
 
     <!-- MODALS -->
+
+    <!-- ================================================================= -->
+    <!-- START: NY MODAL FOR INGREDISENS-BIBLIOTEK                         -->
+    <!-- ================================================================= -->
+    <div id="ingredient-info-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
+        <div class="modal-content">
+            <button class="close-modal-btn">&times;</button>
+            <h3 id="ingredient-modal-title">Administrér Ingrediens</h3>
+            <form id="ingredient-info-form">
+                <input type="hidden" id="ingredient-info-id">
+                
+                <h4>Basis Information</h4>
+                <div class="input-group">
+                    <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
+                    <input type="text" id="ingredient-info-name" placeholder="F.eks. Hakket Oksekød 4-7%" required>
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="ingredient-info-main-category">Overkategori</label>
+                        <select id="ingredient-info-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="ingredient-info-sub-category">Underkategori</label>
+                        <select id="ingredient-info-sub-category" required></select>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h4>Pris & Kalorier (Vejledende)</h4>
+                <p class="small-text">Disse værdier bruges til at estimere pris og kalorieindhold i dine opskrifter.</p>
+                <div class="form-grid-3-col">
+                    <div class="input-group">
+                        <label for="ingredient-info-price">Pris</label>
+                        <div class="price-input-wrapper">
+                            <input type="number" id="ingredient-info-price" step="0.01" placeholder="f.eks. 0.12">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="ingredient-info-default-unit">Pris pr. Enhed</label>
+                        <select id="ingredient-info-default-unit" required>
+                            <option value="g">Gram (g)</option>
+                            <option value="ml">Milliliter (ml)</option>
+                            <option value="stk">Styk (stk)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="ingredient-info-calories">Kalorier (pr. 100g/ml)</label>
+                        <input type="number" id="ingredient-info-calories" placeholder="f.eks. 250">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" id="delete-ingredient-btn">Slet Ingrediens</button>
+                    <button type="submit" class="btn btn-primary" id="save-ingredient-btn">Gem Ingrediens</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- ================================================================= -->
+    <!-- SLUT: NY MODAL FOR INGREDISENS-BIBLIOTEK                          -->
+    <!-- ================================================================= -->
+
+
+    <!-- FJERNET: Alle gamle modals relateret til det gamle varelager er slettet -->
+    <!-- (inventory-item-modal, batch-edit-modal, impulse-purchase-modal, reorder-assistant-modal, quick-stock-adjust-modal) -->
+
+
+    <!-- Other Modals (beholdes) -->
     <div id="project-edit-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -533,8 +576,7 @@
             </form>
         </div>
     </div>
-
-    <!-- NYT: Modals for Aktiver og Gæld -->
+    
     <div id="asset-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -639,7 +681,6 @@
             </form>
         </div>
     </div>
-
 
     <div id="fixed-expense-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -797,136 +838,7 @@
             <div id="shopping-list-modal-content-wrapper"></div>
         </div>
     </div>
-    <div id="inventory-item-modal" class="modal-overlay hidden" data-overlay-closable="false" data-confirm-close="true">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="inventory-item-modal-title">Administrér Vare</h3>
-            <form id="inventory-item-form">
-                <input type="hidden" id="inventory-item-id">
-                <div class="form-section-box">
-                    <h4>Generel Vareinformation</h4>
-                    <p class="small-text">Dette er den generiske vare, som du bruger i dine opskrifter.</p>
-                    <div class="input-group">
-                        <label for="inventory-item-name">Varenavn (generisk)</label>
-                        <input type="text" id="inventory-item-name" placeholder="F.eks. Hakket Kylling" required>
-                    </div>
-                    <div class="form-grid-2-col">
-                        <div class="input-group">
-                            <label for="inventory-item-main-category">Overkategori</label>
-                            <select id="inventory-item-main-category" required></select>
-                        </div>
-                        <div class="input-group">
-                            <label for="inventory-item-sub-category">Underkategori</label>
-                            <select id="inventory-item-sub-category" required></select>
-                        </div>
-                    </div>
-                    <div class="form-grid-2-col">
-                        <div class="input-group">
-                            <label for="inventory-item-location">Placering i hjemmet</label>
-                            <select id="inventory-item-location" required></select>
-                        </div>
-                        <div class="input-group">
-                            <label for="inventory-item-default-unit">Standard Måleenhed (for total)</label>
-                            <select id="inventory-item-default-unit" required>
-                                <option value="g">Gram (g)</option>
-                                <option value="ml">Milliliter (ml)</option>
-                                <option value="stk">Styk (stk)</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div class="input-group">
-                        <label for="inventory-item-reorder-point">Genbestillingspunkt (valgfri)</label>
-                        <input type="number" id="inventory-item-reorder-point" placeholder="F.eks. 500 (i standardenhed)">
-                    </div>
-                </div>
-                <div class="form-section-box">
-                    <h4>Konverteringsregler</h4>
-                    <p class="small-text">Definér hvordan forskellige enheder skal omregnes til den valgte standard måleenhed.</p>
-                    <div id="conversion-rules-container"></div>
-                    <button type="button" id="add-conversion-rule-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Regel</button>
-                </div>
-                <div class="form-section-box">
-                    <div class="section-header">
-                        <h4>Batches på Lager</h4>
-                        <button type="button" id="add-batch-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Nyt Batch</button>
-                    </div>
-                    <p class="small-text">Dette er de specifikke indkøb af varen. Et batch repræsenterer én eller flere enheder fra samme indkøb.</p>
-                    <div id="batch-list-container"></div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-danger" id="delete-inventory-item-btn">Slet Hele Varen</button>
-                    <button type="submit" class="btn btn-primary" id="save-inventory-item-btn">Gem Vare</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="batch-edit-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="batch-edit-modal-title">Rediger Batch</h3>
-            <form id="batch-edit-form">
-                <input type="hidden" id="batch-edit-item-id">
-                <input type="hidden" id="batch-edit-batch-id">
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="batch-edit-purchase-date">Indkøbsdato</label>
-                        <input type="date" id="batch-edit-purchase-date" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="batch-edit-expiry-date">Udløbsdato (valgfri)</label>
-                        <input type="date" id="batch-edit-expiry-date">
-                    </div>
-                </div>
-                <div class="form-grid-3-col">
-                    <div class="input-group">
-                        <label for="batch-edit-quantity">Antal</label>
-                        <input type="number" id="batch-edit-quantity" min="0" value="1" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="batch-edit-size">Vægt/størrelse pr. enhed</label>
-                        <div class="unit-input-wrapper">
-                             <input type="number" id="batch-edit-size" min="0" step="any" required>
-                             <span id="batch-edit-size-unit"></span>
-                        </div>
-                    </div>
-                    <div class="input-group">
-                        <label for="batch-edit-unit">Enhedstype</label>
-                        <input type="text" id="batch-edit-unit" required>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="batch-edit-price">Pris (total for batch)</label>
-                    <div class="price-input-wrapper">
-                        <input type="number" id="batch-edit-price" min="0" step="0.01">
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-danger" id="delete-batch-btn">Slet Batch</button>
-                    <button type="submit" class="btn btn-primary">Gem Batch</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <div id="impulse-purchase-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Hurtigt Køb</h3>
-            <p>Søg efter en vare for at tilføje et nyt batch, eller opret en ny vare, hvis den ikke findes.</p>
-            <form id="impulse-purchase-form">
-                <div class="input-group">
-                    <label for="impulse-item-search">Søg eller opret vare</label>
-                    <div class="search-bar">
-                        <input type="text" id="impulse-item-search" placeholder="Begynd at skrive for at søge..." autocomplete="off">
-                        <i class="fas fa-search"></i>
-                        <div id="impulse-item-suggestions" class="autocomplete-suggestions"></div>
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="impulse-action-btn" disabled>Vælg en handling</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    
     <div id="recipe-edit-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -999,12 +911,12 @@
                         <label for="recipe-import-textarea">Indsæt tekst her</label>
                         <textarea id="recipe-import-textarea" rows="8" placeholder="Indsæt fuld opskriftstekst eller kun en ingrediensliste..."></textarea>
                     </div>
-                    <button id="import-recipe-btn" class="btn btn-secondary">Importér</button>
+                    <button id="import-recipe-btn" type="button" class="btn btn-secondary">Importér</button>
                 </div>
                 <hr>
                 <h4>Ingredienser</h4>
                 <div id="ingredients-container"></div>
-                <button id="add-ingredient-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
+                <button id="add-ingredient-btn" type="button" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
                 </div>
@@ -1026,7 +938,8 @@
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
                     <button id="read-view-plan-btn" class="btn btn-primary"><i class="fas fa-calendar-plus"></i> Planlæg</button>
-                    <button id="read-view-cook-btn" class="btn btn-secondary"><i class="fas fa-hat-chef"></i> Markér som lavet</button>
+                    <!-- FJERNET: Knappen til at fratrække fra lager er ikke længere relevant -->
+                    <button id="read-view-cook-btn" class="btn btn-secondary hidden"><i class="fas fa-hat-chef"></i> Markér som lavet</button>
                     <button id="read-view-edit-btn" class="btn btn-secondary"><i class="fas fa-edit"></i> Rediger</button>
                     <button id="read-view-delete-btn" class="btn btn-danger"><i class="fas fa-trash"></i> Slet</button>
                 </div>
@@ -1140,38 +1053,6 @@
             </form>
         </div>
     </div>
-    <div id="reorder-assistant-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h3>Genbestillings-assistent</h3>
-            <p>Følgende varer er ved at løbe tør. Vælg dem, du vil tilføje til indkøbslisten.</p>
-            <form id="reorder-form">
-                <div id="reorder-list-container"></div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Tilføj valgte til Indkøbsliste</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- NYT: Hurtig Redigering af Lagerbeholdning -->
-    <div id="quick-stock-adjust-modal" class="modal-overlay hidden">
-        <div class="modal-content small">
-            <button class="close-modal-btn">&times;</button>
-            <h3 id="quick-stock-modal-title">Juster Beholdning</h3>
-            <form id="quick-stock-adjust-form">
-                <input type="hidden" id="quick-stock-item-id">
-                <div class="input-group">
-                    <label for="quick-stock-new-total">Ny total beholdning (<span id="quick-stock-unit-label"></span>)</label>
-                    <input type="number" step="any" id="quick-stock-new-total" required>
-                </div>
-                <p class="small-text">Systemet justerer automatisk dine batches i baggrunden.</p>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Gem</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- Third-party libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
@@ -1182,8 +1063,3 @@
 
 </body>
 </html>
-
-
-
-
-
