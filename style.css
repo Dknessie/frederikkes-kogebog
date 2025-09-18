@@ -1547,7 +1547,7 @@ header {
 }
 
 #plan-meal-modal, #edit-budget-modal, #project-edit-modal, #room-edit-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
-#ingredient-assistant-modal { z-index: 2015; }
+#ingredient-assistant-modal, #bulk-import-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
 
@@ -2663,3 +2663,20 @@ input:checked + .slider:before { transform: translateX(22px); }
 .sidebar-event-actions .delete-event-btn:hover {
     color: var(--status-red);
 }
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    color: #888;
+    font-style: italic;
+}
+
+.empty-state-small {
+    text-align: center;
+    padding: var(--spacing-m);
+    color: #999;
+    font-size: var(--small-font-size);
+}
+
