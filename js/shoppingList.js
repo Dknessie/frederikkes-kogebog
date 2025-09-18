@@ -1,10 +1,11 @@
 // js/shoppingList.js
 
 import { db } from './firebase.js';
-import { doc, setDoc, writeBatch, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { getWeekNumber, getStartOfWeek, formatDate, convertToGrams } from './utils.js';
-import { openBatchModal, openInventoryItemModal } from './inventory.js';
+import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
+// FJERNET: openBatchModal og openInventoryItemModal er ikke længere nødvendige her
+// import { openBatchModal, openInventoryItemModal } from './inventory.js';
 
 let appState;
 let appElements;
@@ -14,9 +15,7 @@ export function initShoppingList(state, elements) {
     appState = state;
     appElements = {
         ...elements,
-        bulkAddModal: document.getElementById('bulk-add-modal'),
-        bulkAddForm: document.getElementById('bulk-add-form'),
-        bulkAddListContainer: document.getElementById('bulk-add-list-container'),
+        // FJERNET: bulk add modal er ikke længere i brug
     };
 
     if (appElements.generateGroceriesBtn) {
@@ -29,17 +28,16 @@ export function initShoppingList(state, elements) {
             if (e.target.closest('.shopping-list-clear-btn')) {
                 handleClearShoppingList();
             } else if (e.target.closest('.shopping-list-confirm-btn')) {
-                handleConfirmPurchase();
+                // FJERNET: Bekræft indkøb er ikke en funktion længere
+                showNotification({title: "Funktion Fjernet", message: "Denne funktion er fjernet, da lagerstyring er udgået."});
             } else if (e.target.closest('.remove-from-list-btn')) {
                 const itemName = e.target.closest('[data-item-name]').dataset.itemName;
                 handleRemoveShoppingItem(itemName);
             } else if (e.target.matches('.shopping-list-checkbox')) {
                 const listItem = e.target.closest('.shopping-list-item');
                 listItem.classList.toggle('is-checked');
-            } else if (e.target.closest('.create-from-list-btn')) {
-                const itemName = e.target.closest('[data-item-name]').dataset.itemName;
-                handleCreateItemFromShoppingList(itemName);
             }
+            // FJERNET: Opret vare fra indkøbsliste er ikke længere relevant
         });
 
         appElements.shoppingListModal.addEventListener('submit', (e) => {
@@ -55,14 +53,7 @@ export function initShoppingList(state, elements) {
         });
     }
 
-    // NEW: Listener for the bulk add form
-    if (appElements.bulkAddForm) {
-        appElements.bulkAddForm.addEventListener('submit', handleBulkSave);
-    }
-
-    if (appElements.reorderForm) {
-        appElements.reorderForm.addEventListener('submit', handleReorderSubmit);
-    }
+    // FJERNET: Listeners for bulk add og reorder er fjernet
 }
 
 export function openShoppingListModal(listType) {
@@ -90,7 +81,6 @@ function renderListInModal() {
     const list = appState.shoppingLists[currentListType] || {};
     wrapper.innerHTML = ''; // Clear previous content
 
-    // ÆNDRING: Flyt controls (knapper og form) til toppen
     let listContentHTML = '';
 
     switch (currentListType) {
@@ -98,6 +88,7 @@ function renderListInModal() {
             listContentHTML = renderGroceriesList(list);
             break;
         case 'materials':
+            // Denne funktion skal muligvis opdateres i fremtiden, hvis materialer skal have pris/kalorier
             listContentHTML = renderMaterialsList(list);
             break;
         case 'wishlist':
@@ -105,7 +96,6 @@ function renderListInModal() {
             break;
     }
 
-    // Saml den endelige HTML med controls øverst
     wrapper.innerHTML = `
         ${createModalControlsHTML(currentListType === 'wishlist')}
         <div class="shopping-list-scroll-container">
@@ -115,10 +105,11 @@ function renderListInModal() {
 }
 
 function renderGroceriesList(list) {
-    // ÆNDRING: Gruppér efter underkategori i stedet for butik
     const groupedBySubCategory = {};
     Object.values(list).forEach(item => {
-        const subCategory = item.subCategory || 'Andet'; // Brug underkategori som nøgle
+        // OPDATERING: Finder info fra ingrediens-biblioteket
+        const info = appState.ingredientInfo.find(i => i.name.toLowerCase() === item.name.toLowerCase());
+        const subCategory = info?.subCategory || 'Andet';
         if (!groupedBySubCategory[subCategory]) {
             groupedBySubCategory[subCategory] = [];
         }
@@ -130,24 +121,20 @@ function renderGroceriesList(list) {
     }
 
     let html = '';
-    // Sortér kategorierne alfabetisk
     const sortedCategories = Object.keys(groupedBySubCategory).sort((a, b) => a.localeCompare(b));
     
     sortedCategories.forEach(subCategory => {
-        html += `<div class="store-section"><h4>${subCategory}</h4><ul>`; // Genbruger .store-section styling
+        html += `<div class="store-section"><h4>${subCategory}</h4><ul>`;
         groupedBySubCategory[subCategory].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-            const quantityText = `${item.quantity_to_buy} ${item.unit}`;
-            const createButtonHTML = !item.itemId 
-                ? `<button class="btn-icon btn-small create-from-list-btn" title="Opret '${item.name}' i varelager"><i class="fas fa-plus-circle"></i></button>`
-                : '';
+            // OPDATERING: Forenklet quantity-tekst
+            const quantityText = `${item.quantity} ${item.unit}`;
 
             html += `
                 <li class="shopping-list-item" data-item-name="${item.name}">
                     <input type="checkbox" id="shop-${safeItemName}" class="shopping-list-checkbox">
                     <label for="shop-${safeItemName}" class="shopping-list-item-label">${item.name} <span>(${quantityText})</span></label>
                     <div class="shopping-list-item-actions">
-                        ${createButtonHTML}
                         <button class="btn-icon remove-from-list-btn" title="Fjern fra liste"><i class="fas fa-times-circle"></i></button>
                     </div>
                 </li>`;
@@ -157,12 +144,6 @@ function renderGroceriesList(list) {
 
     return html;
 }
-
-function handleCreateItemFromShoppingList(itemName) {
-    appElements.shoppingListModal.classList.add('hidden');
-    openInventoryItemModal(null, itemName);
-}
-
 
 function renderMaterialsList(list) {
     const groupedByProject = {};
@@ -229,15 +210,10 @@ function renderWishlist(list) {
     return html;
 }
 
-// ÆNDRING: Omdøbt fra getModalFooter til createModalControlsHTML
 function createModalControlsHTML(isWishlist = false) {
-    const confirmText = isWishlist ? "Marker som købt" : "Bekræft Indkøb";
+    // FJERNET: Bekræft-knap er fjernet, da lagerstyring er udgået
     const addText = isWishlist ? 'ønske' : 'vare';
     
-    const confirmButton = currentListType !== 'materials' 
-        ? `<button class="btn btn-primary shopping-list-confirm-btn"><i class="fas fa-check"></i> ${confirmText}</button>` 
-        : '';
-
     return `
         <div class="shopping-list-controls">
             <form class="add-item-form">
@@ -246,7 +222,6 @@ function createModalControlsHTML(isWishlist = false) {
             </form>
             <div class="shopping-list-actions">
                 <button class="btn btn-secondary shopping-list-clear-btn"><i class="fas fa-trash"></i> Ryd Liste</button>
-                ${confirmButton}
             </div>
         </div>
     `;
@@ -263,6 +238,9 @@ async function updateShoppingListInFirestore(listType, newList) {
     }
 }
 
+/**
+ * OPDATERING: Funktionen er kraftigt simplificeret. Den tjekker ikke længere lagerstatus.
+ */
 async function generateGroceriesList() {
     const start = getStartOfWeek(appState.currentDate); 
     const allIngredientsNeeded = {};
@@ -302,46 +280,12 @@ async function generateGroceriesList() {
     const shoppingList = {};
     for (const ingKey in allIngredientsNeeded) {
         const needed = allIngredientsNeeded[ingKey];
-        const inventoryItem = appState.inventory.find(item => item.name.toLowerCase() === ingKey);
-
-        if (!inventoryItem) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, subCategory: 'Andet', itemId: null };
-            continue;
-        }
-
-        const conversion = convertToGrams(needed.total, needed.unit, inventoryItem);
-        if (conversion.error) {
-            shoppingList[ingKey] = { name: needed.name, quantity_to_buy: Math.ceil(needed.total), unit: needed.unit, subCategory: inventoryItem.subCategory || 'Andet', itemId: inventoryItem.id };
-            continue;
-        }
-
-        const neededInBaseUnit = conversion.grams;
-        const toBuyInBaseUnit = Math.max(0, neededInBaseUnit - (inventoryItem.totalStock || 0));
-
-        if (toBuyInBaseUnit > 0) {
-            
-            let quantityToBuy;
-            let displayUnit;
-
-            if (inventoryItem.defaultUnit === 'stk') {
-                quantityToBuy = Math.ceil(toBuyInBaseUnit);
-                displayUnit = 'stk';
-            } else {
-                const representativeBatch = inventoryItem.batches.filter(b => b.size > 0).sort((a,b) => (a.price/a.size) - (b.price/b.size))[0];
-                const purchaseSize = representativeBatch?.size || 1;
-                quantityToBuy = Math.ceil(toBuyInBaseUnit / purchaseSize);
-                displayUnit = 'stk';
-            }
-
-            const key = inventoryItem.name.toLowerCase();
-            shoppingList[key] = {
-                name: inventoryItem.name,
-                quantity_to_buy: quantityToBuy,
-                unit: displayUnit,
-                subCategory: inventoryItem.subCategory || 'Andet',
-                itemId: inventoryItem.id,
-            };
-        }
+        // Opretter et simpelt objekt til listen uden at tjekke lager
+        shoppingList[ingKey] = { 
+            name: needed.name, 
+            quantity: Math.ceil(needed.total), // Runder op til nærmeste hele tal for simplicitet
+            unit: needed.unit
+        };
     }
     
     await updateShoppingListInFirestore('groceries', shoppingList);
@@ -379,28 +323,13 @@ async function handleAddShoppingItem(itemName) {
         return;
     }
     
-    const inventoryItem = appState.inventory.find(i => i.name.toLowerCase() === key);
+    // Opretter et simpelt objekt
+    updatedList[key] = {
+        name: itemName,
+        quantity: 1,
+        unit: 'stk',
+    };
     
-    let newItem;
-    if (inventoryItem) {
-        newItem = {
-            name: inventoryItem.name,
-            quantity_to_buy: 1,
-            unit: 'stk',
-            subCategory: inventoryItem.subCategory || 'Andet',
-            itemId: inventoryItem.id,
-        };
-    } else {
-        newItem = {
-            name: itemName,
-            quantity_to_buy: 1,
-            unit: 'stk',
-            subCategory: 'Andet',
-            itemId: null,
-        };
-    }
-    
-    updatedList[key] = newItem;
     await updateShoppingListInFirestore('groceries', updatedList);
     renderListInModal();
 }
@@ -420,215 +349,3 @@ async function handleRemoveShoppingItem(itemName) {
         renderListInModal();
     }
 }
-
-async function handleConfirmPurchase() {
-    const checkedItems = [];
-    document.querySelectorAll('.shopping-list-checkbox:checked').forEach(checkbox => {
-        const itemName = checkbox.closest('.shopping-list-item').dataset.itemName;
-        const item = Object.values(appState.shoppingLists.groceries).find(i => i.name === itemName);
-        if (item) checkedItems.push(item);
-    });
-
-    if (checkedItems.length === 0) {
-        await showNotification({ title: "Intet valgt", message: "Vælg venligst de varer, du har købt, ved at sætte flueben." });
-        return;
-    }
-    openBulkAddModal(checkedItems);
-}
-
-function openBulkAddModal(items) {
-    const container = appElements.bulkAddListContainer;
-    container.innerHTML = '';
-    appElements.bulkAddForm.reset();
-
-    items.forEach(item => {
-        const inventoryItem = appState.inventory.find(i => i.id === item.itemId);
-        const row = document.createElement('div');
-        row.className = 'bulk-add-item';
-        row.dataset.itemId = item.itemId || '';
-        row.dataset.itemName = item.name;
-
-        const lastBatch = inventoryItem?.batches?.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate))[0];
-
-        row.innerHTML = `
-            <div class="bulk-add-item-header">${item.name}</div>
-            <div class="bulk-add-item-fields">
-                <div class="input-group">
-                    <label>Antal</label>
-                    <input type="number" class="bulk-quantity" value="1" min="1" required>
-                </div>
-                <div class="input-group">
-                    <label>Størrelse</label>
-                    <input type="number" class="bulk-size" placeholder="pr. stk" value="${lastBatch?.size || ''}" required>
-                </div>
-                <div class="input-group">
-                    <label>Enhed</label>
-                    <input type="text" class="bulk-unit" value="${inventoryItem?.defaultUnit || 'stk'}" required>
-                </div>
-                <div class="input-group">
-                    <label>Total Pris</label>
-                    <input type="number" class="bulk-price" placeholder="kr." step="0.01">
-                </div>
-                <div class="input-group">
-                    <label>Udløb</label>
-                    <input type="date" class="bulk-expiry">
-                </div>
-            </div>
-        `;
-        container.appendChild(row);
-    });
-
-    appElements.shoppingListModal.classList.add('hidden');
-    appElements.bulkAddModal.classList.remove('hidden');
-}
-
-async function handleBulkSave(e) {
-    e.preventDefault();
-    const rows = appElements.bulkAddListContainer.querySelectorAll('.bulk-add-item');
-    const batch = writeBatch(db);
-    const purchasedItems = [];
-    let totalExpense = 0;
-
-    rows.forEach(row => {
-        const quantity = Number(row.querySelector('.bulk-quantity').value);
-        const price = Number(row.querySelector('.bulk-price').value);
-
-        if (quantity > 0 && row.dataset.itemId) { // Only save if it's a known item
-            const batchData = {
-                itemId: row.dataset.itemId,
-                userId: appState.currentUser.uid,
-                purchaseDate: formatDate(new Date()),
-                expiryDate: row.querySelector('.bulk-expiry').value || null,
-                quantity: quantity,
-                size: Number(row.querySelector('.bulk-size').value),
-                unit: row.querySelector('.bulk-unit').value,
-                price: price || null,
-            };
-
-            const newBatchRef = doc(collection(db, 'inventory_batches'));
-            batch.set(newBatchRef, batchData);
-            
-            purchasedItems.push(row.dataset.itemName);
-            if (price) {
-                totalExpense += price;
-            }
-        }
-    });
-
-    const list = appState.shoppingLists.groceries || {};
-    const updatedList = { ...list };
-    purchasedItems.forEach(itemName => {
-        const keyToDelete = Object.keys(updatedList).find(k => updatedList[k].name.toLowerCase() === itemName.toLowerCase());
-        if (keyToDelete) {
-            delete updatedList[keyToDelete];
-        }
-    });
-    const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
-    batch.set(shoppingListRef, { groceries: updatedList }, { merge: true });
-
-    try {
-        await batch.commit();
-        appElements.bulkAddModal.classList.add('hidden');
-        showNotification({ title: "Lager Opdateret!", message: `${purchasedItems.length} vare(r) er blevet tilføjet til dit varelager.` });
-    } catch (error) {
-        handleError(error, "Kunne ikke gemme indkøb.", "handleBulkSave");
-    }
-}
-
-
-export async function addSingleItemToGroceries(itemId) {
-    const inventoryItem = appState.inventory.find(i => i.id === itemId);
-    if (!inventoryItem) {
-        return handleError(new Error("Vare ikke fundet"), "Varen kunne ikke tilføjes til indkøbslisten.");
-    }
-
-    const newItem = {
-        name: inventoryItem.name,
-        quantity_to_buy: 1,
-        unit: 'stk',
-        subCategory: inventoryItem.subCategory || 'Andet',
-        itemId: inventoryItem.id,
-    };
-
-    await addItemsToGroceriesList([newItem]);
-}
-
-export function openReorderAssistantModal(items) {
-    const container = appElements.reorderListContainer;
-    container.innerHTML = '';
-
-    if (!items || items.length === 0) {
-        container.innerHTML = '<p class="empty-state-small">Alle varer er over deres genbestillingspunkt. Godt gået!</p>';
-        return;
-    }
-
-    items.forEach(item => {
-        const itemHTML = `
-            <div class="reorder-item">
-                <label>
-                    <input type="checkbox" class="reorder-checkbox" value="${item.id}" checked>
-                    <span class="item-name">${item.name}</span>
-                </label>
-                <span class="stock-info">På lager: ${item.totalStock}${item.defaultUnit} (Genbestil ved ${item.reorderPoint}${item.defaultUnit})</span>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', itemHTML);
-    });
-    
-    appElements.reorderAssistantModal.classList.remove('hidden');
-}
-
-async function handleReorderSubmit(e) {
-    e.preventDefault();
-    const selectedItemIds = [...appElements.reorderForm.querySelectorAll('.reorder-checkbox:checked')].map(cb => cb.value);
-    
-    if (selectedItemIds.length === 0) {
-        showNotification({ title: "Intet valgt", message: "Vælg venligst de varer du vil tilføje." });
-        return;
-    }
-
-    const itemsToAdd = [];
-    selectedItemIds.forEach(itemId => {
-        const inventoryItem = appState.inventory.find(i => i.id === itemId);
-        if (inventoryItem) {
-            itemsToAdd.push({
-                name: inventoryItem.name,
-                quantity_to_buy: 1,
-                unit: 'stk',
-                subCategory: inventoryItem.subCategory || 'Andet',
-                itemId: inventoryItem.id,
-            });
-        }
-    });
-
-    await addItemsToGroceriesList(itemsToAdd);
-    appElements.reorderAssistantModal.classList.add('hidden');
-    showNotification({ title: "Liste Opdateret", message: `${itemsToAdd.length} vare(r) er blevet tilføjet til din indkøbsliste.` });
-}
-
-async function addItemsToGroceriesList(items) {
-    const list = appState.shoppingLists.groceries || {};
-    const updatedList = { ...list };
-
-    items.forEach(item => {
-        const key = item.name.toLowerCase();
-        if (!updatedList[key]) {
-            updatedList[key] = item;
-        }
-    });
-
-    try {
-        const shoppingListRef = doc(db, 'shopping_lists', appState.currentUser.uid);
-        await setDoc(shoppingListRef, { groceries: updatedList }, { merge: true });
-    } catch (error) {
-        handleError(error, "Kunne ikke tilføje varer til listen.", "addItemsToGroceriesList");
-    }
-}
-
-function populateReferenceDropdown(selectElement, options, placeholder, currentValue) {
-    if (!selectElement) return;
-    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-    (options || []).sort().forEach(opt => selectElement.add(new Option(opt, opt)));
-    selectElement.value = currentValue || "";
-}
-
