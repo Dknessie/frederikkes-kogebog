@@ -1,7 +1,7 @@
 // js/inventory.js
 
 import { db } from './firebase.js';
-import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 
 let appState;
@@ -12,11 +12,12 @@ let libraryState = {
     searchTerm: '',
     selectedCategory: '',
     sortBy: 'name', // 'name', 'price', 'calories'
-    sortOrder: 'asc' // 'asc', 'desc'
+    sortOrder: 'asc', // 'asc', 'desc'
+    currentView: 'grid' // 'grid' or 'list'
 };
 
 /**
- * OPDATERET: Initialiserer det nye Ingrediens-bibliotek modul.
+ * Initialiserer det nye Ingrediens-bibliotek modul.
  * @param {object} state - Den centrale state for applikationen.
  * @param {object} elements - Cachede DOM-elementer.
  */
@@ -24,7 +25,6 @@ export function initIngredientLibrary(state, elements) {
     appState = state;
     appElements = elements;
 
-    // Tilslut event listeners til den nye UI
     const page = document.getElementById('inventory');
     if(page) {
         page.addEventListener('click', handlePageClick);
@@ -32,7 +32,6 @@ export function initIngredientLibrary(state, elements) {
         page.addEventListener('change', handlePageChange);
     }
     
-    // Tilslut modal formen
     if (appElements.ingredientForm) {
         appElements.ingredientForm.addEventListener('submit', handleSaveIngredient);
     }
@@ -47,26 +46,46 @@ export function initIngredientLibrary(state, elements) {
             populateSubCategoryDropdown(document.getElementById('ingredient-info-sub-category'), mainCategorySelectModal.value);
         });
     }
+
+    const assistantForm = document.getElementById('ingredient-assistant-form');
+    if(assistantForm) {
+        assistantForm.addEventListener('submit', handleBulkSaveFromAssistant);
+    }
 }
 
 /**
- * OPDATERET: Renderer hele Ingrediens-bibliotek siden.
+ * Renderer hele Ingrediens-bibliotek siden.
  */
 export function renderIngredientLibrary() {
-    const container = document.getElementById('ingredient-library-container');
-    if (!container) return;
+    // Opdater filter-dropdown, før vi renderer indholdet
+    populateCategoryFilter();
 
-    // Filtrering
-    let filteredItems = [...(appState.ingredientInfo || [])];
+    const gridContainer = document.getElementById('ingredient-grid-container');
+    const listContainer = document.getElementById('ingredient-library-container').parentElement; // table-wrapper
+
+    if (!gridContainer || !listContainer) return;
+
+    if (libraryState.currentView === 'grid') {
+        gridContainer.classList.remove('hidden');
+        listContainer.classList.add('hidden');
+        renderGridView(gridContainer);
+    } else {
+        gridContainer.classList.add('hidden');
+        listContainer.classList.remove('hidden');
+        renderListView(document.getElementById('ingredient-library-container'));
+    }
+}
+
+function getFilteredAndSortedIngredients() {
+    let items = [...(appState.ingredientInfo || [])];
     if (libraryState.searchTerm) {
-        filteredItems = filteredItems.filter(item => item.name.toLowerCase().includes(libraryState.searchTerm));
+        items = items.filter(item => item.name.toLowerCase().includes(libraryState.searchTerm));
     }
     if (libraryState.selectedCategory) {
-        filteredItems = filteredItems.filter(item => item.mainCategory === libraryState.selectedCategory);
+        items = items.filter(item => item.mainCategory === libraryState.selectedCategory);
     }
 
-    // Sortering
-    filteredItems.sort((a, b) => {
+    items.sort((a, b) => {
         let valA = a[libraryState.sortBy] || 0;
         let valB = b[libraryState.sortBy] || 0;
         if (libraryState.sortBy === 'name') {
@@ -79,8 +98,19 @@ export function renderIngredientLibrary() {
         return 0;
     });
 
-    const tableRows = filteredItems.map(createIngredientRowHTML).join('');
+    return items;
+}
 
+function renderGridView(container) {
+    const items = getFilteredAndSortedIngredients();
+    container.innerHTML = items.length > 0 
+        ? items.map(createIngredientCardHTML).join('')
+        : `<p class="empty-state" style="grid-column: 1 / -1;">Ingen ingredienser fundet.</p>`;
+}
+
+function renderListView(container) {
+    const items = getFilteredAndSortedIngredients();
+    const tableRows = items.map(createIngredientRowHTML).join('');
     container.innerHTML = `
         <table class="spreadsheet-table">
             <thead>
@@ -99,14 +129,33 @@ export function renderIngredientLibrary() {
     `;
 }
 
+function createIngredientCardHTML(item) {
+    // Denne funktion skal bruge styling fra style.css for at se godt ud
+    const price = item.averagePrice && item.defaultUnit ? `${(item.averagePrice * (item.defaultUnit === 'stk' ? 1 : 1000)).toFixed(2)} kr/${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}` : 'Pris ukendt';
+    const calories = item.caloriesPer100g ? `${item.caloriesPer100g} kcal` : 'N/A';
+    
+    return `
+        <div class="recipe-list-card ingredient-card" data-id="${item.id}">
+            <div class="list-card-content">
+                <h4>${item.name}</h4>
+                <span class="list-card-category">${item.subCategory}</span>
+                <div class="ingredient-card-info">
+                    <span><i class="fas fa-coins"></i> ${price}</span>
+                    <span><i class="fas fa-fire-alt"></i> ${calories}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function getSortIcon(column) {
     if (libraryState.sortBy !== column) return '';
     return libraryState.sortOrder === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
 }
 
 function createIngredientRowHTML(item) {
-    const priceText = item.averagePrice ? `${item.averagePrice.toFixed(2).replace('.', ',')} kr.` : 'N/A';
-    const unitText = item.defaultUnit ? `pr. ${item.defaultUnit}` : '';
+    const priceText = item.averagePrice ? `${(item.averagePrice * (item.defaultUnit === 'stk' ? 1 : 1000)).toFixed(2).replace('.', ',')} kr.` : 'N/A';
+    const unitText = item.defaultUnit ? `pr. ${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}` : '';
     const caloriesText = item.caloriesPer100g ? `${item.caloriesPer100g}` : 'N/A';
 
     return `
@@ -128,8 +177,8 @@ function handlePageClick(e) {
     if (e.target.closest('#add-ingredient-btn')) {
         openIngredientModal(null);
     }
-    if (e.target.closest('.edit-ingredient-btn')) {
-        const itemId = e.target.closest('tr').dataset.id;
+    if (e.target.closest('.edit-ingredient-btn') || e.target.closest('.ingredient-card')) {
+        const itemId = e.target.closest('[data-id]').dataset.id;
         openIngredientModal(itemId);
     }
     if (e.target.closest('th[data-sort]')) {
@@ -140,6 +189,18 @@ function handlePageClick(e) {
             libraryState.sortBy = newSortBy;
             libraryState.sortOrder = 'asc';
         }
+        renderIngredientLibrary();
+    }
+    if (e.target.closest('#view-grid-btn')) {
+        libraryState.currentView = 'grid';
+        document.getElementById('view-grid-btn').classList.add('active');
+        document.getElementById('view-list-btn').classList.remove('active');
+        renderIngredientLibrary();
+    }
+    if (e.target.closest('#view-list-btn')) {
+        libraryState.currentView = 'list';
+        document.getElementById('view-grid-btn').classList.remove('active');
+        document.getElementById('view-list-btn').classList.add('active');
         renderIngredientLibrary();
     }
 }
@@ -169,8 +230,14 @@ function openIngredientModal(itemId) {
     
     document.getElementById('ingredient-info-id').value = item ? item.id : '';
     document.getElementById('ingredient-info-name').value = item ? item.name : '';
+    
+    // Konverter pris for visning
+    let displayPrice = '';
+    if (item && item.averagePrice) {
+        displayPrice = item.defaultUnit === 'stk' ? item.averagePrice : item.averagePrice * 1000;
+    }
+    document.getElementById('ingredient-info-price').value = displayPrice;
     document.getElementById('ingredient-info-default-unit').value = item ? item.defaultUnit : 'g';
-    document.getElementById('ingredient-info-price').value = item ? item.averagePrice || '' : '';
     document.getElementById('ingredient-info-calories').value = item ? item.caloriesPer100g || '' : '';
     
     document.getElementById('delete-ingredient-btn').classList.toggle('hidden', !item);
@@ -185,12 +252,21 @@ async function handleSaveIngredient(e) {
     e.preventDefault();
     const itemId = document.getElementById('ingredient-info-id').value;
     
+    const priceInput = parseFloat(document.getElementById('ingredient-info-price').value) || null;
+    const priceUnit = document.getElementById('ingredient-info-default-unit').value;
+    let averagePrice = priceInput;
+
+    // Gem altid prisen som kr/g eller kr/ml for konsistens i beregninger
+    if (priceInput && (priceUnit === 'g' || priceUnit === 'ml')) {
+        averagePrice = priceInput / 1000;
+    }
+    
     const itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
-        defaultUnit: document.getElementById('ingredient-info-default-unit').value,
-        averagePrice: parseFloat(document.getElementById('ingredient-info-price').value) || null,
+        defaultUnit: priceUnit,
+        averagePrice: averagePrice,
         caloriesPer100g: parseInt(document.getElementById('ingredient-info-calories').value, 10) || null,
         userId: appState.currentUser.uid,
     };
@@ -203,7 +279,6 @@ async function handleSaveIngredient(e) {
         if (itemId) {
             await updateDoc(doc(db, 'ingredient_info', itemId), itemData);
         } else {
-            // OPDATERING: Gemmer til den nye collection
             await addDoc(collection(db, 'ingredient_info'), itemData);
         }
         appElements.ingredientModal.classList.add('hidden');
@@ -220,14 +295,78 @@ async function handleDeleteIngredient() {
     if (!confirmed) return;
 
     try {
-        // OPDATERING: Sletter fra den nye collection
         await deleteDoc(doc(db, 'ingredient_info', itemId));
         appElements.ingredientModal.classList.add('hidden');
         showNotification({ title: 'Slettet', message: 'Ingrediensen er slettet.' });
     } catch (error) { handleError(error, "Ingrediensen kunne ikke slettes."); }
 }
 
+/**
+ * NY FUNKTION: Håndterer bulk-save fra oprettelses-assistenten.
+ * @param {Event} e - Form submit event.
+ */
+async function handleBulkSaveFromAssistant(e) {
+    e.preventDefault();
+    const listContainer = document.getElementById('ingredient-assistant-list');
+    const rows = listContainer.querySelectorAll('.assistant-item-row');
+    const batch = writeBatch(db);
+    const ingredientsCol = collection(db, "ingredient_info");
+    let itemsAddedCount = 0;
+
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        const mainCategory = row.querySelector('.assistant-main-cat').value;
+        const subCategory = row.querySelector('.assistant-sub-cat').value;
+        
+        if (name && mainCategory && subCategory) {
+            const priceInput = parseFloat(row.querySelector('.assistant-price').value) || null;
+            const priceUnit = row.querySelector('.assistant-unit').value;
+            let averagePrice = priceInput;
+            if (priceInput && (priceUnit === 'g' || priceUnit === 'ml')) {
+                averagePrice = priceInput / 1000;
+            }
+
+            const ingredientData = {
+                name: name,
+                mainCategory: mainCategory,
+                subCategory: subCategory,
+                defaultUnit: priceUnit,
+                averagePrice: averagePrice,
+                caloriesPer100g: parseInt(row.querySelector('.assistant-calories').value, 10) || null,
+                userId: appState.currentUser.uid,
+            };
+            
+            const docRef = doc(ingredientsCol);
+            batch.set(docRef, ingredientData);
+            itemsAddedCount++;
+        }
+    });
+
+    if (itemsAddedCount > 0) {
+        try {
+            await batch.commit();
+            document.getElementById('ingredient-assistant-modal').classList.add('hidden');
+            showNotification({title: "Succes!", message: `${itemsAddedCount} nye ingredienser er blevet tilføjet til dit bibliotek.`});
+        } catch (error) {
+            handleError(error, "Kunne ikke gemme de nye ingredienser.");
+        }
+    } else {
+        document.getElementById('ingredient-assistant-modal').classList.add('hidden');
+    }
+}
+
+
 // ----- HJÆLPEFUNKTIONER -----
+
+function populateCategoryFilter() {
+    const select = document.getElementById('library-category-filter');
+    if (!select) return;
+    const mainCategories = [...new Set((appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? cat : cat.name)))];
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Alle Kategorier</option>';
+    mainCategories.sort().forEach(cat => select.add(new Option(cat, cat)));
+    select.value = currentValue;
+}
 
 function populateMainCategoryDropdown(select, val) {
     const mainCategories = (appState.references.itemCategories || []).map(cat => (typeof cat === 'string' ? cat : cat.name));
@@ -248,3 +387,4 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
+
