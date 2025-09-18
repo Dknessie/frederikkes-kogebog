@@ -3,9 +3,11 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, convertToGrams, calculateRecipePrice } from './utils.js';
+// OPDATERING: Importerer de nye beregningsfunktioner
+import { normalizeUnit, calculateRecipePrice, calculateRecipeNutrition } from './utils.js';
 import { openPlanMealModal } from './mealPlanner.js';
-import { confirmAndDeductIngredients } from './kitchenCounter.js';
+// FJERNET: kitchenCounter er udgået
+// import { confirmAndDeductIngredients } from './kitchenCounter.js';
 
 let appState;
 let appElements;
@@ -22,6 +24,8 @@ export function initRecipes(state, elements) {
     appState = state;
     appElements = {
         ...elements,
+        // OPDATERING: addIngredientBtn er nu specifik for opskriftsmodalen
+        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn'),
         importRecipeBtn: document.getElementById('import-recipe-btn')
     };
 
@@ -37,11 +41,10 @@ export function initRecipes(state, elements) {
     });
      if (appElements.goToCalendarBtn) appElements.goToCalendarBtn.addEventListener('click', () => window.location.hash = '#calendar');
 
-    if (appElements.whatCanIMakeWidget) {
-        appElements.whatCanIMakeWidget.addEventListener('click', handleWhatCanIMakeClick);
-    }
+    // FJERNET: whatCanIMakeWidget er baseret på lagerstatus og fjernes
+    // if (appElements.whatCanIMakeWidget) { ... }
 
-    appElements.addIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
+    appElements.recipeAddIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
     appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
     appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
     appElements.recipeEditModal.addEventListener('click', (e) => {
@@ -56,16 +59,8 @@ export function initRecipes(state, elements) {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
     });
-    appElements.readViewCookBtn.addEventListener('click', async () => {
-        const recipeId = appState.currentlyViewedRecipeId;
-        const recipe = appState.recipes.find(r => r.id === recipeId);
-        if (recipe) {
-            const wasDeducted = await confirmAndDeductIngredients(recipeId, recipe.portions);
-            if (wasDeducted) {
-                appElements.recipeReadModal.classList.add('hidden');
-            }
-        }
-    });
+    // FJERNET: "Cook" knappen har ikke længere lager-funktionalitet, så dens listener fjernes for nu
+    // appElements.readViewCookBtn.addEventListener('click', ...);
     appElements.readViewEditBtn.addEventListener('click', openEditRecipeModal);
     appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
 }
@@ -94,6 +89,12 @@ function renderFlipper() {
         wrapper.dataset.id = recipe.id;
         const imageUrl = recipe.imageBase64 || recipe.imageUrl || `https://placehold.co/600x400/f3f0e9/d1603d?text=${encodeURIComponent(recipe.title)}`;
         const intro = (recipe.introduction || '').substring(0, 150) + ((recipe.introduction || '').length > 150 ? '...' : '');
+        
+        // OPDATERING: Beregn pris og kalorier
+        const price = calculateRecipePrice(recipe, appState.ingredientInfo);
+        const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+        const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? `~${Math.round(totalCalories / recipe.portions)} kcal/port.` : '';
+
         wrapper.innerHTML = `
             <div class="recipe-display-card">
                 <img src="${imageUrl}" alt="${recipe.title}" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/600x400/f3f0e9/d1603d?text=Billede+mangler';">
@@ -102,7 +103,8 @@ function renderFlipper() {
                     <div class="recipe-meta">
                         <span><i class="fas fa-clock"></i> ${recipe.time || '?'} min.</span>
                         <span><i class="fas fa-users"></i> ${recipe.portions || '?'} port.</span>
-                        <span><i class="fas fa-coins"></i> ~${calculateRecipePrice(recipe, appState.inventory).toFixed(2)} kr.</span>
+                        <span><i class="fas fa-coins"></i> ~${price.toFixed(2)} kr.</span>
+                        ${caloriesPerPortion ? `<span><i class="fas fa-fire-alt"></i> ${caloriesPerPortion}</span>` : ''}
                     </div>
                     <p class="recipe-intro">${intro}</p>
                     <div class="recipe-card-actions">
@@ -190,99 +192,10 @@ function renderListFilterTags() {
 }
 
 function renderSidebarWidgets() {
-    renderWhatCanIMakeWidget();
+    // FJERNET: "Hvad kan jeg lave" er fjernet.
+    appElements.whatCanIMakeWidget.innerHTML = `<h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave?</h5><p class="empty-state-small">Denne funktion er midlertidigt fjernet under ombygningen af varelageret.</p>`;
     renderUpcomingMealPlanWidget();
 }
-
-function findKeyIngredients() {
-    const ingredientFrequency = {};
-    appState.recipes.forEach(recipe => {
-        recipe.ingredients.forEach(ing => {
-            const key = ing.name.toLowerCase();
-            ingredientFrequency[key] = (ingredientFrequency[key] || 0) + 1;
-        });
-    });
-
-    return appState.inventory
-        .filter(item => item.totalStock > 0)
-        .map(item => ({
-            name: item.name,
-            frequency: ingredientFrequency[item.name.toLowerCase()] || 0
-        }))
-        .filter(item => item.frequency > 1)
-        .sort((a, b) => b.frequency - a.frequency)
-        .slice(0, 4);
-}
-
-function handleWhatCanIMakeClick(e) {
-    const keyIngredientBtn = e.target.closest('.key-ingredient-btn');
-    if (keyIngredientBtn) {
-        const ingredientName = keyIngredientBtn.dataset.ingredient;
-        if (cookbookState.selectedKeyIngredient === ingredientName) {
-            cookbookState.selectedKeyIngredient = null;
-        } else {
-            cookbookState.selectedKeyIngredient = ingredientName;
-        }
-        renderWhatCanIMakeWidget();
-    }
-}
-
-function renderWhatCanIMakeWidget() {
-    const widget = appElements.whatCanIMakeWidget;
-    if (!widget) return;
-
-    const keyIngredients = findKeyIngredients();
-    
-    let keyIngredientsHTML = '';
-    if (keyIngredients.length > 0) {
-        keyIngredientsHTML = keyIngredients.map(ing => `
-            <button class="filter-tag key-ingredient-btn ${cookbookState.selectedKeyIngredient === ing.name ? 'active' : ''}" data-ingredient="${ing.name}">
-                ${ing.name}
-            </button>
-        `).join('');
-    } else {
-        keyIngredientsHTML = '<p class="empty-state-small">Tilføj varer på lager for at få forslag.</p>';
-    }
-
-    widget.innerHTML = `
-        <h5><i class="fas fa-hat-chef"></i> Hvad kan jeg lave?</h5>
-        <p class="small-text" style="margin-top: -10px;">Vælg en ingrediens for at få forslag:</p>
-        <div class="list-filter-tags" style="margin-bottom: 1rem;">
-            ${keyIngredientsHTML}
-        </div>
-        <div id="what-can-i-make-results" class="widget-list">
-            ${renderKeyIngredientResults()}
-        </div>
-    `;
-}
-
-function renderKeyIngredientResults() {
-    if (!cookbookState.selectedKeyIngredient) {
-        return '<p class="empty-state-small">Vælg en ingrediens ovenfor.</p>';
-    }
-
-    const recipesWithIngredient = appState.recipes
-        .filter(r => r.ingredients.some(ing => ing.name.toLowerCase() === cookbookState.selectedKeyIngredient.toLowerCase()))
-        .map(r => calculateRecipeMatch(r, appState.inventory))
-        .sort((a, b) => a.missingCount - b.missingCount || a.title.localeCompare(b.title))
-        .slice(0, 5);
-
-    if (recipesWithIngredient.length === 0) {
-        return `<p class="empty-state-small">Ingen opskrifter fundet med ${cookbookState.selectedKeyIngredient}.</p>`;
-    }
-
-    return recipesWithIngredient.map(recipe => {
-        const statusClass = recipe.missingCount === 0 ? 'status-green' : 'status-yellow';
-        const missingText = recipe.missingCount > 0 ? `<small>Mangler ${recipe.missingCount}</small>` : '';
-        return `
-            <li class="widget-list-item">
-                <span><span class="status-indicator ${statusClass}"></span>${recipe.title}</span>
-                ${missingText}
-            </li>
-        `;
-    }).join('');
-}
-
 
 function renderUpcomingMealPlanWidget() {
     const list = appElements.upcomingMealPlanWidget.querySelector('.widget-list');
@@ -385,7 +298,8 @@ function createIngredientRow(container, ingredient = { name: '', quantity: '', u
         const value = e.target.value.toLowerCase();
         removeAutocomplete();
         if (value.length < 1) return;
-        const suggestions = appState.inventoryItems.filter(item => item.name.toLowerCase().startsWith(value));
+        // OPDATERING: Søger i det nye ingredientInfo-bibliotek
+        const suggestions = appState.ingredientInfo.filter(item => item.name.toLowerCase().startsWith(value));
         if (suggestions.length > 0) {
             const suggestionsContainer = document.createElement('div');
             suggestionsContainer.className = 'autocomplete-suggestions';
@@ -416,8 +330,18 @@ export function renderReadView(recipe) {
     document.getElementById('read-view-category').textContent = recipe.category || '';
     document.getElementById('read-view-time').innerHTML = `<i class="fas fa-clock"></i> ${recipe.time || '?'} min.`;
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
-    const recipePrice = calculateRecipePrice(recipe, appState.inventory);
-    appElements.readViewPrice.innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
+
+    // OPDATERING: Beregn og vis pris og kalorier
+    const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
+    const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+    const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? Math.round(totalCalories / recipe.portions) : 0;
+    
+    document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
+    const caloriesElement = document.getElementById('read-view-calories');
+    if(caloriesElement) {
+        caloriesElement.innerHTML = caloriesPerPortion > 0 ? `<i class="fas fa-fire-alt"></i> ~${caloriesPerPortion} kcal/port.` : '';
+    }
+
     const tagsContainer = document.getElementById('read-view-tags');
     tagsContainer.innerHTML = '';
     if (recipe.tags && recipe.tags.length > 0) {
@@ -434,10 +358,9 @@ export function renderReadView(recipe) {
     if (recipe.ingredients && recipe.ingredients.length > 0) {
         recipe.ingredients.forEach(ing => {
             const li = document.createElement('li');
-            const { canBeMade } = calculateRecipeMatch({ ingredients: [ing] }, appState.inventory);
-            const statusIcon = canBeMade ? `<span class="ingredient-stock-status in-stock"><i class="fas fa-check-circle"></i></span>` : `<span class="ingredient-stock-status out-of-stock"><i class="fas fa-times-circle"></i></span>`;
+            // FJERNET: Lagerstatus-check er fjernet
             const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
-            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span> ${statusIcon}`;
+            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span>`;
             ingredientsList.appendChild(li);
         });
     }
@@ -676,30 +599,4 @@ async function handleDeleteRecipeFromReadView() {
             handleError(error, "Opskriften kunne ikke slettes.", "deleteRecipeFromReadView");
         }
     }
-}
-function calculateRecipeMatch(recipe, inventory) {
-    let missingCount = 0;
-    if (!recipe.ingredients || recipe.ingredients.length === 0) {
-        return { ...recipe, missingCount: 0, canBeMade: true };
-    }
-    let canBeMade = true;
-    recipe.ingredients.forEach(ing => {
-        const inventoryItem = inventory.find(item => item.name.toLowerCase() === ing.name.toLowerCase());
-        if (!inventoryItem) {
-            missingCount++;
-            canBeMade = false;
-            return;
-        }
-        const conversion = convertToGrams(ing.quantity, ing.unit, inventoryItem);
-        if (conversion.error) {
-            missingCount++;
-            canBeMade = false;
-            return;
-        }
-        if (conversion.grams > (inventoryItem.totalStock || 0)) {
-            missingCount++;
-            canBeMade = false;
-        }
-    });
-    return { ...recipe, missingCount, canBeMade };
 }
