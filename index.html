@@ -229,7 +229,6 @@
                 
                 <div class="actions-bar">
                     <button id="add-ingredient-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
-                    <!-- NYT: Knap til tekst import -->
                     <button id="text-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer fra Tekst</button>
                     <div class="search-bar" style="max-width: 300px; flex-grow: 1;">
                          <input type="text" id="library-search" placeholder="Søg i biblioteket...">
@@ -305,6 +304,11 @@
                     <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
                     <input type="text" id="ingredient-info-name" placeholder="F.eks. Hakket Oksekød 4-7%" required>
                 </div>
+                <!-- NYT: Alias felt tilføjet -->
+                <div class="input-group">
+                    <label for="ingredient-info-aliases">Alias (separer med komma)</label>
+                    <input type="text" id="ingredient-info-aliases" placeholder="F.eks. oksekød, hakket kød, fars">
+                </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="ingredient-info-main-category">Overkategori</label>
@@ -349,7 +353,6 @@
         </div>
     </div>
     
-    <!-- NYT: Tekst Import Modal (erstatter JSON-modal) -->
     <div id="text-import-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
@@ -936,6 +939,7 @@
                 <hr>
                 <h4>Ingredienser</h4>
                 <div id="ingredients-container"></div>
+                <!-- RETTELSE: ID er ændret for at undgå konflikt -->
                 <button id="add-ingredient-btn-recipe" type="button" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
@@ -954,7 +958,8 @@
                     <span id="read-view-time"><i class="fas fa-clock"></i></span>
                     <span id="read-view-portions"><i class="fas fa-users"></i></span>
                     <span id="read-view-price"><i class="fas fa-coins"></i></span>
-                    <span id="read-view-calories"><i class="fas fa-fire-alt"></i></span>
+                    <!-- ÆNDRING: Kalorier pr. portion er erstattet med kalorier pr. 100g -->
+                    <span id="read-view-calories-100g"><i class="fas fa-fire-alt"></i></span>
                 </div>
                  <div id="read-view-tags" class="recipe-card-tags"></div>
                 <div class="read-view-actions">
@@ -1083,3 +1088,4 @@
 
 </body>
 </html>
+
