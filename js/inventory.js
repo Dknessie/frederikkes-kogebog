@@ -377,13 +377,30 @@ async function handleTextImportSubmit(e) {
 
     const batch = writeBatch(db);
     const ingredientsCol = collection(db, "ingredient_info");
-    const existingNames = new Set(appState.ingredientInfo.map(i => i.name.toLowerCase()));
-    let newIngredientsCount = 0;
-    let skippedCount = 0;
+    
+    // Create lookup maps for efficiency
+    const nameToIdMap = new Map();
+    const aliasToCanonicalNameMap = new Map();
+    appState.ingredientInfo.forEach(item => {
+        nameToIdMap.set(item.name.toLowerCase(), item.id);
+        if (item.aliases) {
+            item.aliases.forEach(alias => {
+                aliasToCanonicalNameMap.set(alias.toLowerCase(), item.name);
+            });
+        }
+    });
+
+    let newCount = 0;
+    let updatedCount = 0;
+    const skippedItems = [];
 
     for (const item of parsedIngredients) {
-        if (existingNames.has(item.name.toLowerCase())) {
-            skippedCount++;
+        const itemNameLower = item.name.toLowerCase();
+
+        // Check for alias conflict first
+        const conflictingCanonicalName = aliasToCanonicalNameMap.get(itemNameLower);
+        if (conflictingCanonicalName && conflictingCanonicalName.toLowerCase() !== itemNameLower) {
+            skippedItems.push(`'${item.name}' blev sprunget over, da det er et alias for '${conflictingCanonicalName}'.`);
             continue;
         }
 
@@ -397,35 +414,48 @@ async function handleTextImportSubmit(e) {
             mainCategory: item.mainCategory,
             subCategory: item.subCategory,
             defaultUnit: normalizeUnit(item.defaultUnit),
-            aliases: [], // Alias kan tilføjes manuelt senere
+            aliases: item.aliases || [],
             averagePrice: averagePrice,
-            caloriesPer100g: item.caloriesPer100g,
+            caloriesPer100g: item.caloriesPer100g || null,
             userId: appState.currentUser.uid,
         };
 
-        if (finalData.name && finalData.mainCategory && finalData.subCategory && finalData.defaultUnit) {
+        // Check if item exists to decide between update and create
+        if (nameToIdMap.has(itemNameLower)) {
+            // Update existing
+            const docId = nameToIdMap.get(itemNameLower);
+            const docRef = doc(db, "ingredient_info", docId);
+            batch.update(docRef, finalData);
+            updatedCount++;
+        } else {
+            // Create new
             const docRef = doc(ingredientsCol);
             batch.set(docRef, finalData);
-            newIngredientsCount++;
-            existingNames.add(finalData.name.toLowerCase());
-        } else {
-            console.warn("Skipping invalid item from import:", item);
+            newCount++;
         }
     }
 
     try {
-        await batch.commit();
+        if (newCount > 0 || updatedCount > 0) {
+            await batch.commit();
+        }
         appElements.textImportModal.classList.add('hidden');
         textarea.value = '';
-        let message = `${newIngredientsCount} ny${newIngredientsCount === 1 ? '' : 'e'} ingrediens${newIngredientsCount === 1 ? '' : 'er'} blev tilføjet.`;
-        if (skippedCount > 0) {
-            message += ` ${skippedCount} blev sprunget over, da de allerede fandtes.`;
+        
+        let message = '';
+        if (newCount > 0) message += `${newCount} ny${newCount === 1 ? '' : 'e'} ingrediens${newCount === 1 ? '' : 'er'} blev oprettet.<br>`;
+        if (updatedCount > 0) message += `${updatedCount} eksisterende ingrediens${updatedCount === 1 ? '' : 'er'} blev opdateret.<br>`;
+        if (skippedItems.length > 0) {
+            message += `<br><b>Følgende blev sprunget over:</b><br>${skippedItems.join('<br>')}`;
         }
+        if (message === '') message = "Ingen ændringer foretaget. Ingredienserne fandtes muligvis allerede eller var i konflikt.";
+        
         showNotification({title: "Import Fuldført!", message: message});
     } catch (error) {
         handleError(error, "Der opstod en fejl under importen.");
     }
 }
+
 
 function parseIngredientText(text) {
     const ingredients = [];
@@ -451,12 +481,17 @@ function parseIngredientText(text) {
             } else {
                 const keyMap = {
                     'navn': 'name',
+                    'alias': 'aliases',
                     'overkategori': 'mainCategory',
                     'underkategori': 'subCategory',
                     'prisenhed': 'defaultUnit'
                 };
                 if (keyMap[key]) {
-                    ingredient[keyMap[key]] = value;
+                    if (key === 'alias') {
+                        ingredient[keyMap[key]] = value.split(',').map(a => a.trim()).filter(Boolean);
+                    } else {
+                        ingredient[keyMap[key]] = value;
+                    }
                 }
             }
         }
