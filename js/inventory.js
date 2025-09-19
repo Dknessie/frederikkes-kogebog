@@ -53,7 +53,6 @@ export function initIngredientLibrary(state, elements) {
         assistantForm.addEventListener('submit', handleBulkSaveFromAssistant);
     }
     
-    // NYT: Event listener for tekst import
     if(appElements.textImportForm) {
         appElements.textImportForm.addEventListener('submit', handleTextImportSubmit);
     }
@@ -63,11 +62,10 @@ export function initIngredientLibrary(state, elements) {
  * Renderer hele Ingrediens-bibliotek siden.
  */
 export function renderIngredientLibrary() {
-    // Opdater filter-dropdown, før vi renderer indholdet
     populateCategoryFilter();
 
     const gridContainer = document.getElementById('ingredient-grid-container');
-    const listContainer = document.getElementById('ingredient-library-container').parentElement; // table-wrapper
+    const listContainer = document.getElementById('ingredient-library-container').parentElement; 
 
     if (!gridContainer || !listContainer) return;
 
@@ -182,7 +180,6 @@ function handlePageClick(e) {
     if (e.target.closest('#add-ingredient-btn')) {
         openIngredientModal(null);
     }
-    // NYT: Håndterer klik på tekst-import knap
     if (e.target.closest('#text-import-btn')) {
         appElements.textImportModal.classList.remove('hidden');
     }
@@ -239,6 +236,7 @@ function openIngredientModal(itemId) {
     
     document.getElementById('ingredient-info-id').value = item ? item.id : '';
     document.getElementById('ingredient-info-name').value = item ? item.name : '';
+    document.getElementById('ingredient-info-aliases').value = item?.aliases?.join(', ') || '';
     
     let displayPrice = '';
     if (item && item.averagePrice) {
@@ -268,8 +266,14 @@ async function handleSaveIngredient(e) {
         averagePrice = priceInput / 1000;
     }
     
+    const aliases = document.getElementById('ingredient-info-aliases').value
+        .split(',')
+        .map(alias => alias.trim().toLowerCase())
+        .filter(alias => alias.length > 0);
+    
     const itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
+        aliases: aliases,
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
         defaultUnit: priceUnit,
@@ -331,6 +335,7 @@ async function handleBulkSaveFromAssistant(e) {
 
             const ingredientData = {
                 name: name,
+                aliases: [],
                 mainCategory: mainCategory,
                 subCategory: subCategory,
                 defaultUnit: priceUnit,
@@ -358,12 +363,6 @@ async function handleBulkSaveFromAssistant(e) {
     }
 }
 
-// ----- NY TEKST IMPORT LOGIK -----
-
-/**
- * Håndterer indsendelsen af tekst-import formularen.
- * @param {Event} e Form-submit eventet.
- */
 async function handleTextImportSubmit(e) {
     e.preventDefault();
     const textarea = document.getElementById('text-import-textarea');
@@ -398,6 +397,7 @@ async function handleTextImportSubmit(e) {
             mainCategory: item.mainCategory,
             subCategory: item.subCategory,
             defaultUnit: normalizeUnit(item.defaultUnit),
+            aliases: [], // Alias kan tilføjes manuelt senere
             averagePrice: averagePrice,
             caloriesPer100g: item.caloriesPer100g,
             userId: appState.currentUser.uid,
@@ -427,20 +427,15 @@ async function handleTextImportSubmit(e) {
     }
 }
 
-/**
- * Parser den rå tekst fra import-modalen til et array af ingrediens-objekter.
- * @param {string} text Den rå tekst.
- * @returns {Array<object>} Et array af parsede ingrediens-objekter.
- */
 function parseIngredientText(text) {
     const ingredients = [];
-    const blocks = text.trim().split(/\n\s*\n/); // Split by one or more empty lines
+    const blocks = text.trim().split(/\n\s*\n/); 
 
     for (const block of blocks) {
         const lines = block.split('\n');
         const ingredient = {};
         for (const line of lines) {
-            const parts = line.split(/:\s*/); // Split by colon and optional whitespace
+            const parts = line.split(/:\s*/); 
             if (parts.length < 2) continue;
             
             const key = parts[0].trim().toLowerCase();
@@ -503,3 +498,4 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
+
