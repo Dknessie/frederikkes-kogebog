@@ -84,8 +84,6 @@ export function formatDate(date) {
 
 /**
  * Converts a quantity from a given recipe unit to a base unit (g, ml, or stk).
- * It uses standard conversion factors.
- * NOTE: This is simplified and does not use user-defined rules anymore.
  * @param {number} quantity The quantity to convert.
  * @param {string} fromUnit The unit to convert from (e.g., 'dl', 'spsk').
  * @param {string} targetUnit The target base unit ('g', 'ml', 'stk').
@@ -110,14 +108,15 @@ export function convertToBaseUnit(quantity, fromUnit, targetUnit) {
     if (targetUnit === 'g' && conversionsToG[normalizedFrom]) {
         return { amount: quantity * conversionsToG[normalizedFrom], error: null };
     }
-
-    // If it's 'stk' or any other unit that doesn't have a direct conversion path,
-    // we assume it's a 1-to-1 conversion if the target is also 'stk'. Otherwise, it's an error.
-    if (targetUnit === 'stk' && normalizedFrom === 'stk') {
-         return { amount: quantity, error: null };
+    
+    if (targetUnit === 'stk') {
+        // Simple 1-to-1 for units like 'fed', 'dåse' etc. when target is 'stk'
+        const pieceUnits = ['stk', 'fed', 'dåse', 'bundt', 'knivspids'];
+        if (pieceUnits.includes(normalizedFrom)) {
+            return { amount: quantity, error: null };
+        }
     }
 
-    // We can't convert, e.g., 'stk' to 'g' without more info.
     return { 
         amount: null, 
         error: `Kan ikke konvertere fra '${fromUnit}' til '${targetUnit}'.` 
@@ -139,11 +138,10 @@ export function calculateRecipePrice(recipe, ingredientInfo, portionsOverride) {
     const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
 
     recipe.ingredients.forEach(ing => {
-        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
         if (info && info.averagePrice && info.defaultUnit) {
             const scaledQuantity = (ing.quantity || 0) * scaleFactor;
             
-            // Convert the ingredient's unit to the price unit defined in the library
             const conversion = convertToBaseUnit(scaledQuantity, ing.unit, info.defaultUnit);
             
             if (conversion.amount !== null) {
@@ -155,35 +153,55 @@ export function calculateRecipePrice(recipe, ingredientInfo, portionsOverride) {
 }
 
 /**
- * NY FUNKTION: Calculates the estimated nutrition (calories) of a recipe.
+ * NY FUNKTION: Beregner den samlede vægt af en opskrift i gram.
+ * Ignorerer ingredienser målt i 'stk', 'fed' etc., medmindre der findes en konverteringsregel.
+ * @param {object} recipe - Opskrift-objektet.
+ * @param {Array} ingredientInfo - Hele ingrediensbiblioteket.
+ * @returns {number} Den samlede vægt i gram.
+ */
+function calculateRecipeWeightInGrams(recipe, ingredientInfo) {
+    let totalGrams = 0;
+    if (!recipe.ingredients) return 0;
+
+    recipe.ingredients.forEach(ing => {
+        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
+        if (info && (info.defaultUnit === 'g' || info.defaultUnit === 'ml')) {
+             const conversion = convertToBaseUnit(ing.quantity || 0, ing.unit, 'g');
+             if (conversion.amount !== null) {
+                 totalGrams += conversion.amount;
+             }
+        }
+    });
+    return totalGrams;
+}
+
+
+/**
+ * ÆNDRET: Beregner nu kalorier pr. 100g for en opskrift.
  * @param {object} recipe The recipe object.
  * @param {Array} ingredientInfo The full ingredient library.
- * @param {number} [portionsOverride] Optional number of portions to calculate for.
- * @returns {number} The total estimated calories for the entire dish.
+ * @returns {number} The estimated calories per 100g.
  */
-export function calculateRecipeNutrition(recipe, ingredientInfo, portionsOverride) {
+export function calculateRecipeNutrition(recipe, ingredientInfo) {
     let totalCalories = 0;
     if (!recipe.ingredients || !ingredientInfo) return 0;
 
-    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
-
     recipe.ingredients.forEach(ing => {
-        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
-        // We can only calculate if we have calorie info and the unit is mass or volume
+        const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
         if (info && info.caloriesPer100g && (info.defaultUnit === 'g' || info.defaultUnit === 'ml')) {
-            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
-            
-            // Convert ingredient unit to a base unit (g or ml) to calculate calories
-            const conversion = convertToBaseUnit(scaledQuantity, ing.unit, info.defaultUnit);
+            const conversion = convertToBaseUnit(ing.quantity || 0, ing.unit, info.defaultUnit);
 
             if (conversion.amount !== null) {
-                // Calculate calories based on the amount in grams/ml
                 const calories = (conversion.amount / 100) * info.caloriesPer100g;
                 totalCalories += calories;
             }
         }
     });
-    return totalCalories;
+    
+    const totalGrams = calculateRecipeWeightInGrams(recipe, ingredientInfo);
+    if (totalGrams === 0) return 0;
+
+    return (totalCalories / totalGrams) * 100;
 }
 
 
@@ -242,9 +260,8 @@ export function calculateTermMonths(principal, annualRate, monthlyPayment) {
 
     const monthlyRate = (annualRate / 100) / 12;
 
-    // Tjek om ydelsen overhovedet dækker renterne
     if (monthlyPayment <= principal * monthlyRate) {
-        return Infinity; // Lånet vil aldrig blive betalt af
+        return Infinity; 
     }
 
     const term = -Math.log(1 - (principal * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate);
