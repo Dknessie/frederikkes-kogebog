@@ -229,8 +229,8 @@
                 
                 <div class="actions-bar">
                     <button id="add-ingredient-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
-                    <!-- NYT: Knap til bulk import -->
-                    <button id="bulk-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer Ingredienser</button>
+                    <!-- NYT: Knap til tekst import -->
+                    <button id="text-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer fra Tekst</button>
                     <div class="search-bar" style="max-width: 300px; flex-grow: 1;">
                          <input type="text" id="library-search" placeholder="Søg i biblioteket...">
                     </div>
@@ -349,16 +349,24 @@
         </div>
     </div>
     
-    <!-- NYT: Bulk Import Modal -->
-    <div id="bulk-import-modal" class="modal-overlay hidden">
+    <!-- NYT: Tekst Import Modal (erstatter JSON-modal) -->
+    <div id="text-import-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
-            <h3>Importer Ingredienser</h3>
-            <p>Indsæt en liste af ingredienser i JSON-format herunder. Systemet vil ignorere ingredienser, der allerede findes.</p>
-            <form id="bulk-import-form">
+            <h3>Importer Ingredienser fra Tekst</h3>
+            <p>Indsæt en liste af ingredienser i tekstfeltet. Adskil hver ingrediens med en tom linje. Systemet ignorerer navne, der allerede findes i biblioteket.</p>
+            <p class="small-text"><b>Forventet format:</b><br>
+                Navn: Hakket Oksekød<br>
+                Overkategori: Dagligvarer<br>
+                Underkategori: Kød & Fisk<br>
+                Pris/kg: 110 <span style="color: #888;">(eller Pris/l, Pris/stk)</span><br>
+                Prisenhed: g <span style="color: #888;">(eller ml, stk)</span><br>
+                Kalorier/100g/ml: 250
+            </p>
+            <form id="text-import-form">
                 <div class="input-group">
-                    <label for="bulk-import-textarea">JSON Data</label>
-                    <textarea id="bulk-import-textarea" rows="15" placeholder="Indsæt dit JSON-array her..."></textarea>
+                    <label for="text-import-textarea">Ingrediensliste</label>
+                    <textarea id="text-import-textarea" rows="15" placeholder="Indsæt din liste her..."></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-file-import"></i> Importér og Opret</button>
@@ -366,7 +374,6 @@
             </form>
         </div>
     </div>
-
 
     <div id="ingredient-assistant-modal" class="modal-overlay hidden">
         <div class="modal-content large">
@@ -929,7 +936,7 @@
                 <hr>
                 <h4>Ingredienser</h4>
                 <div id="ingredients-container"></div>
-                <button id="add-ingredient-btn" type="button" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
+                <button id="add-ingredient-btn-recipe" type="button" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj ingrediens</button>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary" id="save-recipe-btn">Gem opskrift</button>
                 </div>
@@ -1076,4 +1083,3 @@
 
 </body>
 </html>
-
