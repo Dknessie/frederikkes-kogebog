@@ -3,6 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
+import { normalizeUnit } from './utils.js';
 
 let appState;
 let appElements;
@@ -50,6 +51,11 @@ export function initIngredientLibrary(state, elements) {
     const assistantForm = document.getElementById('ingredient-assistant-form');
     if(assistantForm) {
         assistantForm.addEventListener('submit', handleBulkSaveFromAssistant);
+    }
+    
+    // NYT: Event listener for tekst import
+    if(appElements.textImportForm) {
+        appElements.textImportForm.addEventListener('submit', handleTextImportSubmit);
     }
 }
 
@@ -130,7 +136,6 @@ function renderListView(container) {
 }
 
 function createIngredientCardHTML(item) {
-    // Denne funktion skal bruge styling fra style.css for at se godt ud
     const price = item.averagePrice && item.defaultUnit ? `${(item.averagePrice * (item.defaultUnit === 'stk' ? 1 : 1000)).toFixed(2)} kr/${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}` : 'Pris ukendt';
     const calories = item.caloriesPer100g ? `${item.caloriesPer100g} kcal` : 'N/A';
     
@@ -176,6 +181,10 @@ function createIngredientRowHTML(item) {
 function handlePageClick(e) {
     if (e.target.closest('#add-ingredient-btn')) {
         openIngredientModal(null);
+    }
+    // NYT: Håndterer klik på tekst-import knap
+    if (e.target.closest('#text-import-btn')) {
+        appElements.textImportModal.classList.remove('hidden');
     }
     if (e.target.closest('.edit-ingredient-btn') || e.target.closest('.ingredient-card')) {
         const itemId = e.target.closest('[data-id]').dataset.id;
@@ -231,7 +240,6 @@ function openIngredientModal(itemId) {
     document.getElementById('ingredient-info-id').value = item ? item.id : '';
     document.getElementById('ingredient-info-name').value = item ? item.name : '';
     
-    // Konverter pris for visning
     let displayPrice = '';
     if (item && item.averagePrice) {
         displayPrice = item.defaultUnit === 'stk' ? item.averagePrice : item.averagePrice * 1000;
@@ -256,7 +264,6 @@ async function handleSaveIngredient(e) {
     const priceUnit = document.getElementById('ingredient-info-default-unit').value;
     let averagePrice = priceInput;
 
-    // Gem altid prisen som kr/g eller kr/ml for konsistens i beregninger
     if (priceInput && (priceUnit === 'g' || priceUnit === 'ml')) {
         averagePrice = priceInput / 1000;
     }
@@ -301,10 +308,6 @@ async function handleDeleteIngredient() {
     } catch (error) { handleError(error, "Ingrediensen kunne ikke slettes."); }
 }
 
-/**
- * NY FUNKTION: Håndterer bulk-save fra oprettelses-assistenten.
- * @param {Event} e - Form submit event.
- */
 async function handleBulkSaveFromAssistant(e) {
     e.preventDefault();
     const listContainer = document.getElementById('ingredient-assistant-list');
@@ -355,6 +358,119 @@ async function handleBulkSaveFromAssistant(e) {
     }
 }
 
+// ----- NY TEKST IMPORT LOGIK -----
+
+/**
+ * Håndterer indsendelsen af tekst-import formularen.
+ * @param {Event} e Form-submit eventet.
+ */
+async function handleTextImportSubmit(e) {
+    e.preventDefault();
+    const textarea = document.getElementById('text-import-textarea');
+    const text = textarea.value;
+    if (!text.trim()) return;
+
+    const parsedIngredients = parseIngredientText(text);
+    if (parsedIngredients.length === 0) {
+        showNotification({title: "Intet at importere", message: "Kunne ikke finde gyldige ingredienser i den angivne tekst."});
+        return;
+    }
+
+    const batch = writeBatch(db);
+    const ingredientsCol = collection(db, "ingredient_info");
+    const existingNames = new Set(appState.ingredientInfo.map(i => i.name.toLowerCase()));
+    let newIngredientsCount = 0;
+    let skippedCount = 0;
+
+    for (const item of parsedIngredients) {
+        if (existingNames.has(item.name.toLowerCase())) {
+            skippedCount++;
+            continue;
+        }
+
+        let averagePrice = item.priceInput;
+        if (item.priceInput && (item.priceUnitForInput === 'kg' || item.priceUnitForInput === 'l')) {
+            averagePrice = item.priceInput / 1000;
+        }
+
+        const finalData = {
+            name: item.name,
+            mainCategory: item.mainCategory,
+            subCategory: item.subCategory,
+            defaultUnit: normalizeUnit(item.defaultUnit),
+            averagePrice: averagePrice,
+            caloriesPer100g: item.caloriesPer100g,
+            userId: appState.currentUser.uid,
+        };
+
+        if (finalData.name && finalData.mainCategory && finalData.subCategory && finalData.defaultUnit) {
+            const docRef = doc(ingredientsCol);
+            batch.set(docRef, finalData);
+            newIngredientsCount++;
+            existingNames.add(finalData.name.toLowerCase());
+        } else {
+            console.warn("Skipping invalid item from import:", item);
+        }
+    }
+
+    try {
+        await batch.commit();
+        appElements.textImportModal.classList.add('hidden');
+        textarea.value = '';
+        let message = `${newIngredientsCount} ny${newIngredientsCount === 1 ? '' : 'e'} ingrediens${newIngredientsCount === 1 ? '' : 'er'} blev tilføjet.`;
+        if (skippedCount > 0) {
+            message += ` ${skippedCount} blev sprunget over, da de allerede fandtes.`;
+        }
+        showNotification({title: "Import Fuldført!", message: message});
+    } catch (error) {
+        handleError(error, "Der opstod en fejl under importen.");
+    }
+}
+
+/**
+ * Parser den rå tekst fra import-modalen til et array af ingrediens-objekter.
+ * @param {string} text Den rå tekst.
+ * @returns {Array<object>} Et array af parsede ingrediens-objekter.
+ */
+function parseIngredientText(text) {
+    const ingredients = [];
+    const blocks = text.trim().split(/\n\s*\n/); // Split by one or more empty lines
+
+    for (const block of blocks) {
+        const lines = block.split('\n');
+        const ingredient = {};
+        for (const line of lines) {
+            const parts = line.split(/:\s*/); // Split by colon and optional whitespace
+            if (parts.length < 2) continue;
+            
+            const key = parts[0].trim().toLowerCase();
+            const value = parts.slice(1).join(':').trim();
+
+            if (key.startsWith('pris/')) {
+                ingredient.priceInput = parseFloat(value.replace(',', '.')) || null;
+                if (key.includes('kg')) ingredient.priceUnitForInput = 'kg';
+                else if (key.includes('l')) ingredient.priceUnitForInput = 'l';
+                else if (key.includes('stk')) ingredient.priceUnitForInput = 'stk';
+            } else if (key === 'kalorier/100g/ml') {
+                ingredient.caloriesPer100g = parseInt(value, 10) || null;
+            } else {
+                const keyMap = {
+                    'navn': 'name',
+                    'overkategori': 'mainCategory',
+                    'underkategori': 'subCategory',
+                    'prisenhed': 'defaultUnit'
+                };
+                if (keyMap[key]) {
+                    ingredient[keyMap[key]] = value;
+                }
+            }
+        }
+        if (ingredient.name) {
+             ingredients.push(ingredient);
+        }
+    }
+    return ingredients;
+}
 
 // ----- HJÆLPEFUNKTIONER -----
 
@@ -387,4 +503,3 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
-
