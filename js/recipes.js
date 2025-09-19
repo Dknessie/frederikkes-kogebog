@@ -18,11 +18,7 @@ const cookbookState = {
 
 export function initRecipes(state, elements) {
     appState = state;
-    appElements = {
-        ...elements,
-        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn'),
-        importRecipeBtn: document.getElementById('import-recipe-btn')
-    };
+    appElements = elements; // Modtager alle cachede elementer fra app.js
 
     if (appElements.cookbookAddRecipeBtn) appElements.cookbookAddRecipeBtn.addEventListener('click', openAddRecipeModal);
     if (appElements.prevRecipeBtn) appElements.prevRecipeBtn.addEventListener('click', () => navigateFlipper(-1));
@@ -36,31 +32,39 @@ export function initRecipes(state, elements) {
     });
      if (appElements.goToCalendarBtn) appElements.goToCalendarBtn.addEventListener('click', () => window.location.hash = '#calendar');
 
-    appElements.recipeAddIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
-    appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
-    appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
-    appElements.recipeEditModal.addEventListener('click', (e) => {
-        if (e.target.closest('.remove-ingredient-btn')) {
-            e.target.closest('.ingredient-row').remove();
-        }
-    });
-    appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
-    appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
+    // Fejlrettelse: Sikrer at listeneren er på den korrekte knap
+    if(appElements.recipeAddIngredientBtn) {
+        appElements.recipeAddIngredientBtn.addEventListener('click', () => createIngredientRow(appElements.ingredientsContainer));
+    }
+    if(appElements.importRecipeBtn) appElements.importRecipeBtn.addEventListener('click', handleRecipeImport);
+    
+    if(appElements.recipeForm) appElements.recipeForm.addEventListener('submit', handleSaveRecipe);
+    
+    if (appElements.recipeEditModal) {
+        appElements.recipeEditModal.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-ingredient-btn')) {
+                e.target.closest('.ingredient-row').remove();
+            }
+        });
+    }
+    
+    if(appElements.recipeImageUploadInput) appElements.recipeImageUploadInput.addEventListener('change', handleImageUpload);
+    if(appElements.recipeImageUrlInput) appElements.recipeImageUrlInput.addEventListener('input', handleImageUrlInput);
 
-    appElements.readViewPlanBtn.addEventListener('click', () => {
+    if(appElements.readViewPlanBtn) appElements.readViewPlanBtn.addEventListener('click', () => {
         appElements.recipeReadModal.classList.add('hidden');
         openPlanMealModal(appState.currentlyViewedRecipeId);
     });
     
-    // NYT: Event listener for oprettelses-assistenten
     const createMissingBtn = document.getElementById('create-missing-ingredients-btn');
     if (createMissingBtn) {
         createMissingBtn.addEventListener('click', handleCreateMissingIngredients);
     }
 
-    appElements.readViewEditBtn.addEventListener('click', openEditRecipeModal);
-    appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
+    if(appElements.readViewEditBtn) appElements.readViewEditBtn.addEventListener('click', openEditRecipeModal);
+    if(appElements.readViewDeleteBtn) appElements.readViewDeleteBtn.addEventListener('click', handleDeleteRecipeFromReadView);
 }
+
 
 export function renderRecipes() {
     renderFlipper();
@@ -88,8 +92,7 @@ function renderFlipper() {
         const intro = (recipe.introduction || '').substring(0, 150) + ((recipe.introduction || '').length > 150 ? '...' : '');
         
         const price = calculateRecipePrice(recipe, appState.ingredientInfo);
-        const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-        const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? `~${Math.round(totalCalories / recipe.portions)} kcal/port.` : '';
+        const caloriesPer100g = calculateRecipeNutrition(recipe, appState.ingredientInfo);
 
         wrapper.innerHTML = `
             <div class="recipe-display-card">
@@ -100,7 +103,7 @@ function renderFlipper() {
                         <span><i class="fas fa-clock"></i> ${recipe.time || '?'} min.</span>
                         <span><i class="fas fa-users"></i> ${recipe.portions || '?'} port.</span>
                         <span><i class="fas fa-coins"></i> ~${price.toFixed(2)} kr.</span>
-                        ${caloriesPerPortion ? `<span><i class="fas fa-fire-alt"></i> ${caloriesPerPortion}</span>` : ''}
+                        ${caloriesPer100g > 0 ? `<span><i class="fas fa-fire-alt"></i> ~${Math.round(caloriesPer100g)} kcal/100g</span>` : ''}
                     </div>
                     <p class="recipe-intro">${intro}</p>
                     <div class="recipe-card-actions">
@@ -325,13 +328,12 @@ export function renderReadView(recipe) {
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
 
     const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
-    const totalCalories = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-    const caloriesPerPortion = (recipe.portions && totalCalories > 0) ? Math.round(totalCalories / recipe.portions) : 0;
+    const caloriesPer100g = calculateRecipeNutrition(recipe, appState.ingredientInfo);
     
     document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
-    const caloriesElement = document.getElementById('read-view-calories');
+    const caloriesElement = document.getElementById('read-view-calories-100g');
     if(caloriesElement) {
-        caloriesElement.innerHTML = caloriesPerPortion > 0 ? `<i class="fas fa-fire-alt"></i> ~${caloriesPerPortion} kcal/port.` : '';
+        caloriesElement.innerHTML = caloriesPer100g > 0 ? `<i class="fas fa-fire-alt"></i> ~${Math.round(caloriesPer100g)} kcal/100g` : '';
     }
 
     const tagsContainer = document.getElementById('read-view-tags');
@@ -351,7 +353,15 @@ export function renderReadView(recipe) {
         recipe.ingredients.forEach(ing => {
             const li = document.createElement('li');
             const noteHTML = ing.note ? `<span class="ingredient-note">(${ing.note})</span>` : '';
-            li.innerHTML = `<span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span>`;
+            const info = findCanonicalIngredient(ing.name);
+            const statusClass = info ? 'exists' : 'missing';
+            const statusIcon = info ? 'fa-check-circle' : 'fa-question-circle';
+            const statusTitle = info ? 'Findes i biblioteket' : 'Ukendt ingrediens';
+
+            li.innerHTML = `
+                <span>${ing.quantity || ''} ${ing.unit || ''} ${ing.name} ${noteHTML}</span>
+                <i class="fas ${statusIcon} ingredient-status-icon ${statusClass}" title="${statusTitle}"></i>
+            `;
             ingredientsList.appendChild(li);
         });
     }
@@ -369,7 +379,6 @@ export function renderReadView(recipe) {
     appElements.recipeReadModal.classList.remove('hidden');
 }
 
-// ... (resten af filen, fra parseIngredientLine til slut, forbliver uændret) ...
 
 function parseIngredientLine(line) {
     line = line.trim();
@@ -450,31 +459,23 @@ function parseFullRecipeText(text) {
 function handleRecipeImport() {
     const text = appElements.recipeImportTextarea.value;
     if (!text) return;
-    const fullRecipeData = parseFullRecipeText(text);
-    if (fullRecipeData && fullRecipeData.title && fullRecipeData.ingredientsText && fullRecipeData.instructions) {
-        document.getElementById('recipe-title').value = fullRecipeData.title || '';
-        document.getElementById('recipe-category').value = fullRecipeData.category || '';
-        document.getElementById('recipe-portions').value = fullRecipeData.portions || '';
-        document.getElementById('recipe-time').value = fullRecipeData.time || '';
-        document.getElementById('recipe-tags').value = fullRecipeData.tags?.join(', ') || '';
-        document.getElementById('recipe-introduction').value = fullRecipeData.introduction || '';
-        document.getElementById('recipe-instructions').value = fullRecipeData.instructions || '';
-        appElements.ingredientsContainer.innerHTML = '';
-        if (fullRecipeData.ingredientsText) {
-            fullRecipeData.ingredientsText.split('\n').forEach(line => {
-                const ingredientData = parseIngredientLine(line);
-                if (ingredientData && ingredientData.name) createIngredientRow(appElements.ingredientsContainer, ingredientData);
-            });
+
+    // FEJLRETTELSE: Fjerner ikke længere eksisterende ingredienser
+    // appElements.ingredientsContainer.innerHTML = '';
+    
+    text.split('\n').forEach(line => {
+        let ingredientData = parseIngredientLine(line);
+        if (ingredientData && ingredientData.name) {
+            // Tjek for alias og brug canonical name hvis det findes
+            const canonicalIngredient = findCanonicalIngredient(ingredientData.name);
+            if(canonicalIngredient) {
+                ingredientData.name = canonicalIngredient.name;
+            }
+            createIngredientRow(appElements.ingredientsContainer, ingredientData);
         }
-        showNotification({ title: "Importeret!", message: "Hele opskriften er blevet indlæst." });
-    } else {
-        appElements.ingredientsContainer.innerHTML = '';
-        text.split('\n').forEach(line => {
-            const ingredientData = parseIngredientLine(line);
-            if (ingredientData && ingredientData.name) createIngredientRow(appElements.ingredientsContainer, ingredientData);
-        });
-        showNotification({ title: "Importeret!", message: "Ingredienslisten er blevet opdateret." });
-    }
+    });
+    showNotification({ title: "Importeret!", message: "Ingredienserne er blevet tilføjet til listen." });
+    
     appElements.recipeImportTextarea.value = '';
 }
 async function handleSaveRecipe(e) {
@@ -594,15 +595,11 @@ async function handleDeleteRecipeFromReadView() {
     }
 }
 
-/**
- * NY FUNKTION: Håndterer klik på "Opret Manglende Ingredienser".
- */
 function handleCreateMissingIngredients() {
     const recipe = appState.recipes.find(r => r.id === appState.currentlyViewedRecipeId);
     if (!recipe || !recipe.ingredients) return;
 
-    const existingIngredientNames = new Set(appState.ingredientInfo.map(i => i.name.toLowerCase()));
-    const missingIngredients = recipe.ingredients.filter(ing => !existingIngredientNames.has(ing.name.toLowerCase()));
+    const missingIngredients = recipe.ingredients.filter(ing => !findCanonicalIngredient(ing.name));
 
     if (missingIngredients.length === 0) {
         showNotification({title: "Alle Findes", message: "Alle ingredienser i denne opskrift findes allerede i dit bibliotek."});
@@ -624,7 +621,6 @@ function openIngredientAssistantModal(missingIngredients) {
         row.className = 'assistant-item-row';
         row.dataset.name = ing.name;
 
-        // Opret dropdowns for kategorier
         const mainCatSelect = document.createElement('select');
         mainCatSelect.className = 'assistant-main-cat';
         populateReferenceDropdown(mainCatSelect, mainCategories.map(c => c.name), 'Vælg kategori...');
@@ -665,10 +661,17 @@ function openIngredientAssistantModal(missingIngredients) {
     modal.classList.remove('hidden');
 }
 
+function findCanonicalIngredient(name) {
+    const lowerCaseName = name.toLowerCase().trim();
+    return appState.ingredientInfo.find(i => 
+        i.name.toLowerCase() === lowerCaseName || 
+        (i.aliases && i.aliases.includes(lowerCaseName))
+    );
+}
+
 function populateReferenceDropdown(select, opts, ph, val) {
     if (!select) return;
     select.innerHTML = `<option value="">${ph}</option>`;
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
-
