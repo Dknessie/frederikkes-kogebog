@@ -6,7 +6,7 @@ import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
 import { openShoppingListModal } from './shoppingList.js';
 import { renderReadView } from './recipes.js';
-import { openEventModal, handleDeleteEvent } from './events.js'; // Importer nye funktioner
+import { openEventModal, handleDeleteEvent } from './events.js';
 
 let appState;
 let appElements;
@@ -57,7 +57,7 @@ function navigateWeek(direction) {
 }
 
 export function renderMealPlanner() {
-    if (!appState.recipes || !appState.inventory || !appElements.hubTitle) return;
+    if (!appState.recipes || !appElements.hubTitle) return;
 
     const startOfWeek = getStartOfWeek(appState.currentDate);
     appElements.hubTitle.textContent = `Uge ${getWeekNumber(startOfWeek)}, ${startOfWeek.getFullYear()}`;
@@ -579,4 +579,3 @@ async function handleDeleteMeal(mealId, date, mealType) {
         handleError(error, "Kunne ikke fjerne måltidet.", "handleDeleteMeal");
     }
 }
-
