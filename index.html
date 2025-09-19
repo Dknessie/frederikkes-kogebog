@@ -119,7 +119,7 @@
                 </div>
             </section>
 
-            <!-- GENINDSAT KALENDER-SEKTION -->
+            <!-- NYT: UGE-HUB LAYOUT FOR KALENDER -->
             <section id="calendar" class="page hidden">
                 <div class="weekly-hub-container">
                     <header class="hub-header">
@@ -132,7 +132,7 @@
                         </div>
                     </header>
                     <div class="hub-actions">
-                         <button id="hub-generate-groceries-btn" class="btn btn-primary"><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
+                         <button id="hub-generate-groceries-btn" class="btn btn-primary" disabled><i class="fas fa-magic-wand-sparkles"></i> Generer Indkøbsliste</button>
                          <button id="hub-clear-week-btn" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Ryd Hele Ugen</button>
                     </div>
 
@@ -151,7 +151,7 @@
                             </div>
                              <div id="shopping-list-widget" class="widget-card shopping-list-widget">
                                 <h4><i class="fas fa-shopping-cart"></i> Indkøbsliste</h4>
-                                <p>Du har <strong>5</strong> varer på din liste.</p>
+                                <p>Du har <strong>0</strong> varer på din liste.</p>
                                 <button class="btn btn-secondary">Se Indkøbsliste</button>
                             </div>
                         </aside>
@@ -173,7 +173,7 @@
                             <h2>Min Kogebog</h2>
                             <p>Find inspiration, planlæg dine måltider og genopdag dine favoritter.</p>
                             <div class="actions">
-                                <button id="cookbook-add-recipe-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Ny Opskrift</button>
+                                <button id="cookbook-add-recipe-btn" class="btn btn-primary" disabled><i class="fas fa-plus"></i> Ny Opskrift</button>
                             </div>
                         </div>
 
@@ -228,7 +228,7 @@
                 <p>Administrér generel information om dine ingredienser for at beregne priser og kalorier på opskrifter.</p>
                 
                 <div class="actions-bar">
-                    <button id="add-ingredient-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
+                    <button id="add-ingredient-btn" class="btn btn-primary" disabled><i class="fas fa-plus"></i> Tilføj Ny Ingrediens</button>
                     <button id="text-import-btn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importer fra Tekst</button>
                     <div class="search-bar" style="max-width: 300px; flex-grow: 1;">
                          <input type="text" id="library-search" placeholder="Søg i biblioteket...">
@@ -304,7 +304,6 @@
                     <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
                     <input type="text" id="ingredient-info-name" placeholder="F.eks. Hakket Oksekød 4-7%" required>
                 </div>
-                <!-- NYT: Alias felt tilføjet -->
                 <div class="input-group">
                     <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
                     <input type="text" id="ingredient-info-aliases" placeholder="F.eks. oksekød, hakket kød, fars">
@@ -810,6 +809,7 @@
         </div>
     </div>
     
+    <!-- NYT: Event Modal -->
     <div id="event-modal" class="modal-overlay hidden">
         <div class="modal-content small">
             <button class="close-modal-btn">&times;</button>
@@ -989,6 +989,7 @@
              <div id="notification-actions" class="form-actions"></div>
         </div>
     </div>
+    <!-- NYT: Modals til kalender -->
     <div id="plan-meal-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <button class="close-modal-btn">&times;</button>
