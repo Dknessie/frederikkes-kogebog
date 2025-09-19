@@ -20,7 +20,6 @@ export function initEvents(state) {
         eventTypeSelect.addEventListener('change', toggleEventTypeFields);
     }
 
-    // Tilføj event listener for den nye slet-knap i modalen
     const deleteEventBtn = document.getElementById('delete-event-btn');
     if (deleteEventBtn) {
         deleteEventBtn.addEventListener('click', async () => {
@@ -35,12 +34,6 @@ export function initEvents(state) {
     }
 }
 
-/**
- * OPDATERET: Åbner modal for at tilføje/redigere en begivenhed, med mulighed for at forudvælge kategori.
- * @param {string} [date] - Valgfri dato til forudfyldning.
- * @param {object} [eventData] - Valgfri begivenhedsdata til redigering.
- * @param {string} [defaultCategory] - Valgfri kategori til forudvælgelse (f.eks. 'Aftale' eller 'To-do').
- */
 export function openEventModal(date, eventData = null, defaultCategory = null) {
     const modal = document.getElementById('event-modal');
     const form = document.getElementById('event-form');
@@ -69,16 +62,13 @@ export function openEventModal(date, eventData = null, defaultCategory = null) {
         document.getElementById('event-id').value = '';
         document.getElementById('event-date').value = date || formatDate(new Date());
         deleteBtn.classList.add('hidden');
-        // Forudvælg kategori hvis angivet
         if (defaultCategory) {
             document.getElementById('event-type').value = defaultCategory;
         }
     }
 
-    // Kald altid denne for at sikre, at de korrekte felter vises
     toggleEventTypeFields();
 
-    // Sørg for at felter for redigering bliver udfyldt efter toggleEventTypeFields er kørt
     if (eventData) {
         setTimeout(() => {
             if (eventData.category === 'Fødselsdag') {
@@ -215,11 +205,6 @@ async function handleSaveEvent(e) {
     }
 }
 
-/**
- * NY FUNKTION: Håndterer sletning af en begivenhed.
- * @param {string} eventId - ID'et på den begivenhed, der skal slettes.
- * @returns {Promise<boolean>} - Returnerer true, hvis sletningen lykkedes.
- */
 export async function handleDeleteEvent(eventId) {
     if (!eventId) return false;
 
@@ -243,4 +228,3 @@ export async function handleDeleteEvent(eventId) {
         return false;
     }
 }
-
