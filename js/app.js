@@ -84,8 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recipeForm: document.getElementById('recipe-form'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
         ingredientsContainer: document.getElementById('ingredients-container'),
-        // RETTELSE: Korrekt ID er sikret her
-        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn-recipe'), 
+        addIngredientBtnRecipe: document.getElementById('add-ingredient-btn-recipe'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         importRecipeBtn: document.getElementById('import-recipe-btn'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
@@ -98,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
+        // NYE KALENDER-ELEMENTER
         hubPrevWeekBtn: document.getElementById('hub-prev-week-btn'),
         hubNextWeekBtn: document.getElementById('hub-next-week-btn'),
         hubTitle: document.getElementById('hub-title'),
@@ -105,32 +105,25 @@ document.addEventListener('DOMContentLoaded', () => {
         hubGenerateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
         mealPlanSection: document.getElementById('meal-plan-section'),
         sidebarSection: document.getElementById('sidebar-section'),
-        generateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
 
+        // NYE MODALS TIL KALENDER
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
-        mealTypeSelector: document.querySelector('#plan-meal-form .meal-type-selector'),
         addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
-        calendarEventModalTitle: document.getElementById('calendar-event-modal-title'),
-        calendarEventViewChooser: document.getElementById('calendar-event-view-chooser'),
-        calendarEventViews: document.querySelectorAll('.calendar-event-view'),
-        calendarRecipeSearch: document.getElementById('calendar-recipe-search'),
-        calendarRecipeList: document.getElementById('calendar-recipe-list'),
-        calendarProjectList: document.getElementById('calendar-project-list'),
-        calendarTaskSearch: document.getElementById('calendar-task-search'),
-        calendarTaskList: document.getElementById('calendar-task-list'),
-        calendarTaskForm: document.getElementById('calendar-task-form'),
         dayDetailsModal: document.getElementById('day-details-modal'),
-        dayDetailsTitle: document.getElementById('day-details-title'),
-        dayDetailsContent: document.getElementById('day-details-content'),
+        eventModal: document.getElementById('event-modal'),
+        eventForm: document.getElementById('event-form'),
 
+        // References
         referencesContainer: document.getElementById('references-container'),
         householdMembersList: document.getElementById('household-members-list'),
 
+        // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
 
+        // Generelle Modals
         notificationModal: document.getElementById('notification-modal'),
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
@@ -138,8 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModal: document.getElementById('shopping-list-modal'),
         shoppingListModalTitle: document.getElementById('shopping-list-modal-title'),
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
-        eventForm: document.getElementById('event-form'),
 
+        // Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         deletePlantBtn: document.getElementById('delete-plant-btn'),
