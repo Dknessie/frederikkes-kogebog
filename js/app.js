@@ -5,15 +5,12 @@ import { collection, onSnapshot, doc, where, query } from "https://www.gstatic.c
 
 import { initAuth, setupAuthEventListeners } from './auth.js';
 import { initUI, navigateTo, handleError } from './ui.js';
-// OPDATERING: Omdøbt initInventory til initIngredientLibrary for klarhed
 import { initIngredientLibrary, renderIngredientLibrary } from './inventory.js';
 import { initRecipes, renderRecipes } from './recipes.js';
 import { initMealPlanner, renderMealPlanner } from './mealPlanner.js';
 import { initShoppingList } from './shoppingList.js';
 import { initReferences, renderReferencesPage } from './references.js';
 import { initDashboard, renderDashboardPage } from './dashboard.js';
-// FJERNET: kitchenCounter.js er ikke længere nødvendig
-// import { initKitchenCounter } from './kitchenCounter.js';
 import { initEvents } from './events.js';
 import { initEconomy, renderEconomy } from './economy.js';
 import { initHjemmet, renderHjemmetPage } from './hjemmet.js';
@@ -23,9 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = {
         currentUser: null,
         users: [],
-        // OPDATERING: Omdøbt og simplificeret datastruktur for ingredienser
-        ingredientInfo: [], // Erstatter inventoryItems og inventory
-        // FJERNET: inventoryBatches er ikke længere i brug
+        ingredientInfo: [], 
         recipes: [],
         assets: [],
         liabilities: [],
@@ -67,13 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
         hjemmetSidebar: document.getElementById('hjemmet-sidebar'),
         hjemmetMainContent: document.getElementById('hjemmet-main-content'),
 
-        // OPDATERING: Omdøbt elementer for at matche den nye funktionalitet
+        // Ingrediens-bibliotek elementer
         ingredientModal: document.getElementById('ingredient-info-modal'),
         ingredientForm: document.getElementById('ingredient-info-form'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         ingredientModalTitle: document.getElementById('ingredient-modal-title'),
-        
-        // FJERNET: Gamle varelager-elementer er slettet fra index.html
+        textImportModal: document.getElementById('text-import-modal'), // NYT
+        textImportForm: document.getElementById('text-import-form'), // NYT
         
         // Recipes (New Structure)
         cookbookAddRecipeBtn: document.getElementById('cookbook-add-recipe-btn'),
@@ -87,12 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
         upcomingMealPlanWidget: document.getElementById('upcoming-meal-plan-widget'),
         goToCalendarBtn: document.getElementById('go-to-calendar-btn'),
         
-        // Modals (beholdes for nu)
+        // Modals (Recipes)
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
         ingredientsContainer: document.getElementById('ingredients-container'),
-        // addIngredientBtn er nu i recipe-modalen, ikke global
+        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn-recipe'),
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         importRecipeBtn: document.getElementById('import-recipe-btn'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
@@ -176,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const hash = window.location.hash || '#dashboard';
         const pageId = hash.substring(1).split('/')[0];
     
-        // Udfør den relevante rendering-funktion
         switch('#' + pageId) {
             case '#dashboard':
                 renderDashboardPage();
@@ -191,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderRecipes();
                 break;
             case '#inventory':
-                // OPDATERING: Kalder den nye render-funktion
                 renderIngredientLibrary();
                 break;
             case '#oekonomi':
@@ -208,9 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(state.listeners).forEach(unsubscribe => unsubscribe && unsubscribe());
         const commonErrorHandler = (error, context) => handleError(error, `Kunne ikke hente data for ${context}.`, `onSnapshot(${context})`);
         
-        // OPDATERING: Simplificeret listener-opsætning
         const collections = {
-            // OPDATERING: Omdøbt collection til 'ingredient_info'
             ingredient_info: 'ingredientInfo',
             recipes: 'recipes',
             events: 'events',
@@ -315,11 +306,9 @@ document.addEventListener('DOMContentLoaded', () => {
         initAuth(onLogin, onLogout);
 
         initUI(state, elements);
-        // OPDATERING: Kalder den nye init-funktion
         initIngredientLibrary(state, elements);
         initRecipes(state, elements);
         initShoppingList(state, elements);
-        // FJERNET: kitchenCounter er udgået
         initMealPlanner(state, elements);
         initReferences(state, elements);
         initDashboard(state, elements);
