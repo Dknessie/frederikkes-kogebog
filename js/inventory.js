@@ -482,13 +482,14 @@ function parseIngredientText(text) {
                 const keyMap = {
                     'navn': 'name',
                     'alias': 'aliases',
+                    'aliaser': 'aliases', // RETTELSE: Accepterer nu "Aliaser"
                     'overkategori': 'mainCategory',
                     'underkategori': 'subCategory',
                     'prisenhed': 'defaultUnit'
                 };
                 if (keyMap[key]) {
-                    if (key === 'alias') {
-                        ingredient[keyMap[key]] = value.split(',').map(a => a.trim()).filter(Boolean);
+                    if (key === 'alias' || key === 'aliaser') {
+                        ingredient[keyMap[key]] = value.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
                     } else {
                         ingredient[keyMap[key]] = value;
                     }
