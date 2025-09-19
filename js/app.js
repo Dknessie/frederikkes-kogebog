@@ -62,15 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
         hjemmetSidebar: document.getElementById('hjemmet-sidebar'),
         hjemmetMainContent: document.getElementById('hjemmet-main-content'),
 
-        // Ingrediens-bibliotek elementer
         ingredientModal: document.getElementById('ingredient-info-modal'),
         ingredientForm: document.getElementById('ingredient-info-form'),
         addIngredientBtn: document.getElementById('add-ingredient-btn'),
         ingredientModalTitle: document.getElementById('ingredient-modal-title'),
-        textImportModal: document.getElementById('text-import-modal'), // NYT
-        textImportForm: document.getElementById('text-import-form'), // NYT
+        textImportModal: document.getElementById('text-import-modal'),
+        textImportForm: document.getElementById('text-import-form'),
         
-        // Recipes (New Structure)
         cookbookAddRecipeBtn: document.getElementById('cookbook-add-recipe-btn'),
         recipeFlipper: document.getElementById('recipe-flipper'),
         prevRecipeBtn: document.getElementById('prev-recipe-btn'),
@@ -82,12 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
         upcomingMealPlanWidget: document.getElementById('upcoming-meal-plan-widget'),
         goToCalendarBtn: document.getElementById('go-to-calendar-btn'),
         
-        // Modals (Recipes)
         recipeEditModal: document.getElementById('recipe-edit-modal'),
         recipeForm: document.getElementById('recipe-form'),
         recipeEditModalTitle: document.getElementById('recipe-edit-modal-title'),
         ingredientsContainer: document.getElementById('ingredients-container'),
-        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn-recipe'),
+        // RETTELSE: Korrekt ID er sikret her
+        recipeAddIngredientBtn: document.getElementById('add-ingredient-btn-recipe'), 
         recipeImportTextarea: document.getElementById('recipe-import-textarea'),
         importRecipeBtn: document.getElementById('import-recipe-btn'),
         recipeImagePreview: document.getElementById('recipe-image-preview'),
@@ -100,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         readViewDeleteBtn: document.getElementById('read-view-delete-btn'),
         readViewPrice: document.getElementById('read-view-price'),
 
-        // KALENDER "Uge-Hub" ELEMENTER
         hubPrevWeekBtn: document.getElementById('hub-prev-week-btn'),
         hubNextWeekBtn: document.getElementById('hub-next-week-btn'),
         hubTitle: document.getElementById('hub-title'),
@@ -110,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarSection: document.getElementById('sidebar-section'),
         generateGroceriesBtn: document.getElementById('hub-generate-groceries-btn'),
 
-        // Modals related to calendar
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
@@ -129,15 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dayDetailsTitle: document.getElementById('day-details-title'),
         dayDetailsContent: document.getElementById('day-details-content'),
 
-        // References
         referencesContainer: document.getElementById('references-container'),
         householdMembersList: document.getElementById('household-members-list'),
 
-        // Mobile
         mobileTabBar: document.getElementById('mobile-tab-bar'),
         mobileTabLinks: document.querySelectorAll('.mobile-tab-link'),
 
-        // Modals
         notificationModal: document.getElementById('notification-modal'),
         notificationTitle: document.getElementById('notification-title'),
         notificationMessage: document.getElementById('notification-message'),
@@ -147,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shoppingListModalContentWrapper: document.getElementById('shopping-list-modal-content-wrapper'),
         eventForm: document.getElementById('event-form'),
 
-        // Hjemmet modals
         plantModal: document.getElementById('plant-edit-modal'),
         plantForm: document.getElementById('plant-form'),
         deletePlantBtn: document.getElementById('delete-plant-btn'),
@@ -319,3 +311,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
+
