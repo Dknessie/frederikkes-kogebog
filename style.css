@@ -1546,8 +1546,8 @@ header {
     animation: fadeIn 0.3s ease;
 }
 
-#plan-meal-modal, #edit-budget-modal, #project-edit-modal, #room-edit-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal { z-index: 2010; }
-#ingredient-assistant-modal, #bulk-import-modal { z-index: 2015; }
+#plan-meal-modal, #edit-budget-modal, #project-edit-modal, #room-edit-modal, #add-calendar-event-modal, #day-details-modal, #maintenance-log-modal, #event-modal, #asset-modal, #liability-modal, #fixed-expense-modal, #text-import-modal { z-index: 2010; }
+#ingredient-assistant-modal { z-index: 2015; }
 #notification-modal { z-index: 2020; }
 #add-expense-modal { z-index: 2010; }
 
@@ -1578,7 +1578,8 @@ header {
 #add-meal-modal .modal-content,
 #edit-budget-modal .modal-content,
 #maintenance-log-modal .modal-content,
-#event-modal .modal-content {
+#event-modal .modal-content,
+#text-import-modal .modal-content {
     max-width: 550px;
 }
 #add-calendar-event-modal .modal-content {
@@ -1948,6 +1949,22 @@ input:checked + .slider:before { transform: translateX(22px); }
 }
 .assistant-item-inputs .input-group {
     margin: 0;
+}
+
+/* NYT: Tekst Import Modal Styling */
+#text-import-modal .small-text {
+    background-color: var(--secondary-color);
+    border-left: 3px solid var(--primary-color);
+    padding: var(--spacing-m);
+    border-radius: var(--border-radius);
+    line-height: 1.7;
+    margin-top: 0;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+#text-import-modal .small-text b {
+    font-family: var(--body-font);
+    font-weight: 700;
 }
 
 
@@ -2679,4 +2696,3 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #999;
     font-size: var(--small-font-size);
 }
-
