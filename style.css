@@ -1147,6 +1147,7 @@ header {
     justify-content: space-between;
     align-items: center;
 }
+
 /* NYT: Styling for view toggle */
 .view-toggle-buttons {
     margin-left: auto;
@@ -1162,6 +1163,31 @@ header {
     background-color: var(--white-color);
     color: var(--primary-color);
     box-shadow: var(--shadow);
+}
+
+/* NYT: Styling for custom select dropdown */
+.actions-bar select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: var(--white-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    font-weight: 600;
+    font-size: var(--small-font-size);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow);
+    min-width: 250px;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%233d3d3d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+}
+.actions-bar select:hover {
+    border-color: #aaa;
 }
 
 
@@ -1709,12 +1735,21 @@ header {
 .read-view-ingredients li:last-child {
     border-bottom: none;
 }
-.ingredient-stock-status {
-    font-size: 1.2rem;
-    margin-left: var(--spacing-m);
+/* NYT: Styling for status-ikon på ingredienser */
+.read-view-ingredients li span:first-child {
+    flex-grow: 1;
 }
-.ingredient-stock-status.in-stock { color: var(--status-green); }
-.ingredient-stock-status.out-of-stock { color: var(--status-red); }
+.ingredient-status-icon {
+    font-size: 1.1rem;
+    margin-left: var(--spacing-m);
+    flex-shrink: 0;
+}
+.ingredient-status-icon.exists {
+    color: var(--status-green);
+}
+.ingredient-status-icon.missing {
+    color: var(--primary-color);
+}
 .ingredient-note {
     font-style: italic;
     color: #666;
@@ -2696,3 +2731,4 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #999;
     font-size: var(--small-font-size);
 }
+
