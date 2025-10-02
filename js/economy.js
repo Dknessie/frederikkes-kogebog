@@ -632,7 +632,7 @@ function openLiabilityModal(liabilityId = null) {
         document.getElementById('liability-name').value = liability.name || '';
         document.getElementById('liability-type').value = liability.type || '';
         document.getElementById('liability-original-principal').value = liability.originalPrincipal || '';
-        document.getElementById('liability-start-date').value = liability.startDate; // Ændret fra formatDate
+        document.getElementById('liability-start-date').value = formatDate(liability.startDate); // KORREKTION: Genindsat formatDate for sikkerheds skyld
         document.getElementById('liability-current-balance').value = liability.originalPrincipal || ''; // Viser originalt beløb
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
         document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
@@ -747,12 +747,18 @@ function calculateProjectedValues(targetDate) {
 
     // Projekter gæld fra deres startdato til måldatoen
     projectedLiabilities.forEach(liability => {
-        // Gå kun videre hvis der er en startdato og et oprindeligt beløb
+        // KORREKTION: Sikkerhedstjek for at forhindre fejl ved manglende data.
         if (!liability.startDate || !liability.originalPrincipal) {
+            liability.currentBalance = liability.originalPrincipal || 0;
             return; 
         }
 
         const startDate = new Date(liability.startDate);
+        // Tjek om startdatoen er gyldig
+        if (isNaN(startDate.getTime())) {
+            liability.currentBalance = liability.originalPrincipal || 0;
+            return;
+        }
         startDate.setHours(0, 0, 0, 0);
         
         // Hvis måldatoen er før lånets start, er restgælden det oprindelige beløb
@@ -908,3 +914,4 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
 
 
 }
+
