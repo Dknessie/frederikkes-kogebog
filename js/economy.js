@@ -64,7 +64,14 @@ function handlePageClick(e) {
     const navLink = e.target.closest('.economy-nav-link');
     if (navLink) {
         e.preventDefault();
-        economyState.currentView = navLink.dataset.view;
+        const newView = navLink.dataset.view;
+        if (economyState.currentView !== newView) {
+            economyState.currentView = newView;
+            // Nulstil projektionsdatoen til i dag, når der skiftes til Formue-visning
+            if (newView === 'assets') {
+                economyState.projectionDate = new Date();
+            }
+        }
         renderEconomy();
         return;
     }
@@ -625,11 +632,13 @@ function openLiabilityModal(liabilityId = null) {
         document.getElementById('liability-name').value = liability.name || '';
         document.getElementById('liability-type').value = liability.type || '';
         document.getElementById('liability-original-principal').value = liability.originalPrincipal || '';
-        document.getElementById('liability-start-date').value = formatDate(liability.startDate);
-        document.getElementById('liability-current-balance').value = liability.currentBalance || '';
+        document.getElementById('liability-start-date').value = liability.startDate; // Ændret fra formatDate
+        document.getElementById('liability-current-balance').value = liability.originalPrincipal || ''; // Viser originalt beløb
         document.getElementById('liability-interest-rate').value = liability.interestRate || '';
         document.getElementById('liability-monthly-payment').value = liability.monthlyPayment || '';
         document.getElementById('liability-term-months').value = liability.termMonths || '';
+    } else {
+        document.getElementById('liability-start-date').value = formatDate(new Date());
     }
     
     populateReferenceDropdown(document.getElementById('liability-type'), appState.references.liabilityTypes, 'Vælg type...', liability?.type);
@@ -648,15 +657,15 @@ async function handleSaveLiability(e) {
         type: document.getElementById('liability-type').value,
         originalPrincipal: parseFloat(document.getElementById('liability-original-principal').value) || null,
         startDate: document.getElementById('liability-start-date').value || null,
-        currentBalance: parseFloat(document.getElementById('liability-current-balance').value),
+        // currentBalance gemmes ikke længere her, da den altid beregnes
         monthlyPayment: parseFloat(document.getElementById('liability-monthly-payment').value) || null,
         interestRate: parseFloat(document.getElementById('liability-interest-rate').value) || null,
         termMonths: parseInt(document.getElementById('liability-term-months').value, 10) || null,
         userId: appState.currentUser.uid
     };
 
-    if (!liabilityData.name || !liabilityData.type || isNaN(liabilityData.currentBalance)) {
-        showNotification({title: "Udfyld påkrævede felter", message: "Navn, type og restgæld skal være udfyldt."});
+    if (!liabilityData.name || !liabilityData.type || !liabilityData.originalPrincipal) {
+        showNotification({title: "Udfyld påkrævede felter", message: "Navn, type og oprindeligt lånbeløb skal være udfyldt."});
         return;
     }
 
@@ -722,45 +731,70 @@ function populateLiabilitiesDropdown(selectElement, placeholder, currentValues) 
         });
     }
 }
+
+/**
+ * OPDATERET FUNKTION: Beregner nu gæld ud fra startdato og aktiver ud fra nutidsværdi.
+ * @param {Date} targetDate - Datoen der skal beregnes til.
+ * @returns {object} Et objekt med projekterede aktiver og gæld.
+ */
 function calculateProjectedValues(targetDate) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const target = new Date(targetDate);
     target.setHours(0, 0, 0, 0);
 
+    // Dyb kloning for at undgå at ændre den oprindelige state
     let projectedLiabilities = JSON.parse(JSON.stringify(appState.liabilities || []));
     let projectedAssets = JSON.parse(JSON.stringify(appState.assets || []));
 
-    const monthsDiff = (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth());
-    const direction = monthsDiff >= 0 ? 1 : -1;
+    // Projekter gæld fra deres startdato til måldatoen
+    projectedLiabilities.forEach(liability => {
+        // Gå kun videre hvis der er en startdato og et oprindeligt beløb
+        if (!liability.startDate || !liability.originalPrincipal) {
+            return; 
+        }
 
-    for (let i = 0; i < Math.abs(monthsDiff); i++) {
-        projectedLiabilities.forEach(liability => {
-            const { currentBalance, monthlyPayment = 0, interestRate = 0 } = liability;
-            if (currentBalance <= 0) return;
+        const startDate = new Date(liability.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        
+        // Hvis måldatoen er før lånets start, er restgælden det oprindelige beløb
+        if (target < startDate) {
+            liability.currentBalance = liability.originalPrincipal;
+            return;
+        }
+
+        // Beregn antallet af hele måneder, der er gået
+        const monthsDiff = (target.getFullYear() - startDate.getFullYear()) * 12 + (target.getMonth() - startDate.getMonth());
+        
+        let balance = liability.originalPrincipal;
+        // Simuler afbetaling måned for måned
+        for (let i = 0; i < monthsDiff; i++) {
+            if (balance <= 0) break;
+            const { monthlyPayment = 0, interestRate = 0 } = liability;
             const monthlyInterestRate = (interestRate / 100) / 12;
-            
-            if (direction === 1) { // Forward in time
-                const monthlyInterest = currentBalance * monthlyInterestRate;
-                const principalPayment = monthlyPayment - monthlyInterest;
-                liability.currentBalance -= principalPayment;
-            } else { // Backward in time
-                const principalPaymentGuess = monthlyPayment - (currentBalance * monthlyInterestRate);
-                liability.currentBalance += principalPaymentGuess;
-            }
-            liability.currentBalance = Math.max(0, liability.currentBalance);
-        });
+            const monthlyInterest = balance * monthlyInterestRate;
+            const principalPayment = monthlyPayment - monthlyInterest;
+            balance -= principalPayment;
+        }
+        // Sæt den beregnede restgæld
+        liability.currentBalance = Math.max(0, balance);
+    });
 
+    // Projekter aktiver frem eller tilbage fra i dag
+    const todayForAssets = new Date();
+    todayForAssets.setHours(0,0,0,0);
+    const monthsDiffForAssets = (target.getFullYear() - todayForAssets.getFullYear()) * 12 + (target.getMonth() - todayForAssets.getMonth());
+    const direction = monthsDiffForAssets >= 0 ? 1 : -1;
+
+    for (let i = 0; i < Math.abs(monthsDiffForAssets); i++) {
         projectedAssets.forEach(asset => {
             const { monthlyContribution = 0, annualGrowthRate = 0 } = asset;
             const monthlyGrowthRate = (annualGrowthRate / 100) / 12;
 
             const isDepreciatingAssetWithLoan = asset.linkedLiabilityIds && asset.linkedLiabilityIds.length > 0;
 
-            if (direction === 1) {
+            if (direction === 1) { // Frem i tiden
                 const contribution = isDepreciatingAssetWithLoan ? 0 : monthlyContribution;
                 asset.value = asset.value * (1 + monthlyGrowthRate) + contribution;
-            } else {
+            } else { // Tilbage i tiden
                 const contribution = isDepreciatingAssetWithLoan ? 0 : monthlyContribution;
                 asset.value = (asset.value - contribution) / (1 + monthlyGrowthRate);
             }
@@ -799,7 +833,8 @@ function handleLoanCalculatorChange(e) {
     const form = e.target.closest('#liability-form');
     if (!form) return;
 
-    const principalInput = form.querySelector('#liability-current-balance');
+    // ÆNDRET: Bruger nu originalPrincipal som basis for beregning
+    const principalInput = form.querySelector('#liability-original-principal');
     const rateInput = form.querySelector('#liability-interest-rate');
     const termMonthsInput = form.querySelector('#liability-term-months');
     const paymentInput = form.querySelector('#liability-monthly-payment');
@@ -825,7 +860,7 @@ function handleLoanCalculatorChange(e) {
     } else if (changedElementId === 'liability-monthly-payment') {
         const newTermMonths = calculateTermMonths(principal, annualRate, monthlyPayment);
         if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
-    } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-current-balance') {
+    } else if (changedElementId === 'liability-interest-rate' || changedElementId === 'liability-original-principal') {
         if (lastEditedLoanField === 'term' && termMonths > 0) {
             const newPayment = calculateMonthlyPayment(principal, annualRate, termMonths);
             if (newPayment) paymentInput.value = newPayment.toFixed(2);
@@ -834,11 +869,23 @@ function handleLoanCalculatorChange(e) {
             if (newTermMonths !== null && isFinite(newTermMonths)) termMonthsInput.value = Math.round(newTermMonths);
         }
     }
-
-    const finalPayment = parseFloat(paymentInput.value) || 0;
-    const finalTermMonths = calculateTermMonths(principal, annualRate, finalPayment);
+    
+    // Opdater resterende løbetid-display baseret på den nuværende beregnede restgæld
+    const startDate = new Date(form.querySelector('#liability-start-date').value);
+    const today = new Date();
+    const monthsPassed = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
+    
+    let currentBalanceForDisplay = principal;
+    for (let i = 0; i < monthsPassed; i++) {
+        if(currentBalanceForDisplay <= 0) break;
+        const interest = currentBalanceForDisplay * ((annualRate/100)/12);
+        currentBalanceForDisplay -= (parseFloat(paymentInput.value) - interest);
+    }
+    
+    const finalTermMonths = calculateTermMonths(currentBalanceForDisplay, annualRate, parseFloat(paymentInput.value) || 0);
     updateRemainingTermDisplay(finalTermMonths, termDisplay);
 }
+
 
 function updateRemainingTermDisplay(totalMonths, displayElement) {
     if (totalMonths === null || totalMonths <= 0) {
@@ -859,3 +906,5 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
     displayElement.value = result.trim() || '0 mdr.';
 }
 
+
+}
