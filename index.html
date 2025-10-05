@@ -628,9 +628,15 @@
                     <label for="asset-type">Type</label>
                     <select id="asset-type" required></select>
                 </div>
-                <div class="input-group">
-                    <label for="asset-value">Nuværende Værdi (kr.)</label>
-                    <input type="number" id="asset-value" step="any" required>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="asset-start-value">Startværdi (kr.)</label>
+                        <input type="number" id="asset-start-value" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="asset-start-date">Startdato</label>
+                        <input type="date" id="asset-start-date" required>
+                    </div>
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
@@ -645,6 +651,10 @@
                 <div class="input-group">
                     <label for="asset-linked-liability">Tilknyttet Gæld (valgfri)</label>
                     <select id="asset-linked-liability" multiple></select>
+                </div>
+                <div class="input-group-inline">
+                    <input type="checkbox" id="asset-include-in-net-worth" checked>
+                    <label for="asset-include-in-net-worth">Inkluder i nettoformue</label>
                 </div>
                 <div class="form-actions">
                     <button type="button" id="delete-asset-btn" class="btn btn-danger hidden">Slet</button>
@@ -710,6 +720,10 @@
                     </div>
                  </div>
 
+                 <div class="input-group-inline">
+                    <input type="checkbox" id="liability-include-in-net-worth" checked>
+                    <label for="liability-include-in-net-worth">Inkluder i nettoformue</label>
+                </div>
 
                 <div class="form-actions">
                      <button type="button" id="delete-liability-btn" class="btn btn-danger hidden">Slet</button>
@@ -1088,4 +1102,3 @@
 
 </body>
 </html>
-
