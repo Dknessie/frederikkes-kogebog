@@ -4,7 +4,7 @@ import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, deleteField, arrayUnion, arrayRemove, getDoc, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
-import { openShoppingListModal } from './shoppingList.js';
+import { openShoppingListModal, generateGroceriesList } from './shoppingList.js'; // KORREKTION: Importerer generateGroceriesList
 import { renderReadView } from './recipes.js';
 import { openEventModal, handleDeleteEvent } from './events.js';
 
@@ -22,6 +22,8 @@ export function initMealPlanner(state, elements) {
 
     // Hovedhandlinger
     if (appElements.hubClearWeekBtn) appElements.hubClearWeekBtn.addEventListener('click', handleClearMealPlan);
+    // KORREKTION: Tilføjer event listener til "Generer Indkøbsliste" knappen
+    if (appElements.hubGenerateGroceriesBtn) appElements.hubGenerateGroceriesBtn.addEventListener('click', generateGroceriesList);
     
     // Event delegation
     if (appElements.mealPlanSection) {
