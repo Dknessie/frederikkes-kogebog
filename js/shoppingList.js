@@ -17,10 +17,6 @@ export function initShoppingList(state, elements) {
         ...elements,
         // FJERNET: bulk add modal er ikke længere i brug
     };
-
-    if (appElements.generateGroceriesBtn) {
-        appElements.generateGroceriesBtn.addEventListener('click', generateGroceriesList);
-    }
     
     // Modal listeners
     if (appElements.shoppingListModal) {
@@ -239,9 +235,9 @@ async function updateShoppingListInFirestore(listType, newList) {
 }
 
 /**
- * OPDATERING: Funktionen er kraftigt simplificeret. Den tjekker ikke længere lagerstatus.
+ * OPDATERING: Funktionen er nu eksporteret og kan kaldes fra andre moduler.
  */
-async function generateGroceriesList() {
+export async function generateGroceriesList() {
     const start = getStartOfWeek(appState.currentDate); 
     const allIngredientsNeeded = {};
 
