@@ -135,22 +135,39 @@ function renderRecipeListPage() {
     if (!container) return;
     container.innerHTML = '';
     let recipesToRender = [...appState.recipes];
+
+    // Først, filtrer baseret på søgeterm
     if (cookbookState.searchTerm) {
         recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(cookbookState.searchTerm));
     }
+
+    // Derefter, filtrer baseret på aktive tags
     if (cookbookState.activeListFilterTags.size > 0) {
         recipesToRender = recipesToRender.filter(r => {
             if (!r.tags) return false;
             return [...cookbookState.activeListFilterTags].every(tag => r.tags.includes(tag));
         });
     }
+
+    // Sorter de filtrerede opskrifter
     recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
+
+    // Render de filtrerede opskrifter
     if (recipesToRender.length === 0) {
         container.innerHTML = `<p class="empty-state" style="grid-column: 1 / -1;">Ingen opskrifter matcher dine valg.</p>`;
-        return;
+    } else {
+        recipesToRender.forEach(recipe => container.appendChild(createRecipeListCard(recipe)));
     }
-    recipesToRender.forEach(recipe => container.appendChild(createRecipeListCard(recipe)));
-    renderListFilterTags();
+
+    // KORREKTION: Render tags baseret på den *fulde* liste før tag-filtrering for at vise relevante tags.
+    // Vi bruger den liste, der kun er filtreret på søgning, så man kan se, hvilke andre tags der findes inden for søgeresultatet.
+    let tagSourceRecipes = [...appState.recipes];
+    if (cookbookState.searchTerm) {
+        tagSourceRecipes = tagSourceRecipes.filter(r => r.title.toLowerCase().includes(cookbookState.searchTerm));
+    }
+    // Hvis et tag allerede er valgt, baserer vi de resterende tags på den nuværende filtrerede liste.
+    const sourceForTags = cookbookState.activeListFilterTags.size > 0 ? recipesToRender : tagSourceRecipes;
+    renderListFilterTags(sourceForTags);
 }
 function createRecipeListCard(recipe) {
     const card = document.createElement('div');
@@ -166,17 +183,31 @@ function createRecipeListCard(recipe) {
         <i class="${recipe.is_favorite ? 'fas favorited' : 'far'} fa-heart favorite-icon"></i>`;
     return card;
 }
-function renderListFilterTags() {
+// OPDATERET: Funktionen accepterer nu en liste af opskrifter at bygge tags fra.
+function renderListFilterTags(sourceRecipes = appState.recipes) {
     const container = appElements.listFilterTagsContainer;
     if (!container) return;
+
     const allTags = new Set();
-    appState.recipes.forEach(r => { if (r.tags) r.tags.forEach(tag => allTags.add(tag)); });
+    // Saml alle tags fra de givne opskrifter
+    sourceRecipes.forEach(r => { if (r.tags) r.tags.forEach(tag => allTags.add(tag)); });
+
+    // Hvis der er aktive filtre, skal vi også sikre os, at de tags vises, selv hvis de ville forsvinde
+    if (cookbookState.activeListFilterTags.size > 0) {
+        appState.recipes.forEach(r => {
+            if (r.tags && [...cookbookState.activeListFilterTags].every(tag => r.tags.includes(tag))) {
+                r.tags.forEach(tag => allTags.add(tag));
+            }
+        });
+    }
+
     container.innerHTML = '';
     const allButton = document.createElement('button');
     allButton.className = `filter-tag ${cookbookState.activeListFilterTags.size === 0 ? 'active' : ''}`;
     allButton.textContent = 'Alle';
     allButton.dataset.tag = 'all';
     container.appendChild(allButton);
+
     [...allTags].sort().forEach(tag => {
         const isActive = cookbookState.activeListFilterTags.has(tag);
         const button = document.createElement('button');
@@ -685,4 +716,3 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
-
