@@ -927,7 +927,3 @@ function updateRemainingTermDisplay(totalMonths, displayElement) {
     
     displayElement.value = result.trim() || '0 mdr.';
 }
-
-
-}
-
