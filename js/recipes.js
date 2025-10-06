@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, calculateRecipePrice, calculateRecipeNutrition } from './utils.js';
+import { normalizeUnit, calculateRecipePrice, calculateRecipeNutrition, compressImage } from './utils.js';
 import { openPlanMealModal } from './mealPlanner.js';
 
 let appState;
@@ -89,7 +89,9 @@ function renderFlipper() {
         const intro = (recipe.introduction || '').substring(0, 150) + ((recipe.introduction || '').length > 150 ? '...' : '');
         
         const price = calculateRecipePrice(recipe, appState.ingredientInfo);
-        const { caloriesPer100g } = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+        const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+        const caloriesPer100g = nutrition ? nutrition.caloriesPer100g : 0;
+
 
         wrapper.innerHTML = `
             <div class="recipe-display-card">
@@ -356,7 +358,8 @@ export function renderReadView(recipe) {
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
 
     const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
-    const { caloriesPer100g } = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+    const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+    const caloriesPer100g = nutrition ? nutrition.caloriesPer100g : 0;
     
     document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
     const caloriesElement = document.getElementById('read-view-calories-100g');
@@ -563,16 +566,17 @@ async function handleSaveRecipe(e) {
         appElements.recipeEditModal.classList.add('hidden');
     } catch (error) { handleError(error, "Opskriften kunne ikke gemmes.", "saveRecipe"); }
 }
-function handleImageUpload(e) {
+async function handleImageUpload(e) {
     const file = e.target.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            appElements.recipeImagePreview.src = event.target.result;
-            appState.recipeFormImage = { type: 'base64', data: event.target.result };
+        try {
+            const compressedDataUrl = await compressImage(file);
+            appElements.recipeImagePreview.src = compressedDataUrl;
+            appState.recipeFormImage = { type: 'base64', data: compressedDataUrl };
             appElements.recipeImageUrlInput.value = '';
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+            handleError(error, "Billedet kunne ikke komprimeres.", "compressImage");
+        }
     }
 }
 function handleImageUrlInput(e) {
@@ -716,3 +720,4 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
+
