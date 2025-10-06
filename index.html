@@ -304,6 +304,14 @@
                     <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
                     <input type="text" id="ingredient-info-name" placeholder="F.eks. Hakket Oksekød 4-7%" required>
                 </div>
+
+                <!-- NYT FELT -->
+                <div class="input-group">
+                    <label for="ingredient-info-substitute-for">Kan bruges i stedet for (valgfri)</label>
+                    <select id="ingredient-info-substitute-for"></select>
+                    <p class="small-text">Vælg en generisk ingrediens, som denne vare kan erstatte. F.eks. kan "Kohberg Protein Brød" bruges i stedet for "Brød".</p>
+                </div>
+
                 <div class="input-group">
                     <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
                     <input type="text" id="ingredient-info-aliases" placeholder="F.eks. oksekød, hakket kød, fars">
@@ -719,8 +727,7 @@
                         <input type="text" id="liability-remaining-term-display" readonly disabled>
                     </div>
                  </div>
-
-                 <div class="input-group-inline">
+                <div class="input-group-inline">
                     <input type="checkbox" id="liability-include-in-net-worth" checked>
                     <label for="liability-include-in-net-worth">Inkluder i nettoformue</label>
                 </div>
@@ -1102,3 +1109,4 @@
 
 </body>
 </html>
+
