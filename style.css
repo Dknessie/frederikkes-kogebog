@@ -1679,17 +1679,19 @@ header {
     margin-bottom: var(--spacing-l);
 }
 
+/* OPDATERING AF LAYOUT I READ VIEW MODAL */
 .read-view-main-content {
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) 2fr;
-    gap: var(--spacing-l);
+    grid-template-columns: minmax(250px, 1fr) 2fr; /* 1 del til ingredienser, 2 dele til fremgangsmåde */
+    gap: var(--spacing-xl); /* Øget mellemrum */
     margin-top: var(--spacing-l);
 }
 
 .read-view-ingredients {
     background-color: var(--secondary-color);
-    padding: var(--spacing-m);
+    padding: var(--spacing-l); /* Øget padding */
     border-radius: var(--border-radius);
+    align-self: flex-start; /* Sørger for at den ikke strækker sig unødigt */
 }
 
 .read-view-ingredients ul {
@@ -1699,10 +1701,11 @@ header {
 }
 .read-view-ingredients li {
     display: flex;
-    justify-content: space-between;
+    /* justify-content: space-between; */ /* Fjernet for bedre alignment */
     align-items: center;
     padding: var(--spacing-s) 0;
     border-bottom: 1px solid var(--border-color);
+    gap: var(--spacing-m); /* Tilføjet gap for bedre afstand */
 }
 .read-view-ingredients li:last-child {
     border-bottom: none;
@@ -2708,4 +2711,3 @@ input:checked + .slider:before { transform: translateX(22px); }
     color: #999;
     font-size: var(--small-font-size);
 }
-
