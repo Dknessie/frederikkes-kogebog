@@ -90,7 +90,7 @@ function renderFlipper() {
         
         const price = calculateRecipePrice(recipe, appState.ingredientInfo);
         const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-        const caloriesPer100g = nutrition ? nutrition.caloriesPer100g : 0;
+        const caloriesPer100g = nutrition;
 
 
         wrapper.innerHTML = `
@@ -359,7 +359,7 @@ export function renderReadView(recipe) {
 
     const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
     const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-    const caloriesPer100g = nutrition ? nutrition.caloriesPer100g : 0;
+    const caloriesPer100g = nutrition;
     
     document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
     const caloriesElement = document.getElementById('read-view-calories-100g');
