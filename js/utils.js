@@ -3,6 +3,54 @@
 // This module contains generic helper functions that can be reused across the application.
 
 /**
+ * Komprimerer og tilpasser et billede, før det uploades.
+ * @param {File} file - Billedfilen fra en input[type=file].
+ * @param {object} options - Indstillinger for komprimering.
+ * @param {number} [options.quality=0.7] - Kvaliteten af JPEG-billedet (0-1).
+ * @param {number} [options.maxWidth=1200] - Maksimal bredde af billedet.
+ * @param {number} [options.maxHeight=1200] - Maksimal højde af billedet.
+ * @returns {Promise<string>} En Promise, der resolver til en Base64 data URL af det komprimerede billede.
+ */
+export async function compressImage(file, options = {}) {
+    const { quality = 0.7, maxWidth = 1200, maxHeight = 1200 } = options;
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+/**
  * Debounces a function to limit the rate at which it gets called.
  * @param {Function} func The function to debounce.
  * @param {number} delay The debounce delay in milliseconds.
@@ -268,3 +316,4 @@ export function calculateTermMonths(principal, annualRate, monthlyPayment) {
     
     return Math.ceil(term);
 }
+
