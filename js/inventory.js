@@ -339,10 +339,12 @@ async function handleBulkSaveFromAssistant(e) {
 
     rows.forEach(row => {
         const name = row.dataset.name;
-        const mainCategory = row.querySelector('.assistant-main-cat').value;
-        const subCategory = row.querySelector('.assistant-sub-cat').value;
+        // KORREKTION: Gør kategorier valgfrie og tildeler en standardværdi
+        const mainCategory = row.querySelector('.assistant-main-cat').value || 'Ukategoriseret';
+        const subCategory = row.querySelector('.assistant-sub-cat').value || 'Ukategoriseret';
         
-        if (name && mainCategory && subCategory) {
+        // Nu fortsætter den, selv hvis kategorier ikke er valgt
+        if (name) {
             const priceInput = parseFloat(row.querySelector('.assistant-price').value) || null;
             const priceUnit = row.querySelector('.assistant-unit').value;
             let averagePrice = priceInput;
@@ -376,9 +378,11 @@ async function handleBulkSaveFromAssistant(e) {
             handleError(error, "Kunne ikke gemme de nye ingredienser.");
         }
     } else {
+        showNotification({title: "Ingen handling", message: "Der var ingen ingredienser at tilføje."});
         document.getElementById('ingredient-assistant-modal').classList.add('hidden');
     }
 }
+
 
 async function handleTextImportSubmit(e) {
     e.preventDefault();
@@ -551,3 +555,4 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
+
