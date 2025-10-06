@@ -251,8 +251,24 @@ function openIngredientModal(itemId) {
     populateMainCategoryDropdown(document.getElementById('ingredient-info-main-category'), item?.mainCategory);
     populateSubCategoryDropdown(document.getElementById('ingredient-info-sub-category'), item?.mainCategory, item?.subCategory);
     
+    // Udfyld den nye "substitute-for" dropdown
+    populateSubstituteForDropdown(document.getElementById('ingredient-info-substitute-for'), item?.substituteFor, itemId);
+
     appElements.ingredientModal.classList.remove('hidden');
 }
+
+// NY FUNKTION: Udfylder "substitute-for" dropdown
+function populateSubstituteForDropdown(selectElement, currentValue, currentItemId) {
+    if (!selectElement) return;
+    // Filtrer den ingrediens, vi redigerer, fra listen, så den ikke kan være en erstatning for sig selv
+    const options = (appState.ingredientInfo || [])
+        .filter(item => item.id !== currentItemId) 
+        .map(item => item.name)
+        .sort((a, b) => a.localeCompare(b));
+    
+    populateReferenceDropdown(selectElement, options, 'Vælg generisk type...', currentValue);
+}
+
 
 async function handleSaveIngredient(e) {
     e.preventDefault();
@@ -273,6 +289,7 @@ async function handleSaveIngredient(e) {
     
     const itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
+        substituteFor: document.getElementById('ingredient-info-substitute-for').value || null, // Gemmer det nye felt
         aliases: aliases,
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
@@ -534,4 +551,3 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
-
