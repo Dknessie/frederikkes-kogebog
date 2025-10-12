@@ -305,7 +305,6 @@
                     <input type="text" id="ingredient-info-name" placeholder="F.eks. Hakket Oksekød 4-7%" required>
                 </div>
 
-                <!-- NYT FELT -->
                 <div class="input-group">
                     <label for="ingredient-info-substitute-for">Kan bruges i stedet for (valgfri)</label>
                     <select id="ingredient-info-substitute-for"></select>
@@ -330,13 +329,17 @@
 
                 <h4>Pris & Kalorier (Vejledende)</h4>
                 <p class="small-text">Disse værdier bruges til at estimere pris og kalorieindhold i dine opskrifter.</p>
-                <div class="form-grid-3-col">
-                    <div class="input-group">
-                        <label for="ingredient-info-price">Pris (kr. pr. kg/l/stk)</label>
-                        <div class="price-input-wrapper">
-                            <input type="number" id="ingredient-info-price" step="0.01" placeholder="f.eks. 110">
-                        </div>
+                <div class="form-grid-2-col">
+                     <div class="input-group">
+                        <label for="ingredient-info-price-from">Pris Fra (kr. pr. kg/l/stk)</label>
+                        <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="f.eks. 110">
                     </div>
+                    <div class="input-group">
+                        <label for="ingredient-info-price-to">Pris Til (kr. pr. kg/l/stk)</label>
+                        <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="f.eks. 130">
+                    </div>
+                </div>
+                <div class="form-grid-2-col">
                     <div class="input-group">
                         <label for="ingredient-info-default-unit">Prisenhed</label>
                         <select id="ingredient-info-default-unit" required>
@@ -350,6 +353,12 @@
                         <input type="number" id="ingredient-info-calories" placeholder="f.eks. 250">
                     </div>
                 </div>
+                <div class="input-group">
+                    <label for="ingredient-info-weight-per-piece">Vægt pr. 'stk' (i gram)</label>
+                    <input type="number" id="ingredient-info-weight-per-piece" placeholder="Valgfri: f.eks. 80">
+                    <p class="small-text">Bruges til kalorieberegning for opskrifter med 'stk'-enheder (f.eks. 1 stk. brød vejer 80g).</p>
+                </div>
+
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-ingredient-btn">Slet Ingrediens</button>
