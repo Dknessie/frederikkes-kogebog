@@ -89,9 +89,8 @@ function renderFlipper() {
         const intro = (recipe.introduction || '').substring(0, 150) + ((recipe.introduction || '').length > 150 ? '...' : '');
         
         const price = calculateRecipePrice(recipe, appState.ingredientInfo);
-        const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-        const caloriesPer100g = nutrition;
-
+        const caloriesPer100g = calculateRecipeNutrition(recipe, appState.ingredientInfo);
+        const priceText = formatPriceRange(price);
 
         wrapper.innerHTML = `
             <div class="recipe-display-card">
@@ -101,7 +100,7 @@ function renderFlipper() {
                     <div class="recipe-meta">
                         <span><i class="fas fa-clock"></i> ${recipe.time || '?'} min.</span>
                         <span><i class="fas fa-users"></i> ${recipe.portions || '?'} port.</span>
-                        <span><i class="fas fa-coins"></i> ~${price.toFixed(2)} kr.</span>
+                        <span><i class="fas fa-coins"></i> ${priceText}</span>
                         ${caloriesPer100g > 0 ? `<span><i class="fas fa-fire-alt"></i> ~${Math.round(caloriesPer100g)} kcal/100g</span>` : ''}
                     </div>
                     <p class="recipe-intro">${intro}</p>
@@ -115,6 +114,14 @@ function renderFlipper() {
     });
     updateFlipperCards();
 }
+
+function formatPriceRange(price) {
+    if (!price || (price.min === 0 && price.max === 0)) return 'Pris ukendt';
+    if (price.min === price.max) return `~${price.max.toFixed(2)} kr.`;
+    return `~${price.min.toFixed(2)} - ${price.max.toFixed(2)} kr.`;
+}
+
+
 function updateFlipperCards() {
     const cards = appElements.recipeFlipper.querySelectorAll('.recipe-card-wrapper');
     if (cards.length === 0) return;
@@ -138,12 +145,10 @@ function renderRecipeListPage() {
     container.innerHTML = '';
     let recipesToRender = [...appState.recipes];
 
-    // Først, filtrer baseret på søgeterm
     if (cookbookState.searchTerm) {
         recipesToRender = recipesToRender.filter(r => r.title.toLowerCase().includes(cookbookState.searchTerm));
     }
 
-    // Derefter, filtrer baseret på aktive tags
     if (cookbookState.activeListFilterTags.size > 0) {
         recipesToRender = recipesToRender.filter(r => {
             if (!r.tags) return false;
@@ -151,23 +156,18 @@ function renderRecipeListPage() {
         });
     }
 
-    // Sorter de filtrerede opskrifter
     recipesToRender.sort((a,b) => a.title.localeCompare(b.title));
 
-    // Render de filtrerede opskrifter
     if (recipesToRender.length === 0) {
         container.innerHTML = `<p class="empty-state" style="grid-column: 1 / -1;">Ingen opskrifter matcher dine valg.</p>`;
     } else {
         recipesToRender.forEach(recipe => container.appendChild(createRecipeListCard(recipe)));
     }
 
-    // KORREKTION: Render tags baseret på den *fulde* liste før tag-filtrering for at vise relevante tags.
-    // Vi bruger den liste, der kun er filtreret på søgning, så man kan se, hvilke andre tags der findes inden for søgeresultatet.
     let tagSourceRecipes = [...appState.recipes];
     if (cookbookState.searchTerm) {
         tagSourceRecipes = tagSourceRecipes.filter(r => r.title.toLowerCase().includes(cookbookState.searchTerm));
     }
-    // Hvis et tag allerede er valgt, baserer vi de resterende tags på den nuværende filtrerede liste.
     const sourceForTags = cookbookState.activeListFilterTags.size > 0 ? recipesToRender : tagSourceRecipes;
     renderListFilterTags(sourceForTags);
 }
@@ -185,16 +185,14 @@ function createRecipeListCard(recipe) {
         <i class="${recipe.is_favorite ? 'fas favorited' : 'far'} fa-heart favorite-icon"></i>`;
     return card;
 }
-// OPDATERET: Funktionen accepterer nu en liste af opskrifter at bygge tags fra.
+
 function renderListFilterTags(sourceRecipes = appState.recipes) {
     const container = appElements.listFilterTagsContainer;
     if (!container) return;
 
     const allTags = new Set();
-    // Saml alle tags fra de givne opskrifter
     sourceRecipes.forEach(r => { if (r.tags) r.tags.forEach(tag => allTags.add(tag)); });
 
-    // Hvis der er aktive filtre, skal vi også sikre os, at de tags vises, selv hvis de ville forsvinde
     if (cookbookState.activeListFilterTags.size > 0) {
         appState.recipes.forEach(r => {
             if (r.tags && [...cookbookState.activeListFilterTags].every(tag => r.tags.includes(tag))) {
@@ -358,10 +356,9 @@ export function renderReadView(recipe) {
     document.getElementById('read-view-portions').innerHTML = `<i class="fas fa-users"></i> ${recipe.portions || '?'} portioner`;
 
     const recipePrice = calculateRecipePrice(recipe, appState.ingredientInfo);
-    const nutrition = calculateRecipeNutrition(recipe, appState.ingredientInfo);
-    const caloriesPer100g = nutrition;
+    const caloriesPer100g = calculateRecipeNutrition(recipe, appState.ingredientInfo);
     
-    document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${recipePrice > 0 ? `~${recipePrice.toFixed(2)} kr.` : 'Pris ukendt'}`;
+    document.getElementById('read-view-price').innerHTML = `<i class="fas fa-coins"></i> ${formatPriceRange(recipePrice)}`;
     const caloriesElement = document.getElementById('read-view-calories-100g');
     if(caloriesElement) {
         caloriesElement.innerHTML = caloriesPer100g > 0 ? `<i class="fas fa-fire-alt"></i> ~${Math.round(caloriesPer100g)} kcal/100g` : '';
@@ -518,7 +515,6 @@ function handleRecipeImport() {
         }
         showNotification({ title: "Importeret!", message: "Hele opskriften er blevet indlæst." });
     } else {
-        // ÆNDRING: Tilføjer i stedet for at slette
         text.split('\n').forEach(line => {
             const ingredientData = parseIngredientLine(line);
             if (ingredientData && ingredientData.name) createIngredientRow(appElements.ingredientsContainer, ingredientData);
@@ -673,7 +669,6 @@ function openIngredientAssistantModal(missingIngredients) {
         row.className = 'assistant-item-row';
         row.dataset.name = ing.name;
 
-        // Opret dropdowns for kategorier
         const mainCatSelect = document.createElement('select');
         mainCatSelect.className = 'assistant-main-cat';
         populateReferenceDropdown(mainCatSelect, mainCategories.map(c => c.name), 'Vælg kategori...');
