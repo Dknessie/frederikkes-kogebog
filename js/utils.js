@@ -255,9 +255,8 @@ export function getRecipeUsedUnitsForIngredient(ingredientName, allRecipes) {
             recipe.ingredients.forEach(ing => {
                 if (ing.name.toLowerCase() === normalizedIngredientName) {
                     const normalizedUnit = normalizeUnit(ing.unit);
-                    if (normalizedUnit && normalizedUnit !== 'g' && normalizedUnit !== 'ml' && normalizedUnit !== 'kg' && normalizedUnit !== 'l') {
-                        // Filtrer standardvægtenheder, som vi allerede kan konvertere internt
-                        // og fokuser på enheder, der kræver brugerdefineret konvertering (som 'stk', 'tsk', 'spsk', etc.)
+                    // KORREKTION: Fjerner filtreringen, så ALLE enheder, der ikke er standard vægt/volumen, kommer med.
+                    if (normalizedUnit && !['g', 'ml', 'kg', 'l', 'dl'].includes(normalizedUnit)) {
                         usedUnits.add(normalizedUnit);
                     }
                 }
@@ -287,3 +286,4 @@ export function calculateTermMonths(principal, annualRate, monthlyPayment) {
     const term = -Math.log(1 - (principal * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate);
     return Math.ceil(term);
 }
+
