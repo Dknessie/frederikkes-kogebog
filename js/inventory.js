@@ -121,7 +121,7 @@ function renderListView(container) {
                 <tr>
                     <th data-sort="name">Vare ${getSortIcon('name')}</th>
                     <th>Kategori</th>
-                    <th data-sort="averagePrice" class="currency">Pris pr. Enhed ${getSortIcon('averagePrice')}</th>
+                    <th data-sort="priceTo" class="currency">Pris pr. Enhed ${getSortIcon('priceTo')}</th>
                     <th data-sort="caloriesPer100g" class="currency">Kalorier pr. 100g ${getSortIcon('caloriesPer100g')}</th>
                     <th></th>
                 </tr>
@@ -134,7 +134,17 @@ function renderListView(container) {
 }
 
 function createIngredientCardHTML(item) {
-    const price = item.averagePrice && item.defaultUnit ? `${(item.averagePrice * (item.defaultUnit === 'stk' ? 1 : 1000)).toFixed(2)} kr/${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}` : 'Pris ukendt';
+    let priceText = 'Pris ukendt';
+    if (item.priceTo) {
+        const unitLabel = item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg');
+        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1000);
+        if (item.priceFrom && item.priceFrom !== item.priceTo) {
+            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1000);
+            priceText = `${priceFromDisplay.toFixed(2)} - ${priceToDisplay.toFixed(2)} kr/${unitLabel}`;
+        } else {
+            priceText = `${priceToDisplay.toFixed(2)} kr/${unitLabel}`;
+        }
+    }
     const calories = item.caloriesPer100g ? `${item.caloriesPer100g} kcal` : 'N/A';
     
     return `
@@ -143,7 +153,7 @@ function createIngredientCardHTML(item) {
                 <h4>${item.name}</h4>
                 <span class="list-card-category">${item.subCategory}</span>
                 <div class="ingredient-card-info">
-                    <span><i class="fas fa-coins"></i> ${price}</span>
+                    <span><i class="fas fa-coins"></i> ${priceText}</span>
                     <span><i class="fas fa-fire-alt"></i> ${calories}</span>
                 </div>
             </div>
@@ -151,21 +161,33 @@ function createIngredientCardHTML(item) {
     `;
 }
 
+
 function getSortIcon(column) {
     if (libraryState.sortBy !== column) return '';
     return libraryState.sortOrder === 'asc' ? '<i class="fas fa-sort-up"></i>' : '<i class="fas fa-sort-down"></i>';
 }
 
 function createIngredientRowHTML(item) {
-    const priceText = item.averagePrice ? `${(item.averagePrice * (item.defaultUnit === 'stk' ? 1 : 1000)).toFixed(2).replace('.', ',')} kr.` : 'N/A';
-    const unitText = item.defaultUnit ? `pr. ${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}` : '';
+    let priceText = 'N/A';
+     if (item.priceTo) {
+        const unitLabel = `pr. ${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}`;
+        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1000);
+        if (item.priceFrom && item.priceFrom !== item.priceTo) {
+            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1000);
+            priceText = `${priceFromDisplay.toFixed(2).replace('.', ',')} - ${priceToDisplay.toFixed(2).replace('.', ',')} kr.`;
+        } else {
+            priceText = `${priceToDisplay.toFixed(2).replace('.', ',')} kr.`;
+        }
+         priceText += ` <small>${unitLabel}</small>`;
+    }
+
     const caloriesText = item.caloriesPer100g ? `${item.caloriesPer100g}` : 'N/A';
 
     return `
         <tr data-id="${item.id}">
             <td>${item.name}</td>
             <td>${item.subCategory || item.mainCategory}</td>
-            <td class="currency">${priceText} <small>${unitText}</small></td>
+            <td class="currency">${priceText}</td>
             <td class="currency">${caloriesText}</td>
             <td>
                 <button class="btn-icon btn-small edit-ingredient-btn" title="Rediger"><i class="fas fa-edit"></i></button>
@@ -238,29 +260,33 @@ function openIngredientModal(itemId) {
     document.getElementById('ingredient-info-name').value = item ? item.name : '';
     document.getElementById('ingredient-info-aliases').value = item?.aliases?.join(', ') || '';
     
-    let displayPrice = '';
-    if (item && item.averagePrice) {
-        displayPrice = item.defaultUnit === 'stk' ? item.averagePrice : item.averagePrice * 1000;
+    // Udfyld nye prisfelter
+    let priceFrom = '';
+    let priceTo = '';
+    if (item) {
+        const multiplier = item.defaultUnit === 'stk' ? 1 : 1000;
+        if (item.priceFrom) priceFrom = item.priceFrom * multiplier;
+        if (item.priceTo) priceTo = item.priceTo * multiplier;
     }
-    document.getElementById('ingredient-info-price').value = displayPrice;
+    document.getElementById('ingredient-info-price-from').value = priceFrom;
+    document.getElementById('ingredient-info-price-to').value = priceTo;
+
     document.getElementById('ingredient-info-default-unit').value = item ? item.defaultUnit : 'g';
     document.getElementById('ingredient-info-calories').value = item ? item.caloriesPer100g || '' : '';
+    document.getElementById('ingredient-info-weight-per-piece').value = item ? item.weightPerPiece || '' : '';
     
     document.getElementById('delete-ingredient-btn').classList.toggle('hidden', !item);
     
     populateMainCategoryDropdown(document.getElementById('ingredient-info-main-category'), item?.mainCategory);
     populateSubCategoryDropdown(document.getElementById('ingredient-info-sub-category'), item?.mainCategory, item?.subCategory);
     
-    // Udfyld den nye "substitute-for" dropdown
     populateSubstituteForDropdown(document.getElementById('ingredient-info-substitute-for'), item?.substituteFor, itemId);
 
     appElements.ingredientModal.classList.remove('hidden');
 }
 
-// NY FUNKTION: Udfylder "substitute-for" dropdown
 function populateSubstituteForDropdown(selectElement, currentValue, currentItemId) {
     if (!selectElement) return;
-    // Filtrer den ingrediens, vi redigerer, fra listen, så den ikke kan være en erstatning for sig selv
     const options = (appState.ingredientInfo || [])
         .filter(item => item.id !== currentItemId) 
         .map(item => item.name)
@@ -274,14 +300,11 @@ async function handleSaveIngredient(e) {
     e.preventDefault();
     const itemId = document.getElementById('ingredient-info-id').value;
     
-    const priceInput = parseFloat(document.getElementById('ingredient-info-price').value) || null;
+    const priceFromInput = parseFloat(document.getElementById('ingredient-info-price-from').value) || null;
+    const priceToInput = parseFloat(document.getElementById('ingredient-info-price-to').value) || null;
     const priceUnit = document.getElementById('ingredient-info-default-unit').value;
-    let averagePrice = priceInput;
+    const multiplier = (priceUnit === 'g' || priceUnit === 'ml') ? 1000 : 1;
 
-    if (priceInput && (priceUnit === 'g' || priceUnit === 'ml')) {
-        averagePrice = priceInput / 1000;
-    }
-    
     const aliases = document.getElementById('ingredient-info-aliases').value
         .split(',')
         .map(alias => alias.trim().toLowerCase())
@@ -289,13 +312,15 @@ async function handleSaveIngredient(e) {
     
     const itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
-        substituteFor: document.getElementById('ingredient-info-substitute-for').value || null, // Gemmer det nye felt
+        substituteFor: document.getElementById('ingredient-info-substitute-for').value || null,
         aliases: aliases,
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
         defaultUnit: priceUnit,
-        averagePrice: averagePrice,
+        priceFrom: priceFromInput ? priceFromInput / multiplier : null,
+        priceTo: priceToInput ? priceToInput / multiplier : null,
         caloriesPer100g: parseInt(document.getElementById('ingredient-info-calories').value, 10) || null,
+        weightPerPiece: parseFloat(document.getElementById('ingredient-info-weight-per-piece').value) || null,
         userId: appState.currentUser.uid,
     };
 
@@ -315,6 +340,7 @@ async function handleSaveIngredient(e) {
         handleError(error, "Ingrediensen kunne ikke gemmes.");
     }
 }
+
 
 async function handleDeleteIngredient() {
     const itemId = document.getElementById('ingredient-info-id').value;
@@ -339,18 +365,13 @@ async function handleBulkSaveFromAssistant(e) {
 
     rows.forEach(row => {
         const name = row.dataset.name;
-        // KORREKTION: Gør kategorier valgfrie og tildeler en standardværdi
         const mainCategory = row.querySelector('.assistant-main-cat').value || 'Ukategoriseret';
         const subCategory = row.querySelector('.assistant-sub-cat').value || 'Ukategoriseret';
         
-        // Nu fortsætter den, selv hvis kategorier ikke er valgt
         if (name) {
             const priceInput = parseFloat(row.querySelector('.assistant-price').value) || null;
             const priceUnit = row.querySelector('.assistant-unit').value;
-            let averagePrice = priceInput;
-            if (priceInput && (priceUnit === 'g' || priceUnit === 'ml')) {
-                averagePrice = priceInput / 1000;
-            }
+            const multiplier = (priceUnit === 'g' || priceUnit === 'ml') ? 1000 : 1;
 
             const ingredientData = {
                 name: name,
@@ -358,8 +379,10 @@ async function handleBulkSaveFromAssistant(e) {
                 mainCategory: mainCategory,
                 subCategory: subCategory,
                 defaultUnit: priceUnit,
-                averagePrice: averagePrice,
+                priceFrom: null,
+                priceTo: priceInput ? priceInput / multiplier : null,
                 caloriesPer100g: parseInt(row.querySelector('.assistant-calories').value, 10) || null,
+                weightPerPiece: null,
                 userId: appState.currentUser.uid,
             };
             
@@ -399,7 +422,6 @@ async function handleTextImportSubmit(e) {
     const batch = writeBatch(db);
     const ingredientsCol = collection(db, "ingredient_info");
     
-    // Create lookup maps for efficiency
     const nameToIdMap = new Map();
     const aliasToCanonicalNameMap = new Map();
     appState.ingredientInfo.forEach(item => {
@@ -418,17 +440,13 @@ async function handleTextImportSubmit(e) {
     for (const item of parsedIngredients) {
         const itemNameLower = item.name.toLowerCase();
 
-        // Check for alias conflict first
         const conflictingCanonicalName = aliasToCanonicalNameMap.get(itemNameLower);
         if (conflictingCanonicalName && conflictingCanonicalName.toLowerCase() !== itemNameLower) {
             skippedItems.push(`'${item.name}' blev sprunget over, da det er et alias for '${conflictingCanonicalName}'.`);
             continue;
         }
 
-        let averagePrice = item.priceInput;
-        if (item.priceInput && (item.priceUnitForInput === 'kg' || item.priceUnitForInput === 'l')) {
-            averagePrice = item.priceInput / 1000;
-        }
+        const multiplier = (item.defaultUnit === 'g' || item.defaultUnit === 'ml') ? 1000 : 1;
 
         const finalData = {
             name: item.name,
@@ -436,20 +454,19 @@ async function handleTextImportSubmit(e) {
             subCategory: item.subCategory,
             defaultUnit: normalizeUnit(item.defaultUnit),
             aliases: item.aliases || [],
-            averagePrice: averagePrice,
+            priceFrom: null,
+            priceTo: item.priceInput ? item.priceInput / multiplier : null,
             caloriesPer100g: item.caloriesPer100g || null,
+            weightPerPiece: null,
             userId: appState.currentUser.uid,
         };
 
-        // Check if item exists to decide between update and create
         if (nameToIdMap.has(itemNameLower)) {
-            // Update existing
             const docId = nameToIdMap.get(itemNameLower);
             const docRef = doc(db, "ingredient_info", docId);
             batch.update(docRef, finalData);
             updatedCount++;
         } else {
-            // Create new
             const docRef = doc(ingredientsCol);
             batch.set(docRef, finalData);
             newCount++;
@@ -503,7 +520,7 @@ function parseIngredientText(text) {
                 const keyMap = {
                     'navn': 'name',
                     'alias': 'aliases',
-                    'aliaser': 'aliases', // RETTELSE: Accepterer nu "Aliaser"
+                    'aliaser': 'aliases',
                     'overkategori': 'mainCategory',
                     'underkategori': 'subCategory',
                     'prisenhed': 'defaultUnit'
