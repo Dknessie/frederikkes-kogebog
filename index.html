@@ -304,12 +304,6 @@
                     <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
                     <input type="text" id="ingredient-info-name" placeholder="Hakket Oksekød 4-7%" required>
                 </div>
-
-                <div class="input-group">
-                    <label for="ingredient-info-substitute-for">Kan bruges i stedet for (valgfri)</label>
-                    <select id="ingredient-info-substitute-for"></select>
-                </div>
-
                 <div class="input-group">
                     <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
                     <input type="text" id="ingredient-info-aliases" placeholder="oksekød, hakket kød, fars">
@@ -327,23 +321,25 @@
 
                 <hr>
 
-                <h4>Pris & Kalorier (Vejledende)</h4>
+                <h4>Pris & Ernæring</h4>
                 <div class="form-grid-2-col">
                      <div class="input-group">
-                        <label for="ingredient-info-price-from">Pris Fra (kr. pr. kg/l/stk)</label>
+                        <label for="ingredient-info-price-from">Pris Fra (kr.)</label>
                         <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="110">
                     </div>
                     <div class="input-group">
-                        <label for="ingredient-info-price-to">Pris Til (kr. pr. kg/l/stk)</label>
+                        <label for="ingredient-info-price-to">Pris Til (kr.)</label>
                         <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="130">
                     </div>
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
-                        <label for="ingredient-info-default-unit">Prisenhed</label>
+                        <label for="ingredient-info-default-unit">Prisenhed (pr. denne enhed)</label>
                         <select id="ingredient-info-default-unit" required>
-                            <option value="g">Kilogram (kg)</option>
-                            <option value="ml">Liter (l)</option>
+                            <option value="g">Gram (g)</option>
+                            <option value="kg">Kilogram (kg)</option>
+                            <option value="ml">Milliliter (ml)</option>
+                            <option value="l">Liter (l)</option>
                             <option value="stk">Styk (stk)</option>
                         </select>
                     </div>
@@ -352,9 +348,17 @@
                         <input type="number" id="ingredient-info-calories" placeholder="250">
                     </div>
                 </div>
+                
+                <hr>
+
+                <h4>Enhedskonverteringer til Gram</h4>
+                <p class="small-text">Angiv hvor mange gram hver enhed svarer til, for at opnå præcise kalorie- og prisberegninger.</p>
+                <div id="unit-conversions-container">
+                    <!-- Dynamisk genererede felter for enhedskonverteringer kommer her -->
+                </div>
                 <div class="input-group">
-                    <label for="ingredient-info-weight-per-piece">Vægt pr. 'stk' (i gram)</label>
-                    <input type="number" id="ingredient-info-weight-per-piece" placeholder="Valgfri: 80">
+                    <label for="ingredient-info-substitute-for">Kan bruges i stedet for (valgfri)</label>
+                    <select id="ingredient-info-substitute-for"></select>
                 </div>
 
 
@@ -1115,4 +1119,3 @@
 
 </body>
 </html>
-
