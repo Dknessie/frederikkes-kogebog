@@ -3,7 +3,7 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit } from './utils.js';
+import { normalizeUnit, getRecipeUsedUnitsForIngredient } from './utils.js'; // Importerer den nye hjælpefunktion
 
 let appState;
 let appElements;
@@ -137,9 +137,9 @@ function createIngredientCardHTML(item) {
     let priceText = 'Pris ukendt';
     if (item.priceTo) {
         const unitLabel = item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg');
-        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1000);
+        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1); // Prisen er nu gemt per g/ml/stk, så ingen *1000 her
         if (item.priceFrom && item.priceFrom !== item.priceTo) {
-            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1000);
+            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1);
             priceText = `${priceFromDisplay.toFixed(2)} - ${priceToDisplay.toFixed(2)} kr/${unitLabel}`;
         } else {
             priceText = `${priceToDisplay.toFixed(2)} kr/${unitLabel}`;
@@ -170,10 +170,10 @@ function getSortIcon(column) {
 function createIngredientRowHTML(item) {
     let priceText = 'N/A';
      if (item.priceTo) {
-        const unitLabel = `pr. ${item.defaultUnit === 'stk' ? 'stk' : (item.defaultUnit === 'ml' ? 'l' : 'kg')}`;
-        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1000);
+        const unitLabel = `pr. ${item.defaultUnit}`;
+        const priceToDisplay = item.priceTo * (item.defaultUnit === 'stk' ? 1 : 1); // Prisen er nu gemt per g/ml/stk, så ingen *1000 her
         if (item.priceFrom && item.priceFrom !== item.priceTo) {
-            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1000);
+            const priceFromDisplay = item.priceFrom * (item.defaultUnit === 'stk' ? 1 : 1);
             priceText = `${priceFromDisplay.toFixed(2).replace('.', ',')} - ${priceToDisplay.toFixed(2).replace('.', ',')} kr.`;
         } else {
             priceText = `${priceToDisplay.toFixed(2).replace('.', ',')} kr.`;
@@ -264,16 +264,15 @@ function openIngredientModal(itemId) {
     let priceFrom = '';
     let priceTo = '';
     if (item) {
-        const multiplier = item.defaultUnit === 'stk' ? 1 : 1000;
-        if (item.priceFrom) priceFrom = item.priceFrom * multiplier;
-        if (item.priceTo) priceTo = item.priceTo * multiplier;
+        // Prisen er nu gemt per g/ml/stk, så ingen *1000 her
+        if (item.priceFrom) priceFrom = item.priceFrom;
+        if (item.priceTo) priceTo = item.priceTo;
     }
     document.getElementById('ingredient-info-price-from').value = priceFrom;
     document.getElementById('ingredient-info-price-to').value = priceTo;
 
     document.getElementById('ingredient-info-default-unit').value = item ? item.defaultUnit : 'g';
     document.getElementById('ingredient-info-calories').value = item ? item.caloriesPer100g || '' : '';
-    document.getElementById('ingredient-info-weight-per-piece').value = item ? item.weightPerPiece || '' : '';
     
     document.getElementById('delete-ingredient-btn').classList.toggle('hidden', !item);
     
@@ -281,6 +280,43 @@ function openIngredientModal(itemId) {
     populateSubCategoryDropdown(document.getElementById('ingredient-info-sub-category'), item?.mainCategory, item?.subCategory);
     
     populateSubstituteForDropdown(document.getElementById('ingredient-info-substitute-for'), item?.substituteFor, itemId);
+
+    // NY LOGIK: Håndtering af enhedskonverteringer
+    const unitConversionsContainer = document.getElementById('unit-conversions-container');
+    unitConversionsContainer.innerHTML = ''; // Ryd tidligere felter
+
+    if (item) {
+        const ingredientName = item.name;
+        const usedUnitsInRecipes = getRecipeUsedUnitsForIngredient(ingredientName, appState.recipes);
+        const existingConversions = item.unitConversions || {};
+
+        const unitsToDefine = new Set();
+
+        // Tilføj alle enheder fra opskrifter, der ikke allerede har en konvertering
+        usedUnitsInRecipes.forEach(unit => {
+            if (!existingConversions[unit]) {
+                unitsToDefine.add(unit);
+            }
+        });
+
+        // Tilføj også eksisterende konverteringer, så de kan redigeres
+        for (const unit in existingConversions) {
+            unitsToDefine.add(unit);
+        }
+
+        // Generer inputfelter for hver enhed
+        unitsToDefine.forEach(unit => {
+            if (unit === 'g' || unit === 'ml' || unit === 'kg' || unit === 'l' || unit === 'spsk' || unit === 'tsk') return; // Filtrer ud standardenheder som kan konverteres direkte i utils
+            const currentValue = existingConversions[unit] || '';
+            const unitRow = document.createElement('div');
+            unitRow.className = 'input-group unit-conversion-row';
+            unitRow.innerHTML = `
+                <label for="unit-conversion-${unit}">1 ${unit} svarer til (gram)</label>
+                <input type="number" id="unit-conversion-${unit}" data-unit="${unit}" step="any" placeholder="F.eks. 50" value="${currentValue}">
+            `;
+            unitConversionsContainer.appendChild(unitRow);
+        });
+    }
 
     appElements.ingredientModal.classList.remove('hidden');
 }
@@ -303,13 +339,24 @@ async function handleSaveIngredient(e) {
     const priceFromInput = parseFloat(document.getElementById('ingredient-info-price-from').value) || null;
     const priceToInput = parseFloat(document.getElementById('ingredient-info-price-to').value) || null;
     const priceUnit = document.getElementById('ingredient-info-default-unit').value;
-    const multiplier = (priceUnit === 'g' || priceUnit === 'ml') ? 1000 : 1;
+    // Ingen multiplier her, da prisen gemmes direkte pr. defaultUnit (g/ml/stk)
+    // const multiplier = (priceUnit === 'g' || priceUnit === 'ml') ? 1000 : 1;
 
     const aliases = document.getElementById('ingredient-info-aliases').value
         .split(',')
         .map(alias => alias.trim().toLowerCase())
         .filter(alias => alias.length > 0);
     
+    // NY LOGIK: Læs enhedskonverteringer fra de dynamisk genererede felter
+    const unitConversions = {};
+    document.querySelectorAll('#unit-conversions-container .unit-conversion-row input').forEach(input => {
+        const unit = input.dataset.unit;
+        const value = parseFloat(input.value);
+        if (unit && !isNaN(value) && value > 0) {
+            unitConversions[unit] = value;
+        }
+    });
+
     const itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
         substituteFor: document.getElementById('ingredient-info-substitute-for').value || null,
@@ -317,10 +364,10 @@ async function handleSaveIngredient(e) {
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
         defaultUnit: priceUnit,
-        priceFrom: priceFromInput ? priceFromInput / multiplier : null,
-        priceTo: priceToInput ? priceToInput / multiplier : null,
+        priceFrom: priceFromInput, // Gemmes direkte
+        priceTo: priceToInput,     // Gemmes direkte
         caloriesPer100g: parseInt(document.getElementById('ingredient-info-calories').value, 10) || null,
-        weightPerPiece: parseFloat(document.getElementById('ingredient-info-weight-per-piece').value) || null,
+        unitConversions: unitConversions, // Gem de nye konverteringer
         userId: appState.currentUser.uid,
     };
 
@@ -370,19 +417,19 @@ async function handleBulkSaveFromAssistant(e) {
         
         if (name) {
             const priceInput = parseFloat(row.querySelector('.assistant-price').value) || null;
-            const priceUnit = row.querySelector('.assistant-unit').value;
-            const multiplier = (priceUnit === 'g' || priceUnit === 'ml') ? 1000 : 1;
+            const priceUnit = row.querySelector('.assistant-unit').value; // Denne enhed er for input, ikke standard gemme enhed for pris
+            // Ingen multiplier her, da prisen gemmes direkte pr. g/ml/stk
 
             const ingredientData = {
                 name: name,
                 aliases: [],
                 mainCategory: mainCategory,
                 subCategory: subCategory,
-                defaultUnit: priceUnit,
+                defaultUnit: priceUnit, // Vi antager, at assistenten altid gemmer pris pr. denne enhed
                 priceFrom: null,
-                priceTo: priceInput ? priceInput / multiplier : null,
+                priceTo: priceInput,
                 caloriesPer100g: parseInt(row.querySelector('.assistant-calories').value, 10) || null,
-                weightPerPiece: null,
+                unitConversions: {}, // Nye ingredienser har ingen konverteringer initialt
                 userId: appState.currentUser.uid,
             };
             
@@ -446,7 +493,8 @@ async function handleTextImportSubmit(e) {
             continue;
         }
 
-        const multiplier = (item.defaultUnit === 'g' || item.defaultUnit === 'ml') ? 1000 : 1;
+        // Ingen multiplier her, da prisen gemmes direkte pr. defaultUnit
+        // const multiplier = (item.defaultUnit === 'g' || item.defaultUnit === 'ml') ? 1000 : 1;
 
         const finalData = {
             name: item.name,
@@ -455,9 +503,9 @@ async function handleTextImportSubmit(e) {
             defaultUnit: normalizeUnit(item.defaultUnit),
             aliases: item.aliases || [],
             priceFrom: null,
-            priceTo: item.priceInput ? item.priceInput / multiplier : null,
+            priceTo: item.priceInput,
             caloriesPer100g: item.caloriesPer100g || null,
-            weightPerPiece: null,
+            unitConversions: {}, // Tekstimport opretter ikke konverteringer
             userId: appState.currentUser.uid,
         };
 
@@ -509,11 +557,14 @@ function parseIngredientText(text) {
             const key = parts[0].trim().toLowerCase();
             const value = parts.slice(1).join(':').trim();
 
+            // OPDATERING: Pris-input gemmes direkte, ikke divideres med multiplier her
             if (key.startsWith('pris/')) {
                 ingredient.priceInput = parseFloat(value.replace(',', '.')) || null;
-                if (key.includes('kg')) ingredient.priceUnitForInput = 'kg';
-                else if (key.includes('l')) ingredient.priceUnitForInput = 'l';
-                else if (key.includes('stk')) ingredient.priceUnitForInput = 'stk';
+                if (key.includes('kg')) ingredient.defaultUnit = 'kg'; // Antager pris pr. kg som defaultUnit
+                else if (key.includes('l')) ingredient.defaultUnit = 'l'; // Antager pris pr. l som defaultUnit
+                else if (key.includes('stk')) ingredient.defaultUnit = 'stk'; // Antager pris pr. stk som defaultUnit
+                else if (key.includes('g')) ingredient.defaultUnit = 'g'; // Antager pris pr. g som defaultUnit
+                else if (key.includes('ml')) ingredient.defaultUnit = 'ml'; // Antager pris pr. ml som defaultUnit
             } else if (key === 'kalorier/100g/ml') {
                 ingredient.caloriesPer100g = parseInt(value, 10) || null;
             } else {
@@ -523,7 +574,7 @@ function parseIngredientText(text) {
                     'aliaser': 'aliases',
                     'overkategori': 'mainCategory',
                     'underkategori': 'subCategory',
-                    'prisenhed': 'defaultUnit'
+                    'prisenhed': 'defaultUnit' // Prisenhed for input. Denne bliver til defaultUnit for pris.
                 };
                 if (keyMap[key]) {
                     if (key === 'alias' || key === 'aliaser') {
@@ -572,4 +623,3 @@ function populateReferenceDropdown(select, opts, ph, val) {
     (opts || []).sort().forEach(opt => select.add(new Option(opt, opt)));
     select.value = val || "";
 }
-
