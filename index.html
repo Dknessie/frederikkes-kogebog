@@ -324,21 +324,19 @@
                 <h4>Pris & Ernæring</h4>
                 <div class="form-grid-2-col">
                      <div class="input-group">
-                        <label for="ingredient-info-price-from">Pris Fra (kr.)</label>
-                        <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="110">
+                        <label for="ingredient-info-price-from">Pris Fra (kr. pr. valgt enhed)</label>
+                        <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="85">
                     </div>
                     <div class="input-group">
-                        <label for="ingredient-info-price-to">Pris Til (kr.)</label>
-                        <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="130">
+                        <label for="ingredient-info-price-to">Pris Til (kr. pr. valgt enhed)</label>
+                        <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="110">
                     </div>
                 </div>
                 <div class="form-grid-2-col">
                     <div class="input-group">
-                        <label for="ingredient-info-default-unit">Prisenhed (pr. denne enhed)</label>
+                        <label for="ingredient-info-default-unit">Prisenhed</label>
                         <select id="ingredient-info-default-unit" required>
-                            <option value="g">Gram (g)</option>
                             <option value="kg">Kilogram (kg)</option>
-                            <option value="ml">Milliliter (ml)</option>
                             <option value="l">Liter (l)</option>
                             <option value="stk">Styk (stk)</option>
                         </select>
@@ -356,7 +354,6 @@
                 <div id="unit-conversions-container">
                     <!-- Dynamisk genererede felter for enhedskonverteringer kommer her -->
                 </div>
-
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-danger" id="delete-ingredient-btn">Slet Ingrediens</button>
@@ -377,7 +374,7 @@
                 Overkategori: Dagligvarer<br>
                 Underkategori: Kød & Fisk<br>
                 Pris/kg: 110 <span style="color: #888;">(eller Pris/l, Pris/stk)</span><br>
-                Prisenhed: g <span style="color: #888;">(eller ml, stk)</span><br>
+                Prisenhed: kg <span style="color: #888;">(eller l, stk)</span><br>
                 Kalorier/100g/ml: 250
             </p>
             <form id="text-import-form">
