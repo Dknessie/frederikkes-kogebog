@@ -61,6 +61,7 @@ export function normalizeUnit(unit) {
     if (['dåse', 'dåser'].includes(u)) return 'dåse';
     if (['bundt'].includes(u)) return 'bundt';
     if (['knivspids'].includes(u)) return 'knivspids';
+    if (['pakke', 'pakker'].includes(u)) return 'pakke'; // Tilføjet 'pakke' som enhed
     return u;
 }
 
@@ -89,68 +90,104 @@ export function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-export function convertToBaseUnit(quantity, fromUnit, targetUnit, itemInfo) {
-    if (!quantity) return { amount: 0, error: null };
+/**
+ * Konverterer en mængde fra en given enhed til gram, baseret på varens standardenhed
+ * eller brugerdefinerede konverteringer.
+ * @param {number} quantity - Mængden at konvertere.
+ * @param {string} fromUnit - Enheden mængden er i (f.eks. 'stk', 'dl').
+ * @param {object} itemInfo - Information om ingrediensen, inklusiv `defaultUnit` og `unitConversions`.
+ * @returns {{amount: number|null, error: string|null}} Konverteret mængde i gram eller en fejl.
+ */
+export function convertToGrams(quantity, fromUnit, itemInfo) {
+    if (!quantity || quantity === 0) return { amount: 0, error: null };
     
     const normalizedFrom = normalizeUnit(fromUnit);
     
-    if (normalizedFrom === targetUnit) {
+    // Hvis enheden allerede er 'g', 'ml' (som antages at være 1:1 med gram for kalorier/pris) eller en anden ukendt enhed til enhedskonvertering.
+    if (normalizedFrom === 'g') {
         return { amount: quantity, error: null };
     }
-
-    // Special case for 'stk' to 'g' conversion using itemInfo
-    if (normalizedFrom === 'stk' && targetUnit === 'g' && itemInfo?.weightPerPiece) {
-        return { amount: quantity * itemInfo.weightPerPiece, error: null };
-    }
-
-    const conversionsToMl = { 'l': 1000, 'dl': 100, 'spsk': 15, 'tsk': 5 };
-    const conversionsToG = { 'kg': 1000 };
-    
-    if (targetUnit === 'ml' && conversionsToMl[normalizedFrom]) {
-        return { amount: quantity * conversionsToMl[normalizedFrom], error: null };
-    }
-    
-    if (targetUnit === 'g' && conversionsToG[normalizedFrom]) {
-        return { amount: quantity * conversionsToG[normalizedFrom], error: null };
-    }
-    
-    const pieceUnits = ['fed', 'dåse', 'bundt', 'knivspids'];
-    if (targetUnit === 'stk' && pieceUnits.includes(normalizedFrom)) {
+    if (normalizedFrom === 'ml') { // For simplicitet antages 1 ml = 1g for kalorier/prisberegning
         return { amount: quantity, error: null };
     }
+    if (normalizedFrom === 'l') {
+        return { amount: quantity * 1000, error: null };
+    }
+    if (normalizedFrom === 'dl') {
+        return { amount: quantity * 100, error: null };
+    }
+    if (normalizedFrom === 'kg') {
+        return { amount: quantity * 1000, error: null };
+    }
 
+    // Tjek for brugerdefinerede konverteringer (f.eks. 'stk' -> gram)
+    if (itemInfo && itemInfo.unitConversions && itemInfo.unitConversions[normalizedFrom]) {
+        const gramsPerUnit = itemInfo.unitConversions[normalizedFrom];
+        return { amount: quantity * gramsPerUnit, error: null };
+    }
+
+    // Fallback for tsk/spsk (antager standardværdier, men kan gøres mere præcist med densitet)
+    if (normalizedFrom === 'spsk') { // ca. 15g vand/mel
+        return { amount: quantity * 15, error: null };
+    }
+    if (normalizedFrom === 'tsk') { // ca. 5g vand/mel
+        return { amount: quantity * 5, error: null };
+    }
+    
+    // Hvis enheden er 'stk' men der ingen konvertering er defineret
+    if (normalizedFrom === 'stk' && !itemInfo?.unitConversions?.[normalizedFrom]) {
+        return { amount: null, error: `Mangler konvertering for '${fromUnit}' til gram for '${itemInfo?.name || 'varen'}'.` };
+    }
+
+    // Hvis enheden er ukendt og ikke kan konverteres
     return { 
         amount: null, 
-        error: `Kan ikke konvertere fra '${fromUnit}' til '${targetUnit}'. Overvej at tilføje 'Vægt pr. stk' for varen.` 
+        error: `Ukendt enhed '${fromUnit}' for vare '${itemInfo?.name || 'varen'}' eller manglende konvertering.` 
     };
 }
 
-export function calculateRecipePrice(recipe, ingredientInfo, portionsOverride) {
+
+export function calculateRecipePrice(recipe, ingredientInfo) {
     let minPrice = 0;
     let maxPrice = 0;
     if (!recipe.ingredients || !ingredientInfo) return { min: 0, max: 0 };
 
-    const scaleFactor = (portionsOverride || recipe.portions || 1) / (recipe.portions || 1);
-
     recipe.ingredients.forEach(ing => {
         const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
+        
         if (info && (info.priceFrom || info.priceTo) && info.defaultUnit) {
-            const scaledQuantity = (ing.quantity || 0) * scaleFactor;
             
-            // Konverter opskriftens enhed til varens basisenhed (g, ml, stk)
-            const conversion = convertToBaseUnit(scaledQuantity, ing.unit, info.defaultUnit, info);
+            // Konverter opskriftens enhed til gram for at beregne pris baseret på gram/kg pris
+            const conversionToGrams = convertToGrams(ing.quantity || 0, ing.unit, info);
             
-            if (conversion.amount !== null) {
-                // priceFrom er tilbudspris, priceTo er normalpris
-                const priceFrom = info.priceFrom || info.priceTo;
-                const priceTo = info.priceTo;
-                
-                if (priceFrom) {
-                    minPrice += conversion.amount * priceFrom;
+            if (conversionToGrams.amount !== null) {
+                // Prisen er gemt pr. standardenhed (g/ml/stk). Hvis defaultUnit er 'stk', så bruges styk-prisen.
+                // Ellers antager vi, at prisen er per gram.
+                let pricePerGramMin = info.priceFrom; // priceFrom er nu direkte per defaultUnit
+                let pricePerGramMax = info.priceTo;   // priceTo er nu direkte per defaultUnit
+
+                if (info.defaultUnit === 'stk') {
+                    // Hvis prisen er pr. styk, skal vi bruge antal 'stk' direkte, ikke gram
+                    // Her antages det, at opskriften også angiver antal i 'stk', hvis prisen er pr. 'stk'
+                    // Dette kræver en 1:1 match eller en logik til at konvertere opskriftens enhed til 'stk'
+                    // For nu, hvis defaultUnit er 'stk' og opskriftens enhed er 'stk', så brug det direkte.
+                    // Hvis opskriftens enhed er anderledes, er det en kompleks konvertering, der kræver 'stk' konvertering.
+                    if (normalizeUnit(ing.unit) === 'stk') {
+                        minPrice += (ing.quantity || 0) * (pricePerGramMin || pricePerGramMax);
+                        maxPrice += (ing.quantity || 0) * pricePerGramMax;
+                    } else {
+                        // Kan ikke direkte beregne pris pr. stk, hvis opskriften bruger en anden enhed
+                        // og vi ikke har en konvertering til 'stk' for opskriftens enhed.
+                        // For nu ignoreres prisen for denne ingrediens, hvis den ikke kan matches.
+                        console.warn(`Advarsel: Kan ikke beregne pris for '${ing.name}'. Pris angivet pr. '${info.defaultUnit}', men opskrift bruger '${ing.unit}'.`);
+                    }
+                } else {
+                    // Hvis prisen er pr. g/ml/kg/l (som nu konverteres til g for konsistens)
+                    minPrice += conversionToGrams.amount * (pricePerGramMin || pricePerGramMax);
+                    maxPrice += conversionToGrams.amount * pricePerGramMax;
                 }
-                if (priceTo) {
-                    maxPrice += conversion.amount * priceTo;
-                }
+            } else {
+                console.warn(`Kunne ikke konvertere mængde for '${ing.name}' fra '${ing.unit}' for prisberegning. Fejl: ${conversionToGrams.error}`);
             }
         }
     });
@@ -166,10 +203,11 @@ function calculateRecipeWeightInGrams(recipe, ingredientInfo) {
         const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
         if (info) {
             // Konverter alle mulige enheder til gram for at få totalvægt
-            const conversion = convertToBaseUnit(ing.quantity || 0, ing.unit, 'g', info);
+            const conversion = convertToGrams(ing.quantity || 0, ing.unit, info);
             if (conversion.amount !== null) {
-                // Her antager vi at 1 ml ≈ 1 g for simplicitet
                 totalGrams += conversion.amount;
+            } else {
+                console.warn(`Kunne ikke konvertere mængde for '${ing.name}' fra '${ing.unit}' til gram for vægtberegning. Fejl: ${conversion.error}`);
             }
         }
     });
@@ -185,12 +223,14 @@ export function calculateRecipeNutrition(recipe, ingredientInfo) {
         const info = ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase() || (i.aliases && i.aliases.includes(ing.name.toLowerCase())));
         if (info && info.caloriesPer100g) {
             // Konverter ingrediensens mængde til gram for at beregne kalorier
-            const conversion = convertToBaseUnit(ing.quantity || 0, ing.unit, 'g', info);
+            const conversion = convertToGrams(ing.quantity || 0, ing.unit, info);
 
             if (conversion.amount !== null) {
                 const calories = (conversion.amount / 100) * info.caloriesPer100g;
                 totalCalories += calories;
-            }
+            } else {
+                console.warn(`Kunne ikke konvertere mængde for '${ing.name}' fra '${ing.unit}' til gram for kalorieberegning. Fejl: ${conversion.error}`);
+            }
         }
     });
     
@@ -198,6 +238,33 @@ export function calculateRecipeNutrition(recipe, ingredientInfo) {
     if (totalGrams === 0) return 0;
 
     return (totalCalories / totalGrams) * 100;
+}
+
+/**
+ * Finder alle unikke enheder brugt for en specifik ingrediens på tværs af alle opskrifter.
+ * @param {string} ingredientName - Navnet på ingrediensen.
+ * @param {Array<object>} allRecipes - Alle opskrifter i applikationen.
+ * @returns {Set<string>} En Set af unikke, normaliserede enheder.
+ */
+export function getRecipeUsedUnitsForIngredient(ingredientName, allRecipes) {
+    const usedUnits = new Set();
+    const normalizedIngredientName = ingredientName.toLowerCase();
+
+    allRecipes.forEach(recipe => {
+        if (recipe.ingredients) {
+            recipe.ingredients.forEach(ing => {
+                if (ing.name.toLowerCase() === normalizedIngredientName) {
+                    const normalizedUnit = normalizeUnit(ing.unit);
+                    if (normalizedUnit && normalizedUnit !== 'g' && normalizedUnit !== 'ml' && normalizedUnit !== 'kg' && normalizedUnit !== 'l') {
+                        // Filtrer standardvægtenheder, som vi allerede kan konvertere internt
+                        // og fokuser på enheder, der kræver brugerdefineret konvertering (som 'stk', 'tsk', 'spsk', etc.)
+                        usedUnits.add(normalizedUnit);
+                    }
+                }
+            });
+        }
+    });
+    return usedUnits;
 }
 
 
@@ -220,4 +287,3 @@ export function calculateTermMonths(principal, annualRate, monthlyPayment) {
     const term = -Math.log(1 - (principal * monthlyRate) / monthlyPayment) / Math.log(1 + monthlyRate);
     return Math.ceil(term);
 }
-
