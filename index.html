@@ -299,60 +299,101 @@
             <form id="ingredient-info-form">
                 <input type="hidden" id="ingredient-info-id">
                 
-                <h4>Basis Information</h4>
-                <div class="input-group">
-                    <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
-                    <input type="text" id="ingredient-info-name" placeholder="Hakket Oksekød 4-7%" required>
+                <div class="switch-group">
+                    <label for="is-generic-toggle">Dette er en generisk ingrediens (f.eks. Brød, Pasta)</label>
+                    <label class="switch">
+                        <input type="checkbox" id="is-generic-toggle">
+                        <span class="slider round"></span>
+                    </label>
                 </div>
-                <div class="input-group">
-                    <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
-                    <input type="text" id="ingredient-info-aliases" placeholder="oksekød, hakket kød, fars">
-                </div>
-                <div class="form-grid-2-col">
+
+                <div id="standard-ingredient-fields">
+                    <h4>Basis Information</h4>
                     <div class="input-group">
-                        <label for="ingredient-info-main-category">Overkategori</label>
-                        <select id="ingredient-info-main-category" required></select>
+                        <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
+                        <input type="text" id="ingredient-info-name" placeholder="Hakket Oksekød 4-7%" required>
                     </div>
                     <div class="input-group">
-                        <label for="ingredient-info-sub-category">Underkategori</label>
-                        <select id="ingredient-info-sub-category" required></select>
+                        <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
+                        <input type="text" id="ingredient-info-aliases" placeholder="oksekød, hakket kød, fars">
+                    </div>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="ingredient-info-main-category">Overkategori</label>
+                            <select id="ingredient-info-main-category" required></select>
+                        </div>
+                        <div class="input-group">
+                            <label for="ingredient-info-sub-category">Underkategori</label>
+                            <select id="ingredient-info-sub-category" required></select>
+                        </div>
+                    </div>
+                    <hr>
+                    <h4>Pris & Ernæring</h4>
+                    <div class="form-grid-2-col">
+                         <div class="input-group">
+                            <label for="ingredient-info-price-from">Pris Fra (kr. pr. valgt enhed)</label>
+                            <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="85">
+                        </div>
+                        <div class="input-group">
+                            <label for="ingredient-info-price-to">Pris Til (kr. pr. valgt enhed)</label>
+                            <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="110">
+                        </div>
+                    </div>
+                    <div class="form-grid-2-col">
+                        <div class="input-group">
+                            <label for="ingredient-info-default-unit">Prisenhed</label>
+                            <select id="ingredient-info-default-unit" required>
+                                <option value="kg">Kilogram (kg)</option>
+                                <option value="l">Liter (l)</option>
+                                <option value="stk">Styk (stk)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="ingredient-info-calories">Kalorier (pr. 100g/ml)</label>
+                            <input type="number" id="ingredient-info-calories" placeholder="250">
+                        </div>
+                    </div>
+                    <hr>
+                    <h4>Enhedskonverteringer til Gram</h4>
+                    <p class="small-text">Angiv hvor mange gram hver enhed svarer til, for at opnå præcise kalorie- og prisberegninger.</p>
+                    <div id="unit-conversions-container">
+                        <!-- Dynamisk genererede felter for enhedskonverteringer kommer her -->
                     </div>
                 </div>
 
-                <hr>
-
-                <h4>Pris & Ernæring</h4>
-                <div class="form-grid-2-col">
-                     <div class="input-group">
-                        <label for="ingredient-info-price-from">Pris Fra (kr. pr. valgt enhed)</label>
-                        <input type="number" id="ingredient-info-price-from" step="0.01" placeholder="85">
+                <div id="generic-ingredient-fields" class="hidden">
+                    <h4>Implementeringer af <span class="generic-ingredient-name-placeholder"></span></h4>
+                    <p class="small-text">Tilføj de specifikke versioner, du kan vælge imellem. Det kan være købevarer eller dine egne opskrifter.</p>
+                    <div id="implementations-list">
+                        <!-- Liste over eksisterende implementeringer -->
                     </div>
-                    <div class="input-group">
-                        <label for="ingredient-info-price-to">Pris Til (kr. pr. valgt enhed)</label>
-                        <input type="number" id="ingredient-info-price-to" step="0.01" placeholder="110">
+                    <div class="add-implementation-form">
+                        <h5>Tilføj Ny Implementering</h5>
+                        <div class="input-group">
+                            <label for="implementation-type">Type</label>
+                            <select id="implementation-type">
+                                <option value="bought">Købevare</option>
+                                <option value="homemade">Hjemmelavet (fra opskrift)</option>
+                            </select>
+                        </div>
+                        <div id="implementation-form-bought">
+                             <div class="input-group">
+                                <label for="implementation-bought-name">Navn på produkt</label>
+                                <input type="text" id="implementation-bought-name" placeholder="Kohberg Solsikkerugbrød">
+                            </div>
+                             <div class="input-group">
+                                <label for="implementation-bought-price">Butikspris (kr.)</label>
+                                <input type="number" step="0.01" id="implementation-bought-price" placeholder="28.50">
+                            </div>
+                        </div>
+                        <div id="implementation-form-homemade" class="hidden">
+                             <div class="input-group">
+                                <label for="implementation-homemade-recipe">Vælg opskrift</label>
+                                <select id="implementation-homemade-recipe"></select>
+                            </div>
+                        </div>
+                        <button type="button" id="add-implementation-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Implementering</button>
                     </div>
-                </div>
-                <div class="form-grid-2-col">
-                    <div class="input-group">
-                        <label for="ingredient-info-default-unit">Prisenhed</label>
-                        <select id="ingredient-info-default-unit" required>
-                            <option value="kg">Kilogram (kg)</option>
-                            <option value="l">Liter (l)</option>
-                            <option value="stk">Styk (stk)</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="ingredient-info-calories">Kalorier (pr. 100g/ml)</label>
-                        <input type="number" id="ingredient-info-calories" placeholder="250">
-                    </div>
-                </div>
-                
-                <hr>
-
-                <h4>Enhedskonverteringer til Gram</h4>
-                <p class="small-text">Angiv hvor mange gram hver enhed svarer til, for at opnå præcise kalorie- og prisberegninger.</p>
-                <div id="unit-conversions-container">
-                    <!-- Dynamisk genererede felter for enhedskonverteringer kommer her -->
                 </div>
 
                 <div class="form-actions">
@@ -1042,6 +1083,16 @@
             </form>
         </div>
     </div>
+    <div id="implementation-choice-modal" class="modal-overlay hidden">
+        <div class="modal-content small">
+            <h3 id="implementation-choice-title">Vælg ingrediens</h3>
+            <p id="implementation-choice-subtitle" class="small-text"></p>
+            <div id="implementation-choice-list">
+                <!-- Valgmuligheder indsættes her af JS -->
+            </div>
+        </div>
+    </div>
+
     <div id="add-calendar-event-modal" class="modal-overlay hidden">
         <div class="modal-content large">
             <button class="close-modal-btn">&times;</button>
