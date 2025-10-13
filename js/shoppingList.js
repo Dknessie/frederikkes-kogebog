@@ -4,8 +4,6 @@ import { db } from './firebase.js';
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
 import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
-// FJERNET: openBatchModal og openInventoryItemModal er ikke længere nødvendige her
-// import { openBatchModal, openInventoryItemModal } from './inventory.js';
 
 let appState;
 let appElements;
@@ -15,7 +13,6 @@ export function initShoppingList(state, elements) {
     appState = state;
     appElements = {
         ...elements,
-        // FJERNET: bulk add modal er ikke længere i brug
     };
     
     // Modal listeners
@@ -23,9 +20,6 @@ export function initShoppingList(state, elements) {
         appElements.shoppingListModal.addEventListener('click', (e) => {
             if (e.target.closest('.shopping-list-clear-btn')) {
                 handleClearShoppingList();
-            } else if (e.target.closest('.shopping-list-confirm-btn')) {
-                // FJERNET: Bekræft indkøb er ikke en funktion længere
-                showNotification({title: "Funktion Fjernet", message: "Denne funktion er fjernet, da lagerstyring er udgået."});
             } else if (e.target.closest('.remove-from-list-btn')) {
                 const itemName = e.target.closest('[data-item-name]').dataset.itemName;
                 handleRemoveShoppingItem(itemName);
@@ -33,7 +27,6 @@ export function initShoppingList(state, elements) {
                 const listItem = e.target.closest('.shopping-list-item');
                 listItem.classList.toggle('is-checked');
             }
-            // FJERNET: Opret vare fra indkøbsliste er ikke længere relevant
         });
 
         appElements.shoppingListModal.addEventListener('submit', (e) => {
@@ -48,8 +41,6 @@ export function initShoppingList(state, elements) {
             }
         });
     }
-
-    // FJERNET: Listeners for bulk add og reorder er fjernet
 }
 
 export function openShoppingListModal(listType) {
@@ -84,7 +75,6 @@ function renderListInModal() {
             listContentHTML = renderGroceriesList(list);
             break;
         case 'materials':
-            // Denne funktion skal muligvis opdateres i fremtiden, hvis materialer skal have pris/kalorier
             listContentHTML = renderMaterialsList(list);
             break;
         case 'wishlist':
@@ -103,7 +93,6 @@ function renderListInModal() {
 function renderGroceriesList(list) {
     const groupedBySubCategory = {};
     Object.values(list).forEach(item => {
-        // OPDATERING: Finder info fra ingrediens-biblioteket
         const info = appState.ingredientInfo.find(i => i.name.toLowerCase() === item.name.toLowerCase());
         const subCategory = info?.subCategory || 'Andet';
         if (!groupedBySubCategory[subCategory]) {
@@ -123,7 +112,6 @@ function renderGroceriesList(list) {
         html += `<div class="store-section"><h4>${subCategory}</h4><ul>`;
         groupedBySubCategory[subCategory].sort((a,b) => a.name.localeCompare(b.name)).forEach(item => {
             const safeItemName = item.name.replace(/[^a-zA-Z0-9]/g, '-');
-            // OPDATERING: Forenklet quantity-tekst
             const quantityText = `${item.quantity} ${item.unit}`;
 
             html += `
@@ -207,7 +195,6 @@ function renderWishlist(list) {
 }
 
 function createModalControlsHTML(isWishlist = false) {
-    // FJERNET: Bekræft-knap er fjernet, da lagerstyring er udgået
     const addText = isWishlist ? 'ønske' : 'vare';
     
     return `
@@ -234,16 +221,13 @@ async function updateShoppingListInFirestore(listType, newList) {
     }
 }
 
-/**
- * OPDATERING: Funktionen er nu eksporteret og kan kaldes fra andre moduler.
- */
-export async function generateGroceriesList() {
-    const start = getStartOfWeek(appState.currentDate); 
+export async function generateGroceriesList(appState) {
+    const start = getStartOfWeek(appState.currentDate);
     const allIngredientsNeeded = {};
 
     for (let i = 0; i < 7; i++) {
         const dayDate = new Date(start);
-        dayDate.setDate(start.getDate() + i); 
+        dayDate.setDate(start.getDate() + i);
         const dateString = formatDate(dayDate);
         const dayPlan = appState.mealPlan[dateString];
 
@@ -254,12 +238,42 @@ export async function generateGroceriesList() {
                         const recipe = appState.recipes.find(r => r.id === meal.recipeId);
                         if (recipe && recipe.ingredients) {
                             const scaleFactor = (meal.portions || recipe.portions || 1) / (recipe.portions || 1);
+                            
                             for (const ing of recipe.ingredients) {
-                                const key = ing.name.toLowerCase();
-                                if (!allIngredientsNeeded[key]) {
-                                    allIngredientsNeeded[key] = { total: 0, unit: ing.unit, name: ing.name };
+                                const ingInfo = appState.ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+                                
+                                if (ingInfo && ingInfo.isGeneric && meal.ingredientChoices[ingInfo.name]) {
+                                    const choiceId = meal.ingredientChoices[ingInfo.name];
+                                    const implementation = ingInfo.implementations.find(impl => impl.id === choiceId);
+                                    
+                                    if (implementation.type === 'bought') {
+                                        // Tilføj den specifikke købevare til listen
+                                        const key = implementation.name.toLowerCase();
+                                        if (!allIngredientsNeeded[key]) {
+                                            allIngredientsNeeded[key] = { total: 0, unit: 'stk', name: implementation.name };
+                                        }
+                                        allIngredientsNeeded[key].total += 1; // Antager 1 pakke/enhed
+                                    } else { // homemade
+                                        // Tilføj ingredienserne fra den hjemmelavede opskrift
+                                        const subRecipe = appState.recipes.find(r => r.id === implementation.recipeId);
+                                        if (subRecipe && subRecipe.ingredients) {
+                                            subRecipe.ingredients.forEach(subIng => {
+                                                const subKey = subIng.name.toLowerCase();
+                                                if (!allIngredientsNeeded[subKey]) {
+                                                    allIngredientsNeeded[subKey] = { total: 0, unit: subIng.unit, name: subIng.name };
+                                                }
+                                                allIngredientsNeeded[subKey].total += (subIng.quantity || 0) * scaleFactor;
+                                            });
+                                        }
+                                    }
+                                } else {
+                                    // Standard ingrediens-håndtering
+                                    const key = ing.name.toLowerCase();
+                                    if (!allIngredientsNeeded[key]) {
+                                        allIngredientsNeeded[key] = { total: 0, unit: ing.unit, name: ing.name };
+                                    }
+                                    allIngredientsNeeded[key].total += (ing.quantity || 0) * scaleFactor;
                                 }
-                                allIngredientsNeeded[key].total += (ing.quantity || 0) * scaleFactor;
                             }
                         }
                     }
@@ -276,10 +290,9 @@ export async function generateGroceriesList() {
     const shoppingList = {};
     for (const ingKey in allIngredientsNeeded) {
         const needed = allIngredientsNeeded[ingKey];
-        // Opretter et simpelt objekt til listen uden at tjekke lager
         shoppingList[ingKey] = { 
             name: needed.name, 
-            quantity: Math.ceil(needed.total), // Runder op til nærmeste hele tal for simplicitet
+            quantity: Math.ceil(needed.total),
             unit: needed.unit
         };
     }
@@ -319,7 +332,6 @@ async function handleAddShoppingItem(itemName) {
         return;
     }
     
-    // Opretter et simpelt objekt
     updatedList[key] = {
         name: itemName,
         quantity: 1,
