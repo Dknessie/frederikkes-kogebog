@@ -383,15 +383,25 @@
                                 <label for="implementation-bought-name">Navn på produkt</label>
                                 <input type="text" id="implementation-bought-name" placeholder="Kohberg Solsikkerugbrød">
                             </div>
-                             <div class="input-group">
-                                <label for="implementation-bought-price">Butikspris (kr.)</label>
-                                <input type="number" step="0.01" id="implementation-bought-price" placeholder="28.50">
+                            <div class="form-grid-2-col">
+                                <div class="input-group">
+                                    <label for="implementation-bought-price">Butikspris (kr.)</label>
+                                    <input type="number" step="0.01" id="implementation-bought-price" placeholder="28.50">
+                                </div>
+                                <div class="input-group">
+                                    <label for="implementation-bought-weight">Varens Vægt (gram)</label>
+                                    <input type="number" id="implementation-bought-weight" placeholder="1000">
+                                </div>
                             </div>
                         </div>
                         <div id="implementation-form-homemade" class="hidden">
                              <div class="input-group">
                                 <label for="implementation-homemade-recipe">Vælg opskrift</label>
                                 <select id="implementation-homemade-recipe"></select>
+                            </div>
+                            <div class="input-group">
+                                <label for="implementation-homemade-weight">Færdig Vægt (gram)</label>
+                                <input type="number" id="implementation-homemade-weight" placeholder="850">
                             </div>
                         </div>
                         <button type="button" id="add-implementation-btn" class="btn btn-secondary"><i class="fas fa-plus"></i> Tilføj Implementering</button>
