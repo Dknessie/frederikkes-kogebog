@@ -3,8 +3,8 @@
 import { db } from './firebase.js';
 import { doc, setDoc, writeBatch, deleteField, arrayUnion, arrayRemove, getDoc, runTransaction, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { getWeekNumber, getStartOfWeek, formatDate } from './utils.js';
-import { openShoppingListModal, generateGroceriesList } from './shoppingList.js'; // KORREKTION: Importerer generateGroceriesList
+import { getWeekNumber, getStartOfWeek, formatDate, calculateRecipePrice } from './utils.js';
+import { openShoppingListModal, generateGroceriesList } from './shoppingList.js';
 import { renderReadView } from './recipes.js';
 import { openEventModal, handleDeleteEvent } from './events.js';
 
@@ -22,8 +22,7 @@ export function initMealPlanner(state, elements) {
 
     // Hovedhandlinger
     if (appElements.hubClearWeekBtn) appElements.hubClearWeekBtn.addEventListener('click', handleClearMealPlan);
-    // KORREKTION: Tilføjer event listener til "Generer Indkøbsliste" knappen
-    if (appElements.hubGenerateGroceriesBtn) appElements.hubGenerateGroceriesBtn.addEventListener('click', generateGroceriesList);
+    if (appElements.hubGenerateGroceriesBtn) appElements.hubGenerateGroceriesBtn.addEventListener('click', () => generateGroceriesList(appState, appElements));
     
     // Event delegation
     if (appElements.mealPlanSection) {
@@ -40,7 +39,7 @@ export function initMealPlanner(state, elements) {
 
     // Modals
     if (appElements.planMealForm) {
-        appElements.planMealForm.addEventListener('submit', handlePlanMealSubmit);
+        appElements.planMealForm.addEventListener('submit', startMealPlanningProcess);
         const mealTypeSelector = appElements.planMealForm.querySelector('.meal-type-selector');
         if(mealTypeSelector) {
             mealTypeSelector.addEventListener('click', (e) => {
@@ -381,30 +380,61 @@ async function handleClearMealPlan() {
     }
 }
 
-async function handlePlanMealSubmit(e) {
+// NY: Starter planlægningsprocessen.
+async function startMealPlanningProcess(e) {
     e.preventDefault();
     
     const recipeId = document.getElementById('plan-meal-recipe-id').value;
     const date = document.getElementById('plan-meal-date').value;
     const portions = Number(document.getElementById('plan-meal-portions').value);
     const mealTypeBtn = document.querySelector('#plan-meal-form .meal-type-selector .btn.active');
-
+    
     if (!recipeId || !date || !portions || !mealTypeBtn) {
         handleError(new Error("Udfyld venligst alle felter."), "Udfyld venligst alle felter.", "planMealSubmit");
         return;
     }
     
-    const mealType = mealTypeBtn.dataset.meal;
+    const recipe = appState.recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
+    // Tjek for generiske ingredienser
+    const genericIngredients = [];
+    for (const ing of recipe.ingredients) {
+        const ingInfo = appState.ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+        if (ingInfo && ingInfo.isGeneric) {
+            genericIngredients.push(ingInfo);
+        }
+    }
+
     const mealData = {
         id: crypto.randomUUID(),
         recipeId,
         type: 'recipe',
         portions,
         cooked: false,
+        ingredientChoices: {} // Nyt felt til at gemme valg
     };
 
-    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
+    if (genericIngredients.length > 0) {
+        // Gennemløb hver generisk ingrediens og få brugerens valg
+        for (const genericIng of genericIngredients) {
+            try {
+                const choiceId = await promptForImplementationChoice(genericIng);
+                mealData.ingredientChoices[genericIng.name] = choiceId;
+            } catch (error) {
+                // Brugeren annullerede
+                return;
+            }
+        }
+    }
     
+    // Når alle valg er truffet, gem måltidet.
+    await savePlannedMeal(mealData, date, mealTypeBtn.dataset.meal);
+}
+
+// NY: Gemmer det endelige måltid efter valg er truffet
+async function savePlannedMeal(mealData, date, mealType) {
+    const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     try {
         await setDoc(mealPlanRef, {
             [date]: {
@@ -418,6 +448,65 @@ async function handlePlanMealSubmit(e) {
         handleError(error, "Måltidet kunne ikke gemmes.", "savePlannedMeal");
     }
 }
+
+// NY: Viser modalen til valg af implementering
+function promptForImplementationChoice(genericIngredient) {
+    return new Promise((resolve, reject) => {
+        const modal = appElements.implementationChoiceModal;
+        const title = modal.querySelector('#implementation-choice-title');
+        const subtitle = modal.querySelector('#implementation-choice-subtitle');
+        const list = modal.querySelector('#implementation-choice-list');
+        
+        title.textContent = `Vælg type '${genericIngredient.name}'`;
+        subtitle.textContent = "Denne ingrediens findes i flere versioner. Vælg den du vil bruge til dette måltid.";
+        list.innerHTML = '';
+
+        genericIngredient.implementations.forEach(impl => {
+            let name, price, savingText = '';
+            
+            if(impl.type === 'bought') {
+                name = impl.name;
+                price = impl.price;
+            } else {
+                const recipe = appState.recipes.find(r => r.id === impl.recipeId);
+                name = `Hjemmelavet: ${recipe.title}`;
+                price = calculateRecipePrice(recipe, appState.ingredientInfo).max;
+            }
+
+            const boughtOption = genericIngredient.implementations.find(i => i.type === 'bought');
+            if(boughtOption && impl.type === 'homemade') {
+                const saving = boughtOption.price - price;
+                if(saving > 0) {
+                    savingText = `<span class="saving-pill">Spar ${saving.toFixed(2)} kr.</span>`;
+                }
+            }
+
+            const itemEl = document.createElement('div');
+            itemEl.className = 'implementation-choice-item';
+            itemEl.innerHTML = `
+                <span class="name">${name}</span>
+                <span class="price">~${price.toFixed(2)} kr. ${savingText}</span>
+            `;
+            itemEl.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                resolve(impl.id);
+            });
+            list.appendChild(itemEl);
+        });
+
+        const cancelHandler = (e) => {
+            if (e.target === modal || e.target.closest('.close-modal-btn')) {
+                modal.classList.add('hidden');
+                modal.removeEventListener('click', cancelHandler);
+                reject('User cancelled');
+            }
+        };
+        modal.addEventListener('click', cancelHandler);
+
+        modal.classList.remove('hidden');
+    });
+}
+
 
 export function openPlanMealModal(recipeId, date = null, mealType = null) {
     const form = appElements.planMealForm;
