@@ -167,23 +167,22 @@ function renderListView(container) {
 function createIngredientCardHTML(item) {
     let priceText = 'Pris ukendt';
     if(item.isGeneric) {
-        const homemadePrices = (item.implementations || [])
-            .filter(impl => impl.type === 'homemade')
-            .map(impl => {
+        const kgPrices = (item.implementations || []).map(impl => {
+            if (impl.type === 'bought' && impl.price && impl.weight) {
+                return (impl.price / impl.weight) * 1000;
+            } else if (impl.type === 'homemade' && impl.recipeId && impl.finishedWeight) {
                 const recipe = appState.recipes.find(r => r.id === impl.recipeId);
-                return recipe ? calculateRecipePrice(recipe, appState.ingredientInfo).max : Infinity;
-            });
-        
-        const boughtPrices = (item.implementations || [])
-            .filter(impl => impl.type === 'bought')
-            .map(impl => impl.price);
+                if (!recipe) return Infinity;
+                const cost = calculateRecipePrice(recipe, appState.ingredientInfo).max;
+                return (cost / impl.finishedWeight) * 1000;
+            }
+            return Infinity;
+        }).filter(p => p !== Infinity);
 
-        const allPrices = [...homemadePrices, ...boughtPrices].filter(p => p !== Infinity);
-
-        if(allPrices.length > 0) {
-            const min = Math.min(...allPrices);
-            const max = Math.max(...allPrices);
-            priceText = min === max ? `~${min.toFixed(2)} kr` : `${min.toFixed(2)} - ${max.toFixed(2)} kr`;
+        if(kgPrices.length > 0) {
+            const min = Math.min(...kgPrices);
+            const max = Math.max(...kgPrices);
+            priceText = min.toFixed(2) === max.toFixed(2) ? `~${min.toFixed(2)} kr/kg` : `${min.toFixed(2)} - ${max.toFixed(2)} kr/kg`;
         }
     } else if (item.priceTo) {
         const unitLabel = item.defaultUnit || 'enhed';
@@ -392,18 +391,26 @@ function renderImplementationsList() {
         itemEl.dataset.index = index;
 
         let content = '';
+        let kgPrice = null;
+
         if(impl.type === 'bought') {
+            if (impl.price && impl.weight) {
+                kgPrice = (impl.price / impl.weight) * 1000;
+            }
             content = `
                 <span class="implementation-name"><i class="fas fa-shopping-cart"></i> ${impl.name}</span>
-                <span class="implementation-price">${impl.price.toFixed(2)} kr.</span>
+                <span class="implementation-price">${kgPrice ? `~${kgPrice.toFixed(2)} kr/kg` : 'Pris ukendt'}</span>
             `;
         } else { // homemade
             const recipe = appState.recipes.find(r => r.id === impl.recipeId);
             const recipeName = recipe ? recipe.title : 'Ukendt Opskrift';
-            const price = recipe ? calculateRecipePrice(recipe, appState.ingredientInfo).max : 0;
+            if (recipe && impl.finishedWeight > 0) {
+                const cost = calculateRecipePrice(recipe, appState.ingredientInfo).max;
+                kgPrice = (cost / impl.finishedWeight) * 1000;
+            }
             content = `
                 <span class="implementation-name"><i class="fas fa-blender"></i> ${recipeName}</span>
-                <span class="implementation-price">~${price.toFixed(2)} kr.</span>
+                <span class="implementation-price">${kgPrice ? `~${kgPrice.toFixed(2)} kr/kg` : 'Pris ukendt'}</span>
             `;
         }
 
@@ -421,18 +428,26 @@ function handleAddImplementation() {
     if (type === 'bought') {
         const name = document.getElementById('implementation-bought-name').value.trim();
         const price = parseFloat(document.getElementById('implementation-bought-price').value);
-        if (name && !isNaN(price)) {
-            localImplementations.push({ id: crypto.randomUUID(), type: 'bought', name, price });
+        const weight = parseInt(document.getElementById('implementation-bought-weight').value, 10);
+        if (name && !isNaN(price) && !isNaN(weight) && weight > 0) {
+            localImplementations.push({ id: crypto.randomUUID(), type: 'bought', name, price, weight });
             document.getElementById('implementation-bought-name').value = '';
             document.getElementById('implementation-bought-price').value = '';
+            document.getElementById('implementation-bought-weight').value = '';
+        } else {
+            showNotification({title: "Udfyld alle felter", message: "Navn, pris og vægt er påkrævet for købevarer."});
         }
     } else { // homemade
         const select = document.getElementById('implementation-homemade-recipe');
         const recipeTitle = select.value;
         const recipe = appState.recipes.find(r => r.title === recipeTitle);
-        if (recipe) {
-            localImplementations.push({ id: crypto.randomUUID(), type: 'homemade', recipeId: recipe.id });
+        const finishedWeight = parseInt(document.getElementById('implementation-homemade-weight').value, 10);
+        if (recipe && !isNaN(finishedWeight) && finishedWeight > 0) {
+            localImplementations.push({ id: crypto.randomUUID(), type: 'homemade', recipeId: recipe.id, finishedWeight });
             select.value = '';
+            document.getElementById('implementation-homemade-weight').value = '';
+        } else {
+            showNotification({title: "Udfyld alle felter", message: "Opskrift og færdig vægt er påkrævet for hjemmelavede varer."});
         }
     }
     renderImplementationsList();
