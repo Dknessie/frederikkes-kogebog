@@ -3,10 +3,11 @@
 import { db } from './firebase.js';
 import { collection, addDoc, doc, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showNotification, handleError } from './ui.js';
-import { normalizeUnit, getRecipeUsedUnitsForIngredient } from './utils.js'; // Importerer den nye hjælpefunktion
+import { normalizeUnit, getRecipeUsedUnitsForIngredient, calculateRecipePrice } from './utils.js';
 
 let appState;
 let appElements;
+let localImplementations = [];
 
 // Lokal state for den nye Ingrediens-bibliotek side
 let libraryState = {
@@ -35,7 +36,37 @@ export function initIngredientLibrary(state, elements) {
     
     if (appElements.ingredientForm) {
         appElements.ingredientForm.addEventListener('submit', handleSaveIngredient);
+        
+        const isGenericToggle = document.getElementById('is-generic-toggle');
+        if (isGenericToggle) {
+            isGenericToggle.addEventListener('change', toggleGenericFields);
+        }
+
+        const addImplementationBtn = document.getElementById('add-implementation-btn');
+        if (addImplementationBtn) {
+            addImplementationBtn.addEventListener('click', handleAddImplementation);
+        }
+
+        const implementationTypeSelect = document.getElementById('implementation-type');
+        if(implementationTypeSelect) {
+            implementationTypeSelect.addEventListener('change', (e) => {
+                document.getElementById('implementation-form-bought').classList.toggle('hidden', e.target.value !== 'bought');
+                document.getElementById('implementation-form-homemade').classList.toggle('hidden', e.target.value !== 'homemade');
+            });
+        }
+        
+        const implementationsList = document.getElementById('implementations-list');
+        if(implementationsList) {
+            implementationsList.addEventListener('click', (e) => {
+                if(e.target.closest('.delete-implementation-btn')) {
+                    const index = e.target.closest('.implementation-item').dataset.index;
+                    localImplementations.splice(index, 1);
+                    renderImplementationsList();
+                }
+            });
+        }
     }
+    
     const deleteBtn = document.getElementById('delete-ingredient-btn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', handleDeleteIngredient);
@@ -135,7 +166,26 @@ function renderListView(container) {
 
 function createIngredientCardHTML(item) {
     let priceText = 'Pris ukendt';
-    if (item.priceTo) {
+    if(item.isGeneric) {
+        const homemadePrices = (item.implementations || [])
+            .filter(impl => impl.type === 'homemade')
+            .map(impl => {
+                const recipe = appState.recipes.find(r => r.id === impl.recipeId);
+                return recipe ? calculateRecipePrice(recipe, appState.ingredientInfo).max : Infinity;
+            });
+        
+        const boughtPrices = (item.implementations || [])
+            .filter(impl => impl.type === 'bought')
+            .map(impl => impl.price);
+
+        const allPrices = [...homemadePrices, ...boughtPrices].filter(p => p !== Infinity);
+
+        if(allPrices.length > 0) {
+            const min = Math.min(...allPrices);
+            const max = Math.max(...allPrices);
+            priceText = min === max ? `~${min.toFixed(2)} kr` : `${min.toFixed(2)} - ${max.toFixed(2)} kr`;
+        }
+    } else if (item.priceTo) {
         const unitLabel = item.defaultUnit || 'enhed';
         const priceToDisplay = item.priceTo;
         if (item.priceFrom && item.priceFrom !== item.priceTo) {
@@ -252,6 +302,7 @@ function handlePageChange(e) {
 function openIngredientModal(itemId) {
     const form = appElements.ingredientForm;
     form.reset();
+    localImplementations = [];
     
     const item = itemId ? appState.ingredientInfo.find(i => i.id === itemId) : null;
     appElements.ingredientModalTitle.textContent = item ? `Rediger ${item.name}` : 'Opret Ny Ingrediens';
@@ -273,6 +324,9 @@ function openIngredientModal(itemId) {
     const unitConversionsContainer = document.getElementById('unit-conversions-container');
     unitConversionsContainer.innerHTML = '';
 
+    const isGenericToggle = document.getElementById('is-generic-toggle');
+    isGenericToggle.checked = item?.isGeneric || false;
+    
     if (item) {
         const ingredientName = item.name;
         const usedUnitsInRecipes = getRecipeUsedUnitsForIngredient(ingredientName, appState.recipes);
@@ -294,45 +348,139 @@ function openIngredientModal(itemId) {
             `;
             unitConversionsContainer.appendChild(unitRow);
         });
+
+        if (item.isGeneric) {
+            localImplementations = [...(item.implementations || [])];
+        }
     }
 
+    const homemadeRecipeSelect = document.getElementById('implementation-homemade-recipe');
+    populateReferenceDropdown(homemadeRecipeSelect, appState.recipes.map(r => r.title), "Vælg en opskrift...");
+
+
+    toggleGenericFields();
     appElements.ingredientModal.classList.remove('hidden');
 }
+
+function toggleGenericFields() {
+    const isGeneric = document.getElementById('is-generic-toggle').checked;
+    document.getElementById('standard-ingredient-fields').classList.toggle('hidden', isGeneric);
+    document.getElementById('generic-ingredient-fields').classList.toggle('hidden', !isGeneric);
+    
+    const name = document.getElementById('ingredient-info-name').value;
+    document.querySelectorAll('.generic-ingredient-name-placeholder').forEach(el => {
+        el.textContent = name || 'denne ingrediens';
+    });
+    
+    if(isGeneric) {
+        renderImplementationsList();
+    }
+}
+
+function renderImplementationsList() {
+    const container = document.getElementById('implementations-list');
+    container.innerHTML = '';
+
+    if (localImplementations.length === 0) {
+        container.innerHTML = `<p class="empty-state-small">Ingen implementeringer tilføjet endnu.</p>`;
+        return;
+    }
+
+    localImplementations.forEach((impl, index) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'implementation-item';
+        itemEl.dataset.index = index;
+
+        let content = '';
+        if(impl.type === 'bought') {
+            content = `
+                <span class="implementation-name"><i class="fas fa-shopping-cart"></i> ${impl.name}</span>
+                <span class="implementation-price">${impl.price.toFixed(2)} kr.</span>
+            `;
+        } else { // homemade
+            const recipe = appState.recipes.find(r => r.id === impl.recipeId);
+            const recipeName = recipe ? recipe.title : 'Ukendt Opskrift';
+            const price = recipe ? calculateRecipePrice(recipe, appState.ingredientInfo).max : 0;
+            content = `
+                <span class="implementation-name"><i class="fas fa-blender"></i> ${recipeName}</span>
+                <span class="implementation-price">~${price.toFixed(2)} kr.</span>
+            `;
+        }
+
+        itemEl.innerHTML = `
+            ${content}
+            <button type="button" class="btn-icon btn-small delete-implementation-btn"><i class="fas fa-trash"></i></button>
+        `;
+        container.appendChild(itemEl);
+    });
+}
+
+function handleAddImplementation() {
+    const type = document.getElementById('implementation-type').value;
+    
+    if (type === 'bought') {
+        const name = document.getElementById('implementation-bought-name').value.trim();
+        const price = parseFloat(document.getElementById('implementation-bought-price').value);
+        if (name && !isNaN(price)) {
+            localImplementations.push({ id: crypto.randomUUID(), type: 'bought', name, price });
+            document.getElementById('implementation-bought-name').value = '';
+            document.getElementById('implementation-bought-price').value = '';
+        }
+    } else { // homemade
+        const select = document.getElementById('implementation-homemade-recipe');
+        const recipeTitle = select.value;
+        const recipe = appState.recipes.find(r => r.title === recipeTitle);
+        if (recipe) {
+            localImplementations.push({ id: crypto.randomUUID(), type: 'homemade', recipeId: recipe.id });
+            select.value = '';
+        }
+    }
+    renderImplementationsList();
+}
+
 
 async function handleSaveIngredient(e) {
     e.preventDefault();
     const itemId = document.getElementById('ingredient-info-id').value;
+    const isGeneric = document.getElementById('is-generic-toggle').checked;
     
-    const priceFromInput = parseFloat(document.getElementById('ingredient-info-price-from').value) || null;
-    const priceToInput = parseFloat(document.getElementById('ingredient-info-price-to').value) || null;
-    const priceUnit = document.getElementById('ingredient-info-default-unit').value;
-
-    const aliases = document.getElementById('ingredient-info-aliases').value
-        .split(',')
-        .map(alias => alias.trim().toLowerCase())
-        .filter(alias => alias.length > 0);
-    
-    const unitConversions = {};
-    document.querySelectorAll('#unit-conversions-container .unit-conversion-row input').forEach(input => {
-        const unit = input.dataset.unit;
-        const value = parseFloat(input.value);
-        if (unit && !isNaN(value) && value > 0) {
-            unitConversions[unit] = value;
-        }
-    });
-
-    const itemData = {
+    let itemData = {
         name: document.getElementById('ingredient-info-name').value.trim(),
-        aliases: aliases,
+        aliases: document.getElementById('ingredient-info-aliases').value
+            .split(',')
+            .map(alias => alias.trim().toLowerCase())
+            .filter(alias => alias.length > 0),
         mainCategory: document.getElementById('ingredient-info-main-category').value,
         subCategory: document.getElementById('ingredient-info-sub-category').value,
-        defaultUnit: priceUnit,
-        priceFrom: priceFromInput,
-        priceTo: priceToInput,
-        caloriesPer100g: parseInt(document.getElementById('ingredient-info-calories').value, 10) || null,
-        unitConversions: unitConversions,
+        isGeneric: isGeneric,
         userId: appState.currentUser.uid,
     };
+    
+    if (isGeneric) {
+        itemData.implementations = localImplementations;
+    } else {
+        const priceFromInput = parseFloat(document.getElementById('ingredient-info-price-from').value) || null;
+        const priceToInput = parseFloat(document.getElementById('ingredient-info-price-to').value) || null;
+        const priceUnit = document.getElementById('ingredient-info-default-unit').value;
+    
+        const unitConversions = {};
+        document.querySelectorAll('#unit-conversions-container .unit-conversion-row input').forEach(input => {
+            const unit = input.dataset.unit;
+            const value = parseFloat(input.value);
+            if (unit && !isNaN(value) && value > 0) {
+                unitConversions[unit] = value;
+            }
+        });
+
+        itemData = {
+            ...itemData,
+            defaultUnit: priceUnit,
+            priceFrom: priceFromInput,
+            priceTo: priceToInput,
+            caloriesPer100g: parseInt(document.getElementById('ingredient-info-calories').value, 10) || null,
+            unitConversions: unitConversions,
+        };
+    }
 
     if (!itemData.name || !itemData.mainCategory || !itemData.subCategory) {
         return handleError({message: "Udfyld venligst alle påkrævede felter (Navn, Kategorier)."}, "Ufuldstændige data");
@@ -394,6 +542,7 @@ async function handleBulkSaveFromAssistant(e) {
                 caloriesPer100g: parseInt(row.querySelector('.assistant-calories').value, 10) || null,
                 unitConversions: {},
                 userId: appState.currentUser.uid,
+                isGeneric: false,
             };
             
             const docRef = doc(ingredientsCol);
@@ -466,6 +615,7 @@ async function handleTextImportSubmit(e) {
             priceTo: item.priceInput,
             caloriesPer100g: item.caloriesPer100g || null,
             unitConversions: {},
+            isGeneric: false,
             userId: appState.currentUser.uid,
         };
 
