@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
         planMealModal: document.getElementById('plan-meal-modal'),
         planMealForm: document.getElementById('plan-meal-form'),
         planMealModalTitle: document.getElementById('plan-meal-modal-title'),
+        implementationChoiceModal: document.getElementById('implementation-choice-modal'), // NY
         addCalendarEventModal: document.getElementById('add-calendar-event-modal'),
         dayDetailsModal: document.getElementById('day-details-modal'),
         eventModal: document.getElementById('event-modal'),
@@ -304,4 +305,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
 });
-
