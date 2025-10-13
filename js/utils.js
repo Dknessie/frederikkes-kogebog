@@ -136,34 +136,33 @@ export function calculateRecipePrice(recipe, ingredientInfo) {
                     pricePerGramMin = priceFrom / 1000;
                     pricePerGramMax = priceTo / 1000;
                     break;
-                case 'g':
-                case 'ml': // Antager 1ml = 1g
-                    pricePerGramMin = priceFrom;
-                    pricePerGramMax = priceTo;
-                    break;
                 case 'stk':
+                    // For 'stk' kan vi kun beregne en pris pr. gram, hvis vi ved, hvad et stykke vejer.
                     if (info.unitConversions && info.unitConversions.stk) {
                         const gramsPerStk = info.unitConversions.stk;
                         pricePerGramMin = priceFrom / gramsPerStk;
                         pricePerGramMax = priceTo / gramsPerStk;
                     }
+                    // Hvis vi ikke kender vægten af 'stk', kan vi ikke beregne en gram-pris.
                     break;
             }
 
             // Step 2: Beregn prisen for den specifikke mængde i opskriften
-            if (pricePerGramMax !== null) {
+            if (pricePerGramMax !== null) { // Vi har en gram-pris
                 const conversionToGrams = convertToGrams(ing.quantity || 0, ing.unit, info);
                 if (conversionToGrams.amount !== null) {
                     minPrice += conversionToGrams.amount * pricePerGramMin;
                     maxPrice += conversionToGrams.amount * pricePerGramMax;
                 } else {
-                     // Hvis vi ikke kan konvertere til gram, men opskriften bruger 'stk' og prisen er pr. 'stk', kan vi regne det ud
-                    if(info.defaultUnit === 'stk' && normalizeUnit(ing.unit) === 'stk') {
-                        minPrice += (ing.quantity || 0) * priceFrom;
-                        maxPrice += (ing.quantity || 0) * priceTo;
-                    } else {
-                        console.warn(`Kunne ikke beregne pris for '${ing.name}' fra enhed '${ing.unit}'. Konvertering til gram mangler.`);
-                    }
+                    console.warn(`Kunne ikke beregne pris for '${ing.name}' fra enhed '${ing.unit}'. Konvertering til gram mangler.`);
+                }
+            } else if (info.defaultUnit === 'stk') { // Prisen er pr. 'stk', og vi har ingen gram-pris
+                if (normalizeUnit(ing.unit) === 'stk') {
+                    // Simpelt tilfælde: Opskriften bruger 'stk', prisen er pr. 'stk'
+                    minPrice += (ing.quantity || 0) * priceFrom;
+                    maxPrice += (ing.quantity || 0) * priceTo;
+                } else {
+                    console.warn(`Kan ikke beregne 'stk' pris for '${ing.name}', da opskriften bruger '${ing.unit}' og konvertering mangler.`);
                 }
             } else {
                 console.warn(`Kunne ikke bestemme pris pr. gram for '${ing.name}' med prisenhed '${info.defaultUnit}'.`);
