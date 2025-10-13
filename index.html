@@ -299,6 +299,26 @@
             <form id="ingredient-info-form">
                 <input type="hidden" id="ingredient-info-id">
                 
+                <h4>Basis Information</h4>
+                <div class="input-group">
+                    <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
+                    <input type="text" id="ingredient-info-name" placeholder="Hakket Oksekød 4-7%" required>
+                </div>
+                <div class="input-group">
+                    <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
+                    <input type="text" id="ingredient-info-aliases" placeholder="oksekød, hakket kød, fars">
+                </div>
+                <div class="form-grid-2-col">
+                    <div class="input-group">
+                        <label for="ingredient-info-main-category">Overkategori</label>
+                        <select id="ingredient-info-main-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="ingredient-info-sub-category">Underkategori</label>
+                        <select id="ingredient-info-sub-category" required></select>
+                    </div>
+                </div>
+
                 <div class="switch-group">
                     <label for="is-generic-toggle">Dette er en generisk ingrediens (f.eks. Brød, Pasta)</label>
                     <label class="switch">
@@ -308,25 +328,6 @@
                 </div>
 
                 <div id="standard-ingredient-fields">
-                    <h4>Basis Information</h4>
-                    <div class="input-group">
-                        <label for="ingredient-info-name">Navn på ingrediens (unikt)</label>
-                        <input type="text" id="ingredient-info-name" placeholder="Hakket Oksekød 4-7%" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="ingredient-info-aliases">Aliaser (separer med komma)</label>
-                        <input type="text" id="ingredient-info-aliases" placeholder="oksekød, hakket kød, fars">
-                    </div>
-                    <div class="form-grid-2-col">
-                        <div class="input-group">
-                            <label for="ingredient-info-main-category">Overkategori</label>
-                            <select id="ingredient-info-main-category" required></select>
-                        </div>
-                        <div class="input-group">
-                            <label for="ingredient-info-sub-category">Underkategori</label>
-                            <select id="ingredient-info-sub-category" required></select>
-                        </div>
-                    </div>
                     <hr>
                     <h4>Pris & Ernæring</h4>
                     <div class="form-grid-2-col">
@@ -362,6 +363,7 @@
                 </div>
 
                 <div id="generic-ingredient-fields" class="hidden">
+                    <hr>
                     <h4>Implementeringer af <span class="generic-ingredient-name-placeholder"></span></h4>
                     <p class="small-text">Tilføj de specifikke versioner, du kan vælge imellem. Det kan være købevarer eller dine egne opskrifter.</p>
                     <div id="implementations-list">
