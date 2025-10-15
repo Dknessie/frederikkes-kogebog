@@ -380,7 +380,6 @@ async function handleClearMealPlan() {
     }
 }
 
-// NY: Starter planlægningsprocessen.
 async function startMealPlanningProcess(e) {
     e.preventDefault();
     
@@ -397,12 +396,13 @@ async function startMealPlanningProcess(e) {
     const recipe = appState.recipes.find(r => r.id === recipeId);
     if (!recipe) return;
 
-    // Tjek for generiske ingredienser
     const genericIngredients = [];
-    for (const ing of recipe.ingredients) {
-        const ingInfo = appState.ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
-        if (ingInfo && ingInfo.isGeneric) {
-            genericIngredients.push(ingInfo);
+    if (recipe.ingredients) {
+        for (const ing of recipe.ingredients) {
+            const ingInfo = appState.ingredientInfo.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
+            if (ingInfo && ingInfo.isGeneric) {
+                genericIngredients.push(ingInfo);
+            }
         }
     }
 
@@ -412,27 +412,23 @@ async function startMealPlanningProcess(e) {
         type: 'recipe',
         portions,
         cooked: false,
-        ingredientChoices: {} // Nyt felt til at gemme valg
+        ingredientChoices: {}
     };
 
     if (genericIngredients.length > 0) {
-        // Gennemløb hver generisk ingrediens og få brugerens valg
         for (const genericIng of genericIngredients) {
             try {
                 const choiceId = await promptForImplementationChoice(genericIng);
                 mealData.ingredientChoices[genericIng.name] = choiceId;
             } catch (error) {
-                // Brugeren annullerede
-                return;
+                return; // User cancelled
             }
         }
     }
     
-    // Når alle valg er truffet, gem måltidet.
     await savePlannedMeal(mealData, date, mealTypeBtn.dataset.meal);
 }
 
-// NY: Gemmer det endelige måltid efter valg er truffet
 async function savePlannedMeal(mealData, date, mealType) {
     const mealPlanRef = doc(db, 'meal_plans', appState.currentUser.uid);
     try {
@@ -449,7 +445,6 @@ async function savePlannedMeal(mealData, date, mealType) {
     }
 }
 
-// NY: Viser modalen til valg af implementering
 function promptForImplementationChoice(genericIngredient) {
     return new Promise((resolve, reject) => {
         const modal = appElements.implementationChoiceModal;
@@ -462,22 +457,29 @@ function promptForImplementationChoice(genericIngredient) {
         list.innerHTML = '';
 
         genericIngredient.implementations.forEach(impl => {
-            let name, price, savingText = '';
+            let name, price, savingText = '', pricePerKg = null;
             
             if(impl.type === 'bought') {
                 name = impl.name;
                 price = impl.price;
+                if (impl.weight) {
+                    pricePerKg = (price / impl.weight) * 1000;
+                }
             } else {
                 const recipe = appState.recipes.find(r => r.id === impl.recipeId);
                 name = `Hjemmelavet: ${recipe.title}`;
                 price = calculateRecipePrice(recipe, appState.ingredientInfo).max;
+                if (impl.finishedWeight > 0) {
+                    pricePerKg = (price / impl.finishedWeight) * 1000;
+                }
             }
 
-            const boughtOption = genericIngredient.implementations.find(i => i.type === 'bought');
-            if(boughtOption && impl.type === 'homemade') {
-                const saving = boughtOption.price - price;
+            const boughtOption = genericIngredient.implementations.find(i => i.type === 'bought' && i.price && i.weight);
+            if(boughtOption && pricePerKg !== null) {
+                const boughtPricePerKg = (boughtOption.price / boughtOption.weight) * 1000;
+                const saving = boughtPricePerKg - pricePerKg;
                 if(saving > 0) {
-                    savingText = `<span class="saving-pill">Spar ${saving.toFixed(2)} kr.</span>`;
+                    savingText = `<span class="saving-pill">Spar ${saving.toFixed(2)} kr/kg</span>`;
                 }
             }
 
@@ -485,7 +487,7 @@ function promptForImplementationChoice(genericIngredient) {
             itemEl.className = 'implementation-choice-item';
             itemEl.innerHTML = `
                 <span class="name">${name}</span>
-                <span class="price">~${price.toFixed(2)} kr. ${savingText}</span>
+                <span class="price">${pricePerKg ? `~${pricePerKg.toFixed(2)} kr/kg` : `~${price.toFixed(2)} kr`} ${savingText}</span>
             `;
             itemEl.addEventListener('click', () => {
                 modal.classList.add('hidden');
@@ -670,3 +672,4 @@ async function handleDeleteMeal(mealId, date, mealType) {
         handleError(error, "Kunne ikke fjerne måltidet.", "handleDeleteMeal");
     }
 }
+
